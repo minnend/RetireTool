@@ -39,120 +39,10 @@ public class Shiller
 
   public static DecimalFormat currencyFormatter = new DecimalFormat("#,###.00");
 
-  private Sequence            data;
+  private Sequence            shillerData;
+  private Sequence            bondData;
 
-  public static final double  SOC_SEC_AT70      = 3480.00;
-  public static final double  ONE_TWELFTH       = 1.0 / 12.0;
-
-  public class Bond
-  {
-    public final double par;
-    public final double coupon;
-    public final double annualFreq;
-    public final int    startIndex, endIndex;
-
-    public Bond(double par, double coupon, double annualFreq, int startIndex, int endIndex)
-    {
-      assert par > 0.0;
-      assert coupon >= 0.0;
-      assert annualFreq >= 0.0;
-      assert endIndex > startIndex;
-
-      this.par = par;
-      this.coupon = coupon;
-      this.annualFreq = annualFreq;
-      this.startIndex = startIndex;
-      this.endIndex = endIndex;
-      assert Math.abs(par - price(startIndex)) < 0.01;
-    }
-
-    public Bond(double par, int startIndex)
-    {
-      this(par, par * data.get(startIndex, GS10) / 100.0, 2, startIndex, startIndex + 120);
-    }
-
-    public boolean paysThisMonth(int index)
-    {
-      if (!isActive(index) || index == startIndex) {
-        return false;
-      }
-
-      int diff = index - startIndex;
-      int monthsBetweenPayments = getMonthsBetweenPayments();
-      return (diff % monthsBetweenPayments) == 0;
-    }
-
-    public boolean isActive(int index)
-    {
-      return index >= startIndex && index <= endIndex;
-    }
-
-    public boolean isExpiring(int index)
-    {
-      return index == endIndex;
-    }
-
-    public double couponPayment()
-    {
-      return coupon / annualFreq;
-    }
-
-    public double paymentThisMonth(int index)
-    {
-      double couponPayment = (paysThisMonth(index) ? couponPayment() : 0.0);
-      double parPayment = (index == endIndex ? par : 0.0);
-      return couponPayment + parPayment;
-    }
-
-    public int getMonthsBetweenPayments()
-    {
-      return (int) Math.round(12.0 / annualFreq);
-    }
-
-    public int getNextPaymentMonth(int index)
-    {
-      for (int i = index; i <= endIndex; ++i) {
-        if (paysThisMonth(i)) {
-          return i;
-        }
-      }
-      return -1;
-    }
-
-    public double price(int index)
-    {
-      if (!isActive(index) || index == endIndex) {
-        return 0.0;
-      }
-
-      double interestRate = data.get(index, GS10);
-
-      // Calculations for number of payments left.
-      int nextPaymentIndex = getNextPaymentMonth(index);
-      assert nextPaymentIndex >= index;
-
-      int monthsBetweenPayments = getMonthsBetweenPayments();
-      int n = (int) Math.ceil((double) (endIndex - index) / monthsBetweenPayments);
-      double years = n / annualFreq;
-
-      // System.out.printf("| index=%d  interest=%.3f  nextPayment=%d  monthsBetween=%d  n=%d  years=%f\n", index,
-      // interestRate, nextPaymentIndex, monthsBetweenPayments, n, years);
-
-      // Calculations for fractional interest.
-      double fractionalInterest = 0.0;
-      int numMonthsToPayment = nextPaymentIndex - index;
-      assert numMonthsToPayment >= 0 && numMonthsToPayment <= monthsBetweenPayments;
-      if (numMonthsToPayment > 0) {
-        fractionalInterest = 1.0 - (double) numMonthsToPayment / monthsBetweenPayments;
-      }
-
-      double price = Shiller.calcBondPrice(coupon, interestRate, par, years, annualFreq, fractionalInterest);
-      // System.out.printf("| monthsToPayment=%d  fractionalInterest=%f  price=%.2f\n", numMonthsToPayment,
-      // fractionalInterest, price);
-      assert !Double.isNaN(price);
-      return price;
-    }
-  }
+  public static final double  SOC_SEC_AT70      = 3480.00;                      // http://www.ssa.gov/oact/quickcalc/
 
   /**
    * Load data from CSV export of Shiller's SNP/CPI excel spreadsheet
@@ -160,72 +50,68 @@ public class Shiller
    * @param fname name of file to load
    * @return true on success
    */
-  public boolean loadData(String fname)
+  public void loadData(String fname) throws IOException
   {
-    try {
-      File file = new File(fname);
-      if (!file.canRead()) {
-        System.err.printf("Error: unable to read data file (%s)\n", fname);
-        return false;
-      }
-      System.out.printf("Loading data file: [%s]\n", fname);
+    File file = new File(fname);
+    if (!file.canRead()) {
+      throw new IOException(String.format("Can't read shiller file (%s)", fname));
+    }
+    System.out.printf("Loading data file: [%s]\n", fname);
 
-      BufferedReader in = new BufferedReader(new FileReader(fname));
+    BufferedReader in = new BufferedReader(new FileReader(fname));
 
-      data = new Sequence("Shiller Financial Data");
-      String line;
-      while ((line = in.readLine()) != null) {
-        try {
-          String[] toks = line.trim().split(",");
-          if (toks == null || toks.length < 5)
-            continue; // want at least: date, p, d, e, cpi
-
-          // date
-          double date = Double.parseDouble(toks[0]);
-          int year = (int) Math.floor(date);
-          int month = (int) Math.round((date - year) * 100);
-
-          // snp price
-          double price = Double.parseDouble(toks[1]);
-
-          // snp dividend -- data is annual yield, we want monthly
-          double div = Double.parseDouble(toks[2]) / 12;
-
-          // cpi
-          double cpi = Double.parseDouble(toks[4]);
-
-          // GS10 rate
-          double gs10 = Double.parseDouble(toks[6]);
-
-          // CAPE
-          double cape = tryParse(toks[10], 0.0);
-
-          Calendar cal = Library.now();
-          cal.set(Calendar.YEAR, year);
-          cal.set(Calendar.MONTH, month - 1);
-          cal.set(Calendar.DAY_OF_MONTH, 1);
-          cal.set(Calendar.HOUR_OF_DAY, 8);
-          cal.set(Calendar.MINUTE, 0);
-          cal.set(Calendar.SECOND, 0);
-          data.addData(new FeatureVec(5, price, div, cpi, gs10, cape), cal.getTimeInMillis());
-
-          // System.out.printf("%d/%d:  $%.2f  $%.2f  $%.2f\n", year,
-          // month, price, div, cpi);
-
-        } catch (NumberFormatException nfe) {
-          // something went wrong so skip this line
-          System.err.println("Bad Line: " + line);
-          continue;
+    shillerData = new Sequence("Shiller Financial Data");
+    bondData = new Sequence("Bonds");
+    String line;
+    while ((line = in.readLine()) != null) {
+      try {
+        String[] toks = line.trim().split(",");
+        if (toks == null || toks.length < 5) {
+          continue; // want at least: date, p, d, e, cpi
         }
 
+        // date
+        double date = Double.parseDouble(toks[0]);
+        int year = (int) Math.floor(date);
+        int month = (int) Math.round((date - year) * 100);
+
+        // snp price
+        double price = Double.parseDouble(toks[1]);
+
+        // snp dividend -- data is annual yield, we want monthly
+        double div = Double.parseDouble(toks[2]) / 12;
+
+        // cpi
+        double cpi = Double.parseDouble(toks[4]);
+
+        // GS10 rate
+        double gs10 = Double.parseDouble(toks[6]);
+
+        // CAPE
+        double cape = tryParse(toks[10], 0.0);
+
+        Calendar cal = Library.now();
+        cal.set(Calendar.YEAR, year);
+        cal.set(Calendar.MONTH, month - 1);
+        cal.set(Calendar.DAY_OF_MONTH, 1);
+        cal.set(Calendar.HOUR_OF_DAY, 8);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        shillerData.addData(new FeatureVec(5, price, div, cpi, gs10, cape), cal.getTimeInMillis());
+        bondData.addData(gs10, cal.getTimeInMillis());
+
+        // System.out.printf("%d/%d:  $%.2f  $%.2f  $%.2f\n", year,
+        // month, price, div, cpi);
+
+      } catch (NumberFormatException nfe) {
+        // something went wrong so skip this line
+        System.err.println("Bad Line: " + line);
+        continue;
       }
 
-      in.close();
-      return true;
-    } catch (IOException ioe) {
-      ioe.printStackTrace();
-      return false;
     }
+
+    in.close();
   }
 
   /**
@@ -248,7 +134,7 @@ public class Shiller
   public int getIndexForDate(int year, int month)
   {
     long ms = Library.getTime(1, month, year);
-    return data.getClosestIndex(ms);
+    return shillerData.getClosestIndex(ms);
   }
 
   /**
@@ -262,8 +148,9 @@ public class Shiller
    */
   public Sequence calcSnpReturnSeq(int iStart, int nMonths, DividendMethod divMethod, Inflation inflationAccounting)
   {
-    if (iStart < 0 || nMonths < 1 || iStart + nMonths >= data.size()) {
-      throw new IllegalArgumentException(String.format("iStart=%d, nMonths=%d, size=%d", iStart, nMonths, data.size()));
+    if (iStart < 0 || nMonths < 1 || iStart + nMonths >= shillerData.size()) {
+      throw new IllegalArgumentException(String.format("iStart=%d, nMonths=%d, size=%d", iStart, nMonths,
+          shillerData.size()));
     }
 
     Sequence seq = new Sequence("S&P");
@@ -271,36 +158,36 @@ public class Shiller
     // note: it's equivalent to keep track of total value or number of shares
     double divCash = 0.0;
     double baseValue = 1.0;
-    double shares = baseValue / data.get(iStart, PRICE);
-    seq.addData(baseValue, data.getTimeMS(iStart));
+    double shares = baseValue / shillerData.get(iStart, PRICE);
+    seq.addData(baseValue, shillerData.getTimeMS(iStart));
     for (int i = iStart; i < iStart + nMonths; ++i) {
       double div = 0.0;
       if (divMethod == DividendMethod.NO_REINVEST)
-        divCash += shares * data.get(i, DIV);
+        divCash += shares * shillerData.get(i, DIV);
       else if (divMethod == DividendMethod.MONTHLY) {
         // Dividends at the end of every month.
-        div = data.get(i, DIV);
+        div = shillerData.get(i, DIV);
       } else if (divMethod == DividendMethod.QUARTERLY) {
         // Dividends at the end of every quarter (march, june, september, december).
         Calendar cal = Library.now();
-        cal.setTimeInMillis(data.getTimeMS(i));
+        cal.setTimeInMillis(shillerData.getTimeMS(i));
         int month = cal.get(Calendar.MONTH);
         if (month % 3 == 2) { // time for a dividend!
           for (int j = 0; j < 3; j++) {
             if (i - j < iStart)
               break;
-            div += data.get(i - j, DIV);
+            div += shillerData.get(i - j, DIV);
           }
         }
       }
 
       // Apply the dividends (if any).
-      double price = data.get(i + 1, PRICE);
+      double price = shillerData.get(i + 1, PRICE);
       shares += shares * div / price;
 
       // Add data point for current value.
       double value = adjustValue(divCash + shares * price, i + 1, iStart, inflationAccounting);
-      seq.addData(value, data.getTimeMS(i + 1));
+      seq.addData(value, shillerData.getTimeMS(i + 1));
     }
 
     return seq;
@@ -333,17 +220,17 @@ public class Shiller
    */
   public Sequence calcBondReturnSeqRebuy(int iStart, int iEnd, Inflation inflationAccounting)
   {
-    if (iStart < 0 || iEnd < iStart || iEnd >= data.size()) {
-      throw new IllegalArgumentException(String.format("iStart=%d, iEnd=%d, size=%d", iStart, iEnd, data.size()));
+    if (iStart < 0 || iEnd < iStart || iEnd >= shillerData.size()) {
+      throw new IllegalArgumentException(String.format("iStart=%d, iEnd=%d, size=%d", iStart, iEnd, shillerData.size()));
     }
 
     double cash = 1.0; // start with one dollar
     Sequence seq = new Sequence("Bonds (Rebuy)");
-    seq.addData(cash, data.getTimeMS(iStart));
+    seq.addData(cash, shillerData.getTimeMS(iStart));
 
     for (int i = iStart; i < iEnd; ++i) {
       // Buy bond at start of this month.
-      Bond bond = new Bond(cash, i);
+      Bond bond = new Bond(bondData, cash, i);
       // System.out.printf("Bought %d: cash=%f, price=%f\n", i, cash, bond.price(i));
 
       // Sell bond at end of the month (we use start of next month).
@@ -352,7 +239,7 @@ public class Shiller
 
       // Add sequence data point for new month.
       double currentValue = adjustValue(cash, i + 1, iStart, inflationAccounting);
-      seq.addData(currentValue, data.getTimeMS(i + 1));
+      seq.addData(currentValue, shillerData.getTimeMS(i + 1));
     }
 
     return seq;
@@ -370,15 +257,15 @@ public class Shiller
    */
   public Sequence calcBondReturnSeqHold(int iStart, int iEnd, Inflation inflationAccounting)
   {
-    if (iStart < 0 || iEnd < iStart || iEnd >= data.size()) {
-      throw new IllegalArgumentException(String.format("iStart=%d, iEnd=%d, size=%d", iStart, iEnd, data.size()));
+    if (iStart < 0 || iEnd < iStart || iEnd >= shillerData.size()) {
+      throw new IllegalArgumentException(String.format("iStart=%d, iEnd=%d, size=%d", iStart, iEnd, shillerData.size()));
     }
 
     final double principal = 1000.0;
     final double bondQuantum = 10.0; // bonds can only be purchased in fixed increments
     double cash = principal;
     Sequence seq = new Sequence("Bonds (Hold)");
-    seq.addData(cash, data.getTimeMS(iStart));
+    seq.addData(cash, shillerData.getTimeMS(iStart));
     List<Bond> bonds = new ArrayList<Bond>(); // TODO not an efficient data structure
 
     for (int i = iStart; i < iEnd; ++i) {
@@ -396,7 +283,7 @@ public class Shiller
       // Buy new bonds.
       double bondValue = bondQuantum * Math.floor(cash / bondQuantum);
       if (bondValue > 0.0) {
-        bonds.add(new Bond(bondValue, i));
+        bonds.add(new Bond(bondData, bondValue, i));
         cash -= bondValue;
       }
 
@@ -406,7 +293,7 @@ public class Shiller
         value += bond.price(i);
       }
       double currentValue = adjustValue(value, i + 1, iStart, inflationAccounting);
-      seq.addData(currentValue, data.getTimeMS(i + 1));
+      seq.addData(currentValue, shillerData.getTimeMS(i + 1));
     }
 
     return seq._div(principal);
@@ -432,8 +319,9 @@ public class Shiller
   public Sequence calcMixedReturnSeq(int iStart, int nMonths, double targetPercentStock, double targetPercentBonds,
       int rebalanceMonths, Inflation inflationAccounting)
   {
-    if (iStart < 0 || nMonths < 1 || iStart + nMonths >= data.size()) {
-      throw new IllegalArgumentException(String.format("iStart=%d, nMonths=%d, size=%d", iStart, nMonths, data.size()));
+    if (iStart < 0 || nMonths < 1 || iStart + nMonths >= shillerData.size()) {
+      throw new IllegalArgumentException(String.format("iStart=%d, nMonths=%d, size=%d", iStart, nMonths,
+          shillerData.size()));
     }
 
     double targetPercentCash = 100.0 - (targetPercentStock + targetPercentBonds);
@@ -449,21 +337,21 @@ public class Shiller
     double cash = principal;
     double bondValue = 0.0;
     double shares = 0.0;
-    seq.addData(cash, data.getTimeMS(iStart));
+    seq.addData(cash, shillerData.getTimeMS(iStart));
     for (int i = iStart; i < iStart + nMonths; ++i) {
-      double stockPrice = data.get(i + 1, PRICE);
+      double stockPrice = shillerData.get(i + 1, PRICE);
       double stockValue = shares * stockPrice;
       double total = bondValue + stockValue + cash;
       // System.out.printf("%d: [%.2f, %.2f, %.2f]  [%.1f, %.1f, %.1f]  %.2f\n", i, stockValue, bondValue, cash, 100.0
       // * stockValue / total, 100.0 * bondValue / total, 100.0 * cash / total, total);
 
       // Collect dividends from stocks for previous month.
-      double divCash = shares * data.get(i, DIV);
+      double divCash = shares * shillerData.get(i, DIV);
       cash += divCash;
 
       // Update bond value for this month.
       if (bondValue > 0.0) {
-        Bond bond = new Bond(bondValue, i);
+        Bond bond = new Bond(bondData, bondValue, i);
         bondValue = bond.price(i + 1);
       }
       total = bondValue + stockValue + cash;
@@ -513,7 +401,7 @@ public class Shiller
 
       // Add data point for current value.
       double adjustedValue = adjustValue(total, i + 1, iStart, inflationAccounting);
-      seq.addData(adjustedValue, data.getTimeMS(i + 1));
+      seq.addData(adjustedValue, shillerData.getTimeMS(i + 1));
     }
 
     return seq._div(principal);
@@ -564,13 +452,13 @@ public class Shiller
       int a = Math.max(0, i - numMonthsForAverage - 1);
       double ma = 0.0;
       for (int j = a; j < i; ++j) {
-        ma += data.get(j, PRICE);
+        ma += shillerData.get(j, PRICE);
       }
       ma /= (i - a);
 
       // Test above / below moving average.
       double lastMonthReturn;
-      double price = data.get(i - 1, PRICE);
+      double price = shillerData.get(i - 1, PRICE);
       if (price > ma) {
         lastMonthReturn = risky.get(i, 0) / risky.get(i - 1, 0);
       } else {
@@ -616,7 +504,7 @@ public class Shiller
   public double getYearAsFrac(int i)
   {
     Calendar cal = Library.now();
-    cal.setTimeInMillis(data.getTimeMS(i));
+    cal.setTimeInMillis(shillerData.getTimeMS(i));
     int year = cal.get(Calendar.YEAR);
     int month = cal.get(Calendar.MONTH);
     return year + month / 12.0;
@@ -647,7 +535,7 @@ public class Shiller
   public double adjustValue(double value, int iFrom, int iTo, Inflation inflationAccounting)
   {
     if (inflationAccounting == Inflation.Include) {
-      value *= data.get(iTo, CPI) / data.get(iFrom, CPI);
+      value *= shillerData.get(iTo, CPI) / shillerData.get(iFrom, CPI);
     }
     return value;
   }
@@ -681,14 +569,14 @@ public class Shiller
     Sequence rois = new Sequence(String.format("SnP ROIs - %d years", years));
     int months = years * 12;
 
-    int n = data.size();
+    int n = shillerData.size();
     for (int i = 0; i < n; i++) {
       if (i + months >= n)
         break; // not enough data
       double roi = calcSnpReturn(i, months, divMethod, inflationAccounting);
       double cagr = getAnnualReturn(roi, months);
       // System.out.printf("%.2f\t%f\n", getYearAsFrac(i), meanAnnualReturn);
-      rois.addData(cagr, data.getTimeMS(i));
+      rois.addData(cagr, shillerData.getTimeMS(i));
     }
 
     return rois;
@@ -836,7 +724,7 @@ public class Shiller
   public double calcEndBalance(double principal, double annualWithdrawal, double expenseRatio,
       boolean adjustWithdrawalForInflation, double retireAge, double ssAge, double ssMonthly, int iStart, int nMonths)
   {
-    int nData = data.size();
+    int nData = shillerData.size();
     if (iStart < 0 || nMonths < 1 || iStart + nMonths >= nData)
       return Double.NaN;
 
@@ -860,13 +748,13 @@ public class Shiller
       if (balance < 0.0)
         return 0.0; // ran out of money!
 
-      double price1 = data.get(i, PRICE);
-      double price2 = data.get(i + 1, PRICE);
+      double price1 = shillerData.get(i, PRICE);
+      double price2 = shillerData.get(i + 1, PRICE);
       double shares = balance / price1;
       balance *= price2 / price1;
-      balance += shares * data.get(i, DIV);
+      balance += shares * shillerData.get(i, DIV);
       balance *= (1.0 - monthlyExpenseRatio);
-      age += ONE_TWELFTH;
+      age += Library.ONE_TWELFTH;
     }
 
     return balance;
@@ -901,7 +789,7 @@ public class Shiller
       // System.out.printf("Processing Withdrawal Rate: %.2f%%\n", wrate);
       double principal = 1000000.0;
       double salary = principal * wrate / 100.0;
-      int nData = data.size();
+      int nData = shillerData.size();
       int n = 0;
       int nOK = 0;
       for (int i = 0; i < nData; i++) {
@@ -949,7 +837,7 @@ public class Shiller
       int retireAge, int ssAge, double ssMonthly, double desiredRunwayYears)
   {
     int nMonths = nYears * 12;
-    int nData = data.size();
+    int nData = shillerData.size();
 
     List<Integer> failures = new ArrayList<Integer>();
     double minSavings = 0.0;
@@ -992,7 +880,7 @@ public class Shiller
       int years)
   {
     double annualReturn = 1.0 + annualGrowthRate / 100.0;
-    double monthlyReturn = Math.pow(annualReturn, ONE_TWELFTH);
+    double monthlyReturn = Math.pow(annualReturn, Library.ONE_TWELFTH);
     double balance = principal;
     System.out.println("Starting Balance: $" + currencyFormatter.format(balance));
     for (int year = 0; year < years; ++year) {
@@ -1003,44 +891,6 @@ public class Shiller
       }
       System.out.printf("End of Year %d (%d): $%s\n", year + 2015, year + 35, currencyFormatter.format(balance));
     }
-  }
-
-  /**
-   * Calculates the price of a bond.
-   * 
-   * @param coupon amount paid <code>annualFreq</code> times per year
-   * @param interestRate current interest rate
-   * @param parValue amount paid at maturity
-   * @param years years until maturity
-   * @param annualFreq number of times per year that the coupon is paid
-   * @param fractionalInterest fraction of coupon payment period already passed [0..1)
-   * @return current price of the bond
-   */
-  public static double calcBondPrice(double coupon, double interestRate, double parValue, double years,
-      double annualFreq, double fractionalInterest)
-  {
-    if (annualFreq <= 0.0) {
-      annualFreq = 1.0;
-    }
-    double couponPayment = coupon / annualFreq;
-    double nf = years * annualFreq; // number of payments left
-    double effIR = (interestRate / 100.0) / annualFreq; // effective interest rate per payment
-    double x = Math.pow(1.0 + effIR, -nf);
-    double couponPrice = couponPayment * (1.0 - x) / effIR;
-    double maturityPrice = parValue * x;
-
-    double accruedInterest = 0.0;
-    if (fractionalInterest > 0.0) {
-      double prevPrice = couponPrice + maturityPrice;
-      double nextPrice = calcBondPrice(coupon, interestRate, parValue, years - 1.0 / annualFreq, annualFreq, 0.0)
-          + couponPayment;
-      double priceRatio = nextPrice / prevPrice;
-      accruedInterest = prevPrice * (Math.pow(priceRatio, fractionalInterest) - 1.0);
-      // System.out.printf("Previous Price: %.2f  Next Price: %.2f  ratio=%f\n", prevPrice, nextPrice, priceRatio);
-    }
-
-    // System.out.printf("[%.2f + %.2f + %.2f]\n", couponPrice, maturityPrice, accruedInterest);
-    return couponPrice + maturityPrice + accruedInterest;
   }
 
   public static void saveLineChart(File file, String title, int width, int height, boolean logarithmic,
@@ -1107,7 +957,7 @@ public class Shiller
   public void genReturnChart(Inflation inflation, File file) throws IOException
   {
     int iStart = 0;
-    int iEnd = data.size() - 1;
+    int iEnd = shillerData.size() - 1;
 
     // iStart = getIndexForDate(1900, 1);
     // iEnd = getIndexForDate(2010, 1);
@@ -1165,7 +1015,7 @@ public class Shiller
   public void genSMASweepChart(Inflation inflation, File file) throws IOException
   {
     int iStart = 0;
-    int iEnd = data.size() - 1;
+    int iEnd = shillerData.size() - 1;
 
     // iStart = getIndexForDate(1900, 1);
     // iEnd = getIndexForDate(2010, 1);
@@ -1190,7 +1040,7 @@ public class Shiller
   public void genMomentumSweepChart(Inflation inflation, File file) throws IOException
   {
     int iStart = 0;
-    int iEnd = data.size() - 1;
+    int iEnd = shillerData.size() - 1;
 
     // iStart = getIndexForDate(1900, 1);
     // iEnd = getIndexForDate(2010, 1);
@@ -1216,7 +1066,7 @@ public class Shiller
   {
     Sequence cape = new Sequence("CAPE");
     for (int i = iStart; i <= iEnd; ++i) {
-      cape.addData(data.get(i, CAPE), data.getTimeMS(i));
+      cape.addData(shillerData.get(i, CAPE), shillerData.getTimeMS(i));
     }
     return cape;
   }
@@ -1224,7 +1074,7 @@ public class Shiller
   public void genReturnComparison(int numMonths, Inflation inflation, File file) throws IOException
   {
     int iStart = 0;// getIndexForDate(1881, 1);
-    int iEnd = data.size() - 1;
+    int iEnd = shillerData.size() - 1;
 
     int percentStocks = 60;
     int percentBonds = 40;
@@ -1284,14 +1134,14 @@ public class Shiller
    */
   public static double presentValue(double futureValue, double interestRate, int nMonths)
   {
-    double monthlyRate = Math.pow(1.0 + interestRate / 100.0, ONE_TWELFTH);
+    double monthlyRate = Math.pow(1.0 + interestRate / 100.0, Library.ONE_TWELFTH);
     return futureValue / Math.pow(monthlyRate, nMonths);
   }
 
   public void bondLifetime()
   {
     double cash = 0.0;
-    Bond bond = new Bond(1000.0, 100);
+    Bond bond = new Bond(bondData, 1000.0, 100);
     for (int i = bond.startIndex - 2; i <= bond.endIndex + 2; ++i) {
       double payment = bond.paymentThisMonth(i);
       cash += payment;
@@ -1299,103 +1149,4 @@ public class Shiller
       System.out.printf("%d: %.2f + %.2f (%.2f) = %.2f\n", i, price, cash, payment, price + cash);
     }
   }
-
-  public static void testBondPricing()
-  {
-    // source: https://faculty.unlv.edu/msullivan/Chapter%207.pdf
-    double tol = 0.0051; // site gives answer to nearest penny
-    double p = Shiller.calcBondPrice(98.75, 7, 1000, 10, 1, 0);
-    assert (Math.abs(p - 1201.93) < tol);
-
-    p = Shiller.calcBondPrice(98.75, 9, 1000, 10, 1, 0);
-    assert (Math.abs(p - 1056.15) < tol);
-
-    p = Shiller.calcBondPrice(98.75, 11, 1000, 10, 1, 0);
-    assert (Math.abs(p - 933.75) < tol);
-
-    p = Shiller.calcBondPrice(145, 11, 1000, 16, 2, 0);
-    assert (Math.abs(p - 1260.82) < tol);
-
-    p = Shiller.calcBondPrice(0, 9, 1000, 30, 0, 0);
-    assert (Math.abs(p - 75.37) < tol);
-
-    // source: http://users.wfu.edu/palmitar/Law&Valuation/chapter%204/4-2-2.htm
-    p = Shiller.calcBondPrice(86, 8, 1000, 10, 1, 0);
-    assert (Math.abs(p - 1040.26) < tol);
-
-    p = Shiller.calcBondPrice(86, 8, 1000, 10, 2, 0);
-    assert (Math.abs(p - 1040.77) < tol);
-
-    // source: http://www.economics-finance.org/jefe/fin/Secrestpaper.pdf
-    p = Shiller.calcBondPrice(120, 8, 1000, 2, 2, 72.0 / 182.0);
-    assert (Math.abs(p - 1089.37) < tol);
-
-    p = Shiller.calcBondPrice(120, 8, 1000, 2, 2, 0);
-    assert (Math.abs(p - 1072.60) < tol);
-
-    // source: http://accountingexplained.com/financial/lt-liabilities/bond-price
-    tol = 0.51; // site only gives quote to nearest dollar
-    p = Shiller.calcBondPrice(8000, 10, 100000, 10, 1, 0);
-    assert (Math.abs(p - 87711) < tol);
-
-    p = Shiller.calcBondPrice(9000, 8, 100000, 10, 2, 0);
-    assert (Math.abs(p - 106795) < tol);
-  }
-
-  public static void main(String[] args) throws IOException
-  {
-    if (args.length != 1) {
-      System.err.println("Usage: java ~.ShillerSnp <shiller-data-file>");
-      System.exit(1);
-    }
-
-    Shiller shiller = new Shiller();
-    if (!shiller.loadData(args[0]))
-      System.exit(1);
-
-    Shiller.testBondPricing();
-    // System.out.printf("Bond Price: $%.2f\n", Shiller.calcBondPrice(120, 8, 1000, 2.0, 2, 72.0/182.0));
-    // System.exit(1);
-
-    // shiller.printReturnLikelihoods();
-    // shiller.printWithdrawalLikelihoods(30, 0.1);
-    // shiller.genReturnChart(Inflation.Ignore, new File("g:/test.html"));
-    // int[] years = new int[] { 1, 2, 5, 10, 15, 20, 30, 40, 50 };
-    // for (int i = 0; i < years.length; ++i) {
-    // shiller.genReturnComparison(years[i] * 12, Inflation.Ignore, new File("g:/test.html"));
-    // }
-
-    // shiller.genReturnComparison(12*30, Inflation.Ignore, new File("g:/test.html"));
-    shiller.genReturnChart(Inflation.Ignore, new File("g:/cumulative-returns.html"));
-    shiller.genSMASweepChart(Inflation.Ignore, new File("g:/sma-sweep.html"));
-    shiller.genMomentumSweepChart(Inflation.Ignore, new File("g:/momentum-sweep.html"));
-    System.exit(0);
-
-    int retireAge = 65;
-    int ssAge = 70;
-    double expectedSocSecFraction = 0.7; // assume we'll only get a fraction of current SS estimate
-    double expectedMonthlySS = SOC_SEC_AT70 * expectedSocSecFraction;
-    int nYears = 105 - retireAge;
-    double expenseRatio = 0.1;
-    double likelihood = 0.99;
-    double taxRate = 0.30;
-    double desiredMonthlyCash = 6000.00;
-    double desiredRunwayYears = 1.0;
-    double salary = calcAnnualSalary(desiredMonthlyCash, taxRate);
-    System.out.printf("Salary: %s\n", currencyFormatter.format(salary));
-    List<Integer> failures = shiller.calcSavingsTarget(salary, likelihood, nYears, expenseRatio, retireAge, ssAge,
-        expectedMonthlySS, desiredRunwayYears);
-    // if (!failures.isEmpty()) {
-    // System.out.println("Failures:");
-    // for (int i : failures) {
-    // System.out.printf(" [%s] -> [%s]\n", Library.formatDate(shiller.data.getTimeMS(i)),
-    // Library.formatDate(shiller.data.getTimeMS(i + nYears * 12)));
-    // }
-    // }
-
-    // calcSavings(230000.0, 5500.0, 53000.0/12, 7.0, 40);
-
-    System.exit(0);
-  }
-
 }

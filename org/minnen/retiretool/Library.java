@@ -28,6 +28,7 @@ public final class Library
   public final static double           PI_OVER_TWO  = Math.PI / 2.0;
   public final static double           SQRT_2PI     = Math.sqrt(TWO_PI);
   public final static double           SQRT_2       = Math.sqrt(2.0);
+  public static final double           ONE_TWELFTH  = 1.0 / 12.0;
 
   public static TimeZone               utc          = TimeZone.getTimeZone("GMT");
   public final static SimpleDateFormat sdfTime      = getSDF("yyyy MMM d HH:mm:ss");
