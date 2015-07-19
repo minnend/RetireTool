@@ -1,0 +1,933 @@
+package org.minnen.retiretool;
+
+import java.util.*;
+
+/** represents a vector in R^n */
+public class FeatureVec extends Datum
+{
+  public static final String KeyTimestamp = "FV.TimeStamp";
+
+  /**
+   * true = compare data for hashCode and equality test; false = defer to Object's implementation (memory based)
+   */
+  public static boolean      bDataComp    = true;
+
+  /** actual data */
+  protected double[]         vec;
+
+  /**
+   * Create a feature vec from the double array
+   * 
+   * @param vec data for feature vec
+   */
+  public FeatureVec(double vec[])
+  {
+    this.vec = vec.clone();
+  }
+
+  /**
+   * Duplicate the given feature vec
+   * 
+   * @param fv feature vec to duplicate
+   */
+  public FeatureVec(FeatureVec fv)
+  {
+    copyFrom(fv);
+  }
+
+  /** create a vector with dimensionality zero (use appendDim to add dimensions) */
+  public FeatureVec()
+  {
+    vec = new double[0];
+  }
+
+  /**
+   * Create a feature vector with 'nDims' using the supplied values; if too few are given, the last one is repeated (or
+   * zero if no values are provided).
+   */
+  public FeatureVec(int nDims, double... x)
+  {
+    vec = new double[nDims];
+
+    int N = x.length;
+    int M = Math.min(nDims, N);
+    for (int i = 0; i < M; i++)
+      vec[i] = x[i];
+    double rep = (N > 0 ? x[N - 1] : 0);
+    for (int i = M; i < nDims; i++)
+      vec[i] = rep;
+  }
+
+  /** @return this*x' */
+  public double[][] cross(FeatureVec x)
+  {
+    int D1 = getNumDims();
+    int D2 = x.getNumDims();
+    double[] a = x.get();
+    double[][] ret = Library.allocMatrixDouble(D1, D2);
+
+    if (D1 <= D2) {
+      // square or wide matrix
+      for (int i = 0; i < D1; i++)
+        for (int j = 0; j < i; j++)
+          ret[i][j] = ret[j][i] = vec[i] * a[j];
+      for (int i = 0; i < D1; i++)
+        ret[i][i] = vec[i] * a[i];
+      for (int i = 0; i < D1; i++)
+        for (int j = i + 1; j < D2; j++)
+          ret[i][j] = vec[i] * a[j];
+    } else {
+      // tall matrix
+      for (int i = 0; i < D2; i++)
+        for (int j = 0; j < i; j++)
+          ret[i][j] = ret[j][i] = vec[i] * a[j];
+      for (int i = 0; i < D2; i++)
+        ret[i][i] = vec[i] * a[i];
+      for (int i = D2; i < D1; i++)
+        for (int j = 0; j < D2; j++)
+          ret[i][j] = vec[i] * a[j];
+    }
+
+    return ret;
+  }
+
+  /** rotate this vector around the given axis (angle given in radians) */
+  public FeatureVec rotate(final FeatureVec axis, final double angle_rad)
+  {
+    if (getNumDims() != 3 || axis.getNumDims() != 3) {
+      assert false : "can only rotate 3D vectors";
+      return null;
+    }
+
+    double s = Math.sin(angle_rad);
+    double c = Math.cos(angle_rad);
+    double t = 1.0f - c;
+
+    double ax = axis.get(0);
+    double ay = axis.get(1);
+    double az = axis.get(2);
+
+    double tx = t * ax;
+    double ty = t * ay;
+    double txx = tx * ax;
+    double txy = tx * ay;
+    double txz = tx * az;
+    double tyy = ty * ay;
+    double tyz = ty * az;
+    double tzz = t * az * az;
+
+    double sx = s * ax;
+    double sy = s * ay;
+    double sz = s * az;
+
+    double x = get(0);
+    double y = get(1);
+    double z = get(2);
+
+    double fx = (txx + c) * x + (txy - sz) * y + (txz + sy) * z;
+    double fy = (txy + sz) * x + (tyy + c) * y + (tyz - sx) * z;
+    double fz = (txz - sy) * x + (tyz + sx) * y + (tzz + c) * z;
+
+    return new FeatureVec(3, fx, fy, fz);
+  }
+
+  /** set the time stamp of this point (ms) */
+  public void setTime(long ms)
+  {
+    setMeta(KeyTimestamp, ms);
+  }
+
+  /** remove the time stamp for this point */
+  public void removeTime()
+  {
+
+    removeMeta(KeyTimestamp);
+  }
+
+  /** @return time stamp for this point (ms) */
+  public long getTime()
+  {
+    return getMeta(KeyTimestamp, Library.TIME_ERROR);
+  }
+
+  /** @return true if the timestamp for this point is valid */
+  public boolean hasTime()
+  {
+    return containsMeta(KeyTimestamp);
+  }
+
+  /** @return true if no dimensions are NaN */
+  public boolean isValid()
+  {
+    if (vec == null)
+      return false;
+    for (int i = 0; i < vec.length; i++)
+      if (Double.isNaN(vec[i]))
+        return false;
+    return true;
+  }
+
+  /** @return dimensionality of this feature vector */
+  public int getNumDims()
+  {
+    return (vec == null ? 0 : vec.length);
+  }
+
+  /** @return vector data as a double array (actual reference, not a copy!) */
+  public double[] get()
+  {
+    return vec;
+  }
+
+  /** @return vector data as a double array (copy of internal data) */
+  public double[] toArray()
+  {
+    return vec.clone();
+  }
+
+  /** @return value of d^{th} dimension */
+  public double get(int d)
+  {
+    return vec[d];
+  }
+
+  /** set the value of the d^{th} dimension to v */
+  public void set(int d, double v)
+  {
+    vec[d] = v;
+  }
+
+  /** set the value of all dimensions to x */
+  public void fill(double x)
+  {
+    Arrays.fill(vec, x);
+  }
+
+  /**
+   * Copies the values of the argument into this feature vector.
+   */
+  public void copyFrom(FeatureVec fv)
+  {
+    super.copyFrom(fv);
+    int n = fv.getNumDims();
+    if (vec == null || getNumDims() != n)
+      vec = new double[n];
+    for (int i = 0; i < n; i++)
+      vec[i] = fv.get(i);
+    if (fv.hasTime())
+      setTime(fv.getTime());
+  }
+
+  /**
+   * @return new feature vector with just those dimensions specified by the dims array (and in that order).
+   */
+  public FeatureVec selectDims(int... dims)
+  {
+    int nd = dims.length;
+    FeatureVec ret = new FeatureVec(nd);
+    for (int i = 0; i < nd; i++)
+      ret.set(i, get(dims[i]));
+    return ret;
+  }
+
+  /**
+   * Compute the absolute distance between this and the given vector
+   * 
+   * @param fv compute absolute distance to this vector
+   * @return absolute distance
+   */
+  public double absdist(FeatureVec fv)
+  {
+    double sum = 0;
+    for (int d = 0; d < vec.length; d++)
+      sum += Math.abs(fv.vec[d] - vec[d]);
+    return sum;
+  }
+
+  /**
+   * Compute the squared distance between the vectors
+   * 
+   * @param fv compute squared distance to this vector
+   * @return squared distance
+   */
+  public double dist2(FeatureVec fv)
+  {
+    double ret = 0.0;
+    for (int d = 0; d < vec.length; d++) {
+      double diff = vec[d] - fv.vec[d];
+      ret += diff * diff;
+    }
+    return ret;
+  }
+
+  /**
+   * Compute the distance between the vectors
+   * 
+   * @param fv compute distance to this vector
+   * @return distance
+   */
+  public double dist(FeatureVec fv)
+  {
+    return Math.sqrt(dist2(fv));
+  }
+
+  /**
+   * Create a feature vec of zeros
+   * 
+   * @param n dimensionality
+   * @return new vector
+   */
+  public static FeatureVec zeros(int n)
+  {
+    return new FeatureVec(n, 0);
+  }
+
+  /** set all dimensions to zero */
+  public void zero()
+  {
+    for (int i = 0; i < vec.length; i++)
+      vec[i] = 0.0;
+  }
+
+  /**
+   * Create a feature vec of ones
+   * 
+   * @param n dimensionality
+   * @return new vector
+   */
+  public static FeatureVec ones(int n)
+  {
+    return new FeatureVec(n, 1);
+  }
+
+  /**
+   * @return sum of elements of this feature vec
+   */
+  public double sum()
+  {
+    double v = 0;
+    for (int i = 0; i < vec.length; i++)
+      v += vec[i];
+    return v;
+  }
+
+  /** @return mean (average) of elements of this feature vec */
+  public double mean()
+  {
+    return sum() / getNumDims();
+  }
+
+  /**
+   * in-place addition
+   * 
+   * @param fv summand
+   */
+  public FeatureVec _add(FeatureVec fv)
+  {
+    int n = getNumDims();
+    assert n == fv.getNumDims() : String.format("this.nDims=%d  fv.nDims=%d\n", n, fv.getNumDims());
+    for (int i = 0; i < n; i++)
+      vec[i] += fv.get(i);
+    return this;
+  }
+
+  /**
+   * in-place addition
+   * 
+   * @param x summand
+   */
+  public FeatureVec _add(double x)
+  {
+    int n = getNumDims();
+    for (int i = 0; i < n; i++)
+      vec[i] += x;
+    return this;
+  }
+
+  /**
+   * in-place subtraction
+   * 
+   * @param fv vector to subtract
+   */
+  public FeatureVec _sub(FeatureVec fv)
+  {
+    int n = getNumDims();
+    for (int i = 0; i < n; i++)
+      vec[i] -= fv.get(i);
+    return this;
+  }
+
+  /**
+   * in-place subtraction
+   * 
+   * @param x value to substract
+   */
+  public FeatureVec _sub(double x)
+  {
+    int n = getNumDims();
+    for (int i = 0; i < n; i++)
+      vec[i] -= x;
+    return this;
+  }
+
+  /**
+   * in-place multiplicatin
+   * 
+   * @param fv multiplier
+   */
+  public FeatureVec _mul(FeatureVec fv)
+  {
+    int n = getNumDims();
+    assert n == fv.getNumDims();
+    for (int i = 0; i < n; i++)
+      vec[i] *= fv.get(i);
+    return this;
+  }
+
+  /**
+   * in-place multiplication
+   * 
+   * @param x multiplier
+   */
+  public FeatureVec _mul(double x)
+  {
+    int n = getNumDims();
+    for (int i = 0; i < n; i++)
+      vec[i] *= x;
+    return this;
+  }
+
+  /**
+   * in-place division
+   * 
+   * @param fv vector divisor
+   */
+  public FeatureVec _div(FeatureVec fv)
+  {
+    int n = getNumDims();
+    double[] a = fv.get();
+    for (int i = 0; i < n; i++)
+      vec[i] /= a[i];
+    return this;
+  }
+
+  /**
+   * in-place division
+   * 
+   * @param x divisor
+   */
+  public FeatureVec _div(double x)
+  {
+    int n = getNumDims();
+    for (int i = 0; i < n; i++)
+      vec[i] /= x;
+    return this;
+  }
+
+  /**
+   * in-place natural logarithm
+   * 
+   * @return this vector
+   */
+  public FeatureVec _log()
+  {
+    int n = getNumDims();
+    for (int i = 0; i < n; i++) {
+      double sign = Math.signum(vec[i]);
+      vec[i] = sign * Math.log(Math.abs(vec[i]));
+    }
+    return this;
+  }
+
+  /**
+   * @return new vector with each element replaced with its (signed) natural log
+   */
+  public FeatureVec log()
+  {
+    return new FeatureVec(this)._log();
+  }
+
+  /**
+   * in-place natural logarithm
+   * 
+   * @return this vector
+   */
+  public FeatureVec _log1p()
+  {
+    int n = getNumDims();
+    for (int i = 0; i < n; i++) {
+      double sign = Math.signum(vec[i]);
+      vec[i] = sign * Math.log1p(Math.abs(vec[i]));
+    }
+    return this;
+  }
+
+  /**
+   * @return new vector with each element replaced with its (signed) natural log
+   */
+  public FeatureVec log1p()
+  {
+    return new FeatureVec(this)._log1p();
+  }
+
+  /**
+   * in-place absolute value
+   */
+  public FeatureVec _abs()
+  {
+    int n = getNumDims();
+    for (int i = 0; i < n; i++)
+      vec[i] = Math.abs(vec[i]);
+    return this;
+  }
+
+  /**
+   * @return vector with sign (-1/0/+1) for each dimension
+   */
+  public FeatureVec sign()
+  {
+    FeatureVec fv = new FeatureVec(this);
+    return fv._sign();
+  }
+
+  /** in-place calculation of sign (-1/0/+1) of each dimension */
+  public FeatureVec _sign()
+  {
+    int D = getNumDims();
+    for (int d = 0; d < D; d++)
+      vec[d] = Math.signum(vec[d]);
+    return this;
+  }
+
+  /**
+   * in-place squaring of elements
+   */
+  public FeatureVec _sqr()
+  {
+    int n = getNumDims();
+    for (int i = 0; i < n; i++)
+      vec[i] = vec[i] * vec[i];
+    return this;
+  }
+
+  /** @return new vector with values equal to the squared value in this vector */
+  public FeatureVec sqr()
+  {
+    return new FeatureVec(this)._sqr();
+  }
+
+  /** @return new vector with values equal to the absolute value of this vector */
+  public FeatureVec abs()
+  {
+    return new FeatureVec(this)._abs();
+  }
+
+  /** @return new vector representing sum of this vector and given vector */
+  public FeatureVec add(FeatureVec fv)
+  {
+    return new FeatureVec(this)._add(fv);
+  }
+
+  /** @return new vector with x added to each value in this vector */
+  public FeatureVec add(double x)
+  {
+    return new FeatureVec(this)._add(x);
+  }
+
+  public FeatureVec sub(FeatureVec fv)
+  {
+    return new FeatureVec(this)._sub(fv);
+  }
+
+  public FeatureVec sub(double x)
+  {
+    return new FeatureVec(this)._sub(x);
+  }
+
+  public FeatureVec mul(FeatureVec fv)
+  {
+    return new FeatureVec(this)._mul(fv);
+  }
+
+  public FeatureVec mul(double x)
+  {
+    return new FeatureVec(this)._mul(x);
+  }
+
+  public FeatureVec div(FeatureVec fv)
+  {
+    return new FeatureVec(this)._div(fv);
+  }
+
+  public FeatureVec div(double x)
+  {
+    return new FeatureVec(this)._div(x);
+  }
+
+  public double dot(FeatureVec fv)
+  {
+    int n = getNumDims();
+    assert n == fv.getNumDims();
+    double ret = 0.0;
+    for (int i = 0; i < n; i++)
+      ret += vec[i] * fv.vec[i];
+    return ret;
+  }
+
+  /**
+   * @return projection of this vector onto the given vector
+   */
+  public FeatureVec projv(FeatureVec fv)
+  {
+    double a = this.dot(fv);
+    double b = fv.dot(fv);
+    return fv._mul(a / b);
+  }
+
+  /**
+   * @return projection of this vector onto the vector a->p
+   */
+  public FeatureVec projv(FeatureVec a, FeatureVec b)
+  {
+    return this.sub(b).projv(a.sub(b))._add(b);
+  }
+
+  /**
+   * @return position along the given vector (after normalization) of the projection. So the projection can be recovered
+   *         by a*v/|v| if 'a' is the return value and 'v' is the given vector.
+   */
+  public double projLen(FeatureVec fv)
+  {
+    return this.dot(fv) / fv.norm();
+  }
+
+  /** @return distance from this vector to its projection on the given vector */
+  public double projDist(FeatureVec fv)
+  {
+    return Math.sqrt(projDist2(fv));
+  }
+
+  /** @return squared distance from this vector to its projection on the given vector */
+  public double projDist2(FeatureVec fv)
+  {
+    return this.dist2(this.projv(fv));
+  }
+
+  /** @return squared L2 norm of this vector */
+  public double norm2()
+  {
+    int n = getNumDims();
+    double ret = 0.0;
+    for (int i = 0; i < n; i++)
+      ret += vec[i] * vec[i];
+    return ret;
+  }
+
+  /** @return L2 norm of this vector */
+  public double norm()
+  {
+    return Math.sqrt(norm2());
+  }
+
+  /** in-place square root */
+  public FeatureVec _sqrt()
+  {
+    for (int i = 0; i < vec.length; i++)
+      vec[i] = Math.sqrt(vec[i]);
+    return this;
+  }
+
+  /** @return vector with each dimension equal to the square root of the value in this vector */
+  public FeatureVec sqrt()
+  {
+    return new FeatureVec(this)._sqrt();
+  }
+
+  /** @return this vector after it has been normalize to be a unit vector */
+  public FeatureVec _unit()
+  {
+    return _div(norm());
+  }
+
+  /** @return unit vector in the direction of this vector */
+  public FeatureVec unit()
+  {
+    return div(norm());
+  }
+
+  /** @return vector with each dimension equal to the smaller of this vector and the given vector */
+  public FeatureVec min(FeatureVec fv)
+  {
+    return new FeatureVec(this)._min(fv);
+  }
+
+  /** in-place minimum value selection */
+  public FeatureVec _min(FeatureVec fv)
+  {
+    int d = getNumDims();
+    assert (fv.getNumDims() == d) : String.format("dimensionality: local=%d  param=%d", d, fv.getNumDims());
+    for (int i = 0; i < d; i++)
+      vec[i] = Math.min(vec[i], fv.get(i));
+    return this;
+  }
+
+  /** @return smallest value across all of the dimensions */
+  public double min()
+  {
+    double x = vec[0];
+    for (int i = 1; i < vec.length; i++)
+      x = Math.min(x, vec[i]);
+    return x;
+  }
+
+  /** @return true if all dimensions are smaller than the corresponding value in the given vector */
+  public boolean lessThan(FeatureVec fv)
+  {
+    for (int d = 0; d < vec.length; d++)
+      if (vec[d] >= fv.get(d))
+        return false;
+    return true;
+  }
+
+  /** @return true if all dimensions are smaller than or equal to the corresponding value in the given vector */
+  public boolean leqThan(FeatureVec fv)
+  {
+    for (int d = 0; d < vec.length; d++)
+      if (vec[d] > fv.get(d))
+        return false;
+    return true;
+  }
+
+  /** @return true if all dimensions are larger than or equal to the corresponding value in the given vector */
+  public boolean geqThan(FeatureVec fv)
+  {
+    for (int d = 0; d < vec.length; d++)
+      if (vec[d] < fv.get(d))
+        return false;
+    return true;
+  }
+
+  /** @return true if all dimensions are larger than the corresponding value in the given vector */
+  public boolean greaterThan(FeatureVec fv)
+  {
+    for (int d = 0; d < vec.length; d++)
+      if (vec[d] <= fv.get(d))
+        return false;
+    return true;
+  }
+
+  /** @return true if all dimensions are smaller than the given value */
+  public boolean lessThan(double x)
+  {
+    for (int d = 0; d < vec.length; d++)
+      if (vec[d] >= x)
+        return false;
+    return true;
+  }
+
+  /** @return true if all dimensions are smaller than or equal to the given value */
+  public boolean leqThan(double x)
+  {
+    for (int d = 0; d < vec.length; d++)
+      if (vec[d] > x)
+        return false;
+    return true;
+  }
+
+  /** @return true if all dimensions are larger than or equal to the given value */
+  public boolean geqThan(double x)
+  {
+    for (int d = 0; d < vec.length; d++)
+      if (vec[d] < x)
+        return false;
+    return true;
+  }
+
+  /** @return true if all dimensions are larger than the given value */
+  public boolean greaterThan(double x)
+  {
+    for (int d = 0; d < vec.length; d++)
+      if (vec[d] <= x)
+        return false;
+    return true;
+  }
+
+  /** @return largest value across all of the dimensions */
+  public double max()
+  {
+    double x = vec[0];
+    for (int i = 1; i < vec.length; i++)
+      x = Math.max(x, vec[i]);
+    return x;
+  }
+
+  public FeatureVec max(FeatureVec fv)
+  {
+    FeatureVec ret = new FeatureVec(this);
+    return ret._max(fv);
+  }
+
+  public FeatureVec _max(FeatureVec fv)
+  {
+    int d = getNumDims();
+    assert (fv.getNumDims() == d);
+    for (int i = 0; i < d; i++)
+      vec[i] = Math.max(vec[i], fv.get(i));
+    return this;
+  }
+
+  public FeatureVec min(double x)
+  {
+    int d = getNumDims();
+    FeatureVec ret = new FeatureVec(d);
+    for (int i = 0; i < d; i++)
+      ret.set(i, Math.min(vec[i], d));
+    return ret;
+  }
+
+  public FeatureVec max(double x)
+  {
+    int d = getNumDims();
+    FeatureVec ret = new FeatureVec(d);
+    for (int i = 0; i < d; i++)
+      ret.set(i, Math.max(vec[i], x));
+    return ret;
+  }
+
+  /**
+   * add the given value as an extra dimension
+   * 
+   * @param x value of the new dimension
+   * @return this vector
+   */
+  public FeatureVec _appendDim(double x)
+  {
+    double[] vec2 = new double[vec.length + 1];
+    Library.copy(vec, vec2);
+    vec2[vec.length] = x;
+    vec = vec2;
+    return this;
+  }
+
+  /**
+   * @return new vector with the given value appended as an extra dimension
+   */
+  public FeatureVec appendDim(double x)
+  {
+    return new FeatureVec(this)._appendDim(x);
+  }
+
+  /**
+   * add the given values as extra dimensions
+   * 
+   * @param x values of the new dimensions
+   * @return this vector
+   */
+  public FeatureVec _appendDim(double[] x)
+  {
+    double[] vec2 = new double[vec.length + x.length];
+    Library.copy(vec, vec2);
+    Library.copy(x, vec2, 0, vec.length, x.length);
+    vec = vec2;
+    return this;
+  }
+
+  /**
+   * @return new vector with the given values appended as extra dimensions
+   */
+  public FeatureVec appendDim(double[] x)
+  {
+    return new FeatureVec(this)._appendDim(x);
+  }
+
+  /**
+   * add the given values as extra dimensions
+   * 
+   * @param x vector to append
+   * @return this vector
+   */
+  public FeatureVec _appendDim(FeatureVec x)
+  {
+    return this._appendDim(x.get());
+  }
+
+  /**
+   * @return new vector with the given vector appended
+   */
+  public FeatureVec appendDim(FeatureVec x)
+  {
+    return new FeatureVec(this)._appendDim(x);
+  }
+
+  @Override
+  /** @return hashcode based on the data in this vector (not including the time stamp) */
+  public int hashCode()
+  {
+    if (bDataComp)
+      return Arrays.hashCode(vec);
+    return super.hashCode();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (bDataComp) {
+      FeatureVec fv = (FeatureVec) o;
+      int D = getNumDims();
+      if (D != fv.getNumDims())
+        return false;
+      for (int d = 0; d < D; d++)
+        if (Math.abs(vec[d] - fv.get(d)) > 1e-12)
+          return false;
+      return true;
+    } else
+      return super.equals(o);
+  }
+
+  public String toString()
+  {
+    StringBuffer sb = new StringBuffer();
+    sb.append("[FV:");
+    for (int i = 0; i < vec.length; i++)
+      sb.append(String.format(" %.3f", vec[i]));
+    sb.append("]");
+    return sb.toString();
+  }
+
+  /** Convert the first dimension of the given list into an array */
+  public static double[] toArray1D(List<? extends FeatureVec> data)
+  {
+    double[] a = new double[data.size()];
+    for (int i = 0; i < a.length; i++)
+      a[i] = data.get(i).get(0);
+    return a;
+  }
+
+  /**
+   * Convert the data in the given list to a 2D array (DxN). Each row corresponds to a different dimension.
+   */
+  public static double[][] toSeqArray(List<? extends FeatureVec> data)
+  {
+    int N = data.size();
+    int D = data.get(0).getNumDims();
+    double[][] a = new double[D][N];
+    for (int i = 0; i < N; i++) {
+      FeatureVec fv = data.get(i);
+      for (int d = 0; d < D; d++)
+        a[d][i] = fv.get(d);
+    }
+    return a;
+  }
+
+  /**
+   * Convert the data in the given list to a 2D array (NxD). Rows are feature vectors.
+   */
+  public static double[][] toFrameArray(List<? extends FeatureVec> data)
+  {
+    int N = data.size();
+    double[][] a = new double[N][];
+    for (int i = 0; i < N; i++)
+      a[i] = data.get(i).toArray();
+    return a;
+  }
+}
