@@ -409,7 +409,7 @@ public class Shiller
       seq.addData(currentValue, data.getTimeMS(i + 1));
     }
 
-    return (Sequence) seq.div(principal);
+    return seq._div(principal);
   }
 
   /**
@@ -516,7 +516,7 @@ public class Shiller
       seq.addData(adjustedValue, data.getTimeMS(i + 1));
     }
 
-    return (Sequence) seq.div(principal);
+    return seq._div(principal);
   }
 
   public Sequence calcMomentumReturnSeq(int numMonths, Sequence... seqs)
@@ -757,7 +757,7 @@ public class Shiller
     for (int i = 0; i < n; i++)
       cum[i] = 1.0 - cum[i];
 
-    return h.appendDims(new Sequence(cum));
+    return h._appendDims(new Sequence(cum));
   }
 
   public static Sequence appendROISeq(Sequence a, Sequence b)

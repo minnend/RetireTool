@@ -2,7 +2,6 @@ package org.minnen.retiretool;
 
 import java.util.*;
 
-import org.minnen.retiretool.Datum;
 import org.minnen.retiretool.FeatureVec;
 
 /**
@@ -10,13 +9,11 @@ import org.minnen.retiretool.FeatureVec;
  * 
  * Each sequence has a specific frequency and the absolute time of every data point can be computed.
  */
-public class Sequence extends Datum implements Iterable<FeatureVec>
+public class Sequence implements Iterable<FeatureVec>
 {
-  public static final String KeyName    = "Seq.Name";
-  public static final String KeyStartMS = "Seq.StartMS";
-
   /** data stored in this data set */
-  private List<FeatureVec>   data;
+  private List<FeatureVec> data;
+  private String           name;
 
   /**
    * Create an anonymous sequence at 1Hz
@@ -37,45 +34,10 @@ public class Sequence extends Datum implements Iterable<FeatureVec>
     init();
   }
 
-  /**
-   * Create a named sequence with the given sampling frequency
-   * 
-   * @param name name of this sequence
-   * @param msStart start time (in ms) of the sequence
-   */
-  public Sequence(String name, long msStart)
-  {
-    setName(name);
-    setStartMS(msStart);
-    init();
-  }
-
   /** initialize this sequence (constructors call this function) */
   protected void init()
   {
     data = new ArrayList<FeatureVec>();
-  }
-
-  /**
-   * Duplicate the given sequence
-   * 
-   * @param seq sequence to dup
-   */
-  public Sequence(Sequence seq)
-  {
-    this(seq.getName(), seq);
-  }
-
-  /**
-   * Duplicate the given sequence, but give the dup a new name
-   * 
-   * @param name new name
-   * @param seq sequence to duplicate
-   */
-  public Sequence(String name, Sequence seq)
-  {
-    copyFrom(seq);
-    copyMeta(seq);
   }
 
   /**
@@ -103,15 +65,12 @@ public class Sequence extends Datum implements Iterable<FeatureVec>
 
   public String getName()
   {
-    return getMeta(KeyName, "Anonymous");
+    return name;
   }
 
   public void setName(String name)
   {
-    if (name != null)
-      setMeta(KeyName, name);
-    else
-      removeMeta(KeyName);
+    this.name = name;
   }
 
   public String toString()
@@ -178,18 +137,16 @@ public class Sequence extends Datum implements Iterable<FeatureVec>
     return data.size();
   }
 
-  /** set the start time (ms since epoch) for this sequence */
-  public void setStartMS(long ms)
-  {
-    setMeta(KeyStartMS, ms);
-  }
-
   /**
    * @return start time (time of first sample in ms) of this sequence
    */
   public long getStartMS()
   {
-    return getMeta(KeyStartMS, Library.AppStartTime);
+    if (isEmpty()) {
+      return Library.TIME_ERROR;
+    } else {
+      return data.get(0).getTime();
+    }
   }
 
   /**
@@ -219,18 +176,9 @@ public class Sequence extends Datum implements Iterable<FeatureVec>
     return fv.getTime();
   }
 
-  /** Clear all dates, effectively forcing this seq to appear uniformly sampled */
-  public void removeDates()
-  {
-    for (FeatureVec fv : data)
-      fv.removeTime();
-  }
-
   public void setDate(int ix, long ms)
   {
     data.get(ix).setTime(ms);
-    if (ix == 0)
-      setStartMS(ms);
   }
 
   /** @return true if this data set has no data */
@@ -240,22 +188,24 @@ public class Sequence extends Datum implements Iterable<FeatureVec>
   }
 
   /**
-   * @return new sequence formed from the concatenation of this sequence and the given sequence in different dimensions
-   *         (does not modify this sequence).
+   * Append the vectors in the given seq to each vector in this sequence.
+   * 
+   * @param seq holds vectors to append
+   * @return this Sequence
    */
-  public Sequence appendDims(Sequence seq)
+  public Sequence _appendDims(Sequence seq)
   {
-    Sequence ret = new Sequence(appendDims(seq));
-    ret.copyMeta(seq);
-    return ret;
+    assert length() == seq.length();
+    for (int i = 0; i < length(); ++i) {
+      data.get(i)._appendDims(seq.get(i));
+    }
+    return this;
   }
 
   public int addData(FeatureVec value)
   {
     assert (value != null);
     data.add(value);
-    if (data.size() == 1 && value.hasTime())
-      setStartMS(value.getTime());
     return data.size() - 1;
   }
 
@@ -294,7 +244,7 @@ public class Sequence extends Datum implements Iterable<FeatureVec>
    * @param x value to divide by
    * @return this data set
    */
-  public Sequence div(double x)
+  public Sequence _div(double x)
   {
     for (FeatureVec fv : data)
       fv._div(x);
@@ -339,8 +289,6 @@ public class Sequence extends Datum implements Iterable<FeatureVec>
   /** add all data from the given sequence to this sequence */
   public void append(Sequence seq)
   {
-    if (isEmpty())
-      setStartMS(seq.getStartMS());
     data.addAll(seq.data);
   }
 
@@ -353,13 +301,12 @@ public class Sequence extends Datum implements Iterable<FeatureVec>
    */
   public Sequence extractDims(int... dims)
   {
-    Sequence ret = new Sequence(getName(), getStartMS());
+    Sequence ret = new Sequence(getName());
 
     // loop through remaining time steps
     int n = size();
     for (int i = 0; i < n; i++)
       ret.addData(get(i).selectDims(dims));
-    ret.copyMeta(this);
     return ret;
   }
 

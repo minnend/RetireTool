@@ -3,17 +3,11 @@ package org.minnen.retiretool;
 import java.util.*;
 
 /** represents a vector in R^n */
-public class FeatureVec extends Datum
+public class FeatureVec
 {
-  public static final String KeyTimestamp = "FV.TimeStamp";
-
-  /**
-   * true = compare data for hashCode and equality test; false = defer to Object's implementation (memory based)
-   */
-  public static boolean      bDataComp    = true;
-
   /** actual data */
-  protected double[]         vec;
+  private double[] vec;
+  private long     timestamp = Library.TIME_ERROR;
 
   /**
    * Create a feature vec from the double array
@@ -134,26 +128,19 @@ public class FeatureVec extends Datum
   /** set the time stamp of this point (ms) */
   public void setTime(long ms)
   {
-    setMeta(KeyTimestamp, ms);
-  }
-
-  /** remove the time stamp for this point */
-  public void removeTime()
-  {
-
-    removeMeta(KeyTimestamp);
+    timestamp = ms;
   }
 
   /** @return time stamp for this point (ms) */
   public long getTime()
   {
-    return getMeta(KeyTimestamp, Library.TIME_ERROR);
+    return timestamp;
   }
 
   /** @return true if the timestamp for this point is valid */
   public boolean hasTime()
   {
-    return containsMeta(KeyTimestamp);
+    return timestamp != Library.TIME_ERROR;
   }
 
   /** @return true if no dimensions are NaN */
@@ -208,14 +195,12 @@ public class FeatureVec extends Datum
    */
   public void copyFrom(FeatureVec fv)
   {
-    super.copyFrom(fv);
     int n = fv.getNumDims();
     if (vec == null || getNumDims() != n)
       vec = new double[n];
     for (int i = 0; i < n; i++)
       vec[i] = fv.get(i);
-    if (fv.hasTime())
-      setTime(fv.getTime());
+    timestamp = fv.timestamp;
   }
 
   /**
@@ -818,6 +803,30 @@ public class FeatureVec extends Datum
   }
 
   /**
+   * Add the values in the given vector as extra dimensions.
+   * 
+   * @param x vector to add
+   * @return this vector
+   */
+  public FeatureVec _appendDims(FeatureVec x)
+  {
+    int D = x.getNumDims();
+    double[] vec2 = new double[vec.length + D];
+    Library.copy(vec, vec2);
+    Library.copy(x.vec, vec2, 0, vec.length, D);
+    vec = vec2;
+    return this;
+  }
+
+  /**
+   * @return new vector with the given vectorappended as extra dimensions
+   */
+  public FeatureVec appendDims(FeatureVec x)
+  {
+    return new FeatureVec(this)._appendDims(x);
+  }
+
+  /**
    * add the given values as extra dimensions
    * 
    * @param x values of the new dimensions
@@ -857,31 +866,6 @@ public class FeatureVec extends Datum
   public FeatureVec appendDim(FeatureVec x)
   {
     return new FeatureVec(this)._appendDim(x);
-  }
-
-  @Override
-  /** @return hashcode based on the data in this vector (not including the time stamp) */
-  public int hashCode()
-  {
-    if (bDataComp)
-      return Arrays.hashCode(vec);
-    return super.hashCode();
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (bDataComp) {
-      FeatureVec fv = (FeatureVec) o;
-      int D = getNumDims();
-      if (D != fv.getNumDims())
-        return false;
-      for (int d = 0; d < D; d++)
-        if (Math.abs(vec[d] - fv.get(d)) > 1e-12)
-          return false;
-      return true;
-    } else
-      return super.equals(o);
   }
 
   public String toString()
