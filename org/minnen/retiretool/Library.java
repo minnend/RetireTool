@@ -333,4 +333,20 @@ public final class Library
       Arrays.fill(a[i], init);
     return a;
   }
+
+  /**
+   * Try to parse the string as a double.
+   * 
+   * @param s string to parse
+   * @param failValue return this value if parse fails
+   * @return numeric value of s or failValue if parsing fails
+   */
+  public static double tryParse(String s, double failValue)
+  {
+    try {
+      return Double.parseDouble(s);
+    } catch (NumberFormatException nfe) {
+      return failValue;
+    }
+  }
 }

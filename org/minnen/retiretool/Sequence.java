@@ -239,6 +239,19 @@ public class Sequence implements Iterable<FeatureVec>
   }
 
   /**
+   * Multiply each element of each frame by the given value.
+   * 
+   * @param x value to divide by
+   * @return this data set
+   */
+  public Sequence _mul(double x)
+  {
+    for (FeatureVec fv : data)
+      fv._mul(x);
+    return this;
+  }
+
+  /**
    * Divide each element of each frame by the given value.
    * 
    * @param x value to divide by
@@ -284,6 +297,32 @@ public class Sequence implements Iterable<FeatureVec>
       return a;
     else
       return a + 1;
+  }
+
+  /**
+   * @return index of the data point at or before the given time (if possible).
+   */
+  public int getIndexAtOrBefore(long ms)
+  {
+    int i = getClosestIndex(ms);
+    if (i > 0 && ms < get(i).getTime()) {
+      --i;
+    }
+    assert getTimeMS(i) <= ms || i == 0;
+    return i;
+  }
+
+  /**
+   * @return index of the data point at or before the given time (if possible).
+   */
+  public int getIndexAtOrAfter(long ms)
+  {
+    int i = getClosestIndex(ms);
+    if (i < length() - 1 && ms > get(i).getTime()) {
+      ++i;
+    }
+    assert getTimeMS(i) >= ms || i == length() - 1;
+    return i;
   }
 
   /** add all data from the given sequence to this sequence */
@@ -353,5 +392,47 @@ public class Sequence implements Iterable<FeatureVec>
   public double[] extractDim(int iDim)
   {
     return extractDim(iDim, 0, size());
+  }
+
+  /** @return index in data sequence for the given year and month (January == 1). */
+  public int getIndexForDate(int year, int month)
+  {
+    long ms = Library.getTime(1, month, year);
+    return getClosestIndex(ms);
+  }
+
+  /** @return subsequence with numElements starting at index iStart. */
+  public Sequence subseq(int iStart, int numElements)
+  {
+    assert iStart >= 0 && numElements > 0;
+    Sequence seq = new Sequence(name);
+    for (int i = 0; i < numElements; ++i) {
+      seq.addData(get(iStart + i));
+    }
+    assert seq.length() == numElements;
+    return seq;
+  }
+
+  /** @return smallest subsequence that contains start and end times. */
+  public Sequence subseq(long startMs, long endMs)
+  {
+    assert startMs <= endMs;
+    int i = getIndexAtOrBefore(startMs);
+    int j = getIndexAtOrAfter(endMs);
+    assert i <= j;
+    return subseq(i, j - i + 1);
+  }
+
+  /** @return new sequence equal to this sequence divided by the given sequence (component-wise). */
+  public Sequence divide(Sequence divisor)
+  {
+    assert length() == divisor.length();
+    Sequence seq = new Sequence(getName() + " / " + divisor.getName());
+    for (int i = 0; i < length(); ++i) {
+      FeatureVec x = get(i);
+      FeatureVec y = divisor.get(i);
+      seq.addData(x.div(y), getTimeMS(i));
+    }
+    return seq;
   }
 }
