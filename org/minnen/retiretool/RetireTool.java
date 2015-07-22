@@ -401,6 +401,7 @@ public class RetireTool
     Sequence momentum = Strategy.calcMomentumReturnSeq(nMonthsMomentum, snp, bonds);
     Sequence sma = Strategy.calcSMAReturnSeq(nMonthsSMA, prices, snp, bonds);
     Sequence perfect = Strategy.calcPerfectReturnSeq(snp, bonds);
+    Sequence raa = Strategy.calcMixedReturnSeq(new Sequence[] { sma, momentum }, new double[] { 50, 50 }, 12);
 
     assert snp.length() == N;
     assert snpNoDiv.length() == N;
@@ -410,6 +411,7 @@ public class RetireTool
     assert momentum.length() == N;
     assert sma.length() == N;
     assert perfect.length() == N;
+    assert raa.length() == N;
 
     // Sequence telltale = divide(snp, bonds);
     // saveLineChart(file, "Telltale Chart: S&P vs. Bonds", 1200, 800, false, telltale);
@@ -422,6 +424,7 @@ public class RetireTool
     double momentumCAGR = RetireTool.getAnnualReturn(momentum.getLast(0), N);
     double smaCAGR = RetireTool.getAnnualReturn(sma.getLast(0), N);
     double perfectCAGR = RetireTool.getAnnualReturn(perfect.getLast(0), N);
+    double raaCAGR = RetireTool.getAnnualReturn(raa.getLast(0), N);
 
     snp.setName(String.format("Stocks (%.2f%%)", snpCAGR));
     snpNoDiv.setName(String.format("Stocks w/o Dividend Reinvestment (%.2f%%)", snpNoDivCAGR));
@@ -431,8 +434,9 @@ public class RetireTool
     momentum.setName(String.format("Momentum-%d (%.2f%%)", nMonthsMomentum, momentumCAGR));
     sma.setName(String.format("SMA-%d (%.2f%%)", nMonthsSMA, smaCAGR));
     perfect.setName(String.format("Perfect (%.2f%%)", perfectCAGR));
+    raa.setName(String.format("RAA (%.2f%%)", raaCAGR));
 
-    saveLineChart(file, "Cumulative Market Returns", 1200, 600, true, sma, momentum, snp, mixed, bonds, bondsHold);
+    saveLineChart(file, "Cumulative Market Returns", 1200, 600, true, sma, raa, momentum, snp, mixed, bonds, bondsHold);
   }
 
   public static void genStockBondMixSweepChart(Shiller shiller, Inflation inflation, File file) throws IOException
