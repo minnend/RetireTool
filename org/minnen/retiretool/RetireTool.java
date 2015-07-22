@@ -388,6 +388,7 @@ public class RetireTool
 
     int nMonthsSMA = 10;
     int nMonthsMomentum = 12;
+    int rebalanceMonths = 6;
 
     Sequence prices = shiller.getStockData();
 
@@ -395,9 +396,10 @@ public class RetireTool
     Sequence bondsHold = shiller.calcBondReturnSeqHold(iStart, iEnd, inflation);
     Sequence snp = shiller.calcSnpReturnSeq(iStart, iEnd - iStart, DividendMethod.MONTHLY, inflation);
     Sequence snpNoDiv = shiller.calcSnpReturnSeq(iStart, iEnd - iStart, DividendMethod.NO_REINVEST, inflation);
-    Sequence mixed = shiller.calcMixedReturnSeq(iStart, iEnd - iStart, percentStock, percentBonds, 6, inflation);
+    Sequence mixed = shiller.calcMixedReturnSeq(iStart, iEnd - iStart, percentStock, percentBonds, rebalanceMonths,
+        inflation);
     Sequence momentum = Strategy.calcMomentumReturnSeq(nMonthsMomentum, snp, bonds);
-    Sequence sma = Strategy.calcSMAReturnSeq(iStart, nMonthsSMA, prices, snp, bonds);
+    Sequence sma = Strategy.calcSMAReturnSeq(nMonthsSMA, prices, snp, bonds);
     Sequence perfect = Strategy.calcPerfectReturnSeq(snp, bonds);
 
     assert snp.length() == N;
@@ -433,6 +435,34 @@ public class RetireTool
     saveLineChart(file, "Cumulative Market Returns", 1200, 600, true, sma, momentum, snp, mixed, bonds, bondsHold);
   }
 
+  public static void genStockBondMixSweepChart(Shiller shiller, Inflation inflation, File file) throws IOException
+  {
+    int iStart = 0;
+    int iEnd = shiller.length() - 1;
+
+    // iStart = getIndexForDate(1900, 1);
+    // iEnd = getIndexForDate(2010, 1);
+
+    int N = iEnd - iStart + 1;
+    Sequence snp = shiller.calcSnpReturnSeq(iStart, iEnd - iStart, DividendMethod.MONTHLY, inflation);
+    Sequence bonds = shiller.calcBondReturnSeqRebuy(iStart, iEnd, inflation);
+
+    int[] percentStock = new int[] { 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0 };
+    int rebalanceMonths = 6;
+
+    Sequence[] seqs = new Sequence[percentStock.length];
+    for (int i = 0; i < percentStock.length; ++i) {
+      Sequence mix = Strategy.calcMixedReturnSeq(new Sequence[] { snp, bonds }, new double[] { percentStock[i],
+          100 - percentStock[i] }, rebalanceMonths);
+
+      double cagr = RetireTool.getAnnualReturn(mix.getLast(0), N);
+      mix.setName(String.format("Mix-[%d/%d] (%.2f%%)", percentStock[i], 100 - percentStock[i], cagr));
+      seqs[i] = mix;
+    }
+
+    saveLineChart(file, "Cumulative Market Returns: Stock/Bond Mix", 1200, 600, true, seqs);
+  }
+
   public static void genSMASweepChart(Shiller shiller, Inflation inflation, File file) throws IOException
   {
     int iStart = 0;
@@ -450,13 +480,13 @@ public class RetireTool
 
     Sequence[] seqs = new Sequence[months.length];
     for (int i = 0; i < months.length; ++i) {
-      Sequence sma = Strategy.calcSMAReturnSeq(iStart, months[i], prices, snp, bonds);
+      Sequence sma = Strategy.calcSMAReturnSeq(months[i], prices, snp, bonds);
       double cagr = RetireTool.getAnnualReturn(sma.getLast(0), N);
       sma.setName(String.format("SMA-%d (%.2f%%)", months[i], cagr));
       seqs[i] = sma;
     }
 
-    saveLineChart(file, "Cumulative Market Returns", 1200, 600, true, seqs);
+    saveLineChart(file, "Cumulative Market Returns: SMA Strategy", 1200, 600, true, seqs);
   }
 
   public static void genMomentumSweepChart(Shiller shiller, Inflation inflation, File file) throws IOException
@@ -481,7 +511,7 @@ public class RetireTool
       seqs[i] = mom;
     }
 
-    saveLineChart(file, "Cumulative Market Returns", 1200, 600, true, seqs);
+    saveLineChart(file, "Cumulative Market Returns: Momentum Strategy", 1200, 600, true, seqs);
   }
 
   public static void genReturnComparison(Shiller shiller, int numMonths, Inflation inflation, File file)
@@ -636,6 +666,7 @@ public class RetireTool
     genReturnChart(shiller, Inflation.Ignore, new File("g:/cumulative-returns.html"));
     genSMASweepChart(shiller, Inflation.Ignore, new File("g:/sma-sweep.html"));
     genMomentumSweepChart(shiller, Inflation.Ignore, new File("g:/momentum-sweep.html"));
+    genStockBondMixSweepChart(shiller, Inflation.Ignore, new File("g:/stock-bond-mix-sweep.html"));
     System.exit(0);
 
     // int retireAge = 65;

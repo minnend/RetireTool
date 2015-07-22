@@ -305,7 +305,6 @@ public class Shiller extends Sequence
   /**
    * Calculates bond ROI for the given range using the rebuy approach.
    * 
-   * <p>
    * Each month, the existing bond is sold and a new one is purchased.
    * 
    * @param iStart start simulation at this index in the data sequence
@@ -397,6 +396,19 @@ public class Shiller extends Sequence
     return seq;
   }
 
+  /**
+   * Calculate cumulative returns for mixed stock + bonds investment strategy.
+   * 
+   * In this model, stock dividends are used to buy stock and/or bonds to help maintain target allocation percentages.
+   * 
+   * @param iStart index of month for first investment
+   * @param nMonths number of months to run simulation
+   * @param targetPercentStock target percent for stocks
+   * @param targetPercentBonds target percent for bonds
+   * @param rebalanceMonths rebalance every N months (zero for never)
+   * @param inflationAccounting how should inflation be handled?
+   * @return Sequence containing cumulative returns for the investment mix.
+   */
   public Sequence calcMixedReturnSeq(int iStart, int nMonths, double targetPercentStock, double targetPercentBonds,
       int rebalanceMonths, Inflation inflationAccounting)
   {
@@ -411,31 +423,29 @@ public class Shiller extends Sequence
     }
 
     Sequence bondData = getBondData();
-    Sequence seq = new Sequence("Mixed");
+    Sequence seq = new Sequence("Mixed Stocks & Bonds");
 
     final double principal = 1000.0;
-
-    double cash = principal;
-    double bondValue = 0.0;
-    double shares = 0.0;
-    seq.addData(cash, getTimeMS(iStart));
+    double stockValue = principal * targetPercentStock / 100.0;
+    double bondValue = principal * targetPercentBonds / 100.0;
+    double shares = stockValue / get(iStart, PRICE);
+    double cash = principal - (stockValue + bondValue);
+    seq.addData(principal, getTimeMS(iStart));
     for (int i = iStart; i < iStart + nMonths; ++i) {
       double stockPrice = get(i + 1, PRICE);
-      double stockValue = shares * stockPrice;
-      double total = bondValue + stockValue + cash;
-      // System.out.printf("%d: [%.2f, %.2f, %.2f]  [%.1f, %.1f, %.1f]  %.2f\n", i, stockValue, bondValue, cash, 100.0
-      // * stockValue / total, 100.0 * bondValue / total, 100.0 * cash / total, total);
+      stockValue = shares * stockPrice;
 
       // Collect dividends from stocks for previous month.
-      double divCash = shares * get(i, DIV);
-      cash += divCash;
+      cash += shares * get(i, DIV);
 
       // Update bond value for this month.
       if (bondValue > 0.0) {
         Bond bond = new Bond(bondData, bondValue, i);
         bondValue = bond.price(i + 1);
       }
-      total = bondValue + stockValue + cash;
+      double total = bondValue + stockValue + cash;
+      // System.out.printf("%d: [%.2f, %.2f, %.2f]  [%.1f, %.1f, %.1f]  %.2f\n", i, stockValue, bondValue, cash, 100.0
+      // * stockValue / total, 100.0 * bondValue / total, 100.0 * cash / total, total);
 
       // Rebalance as requested.
       int months = i - iStart;
@@ -477,8 +487,8 @@ public class Shiller extends Sequence
       }
       total = bondValue + stockValue + cash;
 
-      // System.out.printf("      [%.2f, %.2f, %.2f]  [%.1f, %.1f, %.1f]  %.2f\n", stockValue, bondValue, cash, 100.0
-      // * stockValue / total, 100.0 * bondValue / total, 100.0 * cash / total, total);
+//      System.out.printf("      [%.2f, %.2f, %.2f]  [%.1f, %.1f, %.1f]  %.2f\n", stockValue, bondValue, cash, 100.0
+//          * stockValue / total, 100.0 * bondValue / total, 100.0 * cash / total, total);
 
       // Add data point for current value.
       double adjustedValue = adjustValue(total, i + 1, iStart, inflationAccounting);

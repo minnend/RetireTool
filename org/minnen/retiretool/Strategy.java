@@ -45,15 +45,13 @@ public class Strategy
   /**
    * Invest in risky asset when above SMA, otherwise safe asset.
    * 
-   * @param iStart index of first month to invest
    * @param numMonthsForAverage calculate SMA over past N months
    * @param prices monthly price used for SMA and signal
    * @param risky cumulative returns for risky asset
    * @param safe cumulative returns for safe asset
    * @return sequence of returns using the above/below-SMA strategy
    */
-  public static Sequence calcSMAReturnSeq(int iStart, int numMonthsForAverage, Sequence prices, Sequence risky,
-      Sequence safe)
+  public static Sequence calcSMAReturnSeq(int numMonthsForAverage, Sequence prices, Sequence risky, Sequence safe)
   {
     assert risky.length() == safe.length();
 
@@ -112,5 +110,55 @@ public class Strategy
       perfect.addData(balance, seqs[0].getTimeMS(i));
     }
     return perfect;
+  }
+
+  /**
+   * Calculate returns as a mixed of other returns.
+   * 
+   * @param assets cumulative returns for each asset.
+   * @param targetPercents target percentage for each asset (will be normalized).
+   * @param rebalanceMonths rebalance every N months (zero for never).
+   * @return sequence of returns using the mixed strategy.
+   */
+  public static Sequence calcMixedReturnSeq(Sequence[] assets, double[] targetPercents, int rebalanceMonths)
+  {
+    final int numAssets = assets.length;
+    assert numAssets == targetPercents.length;
+
+    // Normalize target percentages to sum to 1.0.
+    double targetSum = 0.0;
+    for (int i = 0; i < numAssets; ++i) {
+      targetSum += targetPercents[i];
+    }
+    assert targetSum > 0.0;
+    for (int i = 0; i < numAssets; ++i) {
+      targetPercents[i] /= targetSum;
+    }
+
+    // Initialize asset values to correct percentage.
+    double[] value = new double[numAssets];
+    for (int i = 0; i < numAssets; ++i) {
+      value[i] = targetPercents[i];
+    }
+
+    // Compute returns for each class and rebalance as requested.
+    final int N = assets[0].length();
+    Sequence returns = new Sequence("Mixed");
+    returns.addData(1.0, assets[0].getStartMS());
+    for (int i = 1; i < N; ++i) {
+      double balance = 0.0;
+      for (int j = 0; j < numAssets; ++j) {
+        value[j] *= RetireTool.getReturn(assets[j], i - 1, i);
+        balance += value[j];
+      }
+      returns.addData(balance, assets[0].getTimeMS(i));
+
+      if (rebalanceMonths > 0 && i % rebalanceMonths == 0) {
+        for (int j = 0; j < numAssets; ++j) {
+          value[j] = balance * targetPercents[j];
+        }
+      }
+    }
+    return returns;
   }
 }
