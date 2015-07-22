@@ -206,7 +206,8 @@ public class RetireTool
     }
   }
 
-  public static void printWithdrawalLikelihoods(Shiller shiller, int numYears, double expenseRatio)
+  public static void printWithdrawalLikelihoods(Shiller shiller, Sequence cumulativeReturns, int numYears,
+      double expenseRatio)
   {
     System.out.printf("Withdrawal Likelihoods over %d years:\n", numYears);
     double[] wrates = new double[] { 2.0, 2.5, 3.0, 3.5, 3.75, 4.0, 4.25, 4.5, 5.0 };
@@ -221,7 +222,8 @@ public class RetireTool
       for (int i = 0; i < nData; i++) {
         if (i + months >= nData)
           break; // not enough data
-        double endBalance = shiller.calcEndBalance(principal, salary, expenseRatio, true, 0, 0, 0.0, i, months);
+        double endBalance = calcEndBalance(shiller, cumulativeReturns, principal, salary, expenseRatio, true, 0, 0,
+            0.0, i, months);
         if (endBalance > 0.0)
           ++nOK;
         ++n;
@@ -315,6 +317,7 @@ public class RetireTool
    * increased over time to maintain buying power.
    * 
    * @param shiller shiller data object
+   * @param cumulativeReturns sequence of cumulative returns for the investment strategy
    * @param salary desired annual salary in today's dollars
    * @param minLikelihood desired likelihood
    * @param nYears number of years to draw salary
@@ -326,8 +329,9 @@ public class RetireTool
    * 
    * @return list of starting indices where we run out of money.
    */
-  public static List<Integer> calcSavingsTarget(Shiller shiller, double salary, double minLikelihood, int nYears,
-      double expenseRatio, int retireAge, int ssAge, double ssMonthly, double desiredRunwayYears)
+  public static List<Integer> calcSavingsTarget(Shiller shiller, Sequence cumulativeReturns, double salary,
+      double minLikelihood, int nYears, double expenseRatio, int retireAge, int ssAge, double ssMonthly,
+      double desiredRunwayYears)
   {
     int nMonths = nYears * 12;
     int nData = shiller.length();
@@ -344,12 +348,12 @@ public class RetireTool
         if (i + nMonths >= nData)
           break; // not enough data
         double adjSalary = shiller.adjustForInflation(salary, nData - 1, i);
-        double adjprincipal = shiller.adjustForInflation(principal, nData - 1, i);
+        double adjPrincipal = shiller.adjustForInflation(principal, nData - 1, i);
         double finalSalary = shiller.adjustForInflation(salary, nData - 1, i + nMonths);
         // System.out.printf("%.2f -> %d (%s): %.2f\n", salary, i, Library.formatDate(snp.getTimeMS(i)),
         // adjustedSalary);
-        double endBalance = shiller.calcEndBalance(adjprincipal, adjSalary, expenseRatio, true, retireAge, ssAge,
-            ssMonthly, i, nMonths);
+        double endBalance = calcEndBalance(shiller, cumulativeReturns, adjPrincipal, adjSalary, expenseRatio, true,
+            retireAge, ssAge, ssMonthly, i, nMonths);
         if (endBalance > finalSalary * (1 + desiredRunwayYears * 12)) {
           ++nOK;
         } else {
@@ -529,6 +533,71 @@ public class RetireTool
     String title = numMonths % 12 == 0 ? String.format("%d-Year Future Market Returns", numMonths / 12) : String
         .format("%d-Month Future Market Returns", numMonths);
     saveLineChart(file, title, 1200, 800, false, snp, bonds);
+  }
+
+  public static double getReturn(Sequence cumulativeReturns, int iFrom, int iTo)
+  {
+    return cumulativeReturns.get(iTo, 0) / cumulativeReturns.get(iFrom, 0);
+  }
+
+  /**
+   * Compute ending balance; not inflation-adjusted, assuming we re-invest dividends
+   * 
+   * @param shiller shiller data object with S&P prices and dividends
+   * @param cumulativeReturns sequence of cumulative returns for the investment strategy
+   * @param principal initial funds
+   * @param annualWithdrawal annual withdrawal amount (annual "salary")
+   * @param adjustWithdrawalForInflation use CPI to adjust withdrawal for constant purchasing power
+   * @param expenseRatio percentage of portfolio taken by manager (2.1 = 2.1% per year)
+   * @param retireAge age at retirement (start of simulation)
+   * @param ssAge age when you first receive SS benefits
+   * @param ssMonthly expected monthly SS benefit in today's dollar
+   * @param iStart first index in SNP
+   * @param nMonths number of months (ticks) in S&P to consider
+   * @return ending balance
+   */
+  public static double calcEndBalance(Shiller shiller, Sequence cumulativeReturns, double principal,
+      double annualWithdrawal, double expenseRatio, boolean adjustWithdrawalForInflation, double retireAge,
+      double ssAge, double ssMonthly, int iStart, int nMonths)
+  {
+    int nData = shiller.size();
+    if (iStart < 0 || nMonths < 1 || iStart + nMonths >= nData) {
+      return Double.NaN;
+    }
+
+    double age = retireAge;
+    double monthlyWithdrawal = annualWithdrawal / 12.0;
+    double monthlyExpenseRatio = (expenseRatio / 100.0) / 12.0;
+    double balance = principal;
+    for (int i = iStart; i < iStart + nMonths; ++i) {
+      double adjMonthlyWithdrawal = monthlyWithdrawal;
+      if (adjustWithdrawalForInflation) {
+        // Update monthly withdrawal for inflation.
+        adjMonthlyWithdrawal = shiller.adjustForInflation(monthlyWithdrawal, iStart, i);
+      }
+
+      // Get paid by social security if we're old enough.
+      if (age >= ssAge) {
+        balance += shiller.adjustForInflation(ssMonthly, nData - 1, i);
+      }
+
+      // Withdraw money at beginning of month.
+      balance -= adjMonthlyWithdrawal;
+      if (balance < 0.0) {
+        return 0.0; // ran out of money!
+      }
+
+      // Update balance based on investment returns.
+      balance *= getReturn(cumulativeReturns, i, i + 1);
+
+      // Broker gets their cut.
+      balance *= (1.0 - monthlyExpenseRatio);
+
+      // Now we're one month older.
+      age += Library.ONE_TWELFTH;
+    }
+
+    return balance;
   }
 
   public static void main(String[] args) throws IOException

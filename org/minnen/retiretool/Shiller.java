@@ -190,7 +190,7 @@ public class Shiller extends Sequence
    * @param years number of years in the market
    * @param divMethod how dividends are handled
    * @param inflationAccounting should we adjust for inflation?
-   * @return sequence of CAGRs for S&P all time periods of the given duration.
+   * @return sequence containing CAGRs for S&P for each time periods of the given duration.
    */
   public Sequence calcSnpReturns(int years, DividendMethod divMethod, Inflation inflationAccounting)
   {
@@ -203,7 +203,6 @@ public class Shiller extends Sequence
         break; // not enough data
       double roi = calcSnpReturn(i, months, divMethod, inflationAccounting);
       double cagr = RetireTool.getAnnualReturn(roi, months);
-      // System.out.printf("%.2f\t%f\n", getYearAsFrac(i), meanAnnualReturn);
       rois.addData(cagr, getTimeMS(i));
     }
 
@@ -350,60 +349,6 @@ public class Shiller extends Sequence
     return value;
   }
 
-  /**
-   * Compute ending balance; not inflation-adjusted, assuming we re-invest dividends
-   * 
-   * @param principal initial funds
-   * @param annualWithdrawal annual withdrawal amount (annual "salary")
-   * @param adjustWithdrawalForInflation use CPI to adjust withdrawal for constant purchasing power
-   * @param expenseRatio percentage of portfolio taken by manager (2.1 = 2.1% per year)
-   * @param retireAge age at retirement (start of simulation)
-   * @param ssAge age when you first receive SS benefits
-   * @param ssMonthly expected monthly SS benefit in today's dollar
-   * @param iStart first index in SNP
-   * @param nMonths number of months (ticks) in S&P to consider
-   * @return ending balance
-   */
-  public double calcEndBalance(double principal, double annualWithdrawal, double expenseRatio,
-      boolean adjustWithdrawalForInflation, double retireAge, double ssAge, double ssMonthly, int iStart, int nMonths)
-  {
-    int nData = size();
-    if (iStart < 0 || nMonths < 1 || iStart + nMonths >= nData) {
-      return Double.NaN;
-    }
-
-    double age = retireAge;
-    double monthlyWithdrawal = annualWithdrawal / 12.0;
-    double monthlyExpenseRatio = (expenseRatio / 100.0) / 12.0;
-    double balance = principal;
-    for (int i = iStart; i < iStart + nMonths; ++i) {
-      double adjMonthlyWithdrawal = monthlyWithdrawal;
-      if (adjustWithdrawalForInflation) {
-        // update monthly withdrawal for inflation
-        adjMonthlyWithdrawal = adjustForInflation(monthlyWithdrawal, iStart, i);
-      }
-
-      // withdraw money at beginning of month
-      // System.out.printf("Balance: $%.2f  monthly=$%.2f\n", balance, monthlyWithdrawal);
-      if (age >= ssAge) {
-        balance += adjustForInflation(ssMonthly, nData - 1, i);
-      }
-      balance -= adjMonthlyWithdrawal;
-      if (balance < 0.0)
-        return 0.0; // ran out of money!
-
-      double price1 = get(i, PRICE);
-      double price2 = get(i + 1, PRICE);
-      double shares = balance / price1;
-      balance *= price2 / price1;
-      balance += shares * get(i, DIV);
-      balance *= (1.0 - monthlyExpenseRatio);
-      age += Library.ONE_TWELFTH;
-    }
-
-    return balance;
-  }
-
   /** @return Sequence containing all CAPE data. */
   public Sequence getCapeData()
   {
@@ -541,5 +486,20 @@ public class Shiller extends Sequence
     }
 
     return seq._div(principal);
+  }
+
+  public double getPrice(int i)
+  {
+    return get(i, PRICE);
+  }
+
+  public double getDividend(int i)
+  {
+    return get(i, DIV);
+  }
+
+  public double getCape(int i)
+  {
+    return get(i, CAPE);
   }
 }
