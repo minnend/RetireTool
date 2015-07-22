@@ -539,15 +539,14 @@ public class RetireTool
     }
     Bond.testPricing();
 
-    Shiller shiller = new Shiller();
-    shiller.loadData(args[0]);
+    Shiller shiller = new Shiller(args[0]);
     Sequence tbills = TBills.loadData(args[1]);
 
-    long commonStart = calcCommonStart(shiller.data, tbills);
-    long commonEnd = calcCommonEnd(shiller.data, tbills);
+    long commonStart = calcCommonStart(shiller, tbills);
+    long commonEnd = calcCommonEnd(shiller, tbills);
 
-    System.out.printf("Shiller: [%s] -> [%s]\n", Library.formatDate(shiller.data.getStartMS()),
-        Library.formatDate(shiller.data.getEndMS()));
+    System.out.printf("Shiller: [%s] -> [%s]\n", Library.formatDate(shiller.getStartMS()),
+        Library.formatDate(shiller.getEndMS()));
     System.out.printf("T-Bills: [%s] -> [%s]\n", Library.formatDate(tbills.getStartMS()),
         Library.formatDate(tbills.getEndMS()));
     System.out.printf("Common: [%s] -> [%s]\n", Library.formatDate(commonStart), Library.formatDate(commonEnd));
