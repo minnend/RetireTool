@@ -519,36 +519,43 @@ public class FeatureVec
     return new FeatureVec(this)._add(x);
   }
 
+  /** @return new vector representing difference of this vector and the given vector */
   public FeatureVec sub(FeatureVec fv)
   {
     return new FeatureVec(this)._sub(fv);
   }
 
+  /** @return new vector with x subtracted from each value in this vector */
   public FeatureVec sub(double x)
   {
     return new FeatureVec(this)._sub(x);
   }
 
+  /** @return new vector representing the component-wise product of this vector and the given vector */
   public FeatureVec mul(FeatureVec fv)
   {
     return new FeatureVec(this)._mul(fv);
   }
 
+  /** @return new vector with x multiplied with each value in this vector */
   public FeatureVec mul(double x)
   {
     return new FeatureVec(this)._mul(x);
   }
 
+  /** @return new vector representing the component-wise quotient of this vector and the given vector */
   public FeatureVec div(FeatureVec fv)
   {
     return new FeatureVec(this)._div(fv);
   }
 
+  /** @return new vector with each value in this vector divided by x. */
   public FeatureVec div(double x)
   {
     return new FeatureVec(this)._div(x);
   }
 
+  /** @return dot product of this vector and the given vector. */
   public double dot(FeatureVec fv)
   {
     int n = getNumDims();

@@ -33,7 +33,6 @@ public class TBills
       }
 
       String[] dateFields = toks[0].split("-");
-
       try {
         int year = Integer.parseInt(dateFields[0]);
         int month = Integer.parseInt(dateFields[1]);
