@@ -11,7 +11,8 @@ public class InvestmentStats
   public double   cagr;
   public double   totalReturn;
   public double   maxDrawdown;
-  public double   percentDrawndown;
+  public double   percentNewHigh;
+  public double   percentDown10;
   public double   peakReturn;
 
   public static InvestmentStats calcInvestmentStats(Sequence cumulativeReturns)
@@ -37,22 +38,41 @@ public class InvestmentStats
     maxDrawdown = 0.0;
 
     if (N <= 1) {
-      percentDrawndown = 0.0;
+      percentNewHigh = 0.0;
+      percentDown10 = 0.0;
     } else {
-      int nDown = 0;
+      int nNewHigh = 0;
+      int nDown10 = 0;
       for (int i = 1; i < N; ++i) {
         double value = cumulativeReturns.get(i, 0) / cumulativeReturns.getFirst(0);
         if (value < peakReturn) {
-          ++nDown;
           double drawdown = 100.0 * (peakReturn - value) / peakReturn;
           if (drawdown > maxDrawdown) {
             maxDrawdown = drawdown;
           }
-        } else {
+          if (drawdown >= 10.0) {
+            ++nDown10;
+          }
+        } else if (value > peakReturn) {
           peakReturn = value;
+          ++nNewHigh;
         }
       }
-      percentDrawndown = 100.0 * nDown / (N - 1);
+
+      percentNewHigh = 100.0 * nNewHigh / (N - 1);
+      percentDown10 = 100.0 * nDown10 / (N - 1);
     }
+  }
+
+  public String name()
+  {
+    return cumulativeReturns == null ? "Unknown" : cumulativeReturns.getName();
+  }
+
+  @Override
+  public String toString()
+  {
+    return String.format("[%s: CAGR=%.2f  MDD=%.1f  NewHigh,Down10=%.1f, %.1f]", name(), cagr, maxDrawdown,
+        percentNewHigh, percentDown10);
   }
 }

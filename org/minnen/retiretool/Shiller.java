@@ -129,7 +129,7 @@ public class Shiller extends Sequence
       throw new IllegalArgumentException(String.format("iStart=%d, nMonths=%d, size=%d", iStart, nMonths, size()));
     }
 
-    Sequence seq = new Sequence("S&P");
+    Sequence seq = new Sequence(divMethod == DividendMethod.NO_REINVEST ? "S&P-NoReinvest" : "S&P");
 
     // note: it's equivalent to keep track of total value or number of shares
     double divCash = 0.0;
