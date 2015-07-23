@@ -20,6 +20,8 @@ public class TestInvestmentStats
     assertEquals(0.0, stats.maxDrawdown, eps);
     assertEquals(0.0, stats.percentNewHigh, eps);
     assertEquals(0.0, stats.percentDown10, eps);
+    assertEquals(0, stats.percentUp, eps);
+    assertEquals(0, stats.percentDown, eps);
   }
 
   @Test
@@ -32,6 +34,8 @@ public class TestInvestmentStats
     assertEquals(50.0, stats.maxDrawdown, eps);
     assertEquals(50.0, stats.percentNewHigh, eps);
     assertEquals(100.0 / 3.0, stats.percentDown10, eps);
+    assertEquals(500.0 / 6.0, stats.percentUp, eps);
+    assertEquals(100.0 / 6.0, stats.percentDown, eps);
   }
 
   @Test
@@ -44,5 +48,7 @@ public class TestInvestmentStats
     assertEquals(100.0 / 3.0, stats.maxDrawdown, eps);
     assertEquals(50.0, stats.percentNewHigh, eps);
     assertEquals(50.0, stats.percentDown10, eps);
+    assertEquals(50.0, stats.percentUp, eps);
+    assertEquals(50.0, stats.percentDown, eps);
   }
 }

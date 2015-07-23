@@ -366,7 +366,7 @@ public class RetireTool
 
     int nMonthsSMA = 10;
     int nMonthsMomentum = 12;
-    int rebalanceMonths = 6;
+    int rebalanceMonths = 12;
 
     Sequence prices = shiller.getStockData();
 
@@ -378,7 +378,9 @@ public class RetireTool
         inflation);
     Sequence momentum = Strategy.calcMomentumReturnSeq(nMonthsMomentum, snp, bonds);
     Sequence sma = Strategy.calcSMAReturnSeq(nMonthsSMA, prices, snp, bonds);
-    Sequence raa = Strategy.calcMixedReturnSeq(new Sequence[] { sma, momentum }, new double[] { 50, 50 }, 12);
+    Sequence raa = Strategy.calcMixedReturnSeq(new Sequence[] { sma, momentum }, new double[] { 50, 50 },
+        rebalanceMonths);
+    raa.setName("RAA");
 
     Sequence[] all = new Sequence[] { bonds, bondsHold, snp, snpNoDiv, mixed, momentum, sma, raa };
     InvestmentStats[] stats = new InvestmentStats[all.length];
@@ -416,6 +418,7 @@ public class RetireTool
       double cagr = RetireTool.getAnnualReturn(mix.getLast(0), N);
       mix.setName(String.format("Mix-[%d/%d] (%.2f%%)", percentStock[i], 100 - percentStock[i], cagr));
       seqs[i] = mix;
+      //System.out.println(InvestmentStats.calcInvestmentStats(mix));
     }
 
     saveLineChart(file, "Cumulative Market Returns: Stock/Bond Mix", 1200, 600, true, seqs);
@@ -434,7 +437,7 @@ public class RetireTool
     Sequence bonds = shiller.calcBondReturnSeqRebuy(iStart, iEnd, inflation);
     Sequence snp = shiller.calcSnpReturnSeq(iStart, iEnd - iStart, DividendMethod.MONTHLY, inflation);
 
-    int[] months = new int[] { 1, 2, 3, 5, 6, 9, 10, 12, 15, 18, 21, 24, 30, 36 };
+    int[] months = new int[] { 1, 2, 3, 4, 5, 6, 9, 10, 12, 15, 18, 21, 24, 30, 36 };
 
     Sequence[] seqs = new Sequence[months.length];
     for (int i = 0; i < months.length; ++i) {
@@ -442,6 +445,7 @@ public class RetireTool
       double cagr = RetireTool.getAnnualReturn(sma.getLast(0), N);
       sma.setName(String.format("SMA-%d (%.2f%%)", months[i], cagr));
       seqs[i] = sma;
+      //System.out.println(InvestmentStats.calcInvestmentStats(sma));
     }
 
     saveLineChart(file, "Cumulative Market Returns: SMA Strategy", 1200, 600, true, seqs);
@@ -467,6 +471,7 @@ public class RetireTool
       double cagr = RetireTool.getAnnualReturn(mom.getLast(0), N);
       mom.setName(String.format("Momentum-%d (%.2f%%)", months[i], cagr));
       seqs[i] = mom;
+      //System.out.println(InvestmentStats.calcInvestmentStats(mom));
     }
 
     saveLineChart(file, "Cumulative Market Returns: Momentum Strategy", 1200, 600, true, seqs);
