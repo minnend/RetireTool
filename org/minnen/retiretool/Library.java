@@ -371,4 +371,18 @@ public final class Library
     }
     return last;
   }
+
+  public static String getDurationString(int nMonths)
+  {
+    if (nMonths == 12) {
+      return "1 year";
+    }
+    if (nMonths < 18) {
+      return String.format("%d months");
+    }
+    if (nMonths % 12 == 0) {
+      return String.format("%d years", nMonths / 12);
+    }
+    return String.format("%.1f years", nMonths / 12.0);
+  }
 }

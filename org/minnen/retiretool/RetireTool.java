@@ -166,11 +166,12 @@ public class RetireTool
 
   public static void printReturnLikelihoods(Shiller shiller)
   {
+    Sequence snp = shiller.calcSnpReturnSeq(0, shiller.size(), DividendMethod.MONTHLY, Inflation.Ignore);
     Sequence seqLik = null;
     int[] years = new int[] { 1, 5, 10, 15, 20, 30, 40, 50 };
     for (int i = 0; i < years.length; i++) {
       System.out.printf("Processing %d: %d years\n", i + 1, years[i]);
-      Sequence r = shiller.calcSnpReturns(years[i], DividendMethod.MONTHLY, Inflation.Include);
+      Sequence r = calcReturnsForDuration(snp, years[i] * 12);
       Sequence h = computeHistogram(r, 0.5, 0.0);
       h = addReturnLikelihoods(h);
       seqLik = appendROISeq(seqLik, h);
@@ -208,6 +209,27 @@ public class RetireTool
       }
       System.out.printf("Withdrawal Rate: %.2f  %d / %d = %.2f%%\n", wrate, nOK, n, 100.0 * nOK / n);
     }
+  }
+
+  /**
+   * Calculate returns for all periods with the given duration.
+   * 
+   * @param cumulativeReturns sequence of cumulative returns for the investment strategy
+   * @param months number of months in the market
+   * @return sequence containing CAGRs for each time period of the given duration.
+   */
+  public static Sequence calcReturnsForDuration(Sequence cumulativeReturns, int nMonths)
+  {
+    Sequence rois = new Sequence("ROIs - %s" + Library.getDurationString(nMonths));
+
+    final int N = cumulativeReturns.size();
+    for (int i = 0; i + nMonths < N; i++) {
+      double roi = getReturn(cumulativeReturns, i, i + nMonths);
+      double cagr = RetireTool.getAnnualReturn(roi, nMonths);
+      rois.addData(cagr, cumulativeReturns.getTimeMS(i));
+    }
+
+    return rois;
   }
 
   /**
@@ -384,12 +406,15 @@ public class RetireTool
 
     Sequence[] all = new Sequence[] { bonds, bondsHold, snp, snpNoDiv, mixed, momentum, sma, raa };
     InvestmentStats[] stats = new InvestmentStats[all.length];
+    Sequence[] histograms = new Sequence[all.length];
 
     for (int i = 0; i < all.length; ++i) {
       assert all[i].length() == N;
       stats[i] = InvestmentStats.calcInvestmentStats(all[i]);
-      System.out.println(stats[i]);
       all[i].setName(String.format("%s (%.2f%%)", all[i].getName(), stats[i].cagr));
+      System.out.println(stats[i]);
+      Sequence r = calcReturnsForDuration(all[i], 5 * 12);
+      histograms[i] = computeHistogram(r, 0.5, 0.0);
     }
 
     saveLineChart(file, "Cumulative Market Returns", 1200, 600, true, sma, raa, momentum, snp, mixed, bonds, bondsHold);
@@ -418,7 +443,7 @@ public class RetireTool
       double cagr = RetireTool.getAnnualReturn(mix.getLast(0), N);
       mix.setName(String.format("Mix-[%d/%d] (%.2f%%)", percentStock[i], 100 - percentStock[i], cagr));
       seqs[i] = mix;
-      //System.out.println(InvestmentStats.calcInvestmentStats(mix));
+      // System.out.println(InvestmentStats.calcInvestmentStats(mix));
     }
 
     saveLineChart(file, "Cumulative Market Returns: Stock/Bond Mix", 1200, 600, true, seqs);
@@ -445,7 +470,7 @@ public class RetireTool
       double cagr = RetireTool.getAnnualReturn(sma.getLast(0), N);
       sma.setName(String.format("SMA-%d (%.2f%%)", months[i], cagr));
       seqs[i] = sma;
-      //System.out.println(InvestmentStats.calcInvestmentStats(sma));
+      // System.out.println(InvestmentStats.calcInvestmentStats(sma));
     }
 
     saveLineChart(file, "Cumulative Market Returns: SMA Strategy", 1200, 600, true, seqs);
@@ -471,7 +496,7 @@ public class RetireTool
       double cagr = RetireTool.getAnnualReturn(mom.getLast(0), N);
       mom.setName(String.format("Momentum-%d (%.2f%%)", months[i], cagr));
       seqs[i] = mom;
-      //System.out.println(InvestmentStats.calcInvestmentStats(mom));
+      // System.out.println(InvestmentStats.calcInvestmentStats(mom));
     }
 
     saveLineChart(file, "Cumulative Market Returns: Momentum Strategy", 1200, 600, true, seqs);

@@ -185,31 +185,6 @@ public class Shiller extends Sequence
   }
 
   /**
-   * Calculate S&P returns for all periods with the given duration.
-   * 
-   * @param years number of years in the market
-   * @param divMethod how dividends are handled
-   * @param inflationAccounting should we adjust for inflation?
-   * @return sequence containing CAGRs for S&P for each time periods of the given duration.
-   */
-  public Sequence calcSnpReturns(int years, DividendMethod divMethod, Inflation inflationAccounting)
-  {
-    Sequence rois = new Sequence(String.format("SnP ROIs - %d years", years));
-    int months = years * 12;
-
-    int n = size();
-    for (int i = 0; i < n; i++) {
-      if (i + months >= n)
-        break; // not enough data
-      double roi = calcSnpReturn(i, months, divMethod, inflationAccounting);
-      double cagr = RetireTool.getAnnualReturn(roi, months);
-      rois.addData(cagr, getTimeMS(i));
-    }
-
-    return rois;
-  }
-
-  /**
    * Calculates bond ROI for the given range using the rebuy approach.
    * 
    * Each month, the existing bond is sold and a new one is purchased.
