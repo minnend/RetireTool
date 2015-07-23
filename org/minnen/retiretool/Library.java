@@ -349,4 +349,26 @@ public final class Library
       return failValue;
     }
   }
+
+  public static long calcCommonStart(Sequence... seqs)
+  {
+    long last = seqs[0].getStartMS();
+    for (Sequence seq : seqs) {
+      if (seq.getStartMS() > last) {
+        last = seq.getStartMS();
+      }
+    }
+    return last;
+  }
+
+  public static long calcCommonEnd(Sequence... seqs)
+  {
+    long last = seqs[0].getEndMS();
+    for (Sequence seq : seqs) {
+      if (seq.getEndMS() < last) {
+        last = seq.getEndMS();
+      }
+    }
+    return last;
+  }
 }

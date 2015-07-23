@@ -23,28 +23,6 @@ public class RetireTool
 
   public static DecimalFormat currencyFormatter = new DecimalFormat("#,###.00");
 
-  public static long calcCommonStart(Sequence... seqs)
-  {
-    long last = seqs[0].getStartMS();
-    for (Sequence seq : seqs) {
-      if (seq.getStartMS() > last) {
-        last = seq.getStartMS();
-      }
-    }
-    return last;
-  }
-
-  public static long calcCommonEnd(Sequence... seqs)
-  {
-    long last = seqs[0].getEndMS();
-    for (Sequence seq : seqs) {
-      if (seq.getEndMS() < last) {
-        last = seq.getEndMS();
-      }
-    }
-    return last;
-  }
-
   /**
    * Compute compound annual growth rate (CAGR) based on total multiplier.
    * 
@@ -57,7 +35,7 @@ public class RetireTool
     if (nMonths < 1) {
       return 0.0;
     }
-    // x^n = y -> x = exp(log(y)/n) = y^(1/n)
+    // x^n = y -> x = y ^ (1/n)
     return (Math.pow(totalReturn, 12.0 / nMonths) - 1) * 100;
   }
 
@@ -640,13 +618,12 @@ public class RetireTool
       System.err.println("Usage: java ~.ShillerSnp <shiller-data-file> <t-bill-file>");
       System.exit(1);
     }
-    Bond.testPricing();
 
     Shiller shiller = new Shiller(args[0]);
     Sequence tbills = TBills.loadData(args[1]);
 
-    long commonStart = calcCommonStart(shiller, tbills);
-    long commonEnd = calcCommonEnd(shiller, tbills);
+    long commonStart = Library.calcCommonStart(shiller, tbills);
+    long commonEnd = Library.calcCommonEnd(shiller, tbills);
 
     System.out.printf("Shiller: [%s] -> [%s]\n", Library.formatDate(shiller.getStartMS()),
         Library.formatDate(shiller.getEndMS()));

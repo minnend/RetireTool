@@ -119,13 +119,19 @@ public class Sequence implements Iterable<FeatureVec>
     data.get(i).set(d, x);
   }
 
-  /** @return last feature vector in this data set */
+  /** @return value of given dimension of first feature vector in this sequence. */
+  public double getFirst(int d)
+  {
+    return data.get(0).get(d);
+  }
+
+  /** @return last feature vector in this sequence. */
   public FeatureVec getLast()
   {
     return data.get(data.size() - 1);
   }
 
-  /** @return value of given dimension of last feature vector in this data set */
+  /** @return value of given dimension of last feature vector in this sequence. */
   public double getLast(int d)
   {
     return data.get(data.size() - 1).get(d);
