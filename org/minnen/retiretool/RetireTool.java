@@ -37,23 +37,48 @@ public class RetireTool
     return (Math.pow(totalReturn, 12.0 / nMonths) - 1) * 100;
   }
 
+  /**
+   * Compute histogram for the given returns.
+   * 
+   * @param rois sequence containing list of ROIs for some strategy
+   * @param binWidth width of each bin
+   * @param binCenter center bin has this value
+   * @return sequence of 3D vectors: [center of bin, count, frequence]
+   */
   public static Sequence computeHistogram(Sequence rois, double binWidth, double binCenter)
   {
-    Sequence h = new Sequence("Histogram - " + rois.getName());
+    return computeHistogram(rois, Double.NaN, Double.NaN, binWidth, binCenter);
+  }
 
-    // sort rois to find min/max and ease histogram generation
+  /**
+   * Compute histogram for the given returns.
+   * 
+   * @param rois sequence containing list of ROIs for some strategy
+   * @param vmin histogram starts with bin containing this value (NaN to compute from ROIs)
+   * @param vmax histogram ends with bin containing this value (NaN to compute from ROIs)
+   * @param binWidth width of each bin
+   * @param binCenter center bin has this value
+   * @return sequence of 3D vectors: [center of bin, count, frequence]
+   */
+  public static Sequence computeHistogram(Sequence rois, double vmin, double vmax, double binWidth, double binCenter)
+  {
+    // Sort ROIs to find min/max and ease histogram generation.
     double[] a = rois.extractDim(0);
     Arrays.sort(a);
     int na = a.length;
-    double vmin = a[0];
-    double vmax = a[na - 1];
-
+    if (Double.isNaN(vmin)) {
+      vmin = a[0];
+    }
+    if (Double.isNaN(vmax)) {
+      vmax = a[na - 1];
+    }
     System.out.printf("Data: %d entries in [%.2f%%, %.2f%%]\n", na, vmin, vmax);
 
     // figure out where to start
     double hleftCenter = binCenter - binWidth / 2.0;
     double hleft = hleftCenter + Math.floor((vmin - hleftCenter) / binWidth) * binWidth;
-    // System.out.printf("binCenter=%f   binWidth=%f  hleft=%f\n", binCenter, binWidth, hleft);
+    System.out.printf("binCenter=%f   binWidth=%f  hleft=%f\n", binCenter, binWidth, hleft);
+    Sequence h = new Sequence("Histogram - " + rois.getName());
     int i = 0;
     while (i < na) {
       assert (a[i] >= hleft);
@@ -62,10 +87,11 @@ public class RetireTool
       // find all data points in [hleft, hright)
       int j = i;
       while (j < na) {
-        if (a[j] >= hleft && a[j] < hright)
-          j++;
-        else
+        if (a[j] >= hleft && a[j] < hright) {
+          ++j;
+        } else {
           break;
+        }
       }
 
       // add data point for this bin
@@ -75,6 +101,13 @@ public class RetireTool
 
       // move to next bin
       i = j;
+      hleft = hright;
+    }
+
+    // Add zeroes to reach vmax.
+    while (hleft <= vmax) {
+      double hright = hleft + binWidth;
+      h.addData(new FeatureVec(3, (hleft + hright) / 2, 0, 0));
       hleft = hright;
     }
 
@@ -218,7 +251,7 @@ public class RetireTool
    */
   public static Sequence calcReturnsForDuration(Sequence cumulativeReturns, int nMonths)
   {
-    Sequence rois = new Sequence("ROIs - %s" + Library.getDurationString(nMonths));
+    Sequence rois = new Sequence("ROIs - " + Library.getDurationString(nMonths));
 
     final int N = cumulativeReturns.size();
     for (int i = 0; i + nMonths < N; i++) {
@@ -327,8 +360,8 @@ public class RetireTool
     int iStart = 0;
     int iEnd = shiller.length() - 1;
 
-    // iStart = getIndexForDate(1900, 1);
-    // iEnd = getIndexForDate(2010, 1);
+    // iStart = shiller.getIndexForDate(1980, 1);
+    // iEnd = shiller.getIndexForDate(2010, 1);
     int N = iEnd - iStart + 1;
 
     int percentStock = 60;
@@ -355,20 +388,76 @@ public class RetireTool
 
     Sequence[] all = new Sequence[] { bonds, bondsHold, snp, snpNoDiv, mixed, momentum, sma, raa };
     InvestmentStats[] stats = new InvestmentStats[all.length];
-//    Sequence[] histograms = new Sequence[all.length];
 
     for (int i = 0; i < all.length; ++i) {
       assert all[i].length() == N;
       stats[i] = InvestmentStats.calcInvestmentStats(all[i]);
       all[i].setName(String.format("%s (%.2f%%)", all[i].getName(), stats[i].cagr));
       System.out.println(stats[i]);
-//      Sequence r = calcReturnsForDuration(all[i], 5 * 12);
-//      double[] a = r.extractDim(0);
-//      Arrays.sort(a);
-//      System.out.printf("%s: %.2f%%\n", all[i].getName(), a[ Math.round(a.length * 0.1f)]);
     }
 
-    Chart.saveLineChart(file, "Cumulative Market Returns", 1200, 600, true, sma, raa, momentum, snp, mixed, bonds, bondsHold);
+    Chart.saveLineChart(file, "Cumulative Market Returns", 1200, 600, true, sma, raa, momentum, snp, mixed, bonds,
+        bondsHold);
+  }
+
+  public static void genReturnHistogram(Shiller shiller, int nMonths, Inflation inflation, File file)
+      throws IOException
+  {
+    int iStart = 0;
+    int iEnd = shiller.length() - 1;
+
+    // iStart = shiller.getIndexForDate(1980, 1);
+    // iEnd = shiller.getIndexForDate(2010, 1);
+    int N = iEnd - iStart + 1;
+
+    int percentStock = 60;
+    int percentBonds = 40;
+    // int percentCash = 100 - (percentStock + percentBonds);
+
+    int nMonthsSMA = 10;
+    int nMonthsMomentum = 12;
+    int rebalanceMonths = 12;
+
+    Sequence prices = shiller.getStockData();
+
+    Sequence bonds = shiller.calcBondReturnSeqRebuy(iStart, iEnd, inflation);
+    Sequence snp = shiller.calcSnpReturnSeq(iStart, iEnd - iStart, DividendMethod.MONTHLY, inflation);
+    Sequence mixed = shiller.calcMixedReturnSeq(iStart, iEnd - iStart, percentStock, percentBonds, rebalanceMonths,
+        inflation);
+    Sequence momentum = Strategy.calcMomentumReturnSeq(nMonthsMomentum, snp, bonds);
+    Sequence sma = Strategy.calcSMAReturnSeq(nMonthsSMA, prices, snp, bonds);
+    Sequence raa = Strategy.calcMixedReturnSeq(new Sequence[] { sma, momentum }, new double[] { 50, 50 },
+        rebalanceMonths);
+    raa.setName("RAA");
+
+    Sequence[] assets = new Sequence[] { momentum, sma, raa, snp, bonds, mixed };
+    Sequence[] returns = new Sequence[assets.length];
+    double vmin = 0.0, vmax = 0.0;
+    for (int i = 0; i < assets.length; ++i) {
+      returns[i] = calcReturnsForDuration(assets[i], nMonths);
+      double[] a = returns[i].extractDim(0);
+      Arrays.sort(a);
+      if (i == 0 || a[0] < vmin) {
+        vmin = a[0];
+      }
+      if (i == 0 || a[a.length - 1] > vmax) {
+        vmax = a[a.length - 1];
+      }
+    }
+
+    Sequence[] histograms = new Sequence[assets.length];
+    for (int i = 0; i < assets.length; ++i) {
+      histograms[i] = computeHistogram(returns[i], vmin, vmax, 0.5, 0.0);
+      histograms[i].setName(assets[i].getName());
+    }
+
+    String[] labels = new String[histograms[0].length()];
+    for (int i = 0; i < labels.length; ++i) {
+      labels[i] = String.format("%.1f", histograms[0].get(i, 0));
+    }
+
+    String title = "Histogram of Returns - " + Library.getDurationString(nMonths);
+    Chart.saveHighChart(file, Chart.ChartType.Bar, title, labels, 1200, 600, false, 1, histograms);
   }
 
   public static void genStockBondMixSweepChart(Shiller shiller, Inflation inflation, File file) throws IOException
@@ -579,18 +668,18 @@ public class RetireTool
     Shiller shiller = new Shiller(args[0]);
     Sequence tbills = TBills.loadData(args[1]);
 
-    long commonStart = Library.calcCommonStart(shiller, tbills);
-    long commonEnd = Library.calcCommonEnd(shiller, tbills);
-
-    System.out.printf("Shiller: [%s] -> [%s]\n", Library.formatDate(shiller.getStartMS()),
-        Library.formatDate(shiller.getEndMS()));
-    System.out.printf("T-Bills: [%s] -> [%s]\n", Library.formatDate(tbills.getStartMS()),
-        Library.formatDate(tbills.getEndMS()));
-    System.out.printf("Common: [%s] -> [%s]\n", Library.formatDate(commonStart), Library.formatDate(commonEnd));
-
-    Sequence tbillsCommon = tbills.subseq(commonStart, commonEnd);
-    System.out.printf("T-Bills (Common): [%s] -> [%s]\n", Library.formatDate(tbillsCommon.getStartMS()),
-        Library.formatDate(tbillsCommon.getEndMS()));
+    // long commonStart = Library.calcCommonStart(shiller, tbills);
+    // long commonEnd = Library.calcCommonEnd(shiller, tbills);
+    //
+    // System.out.printf("Shiller: [%s] -> [%s]\n", Library.formatDate(shiller.getStartMS()),
+    // Library.formatDate(shiller.getEndMS()));
+    // System.out.printf("T-Bills: [%s] -> [%s]\n", Library.formatDate(tbills.getStartMS()),
+    // Library.formatDate(tbills.getEndMS()));
+    // System.out.printf("Common: [%s] -> [%s]\n", Library.formatDate(commonStart), Library.formatDate(commonEnd));
+    //
+    // Sequence tbillsCommon = tbills.subseq(commonStart, commonEnd);
+    // System.out.printf("T-Bills (Common): [%s] -> [%s]\n", Library.formatDate(tbillsCommon.getStartMS()),
+    // Library.formatDate(tbillsCommon.getEndMS()));
 
     // shiller.printReturnLikelihoods();
     // shiller.printWithdrawalLikelihoods(30, 0.1);
@@ -600,11 +689,11 @@ public class RetireTool
     // shiller.genReturnComparison(years[i] * 12, Inflation.Ignore, new File("g:/test.html"));
     // }
 
-    // shiller.genReturnComparison(12*30, Inflation.Ignore, new File("g:/test.html"));
-    genReturnChart(shiller, Inflation.Ignore, new File("g:/web/cumulative-returns.html"));
-    genSMASweepChart(shiller, Inflation.Ignore, new File("g:/web/sma-sweep.html"));
-    genMomentumSweepChart(shiller, Inflation.Ignore, new File("g:/web/momentum-sweep.html"));
-    genStockBondMixSweepChart(shiller, Inflation.Ignore, new File("g:/web/stock-bond-mix-sweep.html"));
+    genReturnHistogram(shiller, 20 * 12, Inflation.Ignore, new File("g:/web/histogram.html"));
+    // genReturnChart(shiller, Inflation.Ignore, new File("g:/web/cumulative-returns.html"));
+    // genSMASweepChart(shiller, Inflation.Ignore, new File("g:/web/sma-sweep.html"));
+    // genMomentumSweepChart(shiller, Inflation.Ignore, new File("g:/web/momentum-sweep.html"));
+    // genStockBondMixSweepChart(shiller, Inflation.Ignore, new File("g:/web/stock-bond-mix-sweep.html"));
     System.exit(0);
 
     // int retireAge = 65;

@@ -7,10 +7,14 @@ import java.io.IOException;
 
 public class Chart
 {
+  public enum ChartType {
+    Line, Bar
+  };
+
   public static void saveLineChart(File file, String title, int width, int height, boolean logarithmic,
       Sequence... seqs) throws IOException
   {
-    saveLineHighChart(file, title, width, height, logarithmic, seqs);
+    saveHighChart(file, ChartType.Line, title, null, width, height, logarithmic, 0, seqs);
   }
 
   public static void saveLineGoogleChart(File file, String title, int width, int height, boolean logarithmic,
@@ -62,8 +66,8 @@ public class Chart
     }
   }
 
-  public static void saveLineHighChart(File file, String title, int width, int height, boolean logarithmic,
-      Sequence... seqs) throws IOException
+  public static void saveHighChart(File file, ChartType chartType, String title, String[] labels, int width,
+      int height, boolean logarithmic, int dim, Sequence... seqs) throws IOException
   {
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
       writer.write("<html><head>\n");
@@ -74,11 +78,24 @@ public class Chart
       writer.write("$(function () {\n");
       writer.write(" $('#chart').highcharts({\n");
       writer.write("  title: { text: '" + title + "' },\n");
+      if (chartType == ChartType.Bar) {
+        writer.write("  chart: { type: 'column' },\n");
+      }
       writer.write("  xAxis: { categories: [");
-      for (int i = 0; i < seqs[0].size(); ++i) {
-        writer.write("'" + Library.formatMonth(seqs[0].getTimeMS(i)) + "'");
-        if (i < seqs[0].size() - 1) {
-          writer.write(",");
+      if (labels != null) {
+        assert labels.length == seqs[0].size();
+        for (int i = 0; i < labels.length; ++i) {
+          writer.write("'" + labels[i] + "'");
+          if (i < labels.length - 1) {
+            writer.write(",");
+          }
+        }
+      } else {
+        for (int i = 0; i < seqs[0].size(); ++i) {
+          writer.write("'" + Library.formatMonth(seqs[0].getTimeMS(i)) + "'");
+          if (i < seqs[0].size() - 1) {
+            writer.write(",");
+          }
         }
       }
       writer.write("] },\n");
@@ -91,13 +108,21 @@ public class Chart
       writer.write("   title: { text: null }\n");
       writer.write("  },\n");
 
+      writer.write("  plotOptions: {\n");
+      writer.write("   column: {\n");
+      writer.write("    pointPadding: 0,\n");
+      writer.write("    groupPadding: 0.1,\n");
+      writer.write("    borderWidth: 0\n");
+      writer.write("   }\n");
+      writer.write("  },\n");
+
       writer.write("  series: [\n");
       for (int i = 0; i < seqs.length; ++i) {
         Sequence seq = seqs[i];
         writer.write("  { name: '" + seq.getName() + "',\n");
         writer.write("    data: [");
         for (int t = 0; t < seqs[0].length(); ++t) {
-          writer.write(String.format("%.2f%s", seqs[i].get(t, 0), t == seqs[i].size() - 1 ? "" : ", "));
+          writer.write(String.format("%.4f%s", seqs[i].get(t, dim), t == seqs[i].size() - 1 ? "" : ", "));
         }
         writer.write("] }");
         if (i < seqs.length - 1) {
