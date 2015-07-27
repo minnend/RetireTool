@@ -1,8 +1,6 @@
 package org.minnen.retiretool;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -261,55 +259,6 @@ public class RetireTool
     }
   }
 
-  public static void saveLineChart(File file, String title, int width, int height, boolean logarithmic,
-      Sequence... seqs) throws IOException
-  {
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
-      writer.write("<html><head><script type=\"text/javascript\"\n");
-      writer
-          .write(" src=\"https://www.google.com/jsapi?autoload={ 'modules':[{ 'name':'visualization', 'version':'1', 'packages':['corechart'] }] }\"></script>\n");
-      writer.write("  <script type=\"text/javascript\">\n");
-      writer.write("  google.setOnLoadCallback(drawChart);\n");
-      writer.write("   function drawChart() {\n");
-      writer.write("    var data = google.visualization.arrayToDataTable([\n");
-      writer.write("     ['Date', ");
-      for (int i = 0; i < seqs.length; ++i) {
-        writer.write("'" + seqs[i].getName() + "'");
-        if (i < seqs.length - 1) {
-          writer.write(", ");
-        }
-      }
-      writer.write("],\n");
-      int dt = 1;
-      for (int t = 0; t < seqs[0].length(); t += dt) {
-        writer.write("     ['" + Library.formatMonth(seqs[0].getTimeMS(t)) + "', ");
-        for (int i = 0; i < seqs.length; ++i) {
-          writer.write(String.format("%.2f%s", seqs[i].get(t, 0), i == seqs.length - 1 ? "" : ", "));
-        }
-        writer.write(t + dt >= seqs[0].length() ? "]\n" : "],\n");
-      }
-      writer.write("    ]);\n");
-      writer.write("    var options = {\n");
-      writer.write("     title: '" + title + "',\n");
-      writer.write("     legend: { position: 'right' },\n");
-      writer.write("     vAxis: {\n");
-      writer.write("      logScale: " + (logarithmic ? "true" : "false") + "\n");
-      writer.write("     },\n");
-      writer.write("     chartArea: {\n");
-      writer.write("      left: 100,\n");
-      writer.write("      width: \"75%\",\n");
-      writer.write("      height: \"80%\"\n");
-      writer.write("     }\n");
-      writer.write("    };\n");
-      writer.write("    var chart = new google.visualization.LineChart(document.getElementById('chart'));\n");
-      writer.write("    chart.draw(data, options);\n");
-      writer.write("  }\n");
-      writer.write("</script></head><body>\n");
-      writer.write("<div id=\"chart\" style=\"width: " + width + "px; height: " + height + "px\"></div>\n");
-      writer.write("</body></html>\n");
-    }
-  }
-
   /**
    * Estimate the needed principal to generate the given salary.
    * 
@@ -406,18 +355,20 @@ public class RetireTool
 
     Sequence[] all = new Sequence[] { bonds, bondsHold, snp, snpNoDiv, mixed, momentum, sma, raa };
     InvestmentStats[] stats = new InvestmentStats[all.length];
-    Sequence[] histograms = new Sequence[all.length];
+//    Sequence[] histograms = new Sequence[all.length];
 
     for (int i = 0; i < all.length; ++i) {
       assert all[i].length() == N;
       stats[i] = InvestmentStats.calcInvestmentStats(all[i]);
       all[i].setName(String.format("%s (%.2f%%)", all[i].getName(), stats[i].cagr));
       System.out.println(stats[i]);
-      Sequence r = calcReturnsForDuration(all[i], 5 * 12);
-      histograms[i] = computeHistogram(r, 0.5, 0.0);
+//      Sequence r = calcReturnsForDuration(all[i], 5 * 12);
+//      double[] a = r.extractDim(0);
+//      Arrays.sort(a);
+//      System.out.printf("%s: %.2f%%\n", all[i].getName(), a[ Math.round(a.length * 0.1f)]);
     }
 
-    saveLineChart(file, "Cumulative Market Returns", 1200, 600, true, sma, raa, momentum, snp, mixed, bonds, bondsHold);
+    Chart.saveLineChart(file, "Cumulative Market Returns", 1200, 600, true, sma, raa, momentum, snp, mixed, bonds, bondsHold);
   }
 
   public static void genStockBondMixSweepChart(Shiller shiller, Inflation inflation, File file) throws IOException
@@ -446,7 +397,7 @@ public class RetireTool
       // System.out.println(InvestmentStats.calcInvestmentStats(mix));
     }
 
-    saveLineChart(file, "Cumulative Market Returns: Stock/Bond Mix", 1200, 600, true, seqs);
+    Chart.saveLineChart(file, "Cumulative Market Returns: Stock/Bond Mix", 1200, 600, true, seqs);
   }
 
   public static void genSMASweepChart(Shiller shiller, Inflation inflation, File file) throws IOException
@@ -473,7 +424,7 @@ public class RetireTool
       // System.out.println(InvestmentStats.calcInvestmentStats(sma));
     }
 
-    saveLineChart(file, "Cumulative Market Returns: SMA Strategy", 1200, 600, true, seqs);
+    Chart.saveLineChart(file, "Cumulative Market Returns: SMA Strategy", 1200, 600, true, seqs);
   }
 
   public static void genMomentumSweepChart(Shiller shiller, Inflation inflation, File file) throws IOException
@@ -499,7 +450,7 @@ public class RetireTool
       // System.out.println(InvestmentStats.calcInvestmentStats(mom));
     }
 
-    saveLineChart(file, "Cumulative Market Returns: Momentum Strategy", 1200, 600, true, seqs);
+    Chart.saveLineChart(file, "Cumulative Market Returns: Momentum Strategy", 1200, 600, true, seqs);
   }
 
   public static void genReturnComparison(Shiller shiller, int numMonths, Inflation inflation, File file)
@@ -550,7 +501,7 @@ public class RetireTool
 
     String title = numMonths % 12 == 0 ? String.format("%d-Year Future Market Returns", numMonths / 12) : String
         .format("%d-Month Future Market Returns", numMonths);
-    saveLineChart(file, title, 1200, 800, false, snp, bonds);
+    Chart.saveLineChart(file, title, 1200, 800, false, snp, bonds);
   }
 
   public static double getReturn(Sequence cumulativeReturns, int iFrom, int iTo)
@@ -650,10 +601,10 @@ public class RetireTool
     // }
 
     // shiller.genReturnComparison(12*30, Inflation.Ignore, new File("g:/test.html"));
-    genReturnChart(shiller, Inflation.Ignore, new File("g:/cumulative-returns.html"));
-    genSMASweepChart(shiller, Inflation.Ignore, new File("g:/sma-sweep.html"));
-    genMomentumSweepChart(shiller, Inflation.Ignore, new File("g:/momentum-sweep.html"));
-    genStockBondMixSweepChart(shiller, Inflation.Ignore, new File("g:/stock-bond-mix-sweep.html"));
+    genReturnChart(shiller, Inflation.Ignore, new File("g:/web/cumulative-returns.html"));
+    genSMASweepChart(shiller, Inflation.Ignore, new File("g:/web/sma-sweep.html"));
+    genMomentumSweepChart(shiller, Inflation.Ignore, new File("g:/web/momentum-sweep.html"));
+    genStockBondMixSweepChart(shiller, Inflation.Ignore, new File("g:/web/stock-bond-mix-sweep.html"));
     System.exit(0);
 
     // int retireAge = 65;
