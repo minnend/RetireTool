@@ -1,5 +1,8 @@
 package org.minnen.retiretool;
 
+import java.util.Map;
+import java.util.TreeMap;
+
 public class Strategy
 {
   /**
@@ -11,13 +14,13 @@ public class Strategy
    */
   public static Sequence calcMomentumReturnSeq(int numMonths, Sequence... seqs)
   {
-    assert seqs.length > 0;
+    assert seqs.length > 1;
     int N = seqs[0].length();
     for (int i = 1; i < seqs.length; ++i) {
       assert seqs[i].length() == N;
     }
 
-    Sequence momentum = new Sequence("Momentum");
+    Sequence momentum = new Sequence("Momentum-" + numMonths);
     double balance = 1.0;
     for (int i = 0; i < N; ++i) {
       // Select asset with best return over previous 12 months.
@@ -160,5 +163,107 @@ public class Strategy
       }
     }
     return returns;
+  }
+
+  public static Sequence calcMultiMomentumReturnSeq(Sequence s1, Sequence s2, boolean bConservative)
+  {
+    int N = s1.length();
+    assert s2.length() == N;
+    Sequence[] seqs = new Sequence[] { s1, s2 };
+
+    int[] numMonths = new int[] { 1, 3, 12 };
+
+    Sequence momentum = new Sequence("MultiMomentum-" + (bConservative ? "Safe" : "Risky"));
+    double balance = 1.0;
+    for (int i = 0; i < N; ++i) {
+      int code = calcMomentumCode(i, numMonths, seqs);
+
+      // Use votes to select asset.
+      Sequence bestSeq = null;
+      switch (code) {
+      case 5:
+      case 6:
+      case 7:
+        bestSeq = s1;
+        break;
+      case 3:
+      case 4:
+        bestSeq = bConservative ? s2 : s1;
+        break;
+      default:
+        bestSeq = s2;
+      }
+
+      // Invest everything in best asset for this month.
+      double lastMonthReturn = bestSeq.get(i, 0) / bestSeq.get(Math.max(0, i - 1), 0);
+      balance *= lastMonthReturn;
+      momentum.addData(balance, seqs[0].getTimeMS(i));
+    }
+
+    return momentum;
+  }
+
+  static class SeqCount
+  {
+    public int n1 = 0, n2 = 0;
+  };
+
+  public static void calcMomentumStats(Sequence s1, Sequence s2)
+  {
+    int N = s1.length();
+    assert s2.length() == N;
+    Sequence[] seqs = new Sequence[] { s1, s2 };
+
+    int[] numMonths = new int[] { 1, 3, 12 };
+    Map<Integer, SeqCount> map = new TreeMap<Integer, SeqCount>();
+
+    for (int i = numMonths[numMonths.length - 1] + 1; i < N; ++i) {
+      int code = calcMomentumCode(i, numMonths, seqs);
+
+      // Record result.
+      SeqCount sc;
+      if (map.containsKey(code)) {
+        sc = map.get(code);
+      } else {
+        sc = new SeqCount();
+        map.put(code, sc);
+      }
+      double r1 = s1.get(i, 0) / s1.get(i - 1, 0);
+      double r2 = s2.get(i, 0) / s2.get(i - 1, 0);
+      if (r1 >= r2) {
+        ++sc.n1;
+      } else {
+        ++sc.n2;
+      }
+
+      // System.out.printf("Code=%d: %.3f, %.3f\n", code, r1, r2);
+    }
+
+    for (Map.Entry<Integer, SeqCount> entry : map.entrySet()) {
+      System.out.printf("%d: %d, %d\n", entry.getKey(), entry.getValue().n1, entry.getValue().n2);
+    }
+  }
+
+  public static int calcMomentumCode(int index, int[] numMonths, Sequence... seqs)
+  {
+    final int b = Math.max(0, index - 1);
+    int code = 0;
+    for (int j = 0; j < numMonths.length; ++j) {
+      code <<= 1;
+      final int a = Math.max(0, index - numMonths[j] - 1);
+      Sequence bestSeq = null;
+      double bestReturn = 0.0;
+      for (Sequence seq : seqs) {
+        double r = seq.get(b, 0) / seq.get(a, 0);
+        if (bestSeq == null || r > bestReturn) {
+          bestSeq = seq;
+          bestReturn = r;
+        }
+      }
+      if (bestSeq == seqs[0]) {
+        ++code;
+      }
+    }
+    return code;
   }
 }
