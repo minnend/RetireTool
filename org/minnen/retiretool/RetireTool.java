@@ -78,7 +78,7 @@ public class RetireTool
     double hleftCenter = binCenter - binWidth / 2.0;
     double hleft = hleftCenter + Math.floor((vmin - hleftCenter) / binWidth) * binWidth;
     System.out.printf("binCenter=%f   binWidth=%f  hleft=%f\n", binCenter, binWidth, hleft);
-    Sequence h = new Sequence("Histogram - " + rois.getName());
+    Sequence h = new Sequence("Histogram: " + rois.getName());
     int i = 0;
     while (i < na) {
       assert (a[i] >= hleft);
@@ -195,14 +195,13 @@ public class RetireTool
     return seq;
   }
 
-  public static void printReturnLikelihoods(Shiller shiller)
+  public static void printReturnLikelihoods(Sequence cumulativeReturns)
   {
-    Sequence snp = shiller.calcSnpReturnSeq(0, shiller.size(), DividendMethod.MONTHLY, Inflation.Ignore);
     Sequence seqLik = null;
     int[] years = new int[] { 1, 5, 10, 15, 20, 30, 40, 50 };
     for (int i = 0; i < years.length; i++) {
       System.out.printf("Processing %d: %d years\n", i + 1, years[i]);
-      Sequence r = calcReturnsForDuration(snp, years[i] * 12);
+      Sequence r = calcReturnsForDuration(cumulativeReturns, years[i] * 12);
       Sequence h = computeHistogram(r, 0.5, 0.0);
       h = addReturnLikelihoods(h);
       seqLik = appendROISeq(seqLik, h);
@@ -251,15 +250,13 @@ public class RetireTool
    */
   public static Sequence calcReturnsForDuration(Sequence cumulativeReturns, int nMonths)
   {
-    Sequence rois = new Sequence("ROIs - " + Library.getDurationString(nMonths));
-
     final int N = cumulativeReturns.size();
+    Sequence rois = new Sequence("ROIs: " + Library.getDurationString(nMonths));
     for (int i = 0; i + nMonths < N; i++) {
       double roi = getReturn(cumulativeReturns, i, i + nMonths);
       double cagr = RetireTool.getAnnualReturn(roi, nMonths);
       rois.addData(cagr, cumulativeReturns.getTimeMS(i));
     }
-
     return rois;
   }
 
@@ -715,7 +712,7 @@ public class RetireTool
 
     genReturnViz(shiller, 30 * 12, Inflation.Ignore, new File("g:/web/scatter-returns.html"), new File(
         "g:/web/histogram-returns.html"), new File("g:/web/histogram-excess-returns.html"));
-    // genReturnChart(shiller, Inflation.Ignore, new File("g:/web/cumulative-returns.html"));
+    genReturnChart(shiller, Inflation.Ignore, new File("g:/web/cumulative-returns.html"));
     // genSMASweepChart(shiller, Inflation.Ignore, new File("g:/web/sma-sweep.html"));
     // genMomentumSweepChart(shiller, Inflation.Ignore, new File("g:/web/momentum-sweep.html"));
     // genStockBondMixSweepChart(shiller, Inflation.Ignore, new File("g:/web/stock-bond-mix-sweep.html"));

@@ -45,13 +45,13 @@ public class Strategy
   /**
    * Invest in risky asset when above SMA, otherwise safe asset.
    * 
-   * @param numMonthsForAverage calculate SMA over past N months
+   * @param numMonths calculate SMA over past N months
    * @param prices monthly price used for SMA and signal
    * @param risky cumulative returns for risky asset
    * @param safe cumulative returns for safe asset
    * @return sequence of returns using the above/below-SMA strategy
    */
-  public static Sequence calcSMAReturnSeq(int numMonthsForAverage, Sequence prices, Sequence risky, Sequence safe)
+  public static Sequence calcSMAReturnSeq(int numMonths, Sequence prices, Sequence risky, Sequence safe)
   {
     assert risky.length() == safe.length();
 
@@ -60,7 +60,7 @@ public class Strategy
     sma.addData(balance, risky.getStartMS());
     for (int i = 1; i < risky.length(); ++i) {
       // Calculate trailing moving average.
-      int a = Math.max(0, i - numMonthsForAverage - 1);
+      int a = Math.max(0, i - numMonths - 1);
       double ma = 0.0;
       for (int j = a; j < i; ++j) {
         ma += prices.get(j, 0);
