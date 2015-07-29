@@ -74,12 +74,12 @@ public class RetireTool
     if (Double.isNaN(vmax)) {
       vmax = a[na - 1];
     }
-    System.out.printf("Data: %d entries in [%.2f%%, %.2f%%]\n", na, vmin, vmax);
+    //System.out.printf("Data: %d entries in [%.2f%%, %.2f%%]\n", na, vmin, vmax);
 
     // figure out where to start
     double hleftCenter = binCenter - binWidth / 2.0;
     double hleft = hleftCenter + Math.floor((vmin - hleftCenter) / binWidth) * binWidth;
-    System.out.printf("binCenter=%f   binWidth=%f  hleft=%f\n", binCenter, binWidth, hleft);
+    // System.out.printf("binCenter=%f   binWidth=%f  hleft=%f\n", binCenter, binWidth, hleft);
     Sequence h = new Sequence("Histogram: " + rois.getName());
     int i = 0;
     while (i < na) {
@@ -550,11 +550,11 @@ public class RetireTool
     Chart.saveHighChart(new File(dir, "duel-excess.html"), Chart.ChartType.Bar, title, labels, colors, 1200, 600,
         false, 1, histogramExcess);
 
-    double[] a = excessReturns.extractDim(0);
-    int[] ii = Library.sort(a, true);
-    for (int i = 0; i < excessReturns.length(); ++i) {
-      System.out.printf("[%s]  %.3f\n", Library.formatMonth(excessReturns.getTimeMS(ii[i])), a[i]);
-    }
+    // double[] a = excessReturns.extractDim(0);
+    // int[] ii = Library.sort(a, true);
+    // for (int i = 0; i < excessReturns.length(); ++i) {
+    // System.out.printf("[%s]  %.3f\n", Library.formatMonth(excessReturns.getTimeMS(ii[i])), a[i]);
+    // }
   }
 
   public static void genStockBondMixSweepChart(Shiller shiller, Inflation inflation, File file) throws IOException

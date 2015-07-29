@@ -214,6 +214,7 @@ public class Strategy
   static class SeqCount
   {
     public int n1 = 0, n2 = 0;
+    public double r1 = 1.0, r2 = 1.0;
   };
 
   public static void calcMomentumStats(Sequence s1, Sequence s2)
@@ -243,12 +244,11 @@ public class Strategy
       } else {
         ++sc.n2;
       }
+      sc.r1 *= r1;
+      sc.r2 *= r2;
     }
 
-    System.out.println("Momentum Statistics:");
-    for (Map.Entry<Integer, SeqCount> entry : map.entrySet()) {
-      System.out.printf("%d: %d, %d\n", entry.getKey(), entry.getValue().n1, entry.getValue().n2);
-    }
+    printStats("Momentum Statistics:", map);
   }
 
   public static int calcMomentumCode(int index, int[] numMonths, Sequence... seqs)
@@ -316,12 +316,11 @@ public class Strategy
       } else {
         ++sc.n2;
       }
+      sc.r1 *= r1;
+      sc.r2 *= r2;
     }
 
-    System.out.println("SMA Statistics:");
-    for (Map.Entry<Integer, SeqCount> entry : map.entrySet()) {
-      System.out.printf("%d: %d, %d\n", entry.getKey(), entry.getValue().n1, entry.getValue().n2);
-    }
+    printStats("SMA Statistics:", map);
   }
 
   public static Sequence calcMultiSmaReturnSeq(Sequence prices, Sequence risky, Sequence safe, Disposition disposition)
@@ -369,5 +368,16 @@ public class Strategy
     // Only short-term support.
     assert code == 4;
     return disposition == Disposition.Risky ? risky : safe;
+  }
+
+  public static void printStats(String title, Map<Integer, SeqCount> map)
+  {
+    System.out.println(title);
+    for (Map.Entry<Integer, SeqCount> entry : map.entrySet()) {
+      SeqCount sc = entry.getValue();
+      int n = sc.n1 + sc.n2;
+      double p = (n == 0 ? 0.0 : 100.0 * (sc.n1) / n);
+      System.out.printf("%d: %.1f%%  %.3fx  %3d  [%d, %d]\n", entry.getKey(), p, sc.r1 / sc.r2, n, sc.n1, sc.n2);
+    }
   }
 }
