@@ -371,7 +371,7 @@ public class RetireTool
     int nMonthsMomentum = 12;
     int rebalanceMonths = 12;
 
-    Sequence prices = shiller.getStockData();
+    Sequence prices = shiller.getStockData(iStart, iEnd);
 
     Sequence bonds = shiller.calcBondReturnSeqRebuy(iStart, iEnd, inflation);
     Sequence bondsHold = shiller.calcBondReturnSeqHold(iStart, iEnd, inflation);
@@ -436,7 +436,7 @@ public class RetireTool
     int nMonthsMomentum = 12;
     int rebalanceMonths = 12;
 
-    Sequence prices = shiller.getStockData();
+    Sequence prices = shiller.getStockData(iStart, iEnd);
 
     Sequence bonds = shiller.calcBondReturnSeqRebuy(iStart, iEnd, inflation);
     Sequence snp = shiller.calcSnpReturnSeq(iStart, iEnd - iStart, DividendMethod.MONTHLY, inflation);
@@ -503,7 +503,7 @@ public class RetireTool
     int iEnd = shiller.length() - 1;
     Inflation inflation = Inflation.Ignore;
 
-    Sequence prices = shiller.getStockData();
+    Sequence prices = shiller.getStockData(iStart, iEnd);
     Sequence stock = shiller.calcSnpReturnSeq(iStart, iEnd - iStart, DividendMethod.MONTHLY, inflation);
     Sequence bonds = shiller.calcBondReturnSeqRebuy(iStart, iEnd, inflation);
     Sequence mixed = shiller.calcMixedReturnSeq(iStart, iEnd - iStart, 80, 20, rebalanceMonths, inflation);
@@ -549,6 +549,12 @@ public class RetireTool
     }
     Chart.saveHighChart(new File(dir, "duel-excess.html"), Chart.ChartType.Bar, title, labels, colors, 1200, 600,
         false, 1, histogramExcess);
+
+    double[] a = excessReturns.extractDim(0);
+    int[] ii = Library.sort(a, true);
+    for (int i = 0; i < excessReturns.length(); ++i) {
+      System.out.printf("[%s]  %.3f\n", Library.formatMonth(excessReturns.getTimeMS(ii[i])), a[i]);
+    }
   }
 
   public static void genStockBondMixSweepChart(Shiller shiller, Inflation inflation, File file) throws IOException
@@ -589,7 +595,7 @@ public class RetireTool
     // iEnd = getIndexForDate(2010, 1);
     int N = iEnd - iStart + 1;
 
-    Sequence prices = shiller.getStockData();
+    Sequence prices = shiller.getStockData(iStart, iEnd);
     Sequence bonds = shiller.calcBondReturnSeqRebuy(iStart, iEnd, inflation);
     Sequence snp = shiller.calcSnpReturnSeq(iStart, iEnd - iStart, DividendMethod.MONTHLY, inflation);
 

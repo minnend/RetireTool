@@ -385,4 +385,112 @@ public final class Library
     }
     return String.format("%.1f years", nMonths / 12.0);
   }
+
+  /**
+   * Sort the given array and return the resulting indices
+   * 
+   * @param a data to sort
+   * @param bAscending true = ascending sort, false = descending
+   * @return index of original location of data
+   */
+  public static int[] sort(double[] a, boolean bAscending)
+  {
+    int n = a.length;
+    int[] ii = new int[n];
+    for (int i = 0; i < n; i++)
+      ii[i] = i;
+    sort(a, ii, 0, n - 1);
+    if (!bAscending)
+      for (int i = 0; i < n - i - 1; i++)
+        swap(a, ii, i, n - i - 1);
+    return ii;
+  }
+
+  /**
+   * Internal insertion sort routine for subarrays that is used by quicksort.
+   * 
+   * @param a an array of Comparable items.
+   * @param ii array of indices that will be rearranged to match sort
+   * @param low the left-most index of the subarray.
+   * @param n the number of items to sort.
+   */
+  private static void insertionSort(double[] a, int[] ii, int low, int high)
+  {
+    for (int p = low + 1; p <= high; p++) {
+      double tmp = a[p];
+      int j;
+      for (j = p; j > low && tmp < a[j - 1]; j--) {
+        a[j] = a[j - 1];
+        ii[j] = ii[j - 1];
+      }
+      a[j] = tmp;
+      ii[j] = p;
+    }
+  }
+
+  /**
+   * Internal quicksort method that makes recursive calls. Uses median-of-three partitioning and a cutoff of 10.
+   * 
+   * @param a data to be sorted
+   * @param ii array of indices that will be rearranged to match sort
+   * @param low the left-most index of the subarray.
+   * @param high the right-most index of the subarray.
+   */
+  private static void sort(double[] a, int[] ii, int low, int high)
+  {
+    if (low + 10 > high)
+      insertionSort(a, ii, low, high);
+    else {
+      // Sort low, middle, high
+      int middle = (low + high) / 2;
+      if (a[middle] < a[low])
+        swap(a, ii, low, middle);
+      if (a[high] < a[low])
+        swap(a, ii, low, high);
+      if (a[high] < a[middle])
+        swap(a, ii, middle, high);
+
+      // Place pivot at position high - 1
+      swap(a, ii, middle, high - 1);
+      double pivot = a[high - 1];
+
+      // Begin partitioning
+      int i, j;
+      for (i = low, j = high - 1;;) {
+        while (a[++i] < pivot) {
+        }
+        while (pivot < a[--j]) {
+        }
+
+        if (i >= j)
+          break;
+        swap(a, ii, i, j);
+      }
+
+      // Restore pivot
+      swap(a, ii, i, high - 1);
+
+      sort(a, ii, low, i - 1); // Sort small elements
+      sort(a, ii, i + 1, high); // Sort large elements
+    }
+  }
+
+  /**
+   * Method to swap to elements in an array.
+   * 
+   * @param a an array of objects.
+   * @param ii array of indices that will be rearranged to match sort
+   * @param index1 the index of the first object.
+   * @param index2 the index of the second object.
+   */
+  public static void swap(double[] a, int[] ii, int index1, int index2)
+  {
+    double tmp = a[index1];
+    a[index1] = a[index2];
+    a[index2] = tmp;
+
+    int itmp = ii[index1];
+    ii[index1] = ii[index2];
+    ii[index2] = itmp;
+  }
 }
