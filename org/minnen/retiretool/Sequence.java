@@ -429,6 +429,45 @@ public class Sequence implements Iterable<FeatureVec>
     return subseq(i, j - i + 1);
   }
 
+  /** @return new sequence equal to this sequence added (summed with) the given sequence. */
+  public Sequence add(Sequence seq)
+  {
+    assert length() == seq.length();
+    Sequence ret = new Sequence(getName() + " + " + seq.getName());
+    for (int i = 0; i < length(); ++i) {
+      FeatureVec x = get(i);
+      FeatureVec y = seq.get(i);
+      ret.addData(x.add(y), getTimeMS(i));
+    }
+    return ret;
+  }
+
+  /** @return new sequence equal to given sequence subtracted from this sequence. */
+  public Sequence sub(Sequence seq)
+  {
+    assert length() == seq.length();
+    Sequence ret = new Sequence(getName() + " - " + seq.getName());
+    for (int i = 0; i < length(); ++i) {
+      FeatureVec x = get(i);
+      FeatureVec y = seq.get(i);
+      ret.addData(x.sub(y), getTimeMS(i));
+    }
+    return ret;
+  }
+
+  /** @return new sequence equal to given sequence multiplied with this sequence (component-wise). */
+  public Sequence mul(Sequence seq)
+  {
+    assert length() == seq.length();
+    Sequence ret = new Sequence(getName() + " - " + seq.getName());
+    for (int i = 0; i < length(); ++i) {
+      FeatureVec x = get(i);
+      FeatureVec y = seq.get(i);
+      ret.addData(x.mul(y), getTimeMS(i));
+    }
+    return ret;
+  }
+
   /** @return new sequence equal to this sequence divided by the given sequence (component-wise). */
   public Sequence divide(Sequence divisor)
   {
@@ -441,4 +480,5 @@ public class Sequence implements Iterable<FeatureVec>
     }
     return seq;
   }
+
 }

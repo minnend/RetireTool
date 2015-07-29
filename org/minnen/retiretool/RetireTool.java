@@ -400,8 +400,17 @@ public class RetireTool
         bondsHold);
   }
 
-  public static void genReturnHistogram(Shiller shiller, int nMonths, Inflation inflation, File file)
-      throws IOException
+  public static String[] getLabelsFromHistogram(Sequence histogram)
+  {
+    String[] labels = new String[histogram.length()];
+    for (int i = 0; i < labels.length; ++i) {
+      labels[i] = String.format("%.1f", histogram.get(i, 0));
+    }
+    return labels;
+  }
+
+  public static void genReturnViz(Shiller shiller, int nMonths, Inflation inflation, File fileScatter, File fileBar,
+      File fileExcessReturns) throws IOException
   {
     int iStart = 0;
     int iEnd = shiller.length() - 1;
@@ -435,6 +444,7 @@ public class RetireTool
     double vmin = 0.0, vmax = 0.0;
     for (int i = 0; i < assets.length; ++i) {
       returns[i] = calcReturnsForDuration(assets[i], nMonths);
+      returns[i].setName(assets[i].getName());
       double[] a = returns[i].extractDim(0);
       Arrays.sort(a);
       if (i == 0 || a[0] < vmin) {
@@ -444,6 +454,24 @@ public class RetireTool
         vmax = a[a.length - 1];
       }
     }
+    Sequence compareReturnsA = returns[3];
+    Sequence compareReturnsB = returns[2];
+
+    String title = "Paired Returns - " + Library.getDurationString(nMonths);
+    Chart.saveHighChartScatter(fileScatter, title, 800, 600, 0, compareReturnsA, compareReturnsB);
+
+    title = "Excess Returns - " + Library.getDurationString(nMonths);
+    Sequence excessReturns = compareReturnsB.sub(compareReturnsA);
+    Sequence histogramExcess = computeHistogram(excessReturns, 0.5, 0.0);
+    histogramExcess.setName(String.format("%s vs. %s", compareReturnsB.getName(), compareReturnsA.getName()));
+    String[] labels = getLabelsFromHistogram(histogramExcess);
+    String[] colors = new String[labels.length];
+    for (int i = 0; i < colors.length; ++i) {
+      double x = histogramExcess.get(i, 0);
+      colors[i] = x < -0.001 ? "#df5353" : (x > 0.001 ? "#53df53" : "#dfdf53");
+    }
+    Chart.saveHighChart(fileExcessReturns, Chart.ChartType.Bar, title, labels, colors, 1200, 600, false, 1,
+        histogramExcess);
 
     Sequence[] histograms = new Sequence[assets.length];
     for (int i = 0; i < assets.length; ++i) {
@@ -451,13 +479,9 @@ public class RetireTool
       histograms[i].setName(assets[i].getName());
     }
 
-    String[] labels = new String[histograms[0].length()];
-    for (int i = 0; i < labels.length; ++i) {
-      labels[i] = String.format("%.1f", histograms[0].get(i, 0));
-    }
-
-    String title = "Histogram of Returns - " + Library.getDurationString(nMonths);
-    Chart.saveHighChart(file, Chart.ChartType.Bar, title, labels, 1200, 600, false, 1, histograms);
+    title = "Histogram of Returns - " + Library.getDurationString(nMonths);
+    labels = getLabelsFromHistogram(histograms[0]);
+    Chart.saveHighChart(fileBar, Chart.ChartType.Bar, title, labels, null, 1200, 600, false, 1, histograms);
   }
 
   public static void genStockBondMixSweepChart(Shiller shiller, Inflation inflation, File file) throws IOException
@@ -689,7 +713,8 @@ public class RetireTool
     // shiller.genReturnComparison(years[i] * 12, Inflation.Ignore, new File("g:/test.html"));
     // }
 
-    genReturnHistogram(shiller, 20 * 12, Inflation.Ignore, new File("g:/web/histogram.html"));
+    genReturnViz(shiller, 30 * 12, Inflation.Ignore, new File("g:/web/scatter-returns.html"), new File(
+        "g:/web/histogram-returns.html"), new File("g:/web/histogram-excess-returns.html"));
     // genReturnChart(shiller, Inflation.Ignore, new File("g:/web/cumulative-returns.html"));
     // genSMASweepChart(shiller, Inflation.Ignore, new File("g:/web/sma-sweep.html"));
     // genMomentumSweepChart(shiller, Inflation.Ignore, new File("g:/web/momentum-sweep.html"));
