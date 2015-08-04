@@ -83,7 +83,7 @@ public class Strategy
   {
     assert risky.length() == safe.length();
 
-    Sequence sma = new Sequence("SMA");
+    Sequence sma = new Sequence("SMA-" + numMonths);
     double balance = 1.0;
     sma.addData(balance, risky.getStartMS());
     for (int i = 1; i < risky.length(); ++i) {

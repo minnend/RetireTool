@@ -1,26 +1,13 @@
 package org.minnen.retiretool;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Iterator;
-import java.util.List;
-
 import org.minnen.retiretool.FeatureVec;
 import org.minnen.retiretool.Sequence;
-import org.minnen.retiretool.Library;
-
-import org.minnen.retiretool.RetireTool.DividendMethod;
-import org.minnen.retiretool.RetireTool.Inflation;
 
 /*
- * Store Shiller's data (S&P price, dividends, CPI, GS10, CAPE).
+ * Functions that operate on Shiller's data (S&P price, dividends, CPI, GS10, CAPE).
  * Data: http://www.econ.yale.edu/~shiller/data.htm
  */
-public class Shiller extends Sequence
+public class Shiller
 {
   public static int PRICE = 0;
   public static int DIV   = 1;
@@ -28,345 +15,50 @@ public class Shiller extends Sequence
   public static int GS10  = 3;
   public static int CAPE  = 4;
 
-  /**
-   * Create a Shiller data object without any data.
-   */
-  public Shiller()
-  {
-    super("Shiller Financial Data");
-  }
-
-  /**
-   * Create a Shiller data object and load data from the given file.
-   * 
-   * @param filename path to file with Shiller CSV data.
-   * @throws IOException if there is a problem reading the file.
-   */
-  public Shiller(String filename) throws IOException
-  {
-    super("Shiller Financial Data");
-    loadData(filename);
-  }
-
-  /**
-   * Load data from CSV export of Shiller's SNP/CPI excel spreadsheet.
-   * 
-   * @param filename name of file to load
-   * @return true on success
-   * @throws IOException if there is a problem reading the file.
-   */
-  public void loadData(String filename) throws IOException
-  {
-    File file = new File(filename);
-    if (!file.canRead()) {
-      throw new IOException(String.format("Can't read shiller file (%s)", filename));
-    }
-    System.out.printf("Loading data file: [%s]\n", filename);
-
-    BufferedReader in = new BufferedReader(new FileReader(filename));
-    String line;
-    while ((line = in.readLine()) != null) {
-      try {
-        String[] toks = line.trim().split(",");
-        if (toks == null || toks.length < 5) {
-          continue; // want at least: date, p, d, e, cpi
-        }
-
-        // date
-        double date = Double.parseDouble(toks[0]);
-        int year = (int) Math.floor(date);
-        int month = (int) Math.round((date - year) * 100);
-
-        // snp price
-        double price = Double.parseDouble(toks[1]);
-
-        // snp dividend -- data is annual yield, we want monthly
-        double div = Double.parseDouble(toks[2]) / 12;
-
-        // cpi
-        double cpi = Double.parseDouble(toks[4]);
-
-        // GS10 rate
-        double gs10 = Double.parseDouble(toks[6]);
-
-        // CAPE
-        double cape = Library.tryParse(toks[10], 0.0);
-
-        Calendar cal = Library.now();
-        cal.set(Calendar.YEAR, year);
-        cal.set(Calendar.MONTH, month - 1);
-        cal.set(Calendar.DAY_OF_MONTH, 1);
-        cal.set(Calendar.HOUR_OF_DAY, 8);
-        cal.set(Calendar.MINUTE, 0);
-        cal.set(Calendar.SECOND, 0);
-        addData(new FeatureVec(5, price, div, cpi, gs10, cape), cal.getTimeInMillis());
-
-        // System.out.printf("%d/%d:  $%.2f  $%.2f  $%.2f\n", year,
-        // month, price, div, cpi);
-
-      } catch (NumberFormatException nfe) {
-        // something went wrong so skip this line
-        System.err.println("Bad Line: " + line);
-        continue;
-      }
-
-    }
-    in.close();
-  }
-
-  /**
-   * Calculates S&P ROI for the given range.
-   * 
-   * @param iStart first index in SNP
-   * @param nMonths number of months (ticks) in snp to consider
-   * @param divMethod how should we handle dividend reinvestment
-   * @param inflationAccounting how should we handle inflation
-   * @return sequence of ROIs
-   */
-  public Sequence calcSnpReturnSeq(int iStart, int nMonths, DividendMethod divMethod, Inflation inflationAccounting)
-  {
-    if (iStart < 0 || nMonths < 1 || iStart + nMonths >= size()) {
-      throw new IllegalArgumentException(String.format("iStart=%d, nMonths=%d, size=%d", iStart, nMonths, size()));
-    }
-
-    Sequence seq = new Sequence(divMethod == DividendMethod.NO_REINVEST ? "S&P-NoReinvest" : "S&P");
-
-    // note: it's equivalent to keep track of total value or number of shares
-    double divCash = 0.0;
-    double baseValue = 1.0;
-    double shares = baseValue / get(iStart, PRICE);
-    seq.addData(baseValue, getTimeMS(iStart));
-    for (int i = iStart; i < iStart + nMonths; ++i) {
-      double div = 0.0;
-      if (divMethod == DividendMethod.NO_REINVEST)
-        divCash += shares * get(i, DIV);
-      else if (divMethod == DividendMethod.MONTHLY) {
-        // Dividends at the end of every month.
-        div = get(i, DIV);
-      } else if (divMethod == DividendMethod.QUARTERLY) {
-        // Dividends at the end of every quarter (march, june, september, december).
-        Calendar cal = Library.now();
-        cal.setTimeInMillis(getTimeMS(i));
-        int month = cal.get(Calendar.MONTH);
-        if (month % 3 == 2) { // time for a dividend!
-          for (int j = 0; j < 3; j++) {
-            if (i - j < iStart)
-              break;
-            div += get(i - j, DIV);
-          }
-        }
-      }
-
-      // Apply the dividends (if any).
-      double price = get(i + 1, PRICE);
-      shares += shares * div / price;
-
-      // Add data point for current value.
-      double value = adjustValue(divCash + shares * price, i + 1, iStart, inflationAccounting);
-      seq.addData(value, getTimeMS(i + 1));
-    }
-
-    return seq;
-  }
-
-  /**
-   * Calculates S&P ROI for the given range.
-   * 
-   * @param iStart first index in SNP
-   * @param nMonths number of months (ticks) in snp to consider
-   * @param divMethod how should we handle dividend reinvestment
-   * @param inflationAccounting how should we handle inflation
-   * @return ROI over given time period
-   */
-  public double calcSnpReturn(int iStart, int nMonths, DividendMethod divMethod, Inflation inflationAccounting)
-  {
-    Sequence seq = calcSnpReturnSeq(iStart, nMonths, divMethod, inflationAccounting);
-    return seq.getLast(0);
-  }
-
-  /**
-   * Calculates bond ROI for the given range using the rebuy approach.
-   * 
-   * Each month, the existing bond is sold and a new one is purchased.
-   * 
-   * @param iStart start simulation at this index in the data sequence
-   * @param iEnd end simulation at this index in the data sequence
-   * @param inflationAccounting how should we handle inflation
-   * @return sequence of ROIs
-   */
-  public Sequence calcBondReturnSeqRebuy(int iStart, int iEnd, Inflation inflationAccounting)
-  {
-    if (iStart < 0 || iEnd < iStart || iEnd >= size()) {
-      throw new IllegalArgumentException(String.format("iStart=%d, iEnd=%d, size=%d", iStart, iEnd, size()));
-    }
-
-    Sequence bondData = getBondData();
-    double cash = 1.0; // start with one dollar
-    Sequence seq = new Sequence("Bonds (Rebuy)");
-    seq.addData(cash, getTimeMS(iStart));
-
-    for (int i = iStart; i < iEnd; ++i) {
-      // Buy bond at start of this month.
-      Bond bond = new Bond(bondData, cash, i);
-      // System.out.printf("Bought %d: cash=%f, price=%f\n", i, cash, bond.price(i));
-
-      // Sell bond at end of the month (we use start of next month).
-      cash = bond.price(i + 1);
-      // System.out.printf("  Sell %d: price=%f\n", i+1, cash);
-
-      // Add sequence data point for new month.
-      double currentValue = adjustValue(cash, i + 1, iStart, inflationAccounting);
-      seq.addData(currentValue, getTimeMS(i + 1));
-    }
-
-    return seq;
-  }
-
-  /**
-   * Calculates bond ROI for the given range using the hold-to-maturity approach.
-   * 
-   * All bonds are held to maturity and coupon payments are used to buy more bonds.
-   * 
-   * @param iStart start simulation at this index in the data sequence
-   * @param iEnd end simulation at this index in the data sequence
-   * @param inflationAccounting how should we handle inflation
-   * @return sequence of ROIs
-   */
-  public Sequence calcBondReturnSeqHold(int iStart, int iEnd, Inflation inflationAccounting)
-  {
-    if (iStart < 0 || iEnd < iStart || iEnd >= size()) {
-      throw new IllegalArgumentException(String.format("iStart=%d, iEnd=%d, size=%d", iStart, iEnd, size()));
-    }
-
-    final double principal = 1000.0;
-    final double bondQuantum = 10.0; // bonds can only be purchased in fixed increments
-    double cash = principal;
-    Sequence bondData = getBondData();
-    Sequence seq = new Sequence("Bonds (Hold)");
-    seq.addData(cash, getTimeMS(iStart));
-    List<Bond> bonds = new ArrayList<Bond>(); // TODO not an efficient data structure
-
-    for (int i = iStart; i < iEnd; ++i) {
-      // Collect from existing bonds.
-      Iterator<Bond> it = bonds.iterator();
-      while (it.hasNext()) {
-        Bond bond = it.next();
-        cash += bond.paymentThisMonth(i);
-        assert bond.isActive(i);
-        if (bond.isExpiring(i)) {
-          it.remove();
-        }
-      }
-
-      // Buy new bonds.
-      double bondValue = bondQuantum * Math.floor(cash / bondQuantum);
-      if (bondValue > 0.0) {
-        bonds.add(new Bond(bondData, bondValue, i));
-        cash -= bondValue;
-      }
-
-      // Add sequence data point for new month.
-      double value = cash;
-      for (Bond bond : bonds) {
-        value += bond.price(i);
-      }
-      double currentValue = adjustValue(value, i + 1, iStart, inflationAccounting);
-      seq.addData(currentValue, getTimeMS(i + 1));
-    }
-
-    return seq._div(principal);
-  }
-
-  /**
-   * Calculates bond ROI for the given range using the rebuy approach.
-   * 
-   * Each month, the existing bond is sold and a new one is purchased.
-   * 
-   * @param iStart start simulation at this index in the data sequence
-   * @param iEnd end simulation at this index in the data sequence
-   * @param inflationAccounting how should we handle inflation
-   * @return ROI across the given time period
-   */
-  public double calcBondReturnRebuy(int iStart, int iEnd, Inflation inflationAccounting)
-  {
-    Sequence seq = calcBondReturnSeqRebuy(iStart, iEnd, inflationAccounting);
-    return seq.getLast(0);
-  }
-
-  /**
-   * Convert cash value at one point in time into equivalent value at another according to relative CPI.
-   * 
-   * @param value current value
-   * @param iFrom current time
-   * @param iTo query time
-   * @return equivalent value at query time
-   */
-  public double adjustForInflation(double value, int iFrom, int iTo)
-  {
-    return adjustValue(value, iFrom, iTo, Inflation.Include);
-  }
-
-  /**
-   * Convert value at one point in time into equivalent value at another according to inflation handling option.
-   * 
-   * @param value current value
-   * @param iFrom current time
-   * @param iTo query time
-   * @param inflationAccounting should we adjust for inflation?
-   * @return equivalent value at query time
-   */
-  public double adjustValue(double value, int iFrom, int iTo, Inflation inflationAccounting)
-  {
-    if (inflationAccounting == Inflation.Include) {
-      value *= get(iTo, CPI) / get(iFrom, CPI);
-    }
-    return value;
-  }
-
   /** @return Sequence containing all CAPE data. */
-  public Sequence getCapeData()
+  public static Sequence getCapeData(Sequence shiller)
   {
-    return getCapeData(0, size() - 1);
+    return getCapeData(shiller, 0, shiller.size() - 1);
   }
 
   /** @return Sequence containing CAPE data in the given range (inclusive). */
-  public Sequence getCapeData(int iStart, int iEnd)
+  public static Sequence getCapeData(Sequence shiller, int iStart, int iEnd)
   {
     Sequence cape = new Sequence("CAPE");
     for (int i = iStart; i <= iEnd; ++i) {
-      cape.addData(get(i, CAPE), getTimeMS(i));
+      cape.addData(shiller.get(i, CAPE), shiller.getTimeMS(i));
     }
     return cape;
   }
 
   /** @return Sequence containing all stock and dividend data. */
-  public Sequence getStockData()
+  public static Sequence getStockData(Sequence shiller)
   {
-    return getStockData(0, size() - 1);
+    return getStockData(shiller, 0, shiller.size() - 1);
   }
 
   /** @return Sequence containing stock and dividend data in the given range (inclusive). */
-  public Sequence getStockData(int iStart, int iEnd)
+  public static Sequence getStockData(Sequence shiller, int iStart, int iEnd)
   {
-    Sequence seq = new Sequence("Stock");
+    Sequence seq = new Sequence("S&P");
     for (int i = iStart; i <= iEnd; ++i) {
-      seq.addData(new FeatureVec(2, get(i, PRICE), get(i, DIV)), getTimeMS(i));
+      seq.addData(new FeatureVec(2, shiller.get(i, PRICE), shiller.get(i, DIV)), shiller.getTimeMS(i));
     }
     return seq;
   }
 
   /** @return Sequence containing all bond data. */
-  public Sequence getBondData()
+  public static Sequence getBondData(Sequence shiller)
   {
-    return getBondData(0, size() - 1);
+    return getBondData(shiller, 0, shiller.size() - 1);
   }
 
   /** @return Sequence containing bond data in the given range (inclusive). */
-  public Sequence getBondData(int iStart, int iEnd)
+  public static Sequence getBondData(Sequence shiller, int iStart, int iEnd)
   {
-    Sequence seq = new Sequence("Bonds");
+    Sequence seq = new Sequence("US 10-year Bonds");
     for (int i = iStart; i <= iEnd; ++i) {
-      seq.addData(get(i, GS10), getTimeMS(i));
+      seq.addData(shiller.get(i, GS10), shiller.getTimeMS(i));
     }
     return seq;
   }
@@ -376,19 +68,21 @@ public class Shiller extends Sequence
    * 
    * In this model, stock dividends are used to buy stock and/or bonds to help maintain target allocation percentages.
    * 
+   * @param
    * @param iStart index of month for first investment
    * @param nMonths number of months to run simulation
    * @param targetPercentStock target percent for stocks
    * @param targetPercentBonds target percent for bonds
    * @param rebalanceMonths rebalance every N months (zero for never)
-   * @param inflationAccounting how should inflation be handled?
    * @return Sequence containing cumulative returns for the investment mix.
    */
-  public Sequence calcMixedReturnSeq(int iStart, int nMonths, double targetPercentStock, double targetPercentBonds,
-      int rebalanceMonths, Inflation inflationAccounting)
+  @Deprecated
+  public static Sequence calcMixedReturns(Sequence shiller, int iStart, int nMonths, double targetPercentStock,
+      double targetPercentBonds, int rebalanceMonths)
   {
-    if (iStart < 0 || nMonths < 1 || iStart + nMonths >= size()) {
-      throw new IllegalArgumentException(String.format("iStart=%d, nMonths=%d, size=%d", iStart, nMonths, size()));
+    if (iStart < 0 || nMonths < 1 || iStart + nMonths >= shiller.size()) {
+      throw new IllegalArgumentException(String.format("iStart=%d, nMonths=%d, size=%d", iStart, nMonths,
+          shiller.size()));
     }
 
     double targetPercentCash = 100.0 - (targetPercentStock + targetPercentBonds);
@@ -397,21 +91,21 @@ public class Shiller extends Sequence
           targetPercentStock, targetPercentBonds));
     }
 
-    Sequence bondData = getBondData();
+    Sequence bondData = getBondData(shiller);
     Sequence seq = new Sequence("Mixed Stocks & Bonds");
 
     final double principal = 1000.0;
     double stockValue = principal * targetPercentStock / 100.0;
     double bondValue = principal * targetPercentBonds / 100.0;
-    double shares = stockValue / get(iStart, PRICE);
+    double shares = stockValue / shiller.get(iStart, PRICE);
     double cash = principal - (stockValue + bondValue);
-    seq.addData(principal, getTimeMS(iStart));
+    seq.addData(principal, shiller.getTimeMS(iStart));
     for (int i = iStart; i < iStart + nMonths; ++i) {
-      double stockPrice = get(i + 1, PRICE);
+      double stockPrice = shiller.get(i + 1, PRICE);
       stockValue = shares * stockPrice;
 
       // Collect dividends from stocks for previous month.
-      cash += shares * get(i, DIV);
+      cash += shares * shiller.get(i, DIV);
 
       // Update bond value for this month.
       if (bondValue > 0.0) {
@@ -462,29 +156,13 @@ public class Shiller extends Sequence
       }
       total = bondValue + stockValue + cash;
 
-//      System.out.printf("      [%.2f, %.2f, %.2f]  [%.1f, %.1f, %.1f]  %.2f\n", stockValue, bondValue, cash, 100.0
-//          * stockValue / total, 100.0 * bondValue / total, 100.0 * cash / total, total);
+      // System.out.printf("      [%.2f, %.2f, %.2f]  [%.1f, %.1f, %.1f]  %.2f\n", stockValue, bondValue, cash, 100.0
+      // * stockValue / total, 100.0 * bondValue / total, 100.0 * cash / total, total);
 
       // Add data point for current value.
-      double adjustedValue = adjustValue(total, i + 1, iStart, inflationAccounting);
-      seq.addData(adjustedValue, getTimeMS(i + 1));
+      seq.addData(total, shiller.getTimeMS(i + 1));
     }
 
     return seq._div(principal);
-  }
-
-  public double getPrice(int i)
-  {
-    return get(i, PRICE);
-  }
-
-  public double getDividend(int i)
-  {
-    return get(i, DIV);
-  }
-
-  public double getCape(int i)
-  {
-    return get(i, CAPE);
   }
 }

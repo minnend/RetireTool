@@ -1,5 +1,9 @@
 package org.minnen.retiretool;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 public class Bond
 {
   private final Sequence bondData;
@@ -147,5 +151,93 @@ public class Bond
 
     // System.out.printf("[%.2f + %.2f + %.2f]\n", couponPrice, maturityPrice, accruedInterest);
     return couponPrice + maturityPrice + accruedInterest;
+  }
+
+  /**
+   * Calculates bond ROI for the given range using the rebuy approach.
+   * 
+   * Each month, the existing bond is sold and a new one is purchased.
+   * 
+   * @param bondData interest rates for bonds
+   * @param iStart start simulation at this index in the data sequence
+   * @param iEnd end simulation at this index in the data sequence
+   * @return sequence of ROIs
+   */
+  public static Sequence calcReturnsRebuy(Sequence bondData, int iStart, int iEnd)
+  {
+    if (iStart < 0 || iEnd < iStart || iEnd >= bondData.size()) {
+      throw new IllegalArgumentException(String.format("iStart=%d, iEnd=%d, size=%d", iStart, iEnd, bondData.size()));
+    }
+
+    double cash = 1.0; // start with one dollar
+    Sequence seq = new Sequence("Bonds (Rebuy)");
+    seq.addData(cash, bondData.getTimeMS(iStart));
+
+    for (int i = iStart; i < iEnd; ++i) {
+      // Buy bond at start of this month.
+      Bond bond = new Bond(bondData, cash, i);
+      // System.out.printf("Bought %d: cash=%f, price=%f\n", i, cash, bond.price(i));
+
+      // Sell bond at end of the month (we use start of next month).
+      cash = bond.price(i + 1);
+      // System.out.printf("  Sell %d: price=%f\n", i+1, cash);
+
+      // Add sequence data point for new month.
+      seq.addData(cash, bondData.getTimeMS(i + 1));
+    }
+
+    return seq;
+  }
+
+  /**
+   * Calculates bond ROI for the given range using the hold-to-maturity approach.
+   * 
+   * All bonds are held to maturity and coupon payments are used to buy more bonds.
+   * 
+   * @param bondData interest rates for bonds
+   * @param iStart start simulation at this index in the data sequence
+   * @param iEnd end simulation at this index in the data sequence
+   * @return sequence of ROIs
+   */
+  public static Sequence calcReturnsHold(Sequence bondData, int iStart, int iEnd)
+  {
+    if (iStart < 0 || iEnd < iStart || iEnd >= bondData.size()) {
+      throw new IllegalArgumentException(String.format("iStart=%d, iEnd=%d, size=%d", iStart, iEnd, bondData.size()));
+    }
+
+    final double principal = 1000.0;
+    final double bondQuantum = 10.0; // bonds can only be purchased in fixed increments
+    double cash = principal;
+    Sequence seq = new Sequence("Bonds (Hold)");
+    seq.addData(cash, bondData.getTimeMS(iStart));
+    List<Bond> bonds = new ArrayList<Bond>(); // TODO not an efficient data structure
+
+    for (int i = iStart; i < iEnd; ++i) {
+      // Collect from existing bonds.
+      Iterator<Bond> it = bonds.iterator();
+      while (it.hasNext()) {
+        Bond bond = it.next();
+        cash += bond.paymentThisMonth(i);
+        assert bond.isActive(i);
+        if (bond.isExpiring(i)) {
+          it.remove();
+        }
+      }
+
+      // Buy new bonds.
+      double bondValue = bondQuantum * Math.floor(cash / bondQuantum);
+      if (bondValue > 0.0) {
+        bonds.add(new Bond(bondData, bondValue, i));
+        cash -= bondValue;
+      }
+
+      // Add sequence data point for new month.
+      double value = cash;
+      for (Bond bond : bonds) {
+        value += bond.price(i);
+      }
+      seq.addData(value, bondData.getTimeMS(i + 1));
+    }
+    return seq._div(principal);
   }
 }

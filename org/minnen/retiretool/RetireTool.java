@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.List;
 
 import org.minnen.retiretool.Strategy.Disposition;
@@ -217,7 +218,7 @@ public class RetireTool
     }
   }
 
-  public static void printWithdrawalLikelihoods(Shiller shiller, Sequence cumulativeReturns, int numYears,
+  public static void printWithdrawalLikelihoods(Sequence cumulativeReturns, Sequence cpi, int numYears,
       double expenseRatio)
   {
     System.out.printf("Withdrawal Likelihoods over %d years:\n", numYears);
@@ -227,14 +228,14 @@ public class RetireTool
       // System.out.printf("Processing Withdrawal Rate: %.2f%%\n", wrate);
       double principal = 1000000.0;
       double salary = principal * wrate / 100.0;
-      int nData = shiller.length();
+      int nData = cumulativeReturns.length();
       int n = 0;
       int nOK = 0;
       for (int i = 0; i < nData; i++) {
         if (i + months >= nData)
           break; // not enough data
-        double endBalance = calcEndBalance(shiller, cumulativeReturns, principal, salary, expenseRatio, true, 0, 0,
-            0.0, i, months);
+        double endBalance = calcEndBalance(cumulativeReturns, cpi, principal, salary, expenseRatio, true, 0, 0, 0.0, i,
+            months);
         if (endBalance > 0.0)
           ++nOK;
         ++n;
@@ -310,12 +311,12 @@ public class RetireTool
    * 
    * @return list of starting indices where we run out of money.
    */
-  public static List<Integer> calcSavingsTarget(Shiller shiller, Sequence cumulativeReturns, double salary,
+  public static List<Integer> calcSavingsTarget(Sequence cumulativeReturns, Sequence cpi, double salary,
       double minLikelihood, int nYears, double expenseRatio, int retireAge, int ssAge, double ssMonthly,
       double desiredRunwayYears)
   {
     int nMonths = nYears * 12;
-    int nData = shiller.length();
+    int nData = cumulativeReturns.length();
 
     List<Integer> failures = new ArrayList<Integer>();
     double minSavings = 0.0;
@@ -328,12 +329,12 @@ public class RetireTool
       for (int i = 0; i < nData; i++) {
         if (i + nMonths >= nData)
           break; // not enough data
-        double adjSalary = shiller.adjustForInflation(salary, nData - 1, i);
-        double adjPrincipal = shiller.adjustForInflation(principal, nData - 1, i);
-        double finalSalary = shiller.adjustForInflation(salary, nData - 1, i + nMonths);
+        double adjSalary = adjustForInflation(cpi, salary, nData - 1, i);
+        double adjPrincipal = adjustForInflation(cpi, principal, nData - 1, i);
+        double finalSalary = adjustForInflation(cpi, salary, nData - 1, i + nMonths);
         // System.out.printf("%.2f -> %d (%s): %.2f\n", salary, i, Library.formatDate(snp.getTimeMS(i)),
         // adjustedSalary);
-        double endBalance = calcEndBalance(shiller, cumulativeReturns, adjPrincipal, adjSalary, expenseRatio, true,
+        double endBalance = calcEndBalance(cumulativeReturns, cpi, adjPrincipal, adjSalary, expenseRatio, true,
             retireAge, ssAge, ssMonthly, i, nMonths);
         if (endBalance > finalSalary * (1 + desiredRunwayYears * 12)) {
           ++nOK;
@@ -354,7 +355,7 @@ public class RetireTool
     return failures;
   }
 
-  public static void genReturnChart(Shiller shiller, Inflation inflation, File file) throws IOException
+  public static void genReturnChart(Sequence shiller, File file) throws IOException
   {
     int iStart = 0;
     int iEnd = shiller.length() - 1;
@@ -371,25 +372,26 @@ public class RetireTool
     int nMonthsMomentum = 12;
     int rebalanceMonths = 12;
 
-    Sequence prices = shiller.getStockData(iStart, iEnd);
+    Sequence snpData = Shiller.getStockData(shiller, iStart, iEnd);
+    Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
 
-    Sequence bonds = shiller.calcBondReturnSeqRebuy(iStart, iEnd, inflation);
-    Sequence bondsHold = shiller.calcBondReturnSeqHold(iStart, iEnd, inflation);
-    Sequence stock = shiller.calcSnpReturnSeq(iStart, iEnd - iStart, DividendMethod.MONTHLY, inflation);
-    Sequence stockNoDiv = shiller.calcSnpReturnSeq(iStart, iEnd - iStart, DividendMethod.NO_REINVEST, inflation);
-    Sequence mixed = shiller.calcMixedReturnSeq(iStart, iEnd - iStart, percentStock, percentBonds, rebalanceMonths,
-        inflation);
+    Sequence bonds = Bond.calcReturnsRebuy(bondData, iStart, iEnd);
+    Sequence bondsHold = Bond.calcReturnsHold(bondData, iStart, iEnd);
+    Sequence stock = calcSnpReturns(snpData, iStart, iEnd - iStart, DividendMethod.MONTHLY);
+    Sequence stockNoDiv = calcSnpReturns(snpData, iStart, iEnd - iStart, DividendMethod.NO_REINVEST);
+    Sequence mixed = Shiller.calcMixedReturns(shiller, iStart, iEnd - iStart, percentStock, percentBonds,
+        rebalanceMonths);
     Sequence momentum = Strategy.calcMomentumReturnSeq(nMonthsMomentum, stock, bonds);
-    Sequence sma = Strategy.calcSMAReturnSeq(nMonthsSMA, prices, stock, bonds);
+    Sequence sma = Strategy.calcSMAReturnSeq(nMonthsSMA, snpData, stock, bonds);
     Sequence raa = Strategy.calcMixedReturnSeq(new Sequence[] { sma, momentum }, new double[] { 50, 50 },
         rebalanceMonths);
     raa.setName("RAA");
     Sequence multiMomRisky = Strategy.calcMultiMomentumReturnSeq(stock, bonds, Disposition.Risky);
     Sequence multiMomMod = Strategy.calcMultiMomentumReturnSeq(stock, bonds, Disposition.Moderate);
     Sequence multiMomSafe = Strategy.calcMultiMomentumReturnSeq(stock, bonds, Disposition.Safe);
-    Sequence multiSmaRisky = Strategy.calcMultiSmaReturnSeq(prices, stock, bonds, Disposition.Risky);
-    Sequence multiSmaMod = Strategy.calcMultiSmaReturnSeq(prices, stock, bonds, Disposition.Moderate);
-    Sequence multiSmaSafe = Strategy.calcMultiSmaReturnSeq(prices, stock, bonds, Disposition.Safe);
+    Sequence multiSmaRisky = Strategy.calcMultiSmaReturnSeq(snpData, stock, bonds, Disposition.Risky);
+    Sequence multiSmaMod = Strategy.calcMultiSmaReturnSeq(snpData, stock, bonds, Disposition.Moderate);
+    Sequence multiSmaSafe = Strategy.calcMultiSmaReturnSeq(snpData, stock, bonds, Disposition.Safe);
     Sequence daa = Strategy.calcMixedReturnSeq(new Sequence[] { multiSmaRisky, multiMomSafe }, new double[] { 50, 50 },
         rebalanceMonths);
     daa.setName("DAA");
@@ -418,15 +420,14 @@ public class RetireTool
     return labels;
   }
 
-  public static void genReturnViz(Shiller shiller, int nMonths, Inflation inflation, File fileScatter, File fileBar,
-      File fileExcessReturns) throws IOException
+  public static void genReturnViz(Sequence shiller, int nMonths, File fileScatter, File fileBar, File fileExcessReturns)
+      throws IOException
   {
     int iStart = 0;
     int iEnd = shiller.length() - 1;
 
     // iStart = shiller.getIndexForDate(1980, 1);
     // iEnd = shiller.getIndexForDate(2010, 1);
-    int N = iEnd - iStart + 1;
 
     int percentStock = 60;
     int percentBonds = 40;
@@ -436,19 +437,20 @@ public class RetireTool
     int nMonthsMomentum = 12;
     int rebalanceMonths = 12;
 
-    Sequence prices = shiller.getStockData(iStart, iEnd);
+    Sequence snpData = Shiller.getStockData(shiller, iStart, iEnd);
+    Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
 
-    Sequence bonds = shiller.calcBondReturnSeqRebuy(iStart, iEnd, inflation);
-    Sequence snp = shiller.calcSnpReturnSeq(iStart, iEnd - iStart, DividendMethod.MONTHLY, inflation);
-    Sequence mixed = shiller.calcMixedReturnSeq(iStart, iEnd - iStart, percentStock, percentBonds, rebalanceMonths,
-        inflation);
-    Sequence momentum = Strategy.calcMomentumReturnSeq(nMonthsMomentum, snp, bonds);
-    Sequence sma = Strategy.calcSMAReturnSeq(nMonthsSMA, prices, snp, bonds);
+    Sequence bonds = Bond.calcReturnsRebuy(bondData, iStart, iEnd);
+    Sequence stock = calcSnpReturns(snpData, iStart, iEnd - iStart, DividendMethod.MONTHLY);
+    Sequence mixed = Shiller.calcMixedReturns(shiller, iStart, iEnd - iStart, percentStock, percentBonds,
+        rebalanceMonths);
+    Sequence momentum = Strategy.calcMomentumReturnSeq(nMonthsMomentum, stock, bonds);
+    Sequence sma = Strategy.calcSMAReturnSeq(nMonthsSMA, snpData, stock, bonds);
     Sequence raa = Strategy.calcMixedReturnSeq(new Sequence[] { sma, momentum }, new double[] { 50, 50 },
         rebalanceMonths);
     raa.setName("RAA");
 
-    Sequence[] assets = new Sequence[] { momentum, sma, raa, snp, bonds, mixed };
+    Sequence[] assets = new Sequence[] { momentum, sma, raa, stock, bonds, mixed };
     Sequence[] returns = new Sequence[assets.length];
     double vmin = 0.0, vmax = 0.0;
     for (int i = 0; i < assets.length; ++i) {
@@ -493,7 +495,7 @@ public class RetireTool
     Chart.saveHighChart(fileBar, Chart.ChartType.Bar, title, labels, null, 1200, 600, false, 1, histograms);
   }
 
-  public static void genDuelViz(Shiller shiller, File dir) throws IOException
+  public static void genDuelViz(Sequence shiller, File dir) throws IOException
   {
     assert dir.isDirectory();
 
@@ -501,22 +503,23 @@ public class RetireTool
     int rebalanceMonths = 12;
     int iStart = 0;
     int iEnd = shiller.length() - 1;
-    Inflation inflation = Inflation.Ignore;
 
-    Sequence prices = shiller.getStockData(iStart, iEnd);
-    Sequence stock = shiller.calcSnpReturnSeq(iStart, iEnd - iStart, DividendMethod.MONTHLY, inflation);
-    Sequence bonds = shiller.calcBondReturnSeqRebuy(iStart, iEnd, inflation);
-    Sequence mixed = shiller.calcMixedReturnSeq(iStart, iEnd - iStart, 80, 20, rebalanceMonths, inflation);
+    Sequence snpData = Shiller.getStockData(shiller, iStart, iEnd);
+    Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
+
+    Sequence stock = calcSnpReturns(snpData, iStart, iEnd - iStart, DividendMethod.MONTHLY);
+    Sequence bonds = Bond.calcReturnsRebuy(bondData, iStart, iEnd);
+    Sequence mixed = Shiller.calcMixedReturns(shiller, iStart, iEnd - iStart, 80, 20, rebalanceMonths);
 
     Strategy.calcMomentumStats(stock, bonds);
-    Strategy.calcSmaStats(prices, stock, bonds);
+    Strategy.calcSmaStats(snpData, stock, bonds);
 
     Sequence multiMomRisky = Strategy.calcMultiMomentumReturnSeq(stock, bonds, Disposition.Risky);
     Sequence multiMomMod = Strategy.calcMultiMomentumReturnSeq(stock, bonds, Disposition.Moderate);
     Sequence multiMomSafe = Strategy.calcMultiMomentumReturnSeq(stock, bonds, Disposition.Safe);
-    Sequence multiSmaRisky = Strategy.calcMultiSmaReturnSeq(prices, stock, bonds, Disposition.Risky);
-    Sequence multiSmaMod = Strategy.calcMultiSmaReturnSeq(prices, stock, bonds, Disposition.Moderate);
-    Sequence multiSmaSafe = Strategy.calcMultiSmaReturnSeq(prices, stock, bonds, Disposition.Safe);
+    Sequence multiSmaRisky = Strategy.calcMultiSmaReturnSeq(snpData, stock, bonds, Disposition.Risky);
+    Sequence multiSmaMod = Strategy.calcMultiSmaReturnSeq(snpData, stock, bonds, Disposition.Moderate);
+    Sequence multiSmaSafe = Strategy.calcMultiSmaReturnSeq(snpData, stock, bonds, Disposition.Safe);
 
     Sequence daa = Strategy.calcMixedReturnSeq(new Sequence[] { multiSmaRisky, multiMomSafe }, new double[] { 50, 50 },
         rebalanceMonths);
@@ -557,7 +560,7 @@ public class RetireTool
     // }
   }
 
-  public static void genStockBondMixSweepChart(Shiller shiller, Inflation inflation, File file) throws IOException
+  public static void genStockBondMixSweepChart(Sequence shiller, File file) throws IOException
   {
     int iStart = 0;
     int iEnd = shiller.length() - 1;
@@ -566,8 +569,12 @@ public class RetireTool
     // iEnd = getIndexForDate(2010, 1);
 
     int N = iEnd - iStart + 1;
-    Sequence snp = shiller.calcSnpReturnSeq(iStart, iEnd - iStart, DividendMethod.MONTHLY, inflation);
-    Sequence bonds = shiller.calcBondReturnSeqRebuy(iStart, iEnd, inflation);
+
+    Sequence snpData = Shiller.getStockData(shiller, iStart, iEnd);
+    Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
+
+    Sequence snp = calcSnpReturns(snpData, iStart, iEnd - iStart, DividendMethod.MONTHLY);
+    Sequence bonds = Bond.calcReturnsRebuy(bondData, iStart, iEnd);
 
     int[] percentStock = new int[] { 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0 };
     int rebalanceMonths = 6;
@@ -586,7 +593,7 @@ public class RetireTool
     Chart.saveLineChart(file, "Cumulative Market Returns: Stock/Bond Mix", 1200, 600, true, seqs);
   }
 
-  public static void genSMASweepChart(Shiller shiller, Inflation inflation, File file) throws IOException
+  public static void genSMASweepChart(Sequence shiller, File file) throws IOException
   {
     int iStart = 0;
     int iEnd = shiller.length() - 1;
@@ -595,15 +602,17 @@ public class RetireTool
     // iEnd = getIndexForDate(2010, 1);
     int N = iEnd - iStart + 1;
 
-    Sequence prices = shiller.getStockData(iStart, iEnd);
-    Sequence bonds = shiller.calcBondReturnSeqRebuy(iStart, iEnd, inflation);
-    Sequence snp = shiller.calcSnpReturnSeq(iStart, iEnd - iStart, DividendMethod.MONTHLY, inflation);
+    Sequence snpData = Shiller.getStockData(shiller, iStart, iEnd);
+    Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
+
+    Sequence stock = calcSnpReturns(snpData, iStart, iEnd - iStart, DividendMethod.MONTHLY);
+    Sequence bonds = Bond.calcReturnsRebuy(bondData, iStart, iEnd);
 
     int[] months = new int[] { 1, 2, 3, 4, 5, 6, 9, 10, 12 }; // , 15, 18, 21, 24, 30, 36 };
 
     Sequence[] seqs = new Sequence[months.length];
     for (int i = 0; i < months.length; ++i) {
-      Sequence sma = Strategy.calcSMAReturnSeq(months[i], prices, snp, bonds);
+      Sequence sma = Strategy.calcSMAReturnSeq(months[i], snpData, stock, bonds);
       double cagr = RetireTool.getAnnualReturn(sma.getLast(0), N);
       sma.setName(String.format("SMA-%d (%.2f%%)", months[i], cagr));
       seqs[i] = sma;
@@ -613,7 +622,7 @@ public class RetireTool
     Chart.saveLineChart(file, "Cumulative Market Returns: SMA Strategy", 1200, 600, true, seqs);
   }
 
-  public static void genMomentumSweepChart(Shiller shiller, Inflation inflation, File file) throws IOException
+  public static void genMomentumSweepChart(Sequence shiller, File file) throws IOException
   {
     int iStart = 0;
     int iEnd = shiller.length() - 1;
@@ -622,8 +631,11 @@ public class RetireTool
     // iEnd = getIndexForDate(2010, 1);
     int N = iEnd - iStart + 1;
 
-    Sequence bonds = shiller.calcBondReturnSeqRebuy(iStart, iEnd, inflation);
-    Sequence snp = shiller.calcSnpReturnSeq(iStart, iEnd - iStart, DividendMethod.MONTHLY, inflation);
+    Sequence snpData = Shiller.getStockData(shiller, iStart, iEnd);
+    Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
+
+    Sequence snp = calcSnpReturns(snpData, iStart, iEnd - iStart, DividendMethod.MONTHLY);
+    Sequence bonds = Bond.calcReturnsRebuy(bondData, iStart, iEnd);
 
     int[] months = new int[] { 1, 2, 3, 5, 6, 9, 10, 12 }; // , 15, 18, 21, 24, 30, 36 };
 
@@ -644,8 +656,7 @@ public class RetireTool
     Chart.saveLineChart(file, "Cumulative Market Returns: Momentum Strategy", 1200, 600, true, seqs);
   }
 
-  public static void genReturnComparison(Shiller shiller, int numMonths, Inflation inflation, File file)
-      throws IOException
+  public static void genReturnComparison(Sequence shiller, int numMonths, File file) throws IOException
   {
     int iStart = 0;// getIndexForDate(1881, 1);
     int iEnd = shiller.length() - 1;
@@ -653,10 +664,12 @@ public class RetireTool
     int percentStocks = 60;
     int percentBonds = 40;
 
-    Sequence cumulativeSNP = shiller.calcSnpReturnSeq(iStart, iEnd - iStart, DividendMethod.MONTHLY, inflation);
-    Sequence cumulativeBonds = shiller.calcBondReturnSeqRebuy(iStart, iEnd, inflation);
-    Sequence cumulativeMixed = shiller.calcMixedReturnSeq(iStart, iEnd - iStart, percentStocks, percentBonds, 6,
-        inflation);
+    Sequence snpData = Shiller.getStockData(shiller, iStart, iEnd);
+    Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
+
+    Sequence cumulativeSNP = calcSnpReturns(snpData, iStart, iEnd - iStart, DividendMethod.MONTHLY);
+    Sequence cumulativeBonds = Bond.calcReturnsRebuy(bondData, iStart, iEnd);
+    Sequence cumulativeMixed = Shiller.calcMixedReturns(shiller, iStart, iEnd - iStart, percentStocks, percentBonds, 6);
     assert cumulativeSNP.length() == cumulativeBonds.length();
 
     Sequence snp = new Sequence("S&P");
@@ -703,8 +716,8 @@ public class RetireTool
   /**
    * Compute ending balance; not inflation-adjusted, assuming we re-invest dividends
    * 
-   * @param shiller shiller data object with S&P prices and dividends
    * @param cumulativeReturns sequence of cumulative returns for the investment strategy
+   * @param cpi sequence of CPI values
    * @param principal initial funds
    * @param annualWithdrawal annual withdrawal amount (annual "salary")
    * @param adjustWithdrawalForInflation use CPI to adjust withdrawal for constant purchasing power
@@ -716,11 +729,12 @@ public class RetireTool
    * @param nMonths number of months (ticks) in S&P to consider
    * @return ending balance
    */
-  public static double calcEndBalance(Shiller shiller, Sequence cumulativeReturns, double principal,
+  public static double calcEndBalance(Sequence cumulativeReturns, Sequence cpi, double principal,
       double annualWithdrawal, double expenseRatio, boolean adjustWithdrawalForInflation, double retireAge,
       double ssAge, double ssMonthly, int iStart, int nMonths)
   {
-    int nData = shiller.size();
+    int nData = cumulativeReturns.size();
+    assert cpi.size() == nData;
     if (iStart < 0 || nMonths < 1 || iStart + nMonths >= nData) {
       return Double.NaN;
     }
@@ -733,12 +747,12 @@ public class RetireTool
       double adjMonthlyWithdrawal = monthlyWithdrawal;
       if (adjustWithdrawalForInflation) {
         // Update monthly withdrawal for inflation.
-        adjMonthlyWithdrawal = shiller.adjustForInflation(monthlyWithdrawal, iStart, i);
+        adjMonthlyWithdrawal = adjustForInflation(cpi, monthlyWithdrawal, iStart, i);
       }
 
       // Get paid by social security if we're old enough.
       if (age >= ssAge) {
-        balance += shiller.adjustForInflation(ssMonthly, nData - 1, i);
+        balance += adjustForInflation(cpi, ssMonthly, nData - 1, i);
       }
 
       // Withdraw money at beginning of month.
@@ -760,31 +774,113 @@ public class RetireTool
     return balance;
   }
 
+  /**
+   * Convert cash value at one point in time into equivalent value at another according to relative CPI.
+   * 
+   * @param cpi Sequence of CPI values
+   * @param value current value
+   * @param iFrom current time
+   * @param iTo query time
+   * @return equivalent value at query time
+   */
+  public static double adjustForInflation(Sequence cpi, double value, int iFrom, int iTo)
+  {
+    return adjustValue(cpi, value, iFrom, iTo, Inflation.Include);
+  }
+
+  /**
+   * Convert value at one point in time into equivalent value at another according to inflation handling option.
+   * 
+   * @param cpi Sequence of CPI values
+   * @param value current value
+   * @param iFrom current time
+   * @param iTo query time
+   * @param inflationAccounting should we adjust for inflation?
+   * @return equivalent value at query time
+   */
+  public static double adjustValue(Sequence cpi, double value, int iFrom, int iTo, Inflation inflationAccounting)
+  {
+    if (inflationAccounting == Inflation.Include) {
+      value *= cpi.get(iTo, 0) / cpi.get(iFrom, 0);
+    }
+    return value;
+  }
+
+  /**
+   * Calculates S&P ROI for the given range.
+   * 
+   * @param snp sequence of prices (d=0) and dividends (d=1)
+   * @param iStart first index in SNP
+   * @param nMonths number of months (ticks) in snp to consider
+   * @param divMethod how should we handle dividend reinvestment
+   * @return sequence of ROIs
+   */
+  public static Sequence calcSnpReturns(Sequence snp, int iStart, int nMonths, DividendMethod divMethod)
+  {
+    if (iStart < 0 || nMonths < 1 || iStart + nMonths >= snp.size()) {
+      throw new IllegalArgumentException(String.format("iStart=%d, nMonths=%d, size=%d", iStart, nMonths, snp.size()));
+    }
+
+    Sequence seq = new Sequence(divMethod == DividendMethod.NO_REINVEST ? "S&P-NoReinvest" : "S&P");
+
+    // note: it's equivalent to keep track of total value or number of shares
+    double divCash = 0.0;
+    double baseValue = 1.0;
+    double shares = baseValue / snp.get(iStart, 0);
+    seq.addData(baseValue, snp.getTimeMS(iStart));
+    for (int i = iStart; i < iStart + nMonths; ++i) {
+      double div = 0.0;
+      if (divMethod == DividendMethod.NO_REINVEST)
+        divCash += shares * snp.get(i, 1);
+      else if (divMethod == DividendMethod.MONTHLY) {
+        // Dividends at the end of every month.
+        div = snp.get(i, 1);
+      } else if (divMethod == DividendMethod.QUARTERLY) {
+        // Dividends at the end of every quarter (march, june, september, december).
+        Calendar cal = Library.now();
+        cal.setTimeInMillis(snp.getTimeMS(i));
+        int month = cal.get(Calendar.MONTH);
+        if (month % 3 == 2) { // time for a dividend!
+          for (int j = 0; j < 3; j++) {
+            if (i - j < iStart)
+              break;
+            div += snp.get(i - j, 1);
+          }
+        }
+      }
+
+      // Apply the dividends (if any).
+      double price = snp.get(i + 1, 0);
+      shares += shares * div / price;
+
+      // Add data point for current value.
+      double value = divCash + shares * price;
+      seq.addData(value, snp.getTimeMS(i + 1));
+    }
+    return seq;
+  }
+
   public static void main(String[] args) throws IOException
   {
-    if (args.length != 3) {
-      System.err.println("Usage: java ~.ShillerSnp <shiller-data-file> <t-bill-file> <AAA-bonds>");
+    if (args.length != 2) {
+      System.err.println("Usage: java ~.ShillerSnp <shiller-data-file> <t-bill-file>");
       System.exit(1);
     }
 
-    Shiller shiller = new Shiller(args[0]);
-    Sequence tbills = TBills.loadData(args[1]);
-    Sequence bondsAAA = TBills.loadData(args[2]);
+    Sequence shiller = DataIO.loadShillerData(args[0]);
+    Sequence tbills = DataIO.loadDateValueCSV(args[1]);
 
-    long commonStart = Library.calcCommonStart(shiller, tbills, bondsAAA);
-    long commonEnd = Library.calcCommonEnd(shiller, tbills, bondsAAA);
+    long commonStart = Library.calcCommonStart(shiller, tbills);
+    long commonEnd = Library.calcCommonEnd(shiller, tbills);
 
     System.out.printf("Shiller: [%s] -> [%s]\n", Library.formatDate(shiller.getStartMS()),
         Library.formatDate(shiller.getEndMS()));
     System.out.printf("T-Bills: [%s] -> [%s]\n", Library.formatDate(tbills.getStartMS()),
         Library.formatDate(tbills.getEndMS()));
-    System.out.printf("Moody's AAA: [%s] -> [%s]\n", Library.formatDate(bondsAAA.getStartMS()),
-        Library.formatDate(bondsAAA.getEndMS()));
     System.out.printf("Common: [%s] -> [%s]\n", Library.formatDate(commonStart), Library.formatDate(commonEnd));
 
-    tbills = tbills.subseq(commonStart, commonEnd);
-    bondsAAA = bondsAAA.subseq(commonStart, commonEnd);
-
+    // shiller = shiller.subseq(commonStart, commonEnd);
+    // tbills = tbills.subseq(commonStart, commonEnd);
 
     // shiller.printReturnLikelihoods();
     // shiller.printWithdrawalLikelihoods(30, 0.1);
@@ -794,13 +890,13 @@ public class RetireTool
     // shiller.genReturnComparison(years[i] * 12, Inflation.Ignore, new File("g:/test.html"));
     // }
 
-    // genReturnViz(shiller, 30 * 12, Inflation.Ignore, new File("g:/web/scatter-returns.html"), new File(
-    // "g:/web/histogram-returns.html"), new File("g:/web/histogram-excess-returns.html"));
-    // genReturnChart(shiller, Inflation.Ignore, new File("g:/web/cumulative-returns.html"));
-    // genSMASweepChart(shiller, Inflation.Ignore, new File("g:/web/sma-sweep.html"));
-    // genMomentumSweepChart(shiller, Inflation.Ignore, new File("g:/web/momentum-sweep.html"));
-    // genStockBondMixSweepChart(shiller, Inflation.Ignore, new File("g:/web/stock-bond-mix-sweep.html"));
-    // genDuelViz(shiller, new File("g:/web/"));
+    //genReturnViz(shiller, 30 * 12, new File("g:/web/scatter-returns.html"), new File("g:/web/histogram-returns.html"),
+    //    new File("g:/web/histogram-excess-returns.html"));
+    genReturnChart(shiller, new File("g:/web/cumulative-returns.html"));
+    genSMASweepChart(shiller, new File("g:/web/sma-sweep.html"));
+    genMomentumSweepChart(shiller, new File("g:/web/momentum-sweep.html"));
+    genStockBondMixSweepChart(shiller, new File("g:/web/stock-bond-mix-sweep.html"));
+    genDuelViz(shiller, new File("g:/web/"));
     System.exit(0);
 
     // int retireAge = 65;
