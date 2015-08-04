@@ -426,8 +426,7 @@ public class RetireTool
     return labels;
   }
 
-  public static void genReturnViz(Sequence shiller, int nMonths, File fileScatter, File fileBar, File fileExcessReturns)
-      throws IOException
+  public static void genReturnViz(Sequence shiller, File fileBar) throws IOException
   {
     int iStart = 0;
     int iEnd = shiller.length() - 1;
@@ -435,6 +434,7 @@ public class RetireTool
     // iStart = shiller.getIndexForDate(1980, 1);
     // iEnd = shiller.getIndexForDate(2010, 1);
 
+    int nMonths = 10 * 12;
     int percentStock = 60;
     int percentBonds = 40;
     // int percentCash = 100 - (percentStock + percentBonds);
@@ -447,17 +447,28 @@ public class RetireTool
     Sequence snpData = Shiller.getStockData(shiller, iStart, iEnd);
     Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
 
-    Sequence bonds = Bond.calcReturnsRebuy(bondData, iStart, iEnd);
-    Sequence stock = calcSnpReturns(snpData, iStart, iEnd - iStart, DividendMethod.MONTHLY);
+    Sequence stockAll = calcSnpReturns(snpData, iStart, iEnd - iStart, DividendMethod.MONTHLY);
+    Sequence bondsAll = Bond.calcReturnsRebuy(bondData, iStart, iEnd);
+
+    Sequence stock = stockAll.subseq(iStartReturns, iEnd - iStartReturns + 1);
+    Sequence bonds = bondsAll.subseq(iStartReturns, iEnd - iStartReturns + 1);
+
     Sequence mixed = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
         percentBonds }, rebalanceMonths);
-    Sequence momentum = Strategy.calcMomentumReturns(iStartReturns, nMonthsMomentum, stock, bonds);
-    Sequence sma = Strategy.calcSMAReturns(iStartReturns, nMonthsSMA, snpData, stock, bonds);
+    Sequence momentum = Strategy.calcMomentumReturns(nMonthsMomentum, iStartReturns, stockAll, bondsAll);
+    Sequence sma = Strategy.calcSMAReturns(nMonthsSMA, iStartReturns, snpData, stockAll, bondsAll);
     Sequence raa = Strategy
         .calcMixedReturns(new Sequence[] { sma, momentum }, new double[] { 50, 50 }, rebalanceMonths);
     raa.setName("RAA");
 
-    Sequence[] assets = new Sequence[] { momentum, sma, raa, stock, bonds, mixed };
+    Sequence multiMomSafe = Strategy.calcMultiMomentumReturns(iStartReturns, stockAll, bondsAll, Disposition.Safe);
+    Sequence multiSmaRisky = Strategy
+        .calcMultiSmaReturns(iStartReturns, snpData, stockAll, bondsAll, Disposition.Risky);
+    Sequence daa = Strategy.calcMixedReturns(new Sequence[] { multiSmaRisky, multiMomSafe }, new double[] { 50, 50 },
+        rebalanceMonths);
+    daa.setName("DAA");
+
+    Sequence[] assets = new Sequence[] { multiSmaRisky, daa, multiMomSafe, momentum, sma, raa, stock, bonds, mixed };
     Sequence[] returns = new Sequence[assets.length];
     double vmin = 0.0, vmax = 0.0;
     for (int i = 0; i < assets.length; ++i) {
@@ -472,24 +483,6 @@ public class RetireTool
         vmax = a[a.length - 1];
       }
     }
-    Sequence compareReturnsA = returns[3];
-    Sequence compareReturnsB = returns[2];
-
-    String title = "Paired Returns - " + Library.getDurationString(nMonths);
-    Chart.saveHighChartScatter(fileScatter, title, 800, 600, 0, compareReturnsA, compareReturnsB);
-
-    title = "Excess Returns - " + Library.getDurationString(nMonths);
-    Sequence excessReturns = compareReturnsB.sub(compareReturnsA);
-    Sequence histogramExcess = computeHistogram(excessReturns, 0.5, 0.0);
-    histogramExcess.setName(String.format("%s vs. %s", compareReturnsB.getName(), compareReturnsA.getName()));
-    String[] labels = getLabelsFromHistogram(histogramExcess);
-    String[] colors = new String[labels.length];
-    for (int i = 0; i < colors.length; ++i) {
-      double x = histogramExcess.get(i, 0);
-      colors[i] = x < -0.001 ? "#df5353" : (x > 0.001 ? "#53df53" : "#dfdf53");
-    }
-    Chart.saveHighChart(fileExcessReturns, Chart.ChartType.Bar, title, labels, colors, 1200, 600, false, 1,
-        histogramExcess);
 
     Sequence[] histograms = new Sequence[assets.length];
     for (int i = 0; i < assets.length; ++i) {
@@ -497,8 +490,8 @@ public class RetireTool
       histograms[i].setName(assets[i].getName());
     }
 
-    title = "Histogram of Returns - " + Library.getDurationString(nMonths);
-    labels = getLabelsFromHistogram(histograms[0]);
+    String title = "Histogram of Returns - " + Library.getDurationString(nMonths);
+    String[] labels = getLabelsFromHistogram(histograms[0]);
     Chart.saveHighChart(fileBar, Chart.ChartType.Bar, title, labels, null, 1200, 600, false, 1, histograms);
   }
 
@@ -521,11 +514,11 @@ public class RetireTool
     Sequence stock = stockAll.subseq(iStartReturns, iEnd - iStartReturns + 1);
     Sequence bonds = bondsAll.subseq(iStartReturns, iEnd - iStartReturns + 1);
 
-    Sequence mixed = Strategy.calcMixedReturns(new Sequence[] { stock, bonds}, new double[] { 60, 40 },
+    Sequence mixed = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { 60, 40 },
         rebalanceMonths);
 
-    Strategy.calcMomentumStats(stockAll, bondsAll);
-    Strategy.calcSmaStats(snpData, stockAll, bondsAll);
+    // Strategy.calcMomentumStats(stockAll, bondsAll);
+    // Strategy.calcSmaStats(snpData, stockAll, bondsAll);
 
     Sequence multiMomRisky = Strategy.calcMultiMomentumReturns(iStartReturns, stockAll, bondsAll, Disposition.Risky);
     Sequence multiMomMod = Strategy.calcMultiMomentumReturns(iStartReturns, stockAll, bondsAll, Disposition.Moderate);
@@ -547,8 +540,8 @@ public class RetireTool
       returns[i] = calcReturnsForDuration(assets[i], nMonths);
       returns[i].setName(assets[i].getName());
     }
-    Sequence returnsA = returns[0];
-    Sequence returnsB = returns[9];
+    Sequence returnsA = returns[2];
+    Sequence returnsB = returns[0];
 
     // Generate scatter plot comparing results.
     String title = String.format("%s vs. %s (%s)", returnsB.getName(), returnsA.getName(),
@@ -567,8 +560,8 @@ public class RetireTool
       double x = histogramExcess.get(i, 0);
       colors[i] = x < -0.001 ? "#df5353" : (x > 0.001 ? "#53df53" : "#dfdf53");
     }
-    Chart.saveHighChart(new File(dir, "duel-excess.html"), Chart.ChartType.Line, title, null, null, 1200, 600,
-        false, 0, excessReturns);
+    Chart.saveHighChart(new File(dir, "duel-excess.html"), Chart.ChartType.Line, title, null, null, 1200, 600, false,
+        0, returnsB, returnsA, excessReturns);
     Chart.saveHighChart(new File(dir, "duel-histogram.html"), Chart.ChartType.Bar, title, labels, colors, 1200, 600,
         false, 1, histogramExcess);
 
@@ -910,13 +903,11 @@ public class RetireTool
     // shiller.genReturnComparison(years[i] * 12, Inflation.Ignore, new File("g:/test.html"));
     // }
 
-    // genReturnViz(shiller, 30 * 12, new File("g:/web/scatter-returns.html"), new
-    // File("g:/web/histogram-returns.html"),
-    // new File("g:/web/histogram-excess-returns.html"));
+    genReturnViz(shiller, new File("g:/web/histogram-returns.html"));
     genReturnChart(shiller, new File("g:/web/cumulative-returns.html"));
-    //genSMASweepChart(shiller, new File("g:/web/sma-sweep.html"));
-    //genMomentumSweepChart(shiller, new File("g:/web/momentum-sweep.html"));
-    //genStockBondMixSweepChart(shiller, new File("g:/web/stock-bond-mix-sweep.html"));
+    // genSMASweepChart(shiller, new File("g:/web/sma-sweep.html"));
+    // genMomentumSweepChart(shiller, new File("g:/web/momentum-sweep.html"));
+    // genStockBondMixSweepChart(shiller, new File("g:/web/stock-bond-mix-sweep.html"));
     genDuelViz(shiller, new File("g:/web/"));
     System.exit(0);
 
