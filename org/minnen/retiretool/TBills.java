@@ -27,8 +27,13 @@ public class TBills
     Sequence data = new Sequence("T-Bills");
     String line;
     while ((line = in.readLine()) != null) {
-      String[] toks = line.trim().split("\\s+");
+      line = line.trim();
+      if (line.isEmpty() || line.startsWith("\"")) {
+        continue;
+      }
+      String[] toks = line.trim().split("[,\\s]+");
       if (toks == null || toks.length != 2) {
+        System.err.printf("Error parseing TBills data: [%s]\n", line);
         continue;
       }
 
@@ -47,6 +52,7 @@ public class TBills
         cal.set(Calendar.SECOND, 0);
         data.addData(rate, cal.getTimeInMillis());
       } catch (NumberFormatException e) {
+        System.err.printf("Error parseing TBills data: [%s]\n", line);
         continue;
       }
     }

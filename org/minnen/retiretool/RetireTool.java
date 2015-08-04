@@ -74,7 +74,7 @@ public class RetireTool
     if (Double.isNaN(vmax)) {
       vmax = a[na - 1];
     }
-    //System.out.printf("Data: %d entries in [%.2f%%, %.2f%%]\n", na, vmin, vmax);
+    // System.out.printf("Data: %d entries in [%.2f%%, %.2f%%]\n", na, vmin, vmax);
 
     // figure out where to start
     double hleftCenter = binCenter - binWidth / 2.0;
@@ -762,26 +762,29 @@ public class RetireTool
 
   public static void main(String[] args) throws IOException
   {
-    if (args.length != 2) {
-      System.err.println("Usage: java ~.ShillerSnp <shiller-data-file> <t-bill-file>");
+    if (args.length != 3) {
+      System.err.println("Usage: java ~.ShillerSnp <shiller-data-file> <t-bill-file> <AAA-bonds>");
       System.exit(1);
     }
 
     Shiller shiller = new Shiller(args[0]);
     Sequence tbills = TBills.loadData(args[1]);
+    Sequence bondsAAA = TBills.loadData(args[2]);
 
-    // long commonStart = Library.calcCommonStart(shiller, tbills);
-    // long commonEnd = Library.calcCommonEnd(shiller, tbills);
-    //
-    // System.out.printf("Shiller: [%s] -> [%s]\n", Library.formatDate(shiller.getStartMS()),
-    // Library.formatDate(shiller.getEndMS()));
-    // System.out.printf("T-Bills: [%s] -> [%s]\n", Library.formatDate(tbills.getStartMS()),
-    // Library.formatDate(tbills.getEndMS()));
-    // System.out.printf("Common: [%s] -> [%s]\n", Library.formatDate(commonStart), Library.formatDate(commonEnd));
-    //
-    // Sequence tbillsCommon = tbills.subseq(commonStart, commonEnd);
-    // System.out.printf("T-Bills (Common): [%s] -> [%s]\n", Library.formatDate(tbillsCommon.getStartMS()),
-    // Library.formatDate(tbillsCommon.getEndMS()));
+    long commonStart = Library.calcCommonStart(shiller, tbills, bondsAAA);
+    long commonEnd = Library.calcCommonEnd(shiller, tbills, bondsAAA);
+
+    System.out.printf("Shiller: [%s] -> [%s]\n", Library.formatDate(shiller.getStartMS()),
+        Library.formatDate(shiller.getEndMS()));
+    System.out.printf("T-Bills: [%s] -> [%s]\n", Library.formatDate(tbills.getStartMS()),
+        Library.formatDate(tbills.getEndMS()));
+    System.out.printf("Moody's AAA: [%s] -> [%s]\n", Library.formatDate(bondsAAA.getStartMS()),
+        Library.formatDate(bondsAAA.getEndMS()));
+    System.out.printf("Common: [%s] -> [%s]\n", Library.formatDate(commonStart), Library.formatDate(commonEnd));
+
+    tbills = tbills.subseq(commonStart, commonEnd);
+    bondsAAA = bondsAAA.subseq(commonStart, commonEnd);
+
 
     // shiller.printReturnLikelihoods();
     // shiller.printWithdrawalLikelihoods(30, 0.1);
@@ -793,11 +796,11 @@ public class RetireTool
 
     // genReturnViz(shiller, 30 * 12, Inflation.Ignore, new File("g:/web/scatter-returns.html"), new File(
     // "g:/web/histogram-returns.html"), new File("g:/web/histogram-excess-returns.html"));
-    genReturnChart(shiller, Inflation.Ignore, new File("g:/web/cumulative-returns.html"));
-    genSMASweepChart(shiller, Inflation.Ignore, new File("g:/web/sma-sweep.html"));
-    genMomentumSweepChart(shiller, Inflation.Ignore, new File("g:/web/momentum-sweep.html"));
+    // genReturnChart(shiller, Inflation.Ignore, new File("g:/web/cumulative-returns.html"));
+    // genSMASweepChart(shiller, Inflation.Ignore, new File("g:/web/sma-sweep.html"));
+    // genMomentumSweepChart(shiller, Inflation.Ignore, new File("g:/web/momentum-sweep.html"));
     // genStockBondMixSweepChart(shiller, Inflation.Ignore, new File("g:/web/stock-bond-mix-sweep.html"));
-    genDuelViz(shiller, new File("g:/web/"));
+    // genDuelViz(shiller, new File("g:/web/"));
     System.exit(0);
 
     // int retireAge = 65;
