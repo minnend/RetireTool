@@ -379,8 +379,8 @@ public class RetireTool
     Sequence bondsHold = Bond.calcReturnsHold(bondData, iStart, iEnd);
     Sequence stock = calcSnpReturns(snpData, iStart, iEnd - iStart, DividendMethod.MONTHLY);
     Sequence stockNoDiv = calcSnpReturns(snpData, iStart, iEnd - iStart, DividendMethod.NO_REINVEST);
-    Sequence mixed = Shiller.calcMixedReturns(shiller, iStart, iEnd - iStart, percentStock, percentBonds,
-        rebalanceMonths);
+    Sequence mixed = Strategy.calcMixedReturnSeq(new Sequence[] { stock, bonds }, new double[] { percentStock,
+        percentBonds }, rebalanceMonths);
     Sequence momentum = Strategy.calcMomentumReturnSeq(nMonthsMomentum, stock, bonds);
     Sequence sma = Strategy.calcSMAReturnSeq(nMonthsSMA, snpData, stock, bonds);
     Sequence raa = Strategy.calcMixedReturnSeq(new Sequence[] { sma, momentum }, new double[] { 50, 50 },
@@ -442,8 +442,8 @@ public class RetireTool
 
     Sequence bonds = Bond.calcReturnsRebuy(bondData, iStart, iEnd);
     Sequence stock = calcSnpReturns(snpData, iStart, iEnd - iStart, DividendMethod.MONTHLY);
-    Sequence mixed = Shiller.calcMixedReturns(shiller, iStart, iEnd - iStart, percentStock, percentBonds,
-        rebalanceMonths);
+    Sequence mixed = Strategy.calcMixedReturnSeq(new Sequence[] { stock, bonds }, new double[] { percentStock,
+        percentBonds }, rebalanceMonths);
     Sequence momentum = Strategy.calcMomentumReturnSeq(nMonthsMomentum, stock, bonds);
     Sequence sma = Strategy.calcSMAReturnSeq(nMonthsSMA, snpData, stock, bonds);
     Sequence raa = Strategy.calcMixedReturnSeq(new Sequence[] { sma, momentum }, new double[] { 50, 50 },
@@ -509,7 +509,8 @@ public class RetireTool
 
     Sequence stock = calcSnpReturns(snpData, iStart, iEnd - iStart, DividendMethod.MONTHLY);
     Sequence bonds = Bond.calcReturnsRebuy(bondData, iStart, iEnd);
-    Sequence mixed = Shiller.calcMixedReturns(shiller, iStart, iEnd - iStart, 80, 20, rebalanceMonths);
+    Sequence mixed = Strategy.calcMixedReturnSeq(new Sequence[] { stock, bonds }, new double[] { 60, 40 },
+        rebalanceMonths);
 
     Strategy.calcMomentumStats(stock, bonds);
     Strategy.calcSmaStats(snpData, stock, bonds);
@@ -661,7 +662,7 @@ public class RetireTool
     int iStart = 0;// getIndexForDate(1881, 1);
     int iEnd = shiller.length() - 1;
 
-    int percentStocks = 60;
+    int percentStock = 60;
     int percentBonds = 40;
 
     Sequence snpData = Shiller.getStockData(shiller, iStart, iEnd);
@@ -669,12 +670,13 @@ public class RetireTool
 
     Sequence cumulativeSNP = calcSnpReturns(snpData, iStart, iEnd - iStart, DividendMethod.MONTHLY);
     Sequence cumulativeBonds = Bond.calcReturnsRebuy(bondData, iStart, iEnd);
-    Sequence cumulativeMixed = Shiller.calcMixedReturns(shiller, iStart, iEnd - iStart, percentStocks, percentBonds, 6);
+    Sequence cumulativeMixed = Strategy.calcMixedReturnSeq(new Sequence[] { cumulativeSNP, cumulativeBonds },
+        new double[] { percentStock, percentBonds }, 6);
     assert cumulativeSNP.length() == cumulativeBonds.length();
 
     Sequence snp = new Sequence("S&P");
     Sequence bonds = new Sequence("Bonds");
-    Sequence mixed = new Sequence(String.format("Mixed (%d/%d)", percentStocks, percentBonds));
+    Sequence mixed = new Sequence(String.format("Mixed (%d/%d)", percentStock, percentBonds));
     Sequence snpPremium = new Sequence("S&P Premium");
     int numBondWins = 0;
     int numStockWins = 0;
@@ -890,8 +892,9 @@ public class RetireTool
     // shiller.genReturnComparison(years[i] * 12, Inflation.Ignore, new File("g:/test.html"));
     // }
 
-    //genReturnViz(shiller, 30 * 12, new File("g:/web/scatter-returns.html"), new File("g:/web/histogram-returns.html"),
-    //    new File("g:/web/histogram-excess-returns.html"));
+    // genReturnViz(shiller, 30 * 12, new File("g:/web/scatter-returns.html"), new
+    // File("g:/web/histogram-returns.html"),
+    // new File("g:/web/histogram-excess-returns.html"));
     genReturnChart(shiller, new File("g:/web/cumulative-returns.html"));
     genSMASweepChart(shiller, new File("g:/web/sma-sweep.html"));
     genMomentumSweepChart(shiller, new File("g:/web/momentum-sweep.html"));
