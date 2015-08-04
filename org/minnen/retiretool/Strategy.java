@@ -13,10 +13,11 @@ public class Strategy
    * Invest 100% in asset with highest CAGR over last N months.
    * 
    * @param numMonths calculate CAGR over last N months.
+   * @param iStart index of month to start investing.
    * @param seqs cumulative returns for each asset.
    * @return sequence of returns using the momentum strategy
    */
-  public static Sequence calcMomentumReturns(int numMonths, Sequence... seqs)
+  public static Sequence calcMomentumReturns(int numMonths, int iStart, Sequence... seqs)
   {
     assert seqs.length > 1;
     int N = seqs[0].length();
@@ -26,7 +27,7 @@ public class Strategy
 
     Sequence momentum = new Sequence("Momentum-" + numMonths);
     double balance = 1.0;
-    for (int i = 0; i < N; ++i) {
+    for (int i = iStart; i < N; ++i) {
       // Select asset with best return over previous 12 months.
       int a = Math.max(0, i - numMonths - 1);
       int b = Math.max(0, i - 1);
@@ -45,7 +46,6 @@ public class Strategy
       balance *= lastMonthReturn;
       momentum.addData(balance, seqs[0].getTimeMS(i));
     }
-
     return momentum;
   }
 
@@ -74,19 +74,20 @@ public class Strategy
    * Invest in risky asset when above SMA, otherwise safe asset.
    * 
    * @param numMonths calculate SMA over past N months
+   * @param iStart index of month to start investing.
    * @param prices monthly price used for SMA and signal
    * @param risky cumulative returns for risky asset
    * @param safe cumulative returns for safe asset
    * @return sequence of returns using the above/below-SMA strategy
    */
-  public static Sequence calcSMAReturns(int numMonths, Sequence prices, Sequence risky, Sequence safe)
+  public static Sequence calcSMAReturns(int numMonths, int iStart, Sequence prices, Sequence risky, Sequence safe)
   {
     assert risky.length() == safe.length();
 
     Sequence sma = new Sequence("SMA-" + numMonths);
     double balance = 1.0;
-    sma.addData(balance, risky.getStartMS());
-    for (int i = 1; i < risky.length(); ++i) {
+    sma.addData(balance, risky.getTimeMS(iStart));
+    for (int i = iStart + 1; i < risky.length(); ++i) {
       // Calculate trailing moving average.
       int a = Math.max(0, i - numMonths - 1);
       double ma = calcSma(a, i, prices);
@@ -108,10 +109,11 @@ public class Strategy
   /**
    * Every month, invest 100% in the best asset.
    * 
+   * @param iStart index of month to start investing.
    * @param seqs cumulative returns for each asset
    * @return sequence of returns using the perfect strategy
    */
-  public static Sequence calcPerfectReturns(Sequence... seqs)
+  public static Sequence calcPerfectReturns(int iStart, Sequence... seqs)
   {
     assert seqs.length > 0;
     int N = seqs[0].length();
@@ -121,8 +123,8 @@ public class Strategy
 
     Sequence perfect = new Sequence("Perfect");
     double balance = 1.0;
-    perfect.addData(balance, seqs[0].getStartMS());
-    for (int i = 1; i < seqs[0].length(); ++i) {
+    perfect.addData(balance, seqs[0].getTimeMS(iStart));
+    for (int i = iStart + 1; i < seqs[0].length(); ++i) {
       double bestReturn = 0.0;
       for (Sequence seq : seqs) {
         double r = seq.get(i, 0) / seq.get(i - 1, 0);
@@ -148,6 +150,9 @@ public class Strategy
   {
     final int numAssets = assets.length;
     assert numAssets == targetPercents.length;
+    for (int i = 1; i < numAssets; ++i) {
+      assert assets[i].length() == assets[0].length();
+    }
 
     // Normalize target percentages to sum to 1.0.
     double targetSum = 0.0;
@@ -186,7 +191,7 @@ public class Strategy
     return returns;
   }
 
-  public static Sequence calcMultiMomentumReturns(Sequence risky, Sequence safe, Disposition disposition)
+  public static Sequence calcMultiMomentumReturns(int iStart, Sequence risky, Sequence safe, Disposition disposition)
   {
     int N = risky.length();
     assert safe.length() == N;
@@ -196,7 +201,7 @@ public class Strategy
 
     Sequence momentum = new Sequence("MultiMomentum-" + disposition);
     double balance = 1.0;
-    for (int i = 0; i < N; ++i) {
+    for (int i = iStart; i < N; ++i) {
       int code = calcMomentumCode(i, numMonths, seqs);
 
       // Use votes to select asset.
@@ -323,7 +328,8 @@ public class Strategy
     printStats("SMA Statistics:", map);
   }
 
-  public static Sequence calcMultiSmaReturns(Sequence prices, Sequence risky, Sequence safe, Disposition disposition)
+  public static Sequence calcMultiSmaReturns(int iStart, Sequence prices, Sequence risky, Sequence safe,
+      Disposition disposition)
   {
     int N = risky.length();
     assert safe.length() == N;
@@ -332,7 +338,7 @@ public class Strategy
 
     Sequence sma = new Sequence("MultiSMA-" + disposition);
     double balance = 1.0;
-    for (int i = 0; i < N; ++i) {
+    for (int i = iStart; i < N; ++i) {
       int code = calcSmaCode(i, numMonths, prices, risky, safe);
 
       // Use votes to select asset.
