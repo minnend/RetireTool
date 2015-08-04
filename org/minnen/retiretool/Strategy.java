@@ -16,7 +16,7 @@ public class Strategy
    * @param seqs cumulative returns for each asset.
    * @return sequence of returns using the momentum strategy
    */
-  public static Sequence calcMomentumReturnSeq(int numMonths, Sequence... seqs)
+  public static Sequence calcMomentumReturns(int numMonths, Sequence... seqs)
   {
     assert seqs.length > 1;
     int N = seqs[0].length();
@@ -79,7 +79,7 @@ public class Strategy
    * @param safe cumulative returns for safe asset
    * @return sequence of returns using the above/below-SMA strategy
    */
-  public static Sequence calcSMAReturnSeq(int numMonths, Sequence prices, Sequence risky, Sequence safe)
+  public static Sequence calcSMAReturns(int numMonths, Sequence prices, Sequence risky, Sequence safe)
   {
     assert risky.length() == safe.length();
 
@@ -111,7 +111,7 @@ public class Strategy
    * @param seqs cumulative returns for each asset
    * @return sequence of returns using the perfect strategy
    */
-  public static Sequence calcPerfectReturnSeq(Sequence... seqs)
+  public static Sequence calcPerfectReturns(Sequence... seqs)
   {
     assert seqs.length > 0;
     int N = seqs[0].length();
@@ -144,7 +144,7 @@ public class Strategy
    * @param rebalanceMonths rebalance every N months (zero for never).
    * @return sequence of returns using the mixed strategy.
    */
-  public static Sequence calcMixedReturnSeq(Sequence[] assets, double[] targetPercents, int rebalanceMonths)
+  public static Sequence calcMixedReturns(Sequence[] assets, double[] targetPercents, int rebalanceMonths)
   {
     final int numAssets = assets.length;
     assert numAssets == targetPercents.length;
@@ -186,7 +186,7 @@ public class Strategy
     return returns;
   }
 
-  public static Sequence calcMultiMomentumReturnSeq(Sequence risky, Sequence safe, Disposition disposition)
+  public static Sequence calcMultiMomentumReturns(Sequence risky, Sequence safe, Disposition disposition)
   {
     int N = risky.length();
     assert safe.length() == N;
@@ -323,7 +323,7 @@ public class Strategy
     printStats("SMA Statistics:", map);
   }
 
-  public static Sequence calcMultiSmaReturnSeq(Sequence prices, Sequence risky, Sequence safe, Disposition disposition)
+  public static Sequence calcMultiSmaReturns(Sequence prices, Sequence risky, Sequence safe, Disposition disposition)
   {
     int N = risky.length();
     assert safe.length() == N;
