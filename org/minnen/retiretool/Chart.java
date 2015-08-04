@@ -108,6 +108,12 @@ public class Chart
       writer.write("   title: { text: null }\n");
       writer.write("  },\n");
 
+      if (chartType == ChartType.Line) {
+        writer.write("  chart: {\n");
+        writer.write("   zoomType: 'x'\n");
+        writer.write("  },\n");
+      }
+
       if (colors != null) {
         writer.write("  colors: [");
         for (int i = 0; i < colors.length; ++i) {

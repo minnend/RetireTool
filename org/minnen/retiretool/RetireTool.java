@@ -362,7 +362,6 @@ public class RetireTool
 
     // iStart = shiller.getIndexForDate(1980, 1);
     // iEnd = shiller.getIndexForDate(2010, 1);
-    int N = iEndData - iStartData + 1;
 
     int percentStock = 60;
     int percentBonds = 40;
@@ -522,7 +521,7 @@ public class RetireTool
     Sequence stock = stockAll.subseq(iStartReturns, iEnd - iStartReturns + 1);
     Sequence bonds = bondsAll.subseq(iStartReturns, iEnd - iStartReturns + 1);
 
-    Sequence mixed = Strategy.calcMixedReturns(new Sequence[] { stockAll, bondsAll }, new double[] { 60, 40 },
+    Sequence mixed = Strategy.calcMixedReturns(new Sequence[] { stock, bonds}, new double[] { 60, 40 },
         rebalanceMonths);
 
     Strategy.calcMomentumStats(stockAll, bondsAll);
@@ -551,10 +550,12 @@ public class RetireTool
     Sequence returnsA = returns[0];
     Sequence returnsB = returns[9];
 
+    // Generate scatter plot comparing results.
     String title = String.format("%s vs. %s (%s)", returnsB.getName(), returnsA.getName(),
         Library.getDurationString(nMonths));
     Chart.saveHighChartScatter(new File(dir, "duel-scatter.html"), title, 800, 600, 0, returnsA, returnsB);
 
+    // Generate histogram summarizing excess returns of B over A.
     title = String.format("Excess Returns: %s vs. %s (%s)", returnsB.getName(), returnsA.getName(),
         Library.getDurationString(nMonths));
     Sequence excessReturns = returnsB.sub(returnsA);
@@ -566,7 +567,9 @@ public class RetireTool
       double x = histogramExcess.get(i, 0);
       colors[i] = x < -0.001 ? "#df5353" : (x > 0.001 ? "#53df53" : "#dfdf53");
     }
-    Chart.saveHighChart(new File(dir, "duel-excess.html"), Chart.ChartType.Bar, title, labels, colors, 1200, 600,
+    Chart.saveHighChart(new File(dir, "duel-excess.html"), Chart.ChartType.Line, title, null, null, 1200, 600,
+        false, 0, excessReturns);
+    Chart.saveHighChart(new File(dir, "duel-histogram.html"), Chart.ChartType.Bar, title, labels, colors, 1200, 600,
         false, 1, histogramExcess);
 
     // double[] a = excessReturns.extractDim(0);
@@ -911,9 +914,9 @@ public class RetireTool
     // File("g:/web/histogram-returns.html"),
     // new File("g:/web/histogram-excess-returns.html"));
     genReturnChart(shiller, new File("g:/web/cumulative-returns.html"));
-    genSMASweepChart(shiller, new File("g:/web/sma-sweep.html"));
-    genMomentumSweepChart(shiller, new File("g:/web/momentum-sweep.html"));
-    genStockBondMixSweepChart(shiller, new File("g:/web/stock-bond-mix-sweep.html"));
+    //genSMASweepChart(shiller, new File("g:/web/sma-sweep.html"));
+    //genMomentumSweepChart(shiller, new File("g:/web/momentum-sweep.html"));
+    //genStockBondMixSweepChart(shiller, new File("g:/web/stock-bond-mix-sweep.html"));
     genDuelViz(shiller, new File("g:/web/"));
     System.exit(0);
 
