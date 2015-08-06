@@ -109,16 +109,16 @@ public class InvestmentStats
   public double calcScore()
   {
     List<WeightedValue> terms = new ArrayList<WeightedValue>();
-    terms.add(new WeightedValue(cagr, 500));
+    terms.add(new WeightedValue(cagr, 1000));
     terms.add(new WeightedValue(devAnnualReturn, -10));
     terms.add(new WeightedValue(maxDrawdown, -30));
-    terms.add(new WeightedValue(percentDown10, -20));
+    terms.add(new WeightedValue(percentDown10, -30));
     terms.add(new WeightedValue(percentNewHigh, 10));
     terms.add(new WeightedValue(annualPercentiles[0], 5));
     terms.add(new WeightedValue(annualPercentiles[1], 10));
     terms.add(new WeightedValue(annualPercentiles[2], 10));
     terms.add(new WeightedValue(annualPercentiles[3], 5));
-    terms.add(new WeightedValue(annualPercentiles[4], 5));
+    terms.add(new WeightedValue(annualPercentiles[4], 10));
 
     double score = 0.0;
     for (WeightedValue wv : terms) {

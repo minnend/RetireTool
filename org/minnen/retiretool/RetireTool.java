@@ -423,7 +423,7 @@ public class RetireTool
     return failures;
   }
 
-  public static void genReturnChart(Sequence shiller, File file) throws IOException
+  public static void genReturnChart(Sequence shiller, File fileChart, File fileTable) throws IOException
   {
     int iStartData = 0;
     int iEndData = shiller.length() - 1;
@@ -482,13 +482,14 @@ public class RetireTool
       all[i].setName(String.format("%s (%.2f%%)", all[i].getName(), stats[i].cagr));
     }
 
-    Chart.saveLineChart(file, "Cumulative Market Returns", 1200, 600, true, multiSmaRisky, daa, multiMomSafe, sma, raa,
+    Chart.saveLineChart(fileChart, "Cumulative Market Returns", 1200, 600, true, multiSmaRisky, daa, multiMomSafe, sma, raa,
         momentum, stock, mixed, bonds, bondsHold);
 
     int[] ii = Library.sort(scores, false);
     for (int i = 0; i < all.length; ++i) {
       System.out.printf("%d [%.1f]: %s\n", i + 1, scores[i], stats[ii[i]]);
     }
+    Chart.saveStatsTable(fileTable, stats);
   }
 
   public static String[] getLabelsFromHistogram(Sequence histogram)
@@ -977,7 +978,7 @@ public class RetireTool
     // }
 
     // genReturnViz(shiller, new File("g:/web/histogram-returns.html"));
-    genReturnChart(shiller, new File("g:/web/cumulative-returns.html"));
+    genReturnChart(shiller, new File("g:/web/cumulative-returns.html"), new File("g:/web/strategy-report.html"));
     // genSMASweepChart(shiller, new File("g:/web/sma-sweep.html"));
     // genMomentumSweepChart(shiller, new File("g:/web/momentum-sweep.html"));
     // genStockBondMixSweepChart(shiller, new File("g:/web/stock-bond-mix-sweep.html"));

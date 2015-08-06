@@ -4,6 +4,10 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.minnen.retiretool.InvestmentStats.WeightedValue;
 
 public class Chart
 {
@@ -240,6 +244,61 @@ public class Chart
 
       writer.write("</script></head><body style=\"width:" + width + "px;\">\n");
       writer.write("<div id=\"chart\" style=\"width:100%; height:" + height + "px;\" />\n");
+      writer.write("</body></html>\n");
+    }
+  }
+
+  public static void saveStatsTable(File file, InvestmentStats[] strategyStats) throws IOException
+  {
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+      writer.write("<html><head>\n");
+      writer.write("<script src=\"http://code.jquery.com/jquery.min.js\"></script>\n");
+      writer.write("<script type=\"text/javascript\" src=\"js/jquery.tablesorter.min.js\"></script>\n");
+      writer.write("<script type=\"text/javascript\">\n");
+      writer.write(" $(document).ready(function() { $(\"#myTable\").tablesorter(); } );\n");
+      writer.write("</script>\n");
+      writer.write("<link rel=\"stylesheet\" href=\"js/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
+      writer.write("</head><body style=\"width:1200px\">\n");
+      writer.write("<table id=\"myTable\" class=\"tablesorter\">\n");
+      writer.write("<thead><tr>\n");
+      writer.write(" <th>Strategy / Asset</th>\n");
+      writer.write(" <th>CAGR</th>\n");
+      writer.write(" <th>Standard Deviation</th>\n");
+      writer.write(" <th>Max Drawdown</th>\n");
+      writer.write(" <th>Percent Down 10%</th>\n");
+      writer.write(" <th>Percent New High</th>\n");
+      writer.write(" <th>Worst Annual Return</th>\n");
+      writer.write(" <th>25th-Percentile Annual Return</th>\n");
+      writer.write(" <th>Median Annual Return</th>\n");
+      writer.write(" <th>75th-Percentile Annual Return</th>\n");
+      writer.write(" <th>Best Annual Return</th>\n");
+      writer.write(" <th>Combined Score</th>\n");
+      writer.write("</tr></thead>\n");
+      writer.write("<tbody>\n");
+      for (InvestmentStats stats : strategyStats) {
+        writer.write("<tr>\n");
+        String name = stats.name();
+        Pattern p = Pattern.compile("(.+)\\s+\\(\\d.*\\)$");
+        Matcher m = p.matcher(name);
+        if (m.matches()) {
+          name = m.group(1);
+        }
+        writer.write(String.format("<td><b>%s</b></td>\n", name));
+        writer.write(String.format("<td>%.3f</td>\n", stats.cagr));
+        writer.write(String.format("<td>%.3f</td>\n", stats.devAnnualReturn));
+        writer.write(String.format("<td>%.3f</td>\n", stats.maxDrawdown));
+        writer.write(String.format("<td>%.3f</td>\n", stats.percentDown10));
+        writer.write(String.format("<td>%.3f</td>\n", stats.percentNewHigh));
+        writer.write(String.format("<td>%.3f</td>\n", stats.annualPercentiles[0]));
+        writer.write(String.format("<td>%.3f</td>\n", stats.annualPercentiles[1]));
+        writer.write(String.format("<td>%.3f</td>\n", stats.annualPercentiles[2]));
+        writer.write(String.format("<td>%.3f</td>\n", stats.annualPercentiles[3]));
+        writer.write(String.format("<td>%.3f</td>\n", stats.annualPercentiles[4]));
+        writer.write(String.format("<td>%.3f</td>\n", stats.calcScore()));
+        writer.write("</tr>\n");
+      }
+      writer.write("</tbody>\n");
+      writer.write("</table>");
       writer.write("</body></html>\n");
     }
   }
