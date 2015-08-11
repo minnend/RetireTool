@@ -7,8 +7,6 @@ import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.minnen.retiretool.InvestmentStats.WeightedValue;
-
 public class Chart
 {
   public enum ChartType {
@@ -248,31 +246,43 @@ public class Chart
     }
   }
 
-  public static void saveStatsTable(File file, InvestmentStats[] strategyStats) throws IOException
+  /**
+   * Generate an HTML file with a sortable table of strategy statistics.
+   * 
+   * Documentation for sortable table: http://tablesorter.com/docs/
+   * 
+   * @param file save HTML in this file
+   * @param strategyStats List of strategies to include
+   * @throws IOException if there is a problem writing to the file
+   */
+  public static void saveStatsTable(File file, InvestmentStats... strategyStats) throws IOException
   {
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
       writer.write("<html><head>\n");
+      writer.write("<title>Strategy Statistics</title>\n");
       writer.write("<script src=\"http://code.jquery.com/jquery.min.js\"></script>\n");
       writer.write("<script type=\"text/javascript\" src=\"js/jquery.tablesorter.min.js\"></script>\n");
       writer.write("<script type=\"text/javascript\">\n");
-      writer.write(" $(document).ready(function() { $(\"#myTable\").tablesorter(); } );\n");
+      writer.write(" $(document).ready(function() { $(\"#myTable\").tablesorter( {sortList: [[11,1]], widgets: ['zebra']} ); } );\n");
       writer.write("</script>\n");
-      writer.write("<link rel=\"stylesheet\" href=\"js/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
+      writer
+          .write("<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
       writer.write("</head><body style=\"width:1200px\">\n");
+      writer.write("<h2>Statistics for Different Strategies / Assets from 1871 to 2015</h2>");
       writer.write("<table id=\"myTable\" class=\"tablesorter\">\n");
       writer.write("<thead><tr>\n");
       writer.write(" <th>Strategy / Asset</th>\n");
       writer.write(" <th>CAGR</th>\n");
-      writer.write(" <th>Standard Deviation</th>\n");
-      writer.write(" <th>Max Drawdown</th>\n");
-      writer.write(" <th>Percent Down 10%</th>\n");
-      writer.write(" <th>Percent New High</th>\n");
-      writer.write(" <th>Worst Annual Return</th>\n");
-      writer.write(" <th>25th-Percentile Annual Return</th>\n");
-      writer.write(" <th>Median Annual Return</th>\n");
-      writer.write(" <th>75th-Percentile Annual Return</th>\n");
-      writer.write(" <th>Best Annual Return</th>\n");
-      writer.write(" <th>Combined Score</th>\n");
+      writer.write(" <th>StdDev</th>\n");
+      writer.write(" <th>Drawdown</th>\n");
+      writer.write(" <th>Down 10%</th>\n");
+      writer.write(" <th>New High</th>\n");
+      writer.write(" <th>Worst AR</th>\n");
+      writer.write(" <th>25% AR</th>\n");
+      writer.write(" <th>Median AR</th>\n");
+      writer.write(" <th>75% AR</th>\n");
+      writer.write(" <th>Best AR</th>\n");
+      writer.write(" <th>Score</th>\n");
       writer.write("</tr></thead>\n");
       writer.write("<tbody>\n");
       for (InvestmentStats stats : strategyStats) {
@@ -284,21 +294,36 @@ public class Chart
           name = m.group(1);
         }
         writer.write(String.format("<td><b>%s</b></td>\n", name));
-        writer.write(String.format("<td>%.3f</td>\n", stats.cagr));
-        writer.write(String.format("<td>%.3f</td>\n", stats.devAnnualReturn));
-        writer.write(String.format("<td>%.3f</td>\n", stats.maxDrawdown));
-        writer.write(String.format("<td>%.3f</td>\n", stats.percentDown10));
-        writer.write(String.format("<td>%.3f</td>\n", stats.percentNewHigh));
-        writer.write(String.format("<td>%.3f</td>\n", stats.annualPercentiles[0]));
-        writer.write(String.format("<td>%.3f</td>\n", stats.annualPercentiles[1]));
-        writer.write(String.format("<td>%.3f</td>\n", stats.annualPercentiles[2]));
-        writer.write(String.format("<td>%.3f</td>\n", stats.annualPercentiles[3]));
-        writer.write(String.format("<td>%.3f</td>\n", stats.annualPercentiles[4]));
-        writer.write(String.format("<td>%.3f</td>\n", stats.calcScore()));
+        writer.write(String.format("<td>%.2f</td>\n", stats.cagr));
+        writer.write(String.format("<td>%.2f</td>\n", stats.devAnnualReturn));
+        writer.write(String.format("<td>%.2f</td>\n", stats.maxDrawdown));
+        writer.write(String.format("<td>%.2f</td>\n", stats.percentDown10));
+        writer.write(String.format("<td>%.2f</td>\n", stats.percentNewHigh));
+        writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[0]));
+        writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[1]));
+        writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[2]));
+        writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[3]));
+        writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[4]));
+        writer.write(String.format("<td>%.2f</td>\n", stats.calcScore()));
         writer.write("</tr>\n");
       }
-      writer.write("</tbody>\n");
-      writer.write("</table>");
+      writer.write("</tbody>\n</table>\n");
+      writer.write("<h2>Explanation of Each Column</h2>");
+      writer.write("<div><ul>");
+      writer.write(" <li><b>Strategy / Asset</b> - Name of the strategy or asset class</li>\n");
+      writer.write(" <li><b>CAGR</b> - Compound Annual Growth Rate</li>\n");
+      writer.write(" <li><b>StdDev</b> - Standard deviation of annual returns</li>\n");
+      writer.write(" <li><b>Drawdown</b> - Maximum drawdown (largest gap from peak to trough)</li>\n");
+      writer
+          .write(" <li><b>Down 10%</b> - Percentage of time (months) strategy is 10% or more below the previous peak</li>\n");
+      writer.write(" <li><b>New High</b> - Percentage of time (months) strategy hits a new high</li>\n");
+      writer.write(" <li><b>Worst AR</b> - Return of worst year (biggest drop)</li>\n");
+      writer.write(" <li><b>25% AR</b> - Return of year at the 25th percentile</li>\n");
+      writer.write(" <li><b>Median AR</b> - Return of year at the 50th percentile</li>\n");
+      writer.write(" <li><b>75% AR</b> - Return of year at the 75th percentile</li>\n");
+      writer.write(" <li><b>Best AR</b> - Return of best year (biggest gain)</li>\n");
+      writer.write(" <li><b>Score</b> - Semi-arbitrary combination of statistics used to rank strategies (higher is better)</li>\n");
+      writer.write("</ul></div>");
       writer.write("</body></html>\n");
     }
   }

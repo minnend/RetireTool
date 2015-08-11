@@ -109,22 +109,23 @@ public class InvestmentStats
   public double calcScore()
   {
     List<WeightedValue> terms = new ArrayList<WeightedValue>();
-    terms.add(new WeightedValue(cagr, 1000));
+    double multiYearReturn = RetireTool.mul2ret(Math.pow(RetireTool.ret2mul(cagr), 10));
+    terms.add(new WeightedValue(multiYearReturn, 1000));
     terms.add(new WeightedValue(devAnnualReturn, -10));
-    terms.add(new WeightedValue(maxDrawdown, -30));
-    terms.add(new WeightedValue(percentDown10, -30));
-    terms.add(new WeightedValue(percentNewHigh, 10));
+    terms.add(new WeightedValue(maxDrawdown + 10.0, -1000));
+    terms.add(new WeightedValue(percentDown10, -10));
+    terms.add(new WeightedValue(percentNewHigh, 5));
     terms.add(new WeightedValue(annualPercentiles[0], 5));
     terms.add(new WeightedValue(annualPercentiles[1], 10));
-    terms.add(new WeightedValue(annualPercentiles[2], 10));
-    terms.add(new WeightedValue(annualPercentiles[3], 5));
-    terms.add(new WeightedValue(annualPercentiles[4], 10));
+    terms.add(new WeightedValue(annualPercentiles[2], 20));
+    terms.add(new WeightedValue(annualPercentiles[3], 10));
+    terms.add(new WeightedValue(annualPercentiles[4], 5));
 
     double score = 0.0;
     for (WeightedValue wv : terms) {
       score += wv.value * wv.weight;
     }
-    return score;
+    return score / 10000.0;
   }
 
   public String name()

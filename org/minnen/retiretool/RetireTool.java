@@ -90,7 +90,7 @@ public class RetireTool
    */
   public static double getDeviationAnnualReturn(Sequence cumulativeReturns, double meanAnnualReturn)
   {
-    meanAnnualReturn = meanAnnualReturn / 100.0 + 1.0;
+    meanAnnualReturn = ret2mul(meanAnnualReturn);
     int nMonths = cumulativeReturns.size() - 1;
     if (nMonths < 24) {
       return 0.0;
@@ -346,7 +346,7 @@ public class RetireTool
   public static void calcSavings(double principal, double depStartOfYear, double depMonthly, double annualGrowthRate,
       int years)
   {
-    double annualReturn = 1.0 + annualGrowthRate / 100.0;
+    double annualReturn = ret2mul(annualGrowthRate);
     double monthlyReturn = Math.pow(annualReturn, Library.ONE_TWELFTH);
     double balance = principal;
     System.out.println("Starting Balance: $" + currencyFormatter.format(balance));
@@ -433,7 +433,6 @@ public class RetireTool
 
     int percentStock = 60;
     int percentBonds = 40;
-    // int percentCash = 100 - (percentStock + percentBonds);
 
     int nMonthsSMA = 10;
     int nMonthsMomentum = 12;
@@ -453,6 +452,7 @@ public class RetireTool
     Sequence stockNoDiv = calcSnpReturns(snpData, iStartReturns, iEndData - iStartReturns, DividendMethod.NO_REINVEST);
     Sequence mixed = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
         percentBonds }, rebalanceMonths);
+    mixed.setName(String.format("Stock/Bonds [%d/%d]", percentStock, percentBonds));
     Sequence momentum = Strategy.calcMomentumReturns(nMonthsMomentum, iStartReturns, stockAll, bondsAll);
     Sequence sma = Strategy.calcSMAReturns(nMonthsSMA, iStartReturns, snpData, stockAll, bondsAll);
     Sequence raa = Strategy
@@ -482,8 +482,8 @@ public class RetireTool
       all[i].setName(String.format("%s (%.2f%%)", all[i].getName(), stats[i].cagr));
     }
 
-    Chart.saveLineChart(fileChart, "Cumulative Market Returns", 1200, 600, true, multiSmaRisky, daa, multiMomSafe, sma, raa,
-        momentum, stock, mixed, bonds, bondsHold);
+    Chart.saveLineChart(fileChart, "Cumulative Market Returns", 1200, 600, true, multiSmaRisky, daa, multiMomSafe, sma,
+        raa, momentum, stock, mixed, bonds, bondsHold);
 
     int[] ii = Library.sort(scores, false);
     for (int i = 0; i < all.length; ++i) {
@@ -574,7 +574,7 @@ public class RetireTool
   {
     assert dir.isDirectory();
 
-    int nMonths = 10 * 12;
+    int nMonths = 20 * 12;
     int rebalanceMonths = 12;
     int iStartReturns = 12;
     int iStart = 0;
@@ -589,8 +589,12 @@ public class RetireTool
     Sequence stock = stockAll.subseq(iStartReturns, iEnd - iStartReturns + 1);
     Sequence bonds = bondsAll.subseq(iStartReturns, iEnd - iStartReturns + 1);
 
-    Sequence mixed = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { 80, 20 },
-        rebalanceMonths);
+    int percentStock = 60;
+    int percentBonds = 40;
+    assert percentStock + percentBonds == 100;
+    Sequence mixed = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
+        percentBonds }, rebalanceMonths);
+    mixed.setName(String.format("Stock/Bonds [%d/%d]", percentStock, percentBonds));
 
     // Strategy.calcMomentumStats(stockAll, bondsAll);
     // Strategy.calcSmaStats(snpData, stockAll, bondsAll);
@@ -615,7 +619,7 @@ public class RetireTool
       returns[i].setName(assets[i].getName());
     }
     Sequence returnsA = returns[0];
-    Sequence returnsB = returns[9];
+    Sequence returnsB = returns[2];
 
     // Generate scatter plot comparing results.
     String title = String.format("%s vs. %s (%s)", returnsB.getName(), returnsA.getName(),
@@ -894,6 +898,28 @@ public class RetireTool
   }
 
   /**
+   * Convert a multiplier to a return (1.042 -> 4.2%)
+   * 
+   * @param multiplier a multiplier (1.042 = 4.2% ROI)
+   * @return a return value (4.2 = 4.2% ROI)
+   */
+  public static double mul2ret(double multiplier)
+  {
+    return (multiplier - 1.0) * 100.0;
+  }
+
+  /**
+   * Convert a return to a multiplier (4.2% -> 1.042)
+   * 
+   * @param ret a return value (4.2 = 4.2% ROI)
+   * @return a multiplier (1.042 = 4.2% ROI)
+   */
+  public static double ret2mul(double ret)
+  {
+    return ret / 100.0 + 1.0;
+  }
+
+  /**
    * Calculates S&P ROI for the given range.
    * 
    * @param snp sequence of prices (d=0) and dividends (d=1)
@@ -982,7 +1008,8 @@ public class RetireTool
     // genSMASweepChart(shiller, new File("g:/web/sma-sweep.html"));
     // genMomentumSweepChart(shiller, new File("g:/web/momentum-sweep.html"));
     // genStockBondMixSweepChart(shiller, new File("g:/web/stock-bond-mix-sweep.html"));
-    // genDuelViz(shiller, new File("g:/web/"));
+    genDuelViz(shiller, new File("g:/web/"));
+
     System.exit(0);
 
     // int retireAge = 65;

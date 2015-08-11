@@ -35,15 +35,17 @@ public class Strategy
       double bestReturn = 0.0;
       for (Sequence seq : seqs) {
         double r = seq.get(b, 0) / seq.get(a, 0);
-        if (bestSeq == null || r > bestReturn) {
+        if (r > bestReturn) {
           bestSeq = seq;
           bestReturn = r;
         }
       }
 
       // Invest everything in best asset for this month.
-      double lastMonthReturn = bestSeq.get(i, 0) / bestSeq.get(b, 0);
-      balance *= lastMonthReturn;
+      if (bestSeq != null) {
+        double lastMonthReturn = bestSeq.get(i, 0) / bestSeq.get(b, 0);
+        balance *= lastMonthReturn;
+      }
       momentum.addData(balance, seqs[0].getTimeMS(i));
     }
     return momentum;
