@@ -319,7 +319,7 @@ public class Chart
       writer.write(" <li><b>New High</b> - Percentage of time (months) strategy hits a new high</li>\n");
       writer.write(" <li><b>Worst AR</b> - Return of worst year (biggest drop)</li>\n");
       writer.write(" <li><b>25% AR</b> - Return of year at the 25th percentile</li>\n");
-      writer.write(" <li><b>Median AR</b> - Return of year at the 50th percentile</li>\n");
+      writer.write(" <li><b>Median AR</b> - Median annual return (50th percentile)</li>\n");
       writer.write(" <li><b>75% AR</b> - Return of year at the 75th percentile</li>\n");
       writer.write(" <li><b>Best AR</b> - Return of best year (biggest gain)</li>\n");
       writer.write(" <li><b>Score</b> - Semi-arbitrary combination of statistics used to rank strategies (higher is better)</li>\n");

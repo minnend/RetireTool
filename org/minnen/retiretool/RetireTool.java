@@ -40,74 +40,6 @@ public class RetireTool
     return (Math.pow(totalReturn, 12.0 / nMonths) - 1) * 100;
   }
 
-  public static double[] getAnnualReturns(Sequence cumulativeReturns)
-  {
-    int nMonths = cumulativeReturns.size() - 1;
-    if (nMonths < 12) {
-      return new double[0];
-    } else {
-      int nYears = nMonths / 12;
-      double[] returns = new double[nYears];
-      for (int j = 0, i = 12; i < cumulativeReturns.size(); ++j, i += 12) {
-        returns[j] = cumulativeReturns.get(i, 0) / cumulativeReturns.get(i - 12, 0);
-      }
-      return returns;
-    }
-  }
-
-  /**
-   * Calculates the average annual return from the given return sequence.
-   * 
-   * @param cumulativeReturns sequence containing total return over some duration.
-   * @return average annual return
-   */
-  public static double getMeanAnnualReturn(Sequence cumulativeReturns)
-  {
-    int nMonths = cumulativeReturns.size() - 1;
-    if (nMonths < 2) {
-      return 1.0;
-    } else if (nMonths < 12) {
-      return getAnnualReturn(cumulativeReturns.getLast(0) / cumulativeReturns.getFirst(0), nMonths);
-    } else {
-      double[] returns = getAnnualReturns(cumulativeReturns);
-      double sum = 0.0;
-      for (int i = 0; i < returns.length; ++i) {
-        sum += returns[i];
-      }
-      double mar = sum / returns.length;
-      return (mar - 1) * 100;
-    }
-  }
-
-  /**
-   * Calculates the standard deviation of annual returns for the given return sequence.
-   * 
-   * More Info: https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Compensated_variant
-   * 
-   * @param cumulativeReturns sequence containing total return over some duration.
-   * @param meanAnnualReturn pre-calculated average annual return for the given sequence (where 4.2 => 4.2% return).
-   * @return average annual return
-   */
-  public static double getDeviationAnnualReturn(Sequence cumulativeReturns, double meanAnnualReturn)
-  {
-    meanAnnualReturn = ret2mul(meanAnnualReturn);
-    int nMonths = cumulativeReturns.size() - 1;
-    if (nMonths < 24) {
-      return 0.0;
-    } else {
-      double[] returns = getAnnualReturns(cumulativeReturns);
-      double s1 = 0.0, s2 = 0.0;
-      for (int i = 0; i < returns.length; ++i) {
-        double diff = returns[i] - meanAnnualReturn;
-        s1 += diff * diff;
-        s2 += diff;
-      }
-
-      double sdev = Math.sqrt((s1 - s2 * 2.0 / returns.length) / (returns.length - 1));
-      return sdev * 100;
-    }
-  }
-
   /**
    * Compute histogram for the given returns.
    * 
@@ -152,25 +84,31 @@ public class RetireTool
     Sequence h = new Sequence("Histogram: " + rois.getName());
     int i = 0;
     while (i < na) {
-      assert (a[i] >= hleft);
+      assert (i == 0 || a[i] >= hleft);
       double hright = hleft + binWidth;
+      double hrightTest = hright;
 
-      // find all data points in [hleft, hright)
+      // Did we reach the requested end?
+      if (hright >= vmax) {
+        hrightTest = Double.POSITIVE_INFINITY;
+      }
+
+      // Find all data points in [hleft, hright).
       int j = i;
       while (j < na) {
-        if (a[j] >= hleft && a[j] < hright) {
+        if (a[j] < hrightTest) {
           ++j;
         } else {
           break;
         }
       }
 
-      // add data point for this bin
+      // Add data point for this bin.
       int n = j - i;
       double frac = (double) n / na;
       h.addData(new FeatureVec(3, (hleft + hright) / 2, n, frac));
 
-      // move to next bin
+      // Move to next bin.
       i = j;
       hleft = hright;
     }
@@ -485,6 +423,8 @@ public class RetireTool
     Chart.saveLineChart(fileChart, "Cumulative Market Returns", 1200, 600, true, multiSmaRisky, daa, multiMomSafe, sma,
         raa, momentum, stock, mixed, bonds, bondsHold);
 
+    // Chart.saveLineChart(fileChart, "Cumulative Market Returns", 800, 500, true, stock, stockNoDiv);
+
     int[] ii = Library.sort(scores, false);
     for (int i = 0; i < all.length; ++i) {
       System.out.printf("%d [%.1f]: %s\n", i + 1, scores[i], stats[ii[i]]);
@@ -509,7 +449,7 @@ public class RetireTool
     // iStart = shiller.getIndexForDate(1980, 1);
     // iEnd = shiller.getIndexForDate(2010, 1);
 
-    int nMonths = 10 * 12;
+    int nMonths = 40 * 12;
     int percentStock = 60;
     int percentBonds = 40;
     // int percentCash = 100 - (percentStock + percentBonds);
@@ -543,11 +483,22 @@ public class RetireTool
         rebalanceMonths);
     daa.setName("DAA");
 
-    Sequence[] assets = new Sequence[] { multiSmaRisky, daa, multiMomSafe, momentum, sma, raa, stock, bonds, mixed };
+    //System.out.printf("Stock Total Return: %f\n", getReturn(stock, 0, stock.length()-1));
+
+    // Sequence[] assets = new Sequence[] { multiSmaRisky, daa, multiMomSafe, momentum, sma, raa, stock, bonds, mixed };
+    Sequence[] assets = new Sequence[] { stock };
     Sequence[] returns = new Sequence[assets.length];
     double vmin = 0.0, vmax = 0.0;
     for (int i = 0; i < assets.length; ++i) {
+      //ReturnStats.printDurationTable(assets[i]);
       returns[i] = calcReturnsForDuration(assets[i], nMonths);
+
+      // for (int j = 0; j < returns[i].length(); ++j) {
+      // FeatureVec v = returns[i].get(j);
+      // if (v.get(0) > 62.0 || v.get(0) < -42.0) {
+      // System.out.printf("%d: %.2f  [%s]\n", j, v.get(0), Library.formatMonth(v.getTime()));
+      // }
+      // }
       returns[i].setName(assets[i].getName());
       double[] a = returns[i].extractDim(0);
       Arrays.sort(a);
@@ -567,7 +518,7 @@ public class RetireTool
 
     String title = "Histogram of Returns - " + Library.getDurationString(nMonths);
     String[] labels = getLabelsFromHistogram(histograms[0]);
-    Chart.saveHighChart(fileBar, Chart.ChartType.Bar, title, labels, null, 1200, 600, false, 1, histograms);
+    Chart.saveHighChart(fileBar, Chart.ChartType.Bar, title, labels, null, 800, 500, false, 1, histograms);
   }
 
   public static void genDuelViz(Sequence shiller, File dir) throws IOException
@@ -799,6 +750,14 @@ public class RetireTool
     Chart.saveLineChart(file, title, 1200, 800, false, snp, bonds);
   }
 
+  /**
+   * Calculate total return for the given segment.
+   * 
+   * @param cumulativeReturns sequence of cumulative returns for the investment strategy
+   * @param iFrom index of starting point for calculation
+   * @param iTo index of ending point for calculation (inclusive)
+   * @return total return from iFrom to iTo.
+   */
   public static double getReturn(Sequence cumulativeReturns, int iFrom, int iTo)
   {
     return cumulativeReturns.get(iTo, 0) / cumulativeReturns.get(iFrom, 0);
@@ -1003,12 +962,12 @@ public class RetireTool
     // shiller.genReturnComparison(years[i] * 12, Inflation.Ignore, new File("g:/test.html"));
     // }
 
-    // genReturnViz(shiller, new File("g:/web/histogram-returns.html"));
+    genReturnViz(shiller, new File("g:/web/histogram-returns.html"));
     genReturnChart(shiller, new File("g:/web/cumulative-returns.html"), new File("g:/web/strategy-report.html"));
     // genSMASweepChart(shiller, new File("g:/web/sma-sweep.html"));
     // genMomentumSweepChart(shiller, new File("g:/web/momentum-sweep.html"));
     // genStockBondMixSweepChart(shiller, new File("g:/web/stock-bond-mix-sweep.html"));
-    genDuelViz(shiller, new File("g:/web/"));
+    // genDuelViz(shiller, new File("g:/web/"));
 
     System.exit(0);
 

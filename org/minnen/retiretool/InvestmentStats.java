@@ -1,7 +1,6 @@
 package org.minnen.retiretool;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -32,20 +31,17 @@ public class InvestmentStats
     if (cumulativeReturns != null && !cumulativeReturns.isEmpty()) {
       stats.totalReturn = cumulativeReturns.getLast(0) / cumulativeReturns.getFirst(0);
       stats.cagr = RetireTool.getAnnualReturn(stats.totalReturn, cumulativeReturns.size() - 1);
-      stats.meanAnnualReturn = RetireTool.getMeanAnnualReturn(cumulativeReturns);
-      stats.devAnnualReturn = RetireTool.getDeviationAnnualReturn(cumulativeReturns, stats.meanAnnualReturn);
 
-      double[] returns = RetireTool.getAnnualReturns(cumulativeReturns);
-      Arrays.sort(returns);
+      ReturnStats rstats = new ReturnStats(cumulativeReturns, 12);
+      stats.meanAnnualReturn = rstats.mean;
+      stats.devAnnualReturn = rstats.sdev;
+
       stats.annualPercentiles = new double[5];
-      stats.annualPercentiles[0] = returns[0];
-      stats.annualPercentiles[1] = returns[Math.round(returns.length * 0.25f)];
-      stats.annualPercentiles[2] = returns[Math.round(returns.length * 0.5f)];
-      stats.annualPercentiles[3] = returns[Math.round(returns.length * 0.75f)];
-      stats.annualPercentiles[4] = returns[returns.length - 1];
-      for (int i = 0; i < stats.annualPercentiles.length; ++i) {
-        stats.annualPercentiles[i] = (stats.annualPercentiles[i] - 1) * 100;
-      }
+      stats.annualPercentiles[0] = rstats.min;
+      stats.annualPercentiles[1] = rstats.percentile25;
+      stats.annualPercentiles[2] = rstats.median;
+      stats.annualPercentiles[3] = rstats.percentile75;
+      stats.annualPercentiles[4] = rstats.max;
     }
     stats.calcDrawdownStats();
     return stats;
