@@ -441,7 +441,7 @@ public class RetireTool
     return labels;
   }
 
-  public static void genReturnViz(Sequence shiller, File fileBar) throws IOException
+  public static void genReturnViz(Sequence shiller, File fileHistogram, File fileFuture) throws IOException
   {
     int iStart = 0;
     int iEnd = shiller.length() - 1;
@@ -483,14 +483,15 @@ public class RetireTool
         rebalanceMonths);
     daa.setName("DAA");
 
-    //System.out.printf("Stock Total Return: %f\n", getReturn(stock, 0, stock.length()-1));
+    // System.out.printf("Stock Total Return: %f\n", getReturn(stock, 0, stock.length()-1));
+    // Chart.printDecadeTable(stockAll);
 
     // Sequence[] assets = new Sequence[] { multiSmaRisky, daa, multiMomSafe, momentum, sma, raa, stock, bonds, mixed };
     Sequence[] assets = new Sequence[] { stock };
     Sequence[] returns = new Sequence[assets.length];
     double vmin = 0.0, vmax = 0.0;
     for (int i = 0; i < assets.length; ++i) {
-      //ReturnStats.printDurationTable(assets[i]);
+      // ReturnStats.printDurationTable(assets[i]);
       returns[i] = calcReturnsForDuration(assets[i], nMonths);
 
       // for (int j = 0; j < returns[i].length(); ++j) {
@@ -518,14 +519,18 @@ public class RetireTool
 
     String title = "Histogram of Returns - " + Library.getDurationString(nMonths);
     String[] labels = getLabelsFromHistogram(histograms[0]);
-    Chart.saveHighChart(fileBar, Chart.ChartType.Bar, title, labels, null, 800, 500, false, 1, histograms);
+    Chart.saveHighChart(fileHistogram, Chart.ChartType.Bar, title, labels, null, 800, 500, false, 1, histograms);
+
+    // Generate histogram showing future returns.
+    title = String.format("Future CAGR: %s (%s)", returns[0].getName(), Library.getDurationString(nMonths));
+    Chart.saveHighChart(fileFuture, Chart.ChartType.Line, title, null, null, 800, 500, false, 0, returns[0]);
   }
 
   public static void genDuelViz(Sequence shiller, File dir) throws IOException
   {
     assert dir.isDirectory();
 
-    int nMonths = 20 * 12;
+    int nMonths = 10 * 12;
     int rebalanceMonths = 12;
     int iStartReturns = 12;
     int iStart = 0;
@@ -962,7 +967,7 @@ public class RetireTool
     // shiller.genReturnComparison(years[i] * 12, Inflation.Ignore, new File("g:/test.html"));
     // }
 
-    genReturnViz(shiller, new File("g:/web/histogram-returns.html"));
+    genReturnViz(shiller, new File("g:/web/histogram-returns.html"), new File("g:/web/future-returns.html"));
     genReturnChart(shiller, new File("g:/web/cumulative-returns.html"), new File("g:/web/strategy-report.html"));
     // genSMASweepChart(shiller, new File("g:/web/sma-sweep.html"));
     // genMomentumSweepChart(shiller, new File("g:/web/momentum-sweep.html"));

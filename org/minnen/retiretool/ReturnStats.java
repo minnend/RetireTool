@@ -62,6 +62,12 @@ public class ReturnStats
     }
   }
 
+  private void printRow(String label)
+  {
+    System.out.printf(" <tr><td>%s</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>\n",
+        label, mean, sdev, min, max, median);
+  }
+
   public static void printDurationTable(Sequence cumulativeReturns)
   {
     System.out.printf("<table id=\"durationTable\" class=\"tablesorter\"><thead>\n");
@@ -71,8 +77,7 @@ public class ReturnStats
     int[] dur = new int[] { 1, 2, 5, 10, 20, 30, 40 };
     for (int d = 0; d < dur.length; ++d) {
       ReturnStats rstats = new ReturnStats(cumulativeReturns, 12 * dur[d]);
-      System.out.printf(" <tr><td>%d</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>\n",
-          dur[d], rstats.mean, rstats.sdev, rstats.min, rstats.max, rstats.median);
+      rstats.printRow(String.format("%d", dur[d]));
     }
     System.out.printf("</tbody></table>\n");
   }

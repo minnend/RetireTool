@@ -4,6 +4,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Calendar;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -263,7 +264,8 @@ public class Chart
       writer.write("<script src=\"http://code.jquery.com/jquery.min.js\"></script>\n");
       writer.write("<script type=\"text/javascript\" src=\"js/jquery.tablesorter.min.js\"></script>\n");
       writer.write("<script type=\"text/javascript\">\n");
-      writer.write(" $(document).ready(function() { $(\"#myTable\").tablesorter( {sortList: [[11,1]], widgets: ['zebra']} ); } );\n");
+      writer
+          .write(" $(document).ready(function() { $(\"#myTable\").tablesorter( {sortList: [[11,1]], widgets: ['zebra']} ); } );\n");
       writer.write("</script>\n");
       writer
           .write("<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
@@ -322,9 +324,41 @@ public class Chart
       writer.write(" <li><b>Median AR</b> - Median annual return (50th percentile)</li>\n");
       writer.write(" <li><b>75% AR</b> - Return of year at the 75th percentile</li>\n");
       writer.write(" <li><b>Best AR</b> - Return of best year (biggest gain)</li>\n");
-      writer.write(" <li><b>Score</b> - Semi-arbitrary combination of statistics used to rank strategies (higher is better)</li>\n");
+      writer
+          .write(" <li><b>Score</b> - Semi-arbitrary combination of statistics used to rank strategies (higher is better)</li>\n");
       writer.write("</ul></div>");
       writer.write("</body></html>\n");
     }
+  }
+
+  public static void printDecadeTable(Sequence cumulativeReturns)
+  {
+    // Find start of decade.
+    Calendar cal = Library.now();
+    cal.setLenient(true);
+    int iStart = -1;
+    for (int i = 0; i < cumulativeReturns.length(); ++i) {
+      cal.setTimeInMillis(cumulativeReturns.getTimeMS(i));
+      if (cal.get(Calendar.MONTH) == 0 && cal.get(Calendar.YEAR) % 10 == 0) {
+        iStart = i;
+        break;
+      }
+    }
+    if (iStart < 0) {
+      return;
+    }
+
+    System.out.printf("<table id=\"decadeTable\" class=\"tablesorter\"><thead>\n");
+    System.out.printf("<tr><th>Decade</th><th>CAGR</th><th>StdDev</th><th>Drawdown</th><th>Down 10%%</th><th>Total<br/>Return</th></tr>\n");
+    System.out.printf("</thead><tbody>\n");
+
+    for (int i = iStart; i + 120 < cumulativeReturns.length(); i += 120) {
+      cal.setTimeInMillis(cumulativeReturns.getTimeMS(i));
+      Sequence decade = cumulativeReturns.subseq(i, 121);
+      InvestmentStats stats = InvestmentStats.calcInvestmentStats(decade);
+      System.out.printf(" <tr><td>%ds</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2fx</td></tr>\n",
+          cal.get(Calendar.YEAR), stats.cagr, stats.devAnnualReturn, stats.maxDrawdown, stats.percentDown10, stats.totalReturn);
+    }
+    System.out.printf("</tbody></table>\n");
   }
 }
