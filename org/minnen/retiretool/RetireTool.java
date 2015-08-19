@@ -376,6 +376,56 @@ public class RetireTool
     return failures;
   }
 
+  public static void compareRebalancingMethods(Sequence shiller, File file) throws IOException
+  {
+    int iStartData = 0;
+    int iEndData = shiller.length() - 1;
+
+    // iStart = shiller.getIndexForDate(1980, 1);
+    // iEnd = shiller.getIndexForDate(2010, 1);
+
+    int percentStock = 60;
+    int percentBonds = 40;
+
+    Sequence snpData = Shiller.getStockData(shiller, iStartData, iEndData);
+    Sequence bondData = Shiller.getBondData(shiller, iStartData, iEndData);
+
+    Sequence bonds = Bond.calcReturnsRebuy(bondData, iStartData, iEndData);
+    Sequence stock = calcSnpReturns(snpData, iStartData, iEndData - iStartData, DividendMethod.MONTHLY);
+
+    Sequence mixedNone = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
+        percentBonds }, 0, 0.0);
+    mixedNone.setName(String.format("Stock/Bonds-%d/%d (No Rebalance)", percentStock, percentBonds));
+
+    Sequence mixedM6 = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
+        percentBonds }, 6, 0.0);
+    mixedM6.setName(String.format("Stock/Bonds-%d/%d (Rebalance M6)", percentStock, percentBonds));
+
+    Sequence mixedM12 = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
+        percentBonds }, 12, 0.0);
+    mixedM12.setName(String.format("Stock/Bonds-%d/%d (Rebalance M12)", percentStock, percentBonds));
+
+    Sequence mixedB5 = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
+        percentBonds }, 0, 5.0);
+    mixedB5.setName(String.format("Stock/Bonds-%d/%d (Rebalance B5)", percentStock, percentBonds));
+
+    Sequence mixedB10 = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
+        percentBonds }, 0, 10.0);
+    mixedB10.setName(String.format("Stock/Bonds-%d/%d (Rebalance B10)", percentStock, percentBonds));
+
+    Sequence[] all = new Sequence[] { bonds, stock, mixedNone, mixedM6, mixedM12, mixedB5, mixedB10 };
+    InvestmentStats[] stats = new InvestmentStats[all.length];
+
+    for (int i = 0; i < all.length; ++i) {
+      assert all[i].length() == all[0].length();
+      stats[i] = InvestmentStats.calcInvestmentStats(all[i]);
+      all[i].setName(String.format("%s (%.2f%%)", all[i].getName(), stats[i].cagr));
+      System.out.printf("%s\n", stats[i]);
+    }
+
+    Chart.saveLineChart(file, "Cumulative Market Returns", 1200, 600, true, all);
+  }
+
   public static void genReturnChart(Sequence shiller, File fileChart, File fileTable) throws IOException
   {
     int iStartData = 0;
@@ -390,6 +440,7 @@ public class RetireTool
     int nMonthsSMA = 10;
     int nMonthsMomentum = 12;
     int rebalanceMonths = 12;
+    double rebalanceBand = 0.0;
     int iStartReturns = 12;
 
     Sequence snpData = Shiller.getStockData(shiller, iStartData, iEndData);
@@ -406,12 +457,12 @@ public class RetireTool
 
     Sequence stockNoDiv = calcSnpReturns(snpData, iStartReturns, iEndData - iStartReturns, DividendMethod.NO_REINVEST);
     Sequence mixed = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
-        percentBonds }, rebalanceMonths);
+        percentBonds }, rebalanceMonths, rebalanceBand);
     mixed.setName(String.format("Stock/Bonds [%d/%d]", percentStock, percentBonds));
     Sequence momentum = Strategy.calcMomentumReturns(nMonthsMomentum, iStartReturns, stockAll, bondsAll);
     Sequence sma = Strategy.calcSMAReturns(nMonthsSMA, iStartReturns, snpData, stockAll, bondsAll);
-    Sequence raa = Strategy
-        .calcMixedReturns(new Sequence[] { sma, momentum }, new double[] { 50, 50 }, rebalanceMonths);
+    Sequence raa = Strategy.calcMixedReturns(new Sequence[] { sma, momentum }, new double[] { 50, 50 },
+        rebalanceMonths, rebalanceBand);
     raa.setName("RAA");
     Sequence multiMomRisky = Strategy.calcMultiMomentumReturns(iStartReturns, stockAll, bondsAll, Disposition.Risky);
     Sequence multiMomMod = Strategy.calcMultiMomentumReturns(iStartReturns, stockAll, bondsAll, Disposition.Moderate);
@@ -422,7 +473,7 @@ public class RetireTool
         Disposition.Moderate);
     Sequence multiSmaSafe = Strategy.calcMultiSmaReturns(iStartReturns, snpData, stockAll, bondsAll, Disposition.Safe);
     Sequence daa = Strategy.calcMixedReturns(new Sequence[] { multiSmaRisky, multiMomSafe }, new double[] { 50, 50 },
-        rebalanceMonths);
+        rebalanceMonths, rebalanceBand);
     daa.setName("DAA");
 
     Sequence[] all = new Sequence[] { bonds, bondsHold, stock, stockNoDiv, mixed, momentum, sma, raa, daa,
@@ -444,7 +495,7 @@ public class RetireTool
     for (int i = 0; i < all.length; ++i) {
       System.out.printf("%d [%.1f]: %s\n", i + 1, scores[i], stats[ii[i]]);
     }
-    Chart.saveStatsTable(fileTable, stats);    
+    Chart.saveStatsTable(fileTable, stats);
   }
 
   public static String[] getLabelsFromHistogram(Sequence histogram)
@@ -472,6 +523,7 @@ public class RetireTool
     int nMonthsSMA = 10;
     int nMonthsMomentum = 12;
     int rebalanceMonths = 12;
+    double rebalanceBand = 0.0;
     int iStartReturns = 12;
 
     Sequence snpData = Shiller.getStockData(shiller, iStart, iEnd);
@@ -486,18 +538,18 @@ public class RetireTool
     Sequence bonds = bondsAll.subseq(iStartReturns, iEnd - iStartReturns + 1);
 
     Sequence mixed = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
-        percentBonds }, rebalanceMonths);
+        percentBonds }, rebalanceMonths, rebalanceBand);
     Sequence momentum = Strategy.calcMomentumReturns(nMonthsMomentum, iStartReturns, stockAll, bondsAll);
     Sequence sma = Strategy.calcSMAReturns(nMonthsSMA, iStartReturns, snpData, stockAll, bondsAll);
-    Sequence raa = Strategy
-        .calcMixedReturns(new Sequence[] { sma, momentum }, new double[] { 50, 50 }, rebalanceMonths);
+    Sequence raa = Strategy.calcMixedReturns(new Sequence[] { sma, momentum }, new double[] { 50, 50 },
+        rebalanceMonths, rebalanceBand);
     raa.setName("RAA");
 
     Sequence multiMomSafe = Strategy.calcMultiMomentumReturns(iStartReturns, stockAll, bondsAll, Disposition.Safe);
     Sequence multiSmaRisky = Strategy
         .calcMultiSmaReturns(iStartReturns, snpData, stockAll, bondsAll, Disposition.Risky);
     Sequence daa = Strategy.calcMixedReturns(new Sequence[] { multiSmaRisky, multiMomSafe }, new double[] { 50, 50 },
-        rebalanceMonths);
+        rebalanceMonths, rebalanceBand);
     daa.setName("DAA");
 
     // System.out.printf("Stock Total Return: %f\n", getReturn(stock, 0, stock.length()-1));
@@ -564,6 +616,7 @@ public class RetireTool
 
     int nMonths = 10 * 12;
     int rebalanceMonths = 12;
+    double rebalanceBand = 0.0;
     int iStartReturns = 12;
     int iStart = 0;
     int iEnd = shiller.length() - 1;
@@ -581,7 +634,7 @@ public class RetireTool
     int percentBonds = 40;
     assert percentStock + percentBonds == 100;
     Sequence mixed = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
-        percentBonds }, rebalanceMonths);
+        percentBonds }, rebalanceMonths, rebalanceBand);
     mixed.setName(String.format("Stock/Bonds [%d/%d]", percentStock, percentBonds));
 
     // Strategy.calcMomentumStats(stockAll, bondsAll);
@@ -596,7 +649,7 @@ public class RetireTool
         Disposition.Moderate);
     Sequence multiSmaSafe = Strategy.calcMultiSmaReturns(iStartReturns, snpData, stockAll, bondsAll, Disposition.Safe);
     Sequence daa = Strategy.calcMixedReturns(new Sequence[] { multiSmaRisky, multiMomSafe }, new double[] { 50, 50 },
-        rebalanceMonths);
+        rebalanceMonths, rebalanceBand);
     daa.setName("DAA");
 
     Sequence[] assets = new Sequence[] { stock, bonds, mixed, multiMomRisky, multiMomMod, multiMomSafe, multiSmaRisky,
@@ -656,11 +709,12 @@ public class RetireTool
 
     int[] percentStock = new int[] { 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0 };
     int rebalanceMonths = 6;
+    double rebalanceBand = 0.0;
 
     Sequence[] seqs = new Sequence[percentStock.length];
     for (int i = 0; i < percentStock.length; ++i) {
       Sequence mix = Strategy.calcMixedReturns(new Sequence[] { snp, bonds }, new double[] { percentStock[i],
-          100 - percentStock[i] }, rebalanceMonths);
+          100 - percentStock[i] }, rebalanceMonths, rebalanceBand);
 
       double cagr = RetireTool.getAnnualReturn(mix.getLast(0), N);
       mix.setName(String.format("Mix-[%d/%d] (%.2f%%)", percentStock[i], 100 - percentStock[i], cagr));
@@ -748,7 +802,7 @@ public class RetireTool
     Sequence cumulativeSNP = calcSnpReturns(snpData, iStart, iEnd - iStart, DividendMethod.MONTHLY);
     Sequence cumulativeBonds = Bond.calcReturnsRebuy(bondData, iStart, iEnd);
     Sequence cumulativeMixed = Strategy.calcMixedReturns(new Sequence[] { cumulativeSNP, cumulativeBonds },
-        new double[] { percentStock, percentBonds }, 6);
+        new double[] { percentStock, percentBonds }, 6, 0.0);
     assert cumulativeSNP.length() == cumulativeBonds.length();
 
     Sequence snp = new Sequence("S&P");
@@ -1005,12 +1059,13 @@ public class RetireTool
     // shiller.genReturnComparison(years[i] * 12, Inflation.Ignore, new File("g:/test.html"));
     // }
 
-    //genInterestRateGraph(shiller, new File("g:/web/interest-rates.html"));
-    //genReturnViz(shiller, new File("g:/web/histogram-returns.html"), new File("g:/web/future-returns.html"));
-    genReturnChart(shiller, new File("g:/web/cumulative-returns.html"), new File("g:/web/strategy-report.html"));
+    // genInterestRateGraph(shiller, new File("g:/web/interest-rates.html"));
+    compareRebalancingMethods(shiller, new File("g:/web/rebalance-comparison.html"));
+    // genReturnViz(shiller, new File("g:/web/histogram-returns.html"), new File("g:/web/future-returns.html"));
+    // genReturnChart(shiller, new File("g:/web/cumulative-returns.html"), new File("g:/web/strategy-report.html"));
     // genSMASweepChart(shiller, new File("g:/web/sma-sweep.html"));
     // genMomentumSweepChart(shiller, new File("g:/web/momentum-sweep.html"));
-    //genStockBondMixSweepChart(shiller, new File("g:/web/stock-bond-mix-sweep.html"));
+    // genStockBondMixSweepChart(shiller, new File("g:/web/stock-bond-mix-sweep.html"));
     // genDuelViz(shiller, new File("g:/web/"));
 
     System.exit(0);

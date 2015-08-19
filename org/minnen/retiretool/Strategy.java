@@ -146,9 +146,11 @@ public class Strategy
    * @param assets cumulative returns for each asset.
    * @param targetPercents target percentage for each asset (will be normalized).
    * @param rebalanceMonths rebalance every N months (zero for never).
+   * @param rebalanceBand rebalance when allocation is too far from target percent (zero for never, 5.0 = 5% band).
    * @return sequence of returns using the mixed strategy.
    */
-  public static Sequence calcMixedReturns(Sequence[] assets, double[] targetPercents, int rebalanceMonths)
+  public static Sequence calcMixedReturns(Sequence[] assets, double[] targetPercents, int rebalanceMonths,
+      double rebalanceBand)
   {
     final int numAssets = assets.length;
     assert numAssets == targetPercents.length;
@@ -172,24 +174,45 @@ public class Strategy
       value[i] = targetPercents[i];
     }
 
+    // Convert percentage to decimal.
+    rebalanceBand /= 100.0;
+
     // Compute returns for each class and rebalance as requested.
     final int N = assets[0].length();
     Sequence returns = new Sequence("Mixed");
     returns.addData(1.0, assets[0].getStartMS());
-    for (int i = 1; i < N; ++i) {
+    int numRebalances = 0;
+    for (int index = 1; index < N; ++index) {
       double balance = 0.0;
-      for (int j = 0; j < numAssets; ++j) {
-        value[j] *= RetireTool.getReturn(assets[j], i - 1, i);
-        balance += value[j];
+      for (int i = 0; i < numAssets; ++i) {
+        value[i] *= RetireTool.getReturn(assets[i], index - 1, index);
+        balance += value[i];
       }
-      returns.addData(balance, assets[0].getTimeMS(i));
+      returns.addData(balance, assets[0].getTimeMS(index));
 
-      if (rebalanceMonths > 0 && i % rebalanceMonths == 0) {
+      // Figure out if we need to rebalance.
+      boolean rebalanceNow = (rebalanceMonths > 0 && index % rebalanceMonths == 0);
+      if (!rebalanceNow && rebalanceBand > 0.0) {
+        // Check each asset to see if it has exceeded the allocation band.
+        for (int i = 0; i < numAssets; ++i) {
+          double diff = (value[i] / balance - targetPercents[i]);
+          if (Math.abs(diff) > rebalanceBand) {
+            rebalanceNow = true;
+            break;
+          }
+        }
+      }
+
+      // Rebalance if needed.
+      if (rebalanceNow) {
+        ++numRebalances;
         for (int j = 0; j < numAssets; ++j) {
           value[j] = balance * targetPercents[j];
         }
       }
     }
+
+    System.out.printf("Rebalances: %d\n", numRebalances);
     return returns;
   }
 
