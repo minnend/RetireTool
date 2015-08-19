@@ -118,7 +118,7 @@ public class Bond
   /**
    * Calculates the price of a bond.
    * 
-   * @param coupon amount paid <code>annualFreq</code> times per year
+   * @param coupon total interest payments for each year
    * @param interestRate current interest rate
    * @param parValue amount paid at maturity
    * @param years years until maturity
@@ -141,11 +141,11 @@ public class Bond
 
     double accruedInterest = 0.0;
     if (fractionalInterest > 0.0) {
-      double prevPrice = couponPrice + maturityPrice;
-      double nextPrice = calcPrice(coupon, interestRate, parValue, years - 1.0 / annualFreq, annualFreq, 0.0)
+      double curPrice = couponPrice + maturityPrice;
+      double futurePrice = calcPrice(coupon, interestRate, parValue, years - 1.0 / annualFreq, annualFreq, 0.0)
           + couponPayment;
-      double priceRatio = nextPrice / prevPrice;
-      accruedInterest = prevPrice * (Math.pow(priceRatio, fractionalInterest) - 1.0);
+      double priceRatio = futurePrice / curPrice;
+      accruedInterest = curPrice * (Math.pow(priceRatio, fractionalInterest) - 1.0);
       // System.out.printf("Previous Price: %.2f  Next Price: %.2f  ratio=%f\n", prevPrice, nextPrice, priceRatio);
     }
 

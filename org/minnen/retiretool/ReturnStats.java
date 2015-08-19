@@ -64,15 +64,15 @@ public class ReturnStats
 
   private void printRow(String label)
   {
-    System.out.printf(" <tr><td>%s</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>\n",
-        label, mean, sdev, min, max, median);
+    System.out.printf(" <tr><td>%s</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td>"
+        + "<td>%.2f</td><td>%.2f</td></tr>\n", label, mean, sdev, min, percentile25, median, percentile75, max);
   }
 
   public static void printDurationTable(Sequence cumulativeReturns)
   {
     System.out.printf("<table id=\"durationTable\" class=\"tablesorter\"><thead>\n");
-    System.out
-        .printf("<tr><th>Duration<br/>(Years)</th><th>Mean AR</th><th>StdDev</th><th>Worst AR</th><th>Best AR</th><th>Median AR</th></tr>\n");
+    System.out.printf("<tr><th>Duration<br/>(Years)</th><th>Mean AR</th><th>StdDev</th>"
+        + "<th>Worst AR</th><th>25%% AR</th><th>Median AR</th><th>75%% AR</th><th>Best AR</th></tr>\n");
     System.out.printf("</thead><tbody>\n");
     int[] dur = new int[] { 1, 2, 5, 10, 20, 30, 40 };
     for (int d = 0; d < dur.length; ++d) {

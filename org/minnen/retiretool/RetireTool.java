@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 
+import org.minnen.retiretool.Chart.ChartType;
 import org.minnen.retiretool.Strategy.Disposition;
 
 public class RetireTool
@@ -129,7 +130,7 @@ public class RetireTool
    * @param h histogram sequence (frequencies expected in dim=2)
    * @return new sequence with new dimension storing likelihood of higher return
    */
-  public static Sequence addReturnLikelihoods(Sequence h)
+  public static Sequence addReturnLikelihoods(Sequence h, boolean bInvert)
   {
     int n = h.size();
     double[] freq = h.extractDim(2);
@@ -138,9 +139,11 @@ public class RetireTool
     for (int i = 1; i < n; i++)
       cum[i] = cum[i - 1] + freq[i - 1];
 
-    // we want likelihood of getting a higher return, not lower
-    for (int i = 0; i < n; i++)
-      cum[i] = 1.0 - cum[i];
+    if (bInvert) {
+      // we want likelihood of getting a higher return, not lower
+      for (int i = 0; i < n; i++)
+        cum[i] = 1.0 - cum[i];
+    }
 
     return h._appendDims(new Sequence(cum));
   }
@@ -150,6 +153,8 @@ public class RetireTool
     if (a == null)
       return b.extractDims(0, 3);
 
+    final int indexDataB = 3;
+    int D = a.getNumDims();
     double gap = a.get(1, 0) - a.get(0, 0);
     int na = a.size();
     int nb = b.size();
@@ -160,9 +165,15 @@ public class RetireTool
     double start = Math.min(startA, startB);
     double end = Math.max(endA, endB);
 
+    double firstValueA = a.get(0, D - 1);
+    double lastValueA = a.get(na - 1, D - 1);
+    double firstValueB = b.get(0, indexDataB);
+    double lastValueB = b.get(nb - 1, indexDataB);
+
     int n = (int) Math.round((end - start) / gap) + 1;
-    System.out.printf("Merge: (%.2f -> %.2f) + (%.2f -> %.2f) = (%.2f -> %.2f) %d\n", startA, endA, startB, endB,
-        start, end, n);
+    // System.out.printf("Merge: (%.2f -> %.2f) + (%.2f -> %.2f) = (%.2f -> %.2f) %d\n", startA, endA, startB, endB,
+    // start, end, n);
+    // System.out.printf(" A: [%.3f -> %.3f]  B: [%.3f -> %.3f]\n", firstValueA, lastValueA, firstValueB, lastValueB);
 
     double eps = 1e-5;
     int nd = a.getNumDims(); // one for roi, rest is real data
@@ -173,11 +184,11 @@ public class RetireTool
       // start current feature vec with data from seqA
       FeatureVec fv = null;
       if (ia >= na) { // seqA ran out of data
-        fv = new FeatureVec(nd, roi, 0.0);
+        fv = new FeatureVec(nd, roi, lastValueA);
       } else {
         double ra = a.get(ia, 0);
         if (ra - eps > roi) { // have not started seqA yet
-          fv = new FeatureVec(nd, roi, 1.0);
+          fv = new FeatureVec(nd, roi, firstValueA);
         } else { // copy current entry from seqA
           assert (Math.abs(ra - roi) < eps);
           fv = new FeatureVec(a.get(ia++));
@@ -186,14 +197,14 @@ public class RetireTool
 
       // now add data from seqB
       if (ib >= nb) { // seqB ran out of data
-        fv._appendDim(0.0);
+        fv._appendDim(lastValueB);
       } else {
         double rb = b.get(ib, 0);
         if (rb - eps > roi) { // have not started seqB yet
-          fv._appendDim(1.0);
+          fv._appendDim(firstValueB);
         } else { // copy current entry from seqB
           assert (Math.abs(rb - roi) < eps);
-          fv._appendDim(b.get(ib++, 3));
+          fv._appendDim(b.get(ib++, indexDataB));
         }
       }
 
@@ -204,22 +215,26 @@ public class RetireTool
     return seq;
   }
 
-  public static void printReturnLikelihoods(Sequence cumulativeReturns)
+  public static Sequence calcReturnLikelihoods(Sequence cumulativeReturns, boolean bInvert)
   {
     Sequence seqLik = null;
-    int[] years = new int[] { 1, 5, 10, 15, 20, 30, 40, 50 };
+    int[] years = new int[] { 1, 2, 5, 10, 20, 30, 40 };
     for (int i = 0; i < years.length; i++) {
-      System.out.printf("Processing %d: %d years\n", i + 1, years[i]);
       Sequence r = calcReturnsForDuration(cumulativeReturns, years[i] * 12);
       Sequence h = computeHistogram(r, 0.5, 0.0);
-      h = addReturnLikelihoods(h);
+      h = addReturnLikelihoods(h, bInvert);
       seqLik = appendROISeq(seqLik, h);
     }
+    return seqLik;
+  }
 
+  public static void printReturnLikelihoods(Sequence cumulativeReturns, boolean bInvert)
+  {
+    Sequence seqLik = calcReturnLikelihoods(cumulativeReturns, bInvert);
     for (FeatureVec fv : seqLik) {
       System.out.printf("%.3f", fv.get(0));
-      for (int i = 0; i < years.length; i++)
-        System.out.printf("\t%f", fv.get(i + 1));
+      for (int i = 0; i < seqLik.getNumDims() - 1; i++)
+        System.out.printf(" %f", fv.get(i + 1));
       System.out.println();
     }
   }
@@ -382,11 +397,13 @@ public class RetireTool
 
     Sequence bondsAll = Bond.calcReturnsRebuy(bondData, iStartData, iEndData);
     Sequence stockAll = calcSnpReturns(snpData, iStartData, iEndData - iStartData, DividendMethod.MONTHLY);
+    // Sequence stockAllNoDiv = calcSnpReturns(snpData, iStartData, iEndData - iStartData, DividendMethod.NO_REINVEST);
 
     Sequence bonds = bondsAll.subseq(iStartReturns, iEndData - iStartReturns + 1);
     Sequence stock = stockAll.subseq(iStartReturns, iEndData - iStartReturns + 1);
 
     Sequence bondsHold = Bond.calcReturnsHold(bondData, iStartReturns, iEndData);
+
     Sequence stockNoDiv = calcSnpReturns(snpData, iStartReturns, iEndData - iStartReturns, DividendMethod.NO_REINVEST);
     Sequence mixed = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
         percentBonds }, rebalanceMonths);
@@ -423,13 +440,11 @@ public class RetireTool
     Chart.saveLineChart(fileChart, "Cumulative Market Returns", 1200, 600, true, multiSmaRisky, daa, multiMomSafe, sma,
         raa, momentum, stock, mixed, bonds, bondsHold);
 
-    // Chart.saveLineChart(fileChart, "Cumulative Market Returns", 800, 500, true, stock, stockNoDiv);
-
     int[] ii = Library.sort(scores, false);
     for (int i = 0; i < all.length; ++i) {
       System.out.printf("%d [%.1f]: %s\n", i + 1, scores[i], stats[ii[i]]);
     }
-    Chart.saveStatsTable(fileTable, stats);
+    Chart.saveStatsTable(fileTable, stats);    
   }
 
   public static String[] getLabelsFromHistogram(Sequence histogram)
@@ -449,7 +464,7 @@ public class RetireTool
     // iStart = shiller.getIndexForDate(1980, 1);
     // iEnd = shiller.getIndexForDate(2010, 1);
 
-    int nMonths = 40 * 12;
+    int nMonths = 20 * 12;
     int percentStock = 60;
     int percentBonds = 40;
     // int percentCash = 100 - (percentStock + percentBonds);
@@ -464,6 +479,8 @@ public class RetireTool
 
     Sequence stockAll = calcSnpReturns(snpData, iStart, iEnd - iStart, DividendMethod.MONTHLY);
     Sequence bondsAll = Bond.calcReturnsRebuy(bondData, iStart, iEnd);
+
+    // Chart.saveLineChart(new File("g:/web/stock-prices.html"), "S&P 500 Prices", 800, 500, false, snpData);
 
     Sequence stock = stockAll.subseq(iStartReturns, iEnd - iStartReturns + 1);
     Sequence bonds = bondsAll.subseq(iStartReturns, iEnd - iStartReturns + 1);
@@ -485,6 +502,19 @@ public class RetireTool
 
     // System.out.printf("Stock Total Return: %f\n", getReturn(stock, 0, stock.length()-1));
     // Chart.printDecadeTable(stockAll);
+    Sequence returnLiks = calcReturnLikelihoods(stockAll, true);
+    returnLiks = returnLiks.subseq(60, 180);
+    Sequence[] liks = new Sequence[returnLiks.getNumDims() - 1];
+    int[] years = new int[] { 1, 2, 5, 10, 20, 30, 40 };
+    for (int i = 0; i < liks.length; ++i) {
+      liks[i] = returnLiks.extractDims(i + 1);
+      liks[i].setName(String.format("%d year%s", years[i], years[i] == 1 ? "" : "s"));
+      Chart.saveHighChart(new File(String.format("g:/web/return-likelihoods-%d-years.html", years[i])),
+          Chart.ChartType.Area, "Return Likelihoods", getLabelsFromHistogram(returnLiks), null, 800, 500, 0.0, 1.0,
+          Double.NaN, false, 0, liks[i]);
+    }
+    Chart.saveHighChart(new File("g:/web/return-likelihoods.html"), Chart.ChartType.Line, "Return Likelihoods",
+        getLabelsFromHistogram(returnLiks), null, 800, 500, 0.0, 1.0, Double.NaN, false, 0, liks);
 
     // Sequence[] assets = new Sequence[] { multiSmaRisky, daa, multiMomSafe, momentum, sma, raa, stock, bonds, mixed };
     Sequence[] assets = new Sequence[] { stock };
@@ -519,11 +549,13 @@ public class RetireTool
 
     String title = "Histogram of Returns - " + Library.getDurationString(nMonths);
     String[] labels = getLabelsFromHistogram(histograms[0]);
-    Chart.saveHighChart(fileHistogram, Chart.ChartType.Bar, title, labels, null, 800, 500, false, 1, histograms);
+    Chart.saveHighChart(fileHistogram, Chart.ChartType.Bar, title, labels, null, 800, 500, Double.NaN, Double.NaN,
+        Double.NaN, false, 1, histograms);
 
     // Generate histogram showing future returns.
     title = String.format("Future CAGR: %s (%s)", returns[0].getName(), Library.getDurationString(nMonths));
-    Chart.saveHighChart(fileFuture, Chart.ChartType.Line, title, null, null, 800, 500, false, 0, returns[0]);
+    Chart.saveHighChart(fileFuture, Chart.ChartType.Area, title, null, null, 800, 500, Double.NaN, Double.NaN,
+        Double.NaN, false, 0, returns[0]);
   }
 
   public static void genDuelViz(Sequence shiller, File dir) throws IOException
@@ -594,10 +626,10 @@ public class RetireTool
       double x = histogramExcess.get(i, 0);
       colors[i] = x < -0.001 ? "#df5353" : (x > 0.001 ? "#53df53" : "#dfdf53");
     }
-    Chart.saveHighChart(new File(dir, "duel-excess.html"), Chart.ChartType.Line, title, null, null, 1200, 600, false,
-        0, returnsB, returnsA, excessReturns);
+    Chart.saveHighChart(new File(dir, "duel-excess.html"), Chart.ChartType.Line, title, null, null, 1200, 600,
+        Double.NaN, Double.NaN, Double.NaN, false, 0, returnsB, returnsA, excessReturns);
     Chart.saveHighChart(new File(dir, "duel-histogram.html"), Chart.ChartType.Bar, title, labels, colors, 1200, 600,
-        false, 1, histogramExcess);
+        Double.NaN, Double.NaN, Double.NaN, false, 1, histogramExcess);
 
     // double[] a = excessReturns.extractDim(0);
     // int[] ii = Library.sort(a, true);
@@ -937,6 +969,13 @@ public class RetireTool
     return seq;
   }
 
+  public static void genInterestRateGraph(Sequence shiller, File file) throws IOException
+  {
+    // Sequence bondData = Shiller.getBondData(shiller);
+    Chart.saveHighChart(file, ChartType.Area, "Interest Rates", null, null, 710, 450, 0.0, 16.0, 1.0, false,
+        Shiller.GS10, shiller);
+  }
+
   public static void main(String[] args) throws IOException
   {
     if (args.length != 2) {
@@ -959,7 +998,6 @@ public class RetireTool
     // shiller = shiller.subseq(commonStart, commonEnd);
     // tbills = tbills.subseq(commonStart, commonEnd);
 
-    // shiller.printReturnLikelihoods();
     // shiller.printWithdrawalLikelihoods(30, 0.1);
     // shiller.genReturnChart(Inflation.Ignore, new File("g:/test.html"));
     // int[] years = new int[] { 1, 2, 5, 10, 15, 20, 30, 40, 50 };
@@ -967,11 +1005,12 @@ public class RetireTool
     // shiller.genReturnComparison(years[i] * 12, Inflation.Ignore, new File("g:/test.html"));
     // }
 
-    genReturnViz(shiller, new File("g:/web/histogram-returns.html"), new File("g:/web/future-returns.html"));
+    //genInterestRateGraph(shiller, new File("g:/web/interest-rates.html"));
+    //genReturnViz(shiller, new File("g:/web/histogram-returns.html"), new File("g:/web/future-returns.html"));
     genReturnChart(shiller, new File("g:/web/cumulative-returns.html"), new File("g:/web/strategy-report.html"));
     // genSMASweepChart(shiller, new File("g:/web/sma-sweep.html"));
     // genMomentumSweepChart(shiller, new File("g:/web/momentum-sweep.html"));
-    // genStockBondMixSweepChart(shiller, new File("g:/web/stock-bond-mix-sweep.html"));
+    //genStockBondMixSweepChart(shiller, new File("g:/web/stock-bond-mix-sweep.html"));
     // genDuelViz(shiller, new File("g:/web/"));
 
     System.exit(0);

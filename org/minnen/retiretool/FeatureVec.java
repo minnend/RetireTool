@@ -210,6 +210,7 @@ public class FeatureVec
   {
     int nd = dims.length;
     FeatureVec ret = new FeatureVec(nd);
+    ret.setTime(getTime());
     for (int i = 0; i < nd; i++)
       ret.set(i, get(dims[i]));
     return ret;

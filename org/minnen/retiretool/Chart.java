@@ -11,13 +11,27 @@ import java.util.regex.Pattern;
 public class Chart
 {
   public enum ChartType {
-    Line, Bar
+    Line, Bar, Area
   };
+
+  public static String chart2name(ChartType chartType)
+  {
+    if (chartType == ChartType.Line) {
+      return "line";
+    } else if (chartType == ChartType.Bar) {
+      return "column";
+    } else if (chartType == ChartType.Area) {
+      return "area";
+    } else {
+      return "ERROR";
+    }
+  }
 
   public static void saveLineChart(File file, String title, int width, int height, boolean logarithmic,
       Sequence... seqs) throws IOException
   {
-    saveHighChart(file, ChartType.Line, title, null, null, width, height, logarithmic, 0, seqs);
+    saveHighChart(file, ChartType.Line, title, null, null, width, height, Double.NaN, Double.NaN, logarithmic ? 0.5
+        : Double.NaN, logarithmic, 0, seqs);
   }
 
   public static void saveLineGoogleChart(File file, String title, int width, int height, boolean logarithmic,
@@ -70,7 +84,8 @@ public class Chart
   }
 
   public static void saveHighChart(File file, ChartType chartType, String title, String[] labels, String[] colors,
-      int width, int height, boolean logarithmic, int dim, Sequence... seqs) throws IOException
+      int width, int height, double ymin, double ymax, double minorTickInterval, boolean logarithmic, int dim,
+      Sequence... seqs) throws IOException
   {
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
       writer.write("<html><head>\n");
@@ -81,8 +96,8 @@ public class Chart
       writer.write("$(function () {\n");
       writer.write(" $('#chart').highcharts({\n");
       writer.write("  title: { text: '" + title + "' },\n");
-      if (chartType == ChartType.Bar) {
-        writer.write("  chart: { type: 'column' },\n");
+      if (chartType != ChartType.Line) {
+        writer.write(String.format("  chart: { type: '%s' },\n", chart2name(chartType)));
       }
       writer.write("  xAxis: { categories: [");
       if (labels != null) {
@@ -106,7 +121,15 @@ public class Chart
       writer.write("  yAxis: {\n");
       if (logarithmic) {
         writer.write("   type: 'logarithmic',\n");
-        writer.write("   minorTickInterval: 0.5,\n");
+      }
+      if (!Double.isNaN(minorTickInterval)) {
+        writer.write(String.format("   minorTickInterval: %.3f,\n", minorTickInterval));
+      }
+      if (!Double.isNaN(ymin)) {
+        writer.write(String.format("   min: %.3f,\n", ymin));
+      }
+      if (!Double.isNaN(ymax)) {
+        writer.write(String.format("   max: %.3f,\n", ymax));
       }
       writer.write("   title: { text: null }\n");
       writer.write("  },\n");
@@ -129,14 +152,31 @@ public class Chart
       }
 
       writer.write("  plotOptions: {\n");
-      writer.write("   column: {\n");
-      if (colors != null) {
-        writer.write("    colorByPoint: true,\n");
+      if (chartType == ChartType.Bar) {
+        writer.write("   column: {\n");
+        if (colors != null) {
+          writer.write("    colorByPoint: true,\n");
+        }
+        writer.write("    pointPadding: 0,\n");
+        writer.write("    groupPadding: 0.1,\n");
+        writer.write("    borderWidth: 0\n");
+        writer.write("   }\n");
+      } else if (chartType == ChartType.Area) {
+        writer.write("   area: {\n");
+        writer.write("    fillColor: {\n");
+        writer.write("      linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },\n");
+        writer.write("      stops: [\n");
+        writer.write("        [0, Highcharts.getOptions().colors[0]],\n");
+        writer.write("        [1, Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]\n");
+        writer.write("      ]},\n");
+        writer.write("    marker: { radius: 2 },\n");
+        writer.write("    lineWidth: 1,\n");
+        writer.write("    states: {\n");
+        writer.write("      hover: { lineWidth: 1 }\n");
+        writer.write("    },\n");
+        // writer.write("    threshold: null\n");
+        writer.write("   }\n");
       }
-      writer.write("    pointPadding: 0,\n");
-      writer.write("    groupPadding: 0.1,\n");
-      writer.write("    borderWidth: 0\n");
-      writer.write("   }\n");
       writer.write("  },\n");
 
       writer.write("  series: [\n");
@@ -278,7 +318,7 @@ public class Chart
       writer.write(" <th>StdDev</th>\n");
       writer.write(" <th>Drawdown</th>\n");
       writer.write(" <th>Down 10%</th>\n");
-      writer.write(" <th>New High</th>\n");
+      writer.write(" <th>New High %</th>\n");
       writer.write(" <th>Worst AR</th>\n");
       writer.write(" <th>25% AR</th>\n");
       writer.write(" <th>Median AR</th>\n");
@@ -318,7 +358,7 @@ public class Chart
       writer.write(" <li><b>Drawdown</b> - Maximum drawdown (largest gap from peak to trough)</li>\n");
       writer
           .write(" <li><b>Down 10%</b> - Percentage of time (months) strategy is 10% or more below the previous peak</li>\n");
-      writer.write(" <li><b>New High</b> - Percentage of time (months) strategy hits a new high</li>\n");
+      writer.write(" <li><b>New High %</b> - Percentage of time (months) strategy hits a new high</li>\n");
       writer.write(" <li><b>Worst AR</b> - Return of worst year (biggest drop)</li>\n");
       writer.write(" <li><b>25% AR</b> - Return of year at the 25th percentile</li>\n");
       writer.write(" <li><b>Median AR</b> - Median annual return (50th percentile)</li>\n");
@@ -349,7 +389,8 @@ public class Chart
     }
 
     System.out.printf("<table id=\"decadeTable\" class=\"tablesorter\"><thead>\n");
-    System.out.printf("<tr><th>Decade</th><th>CAGR</th><th>StdDev</th><th>Drawdown</th><th>Down 10%%</th><th>Total<br/>Return</th></tr>\n");
+    System.out
+        .printf("<tr><th>Decade</th><th>CAGR</th><th>StdDev</th><th>Drawdown</th><th>Down 10%%</th><th>Total<br/>Return</th></tr>\n");
     System.out.printf("</thead><tbody>\n");
 
     for (int i = iStart; i + 120 < cumulativeReturns.length(); i += 120) {
@@ -357,7 +398,8 @@ public class Chart
       Sequence decade = cumulativeReturns.subseq(i, 121);
       InvestmentStats stats = InvestmentStats.calcInvestmentStats(decade);
       System.out.printf(" <tr><td>%ds</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2fx</td></tr>\n",
-          cal.get(Calendar.YEAR), stats.cagr, stats.devAnnualReturn, stats.maxDrawdown, stats.percentDown10, stats.totalReturn);
+          cal.get(Calendar.YEAR), stats.cagr, stats.devAnnualReturn, stats.maxDrawdown, stats.percentDown10,
+          stats.totalReturn);
     }
     System.out.printf("</tbody></table>\n");
   }
