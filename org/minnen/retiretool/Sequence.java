@@ -137,6 +137,34 @@ public class Sequence implements Iterable<FeatureVec>
     return data.get(data.size() - 1).get(d);
   }
 
+  /** @return FeatureVec with minimum value for each dimension. */
+  public FeatureVec getMin()
+  {
+    if (isEmpty()) {
+      return null;
+    }
+    FeatureVec v = new FeatureVec(getNumDims());
+    v.copyFrom(get(0));
+    for (int i = 1; i < length(); ++i) {
+      v._min(get(i));
+    }
+    return v;
+  }
+
+  /** @return FeatureVec with maximum value for each dimension. */
+  public FeatureVec getMax()
+  {
+    if (isEmpty()) {
+      return null;
+    }
+    FeatureVec v = new FeatureVec(getNumDims());
+    v.copyFrom(get(0));
+    for (int i = 1; i < length(); ++i) {
+      v._max(get(i));
+    }
+    return v;
+  }
+
   /** @return length of this sequence */
   public int length()
   {

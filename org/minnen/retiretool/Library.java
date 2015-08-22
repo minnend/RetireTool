@@ -119,7 +119,6 @@ public final class Library
   public static long getMillisInDay(long ms)
   {
     Calendar cal = now();
-    cal.setLenient(true);
     cal.setTimeInMillis(ms);
     int day = cal.get(Calendar.DAY_OF_MONTH);
     int month = cal.get(Calendar.MONTH) + 1;
@@ -448,5 +447,25 @@ public final class Library
     int itmp = ii[index1];
     ii[index1] = ii[index2];
     ii[index2] = itmp;
+  }
+
+  /**
+   * Returns index corresponding to first entry of new decade (e.g. January 1880).
+   * @param seq Sequence with timestamps
+   * @return index for first decade or -1 if none
+   */
+  public static int FindStartofFirstDecade(Sequence seq)
+  {
+    // Find start of decade.
+    Calendar cal = Library.now();    
+    int iStart = -1;
+    for (int i = 0; i < seq.length(); ++i) {
+      cal.setTimeInMillis(seq.getTimeMS(i));
+      if (cal.get(Calendar.MONTH) == 0 && cal.get(Calendar.YEAR) % 10 == 0) {
+        iStart = i;
+        break;
+      }
+    }
+    return iStart;
   }
 }

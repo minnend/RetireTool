@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
 public class Chart
 {
   public enum ChartType {
-    Line, Bar, Area
+    Line, Bar, Area, PosNegArea
   };
 
   public static String chart2name(ChartType chartType)
@@ -20,7 +20,7 @@ public class Chart
       return "line";
     } else if (chartType == ChartType.Bar) {
       return "column";
-    } else if (chartType == ChartType.Area) {
+    } else if (chartType == ChartType.Area || chartType == ChartType.PosNegArea) {
       return "area";
     } else {
       return "ERROR";
@@ -161,13 +161,29 @@ public class Chart
         writer.write("    groupPadding: 0.1,\n");
         writer.write("    borderWidth: 0\n");
         writer.write("   }\n");
-      } else if (chartType == ChartType.Area) {
+      } else if (chartType == ChartType.Area || chartType == ChartType.PosNegArea) {
         writer.write("   area: {\n");
         writer.write("    fillColor: {\n");
         writer.write("      linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },\n");
         writer.write("      stops: [\n");
-        writer.write("        [0, Highcharts.getOptions().colors[0]],\n");
-        writer.write("        [1, Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]\n");
+        if (chartType == ChartType.Area) {
+          writer.write("        [0, Highcharts.getOptions().colors[0]],\n");
+          writer.write("        [1, Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]\n");
+        } else {
+          assert chartType == ChartType.PosNegArea;
+          FeatureVec vmin = seqs[0].getMin();
+          FeatureVec vmax = seqs[0].getMax();
+          for (int i = 1; i < seqs.length; ++i) {
+            vmin._min(seqs[i].getMin());
+            vmax._max(seqs[i].getMax());
+          }
+          double vzero = vmax.get(0) / (vmax.get(0) - vmin.get(0));
+
+          writer.write("        [0, 'rgb(0,255,0)'],\n");
+          writer.write(String.format("        [%f, 'rgba(0,255,0,0.5)'],\n", vzero));
+          writer.write(String.format("        [%f, 'rgba(255,0,0,0.5)'],\n", vzero + 0.01));
+          writer.write("        [1, 'rgb(255,0,0)'],\n");
+        }
         writer.write("      ]},\n");
         writer.write("    marker: { radius: 2 },\n");
         writer.write("    lineWidth: 1,\n");
@@ -222,6 +238,11 @@ public class Chart
       }
     }
 
+    // Find min/max values for drawing a y=x line.
+    double vmin = Math.max(returns1.getMin().get(dim), returns2.getMin().get(dim));
+    double vmax = Math.min(returns1.getMax().get(dim), returns2.getMax().get(dim));
+
+    // Write HTML to generate the graph.
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
       writer.write("<html><head>\n");
       writer.write("<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js\"></script>\n");
@@ -236,24 +257,40 @@ public class Chart
       writer.write("  },\n");
       writer.write("  xAxis: {\n");
       writer.write("   title: {\n");
-      writer.write("    enabled: true,\n");
-      writer.write("    text: '" + returns1.getName() + "'\n");
+      writer.write("    text: '" + returns1.getName() + "',\n");
+      writer.write("    style: {\n");
+      writer.write("     fontSize: '18px'\n");
+      writer.write("    }\n");
       writer.write("   }\n");
       writer.write("  },\n");
       writer.write("  yAxis: {\n");
-      writer.write("   title: { text: '" + returns2.getName() + "' }\n");
+      writer.write("   title: {\n");
+      writer.write("    text: '" + returns2.getName() + "',\n");
+      writer.write("    style: {\n");
+      writer.write("     fontSize: '18px'\n");
+      writer.write("    }\n");
+      writer.write("   }\n");
+
       writer.write("  },\n");
       writer.write("  legend: { enabled: false },\n");
       writer.write("  plotOptions: {\n");
       writer.write("   scatter: {\n");
-      writer.write("    marker: { radius: 3 },\n");
+      writer.write("    marker: { radius: 3, symbol: 'circle' },\n");
       writer.write("    tooltip: {\n");
       writer.write("     headerFormat: '',\n");
-      writer.write("     pointFromat: '{point.x}% vs. {point.y}%'\n");
+      writer.write("     pointFormat: '" + returns1.getName() + ": <b>{point.x}</b><br/>" + returns2.getName()
+          + ": <b>{point.y}</b>'\n");
       writer.write("    }\n");
       writer.write("   }\n");
       writer.write("  },\n");
       writer.write("  series: [{\n");
+      writer.write("   type: 'line',\n");
+      writer.write(String.format("   data: [[%f, %f], [%f, %f]],\n", vmin, vmin, vmax, vmax));
+      writer.write("   color: 'rgba(0,0,0,0.2)',\n");
+      writer.write("   marker: { enabled: false },\n");
+      writer.write("   states: { hover: { lineWidth: 0 } },\n");
+      writer.write("   enableMouseTracking: false\n");
+      writer.write("  },{\n");
       writer.write("   name: 'Returns (above)',\n");
       writer.write("   color: 'rgba(83, 223, 83, 0.5)',\n");
       writer.write("   data: [");
@@ -293,10 +330,12 @@ public class Chart
    * Documentation for sortable table: http://tablesorter.com/docs/
    * 
    * @param file save HTML in this file
+   * @param reduced true => hide some columns to save space
    * @param strategyStats List of strategies to include
    * @throws IOException if there is a problem writing to the file
    */
-  public static void saveStatsTable(File file, InvestmentStats... strategyStats) throws IOException
+  public static void saveStatsTable(File file, int width, boolean reduced, InvestmentStats... strategyStats)
+      throws IOException
   {
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
       writer.write("<html><head>\n");
@@ -304,27 +343,34 @@ public class Chart
       writer.write("<script src=\"http://code.jquery.com/jquery.min.js\"></script>\n");
       writer.write("<script type=\"text/javascript\" src=\"js/jquery.tablesorter.min.js\"></script>\n");
       writer.write("<script type=\"text/javascript\">\n");
-      writer
-          .write(" $(document).ready(function() { $(\"#myTable\").tablesorter( {sortList: [[11,1]], widgets: ['zebra']} ); } );\n");
+      writer.write(" $(document).ready(function() { $(\"#myTable\").tablesorter( {widgets: ['zebra']} ); } );\n");
       writer.write("</script>\n");
       writer
           .write("<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
-      writer.write("</head><body style=\"width:1200px\">\n");
-      writer.write("<h2>Statistics for Different Strategies / Assets from 1871 to 2015</h2>");
-      writer.write("<table id=\"myTable\" class=\"tablesorter\">\n");
+      writer.write(String.format("</head><body style=\"width:%dpx\">\n", width));
+      writer.write("<h2>Statistics for Different Strategies / Assets</h2>\n");
+      writer.write("<table id=\"statsTable\" class=\"tablesorter\">\n");
       writer.write("<thead><tr>\n");
-      writer.write(" <th>Strategy / Asset</th>\n");
+      writer.write(" <th>Strategy</th>\n");
       writer.write(" <th>CAGR</th>\n");
       writer.write(" <th>StdDev</th>\n");
       writer.write(" <th>Drawdown</th>\n");
       writer.write(" <th>Down 10%</th>\n");
-      writer.write(" <th>New High %</th>\n");
+      if (!reduced) {
+        writer.write(" <th>New High %</th>\n");
+      }
       writer.write(" <th>Worst AR</th>\n");
-      writer.write(" <th>25% AR</th>\n");
+      if (!reduced) {
+        writer.write(" <th>25% AR</th>\n");
+      }
       writer.write(" <th>Median AR</th>\n");
-      writer.write(" <th>75% AR</th>\n");
+      if (!reduced) {
+        writer.write(" <th>75% AR</th>\n");
+      }
       writer.write(" <th>Best AR</th>\n");
-      writer.write(" <th>Score</th>\n");
+      if (!reduced) {
+        writer.write(" <th>Score</th>\n");
+      }
       writer.write("</tr></thead>\n");
       writer.write("<tbody>\n");
       for (InvestmentStats stats : strategyStats) {
@@ -340,32 +386,48 @@ public class Chart
         writer.write(String.format("<td>%.2f</td>\n", stats.devAnnualReturn));
         writer.write(String.format("<td>%.2f</td>\n", stats.maxDrawdown));
         writer.write(String.format("<td>%.2f</td>\n", stats.percentDown10));
-        writer.write(String.format("<td>%.2f</td>\n", stats.percentNewHigh));
+        if (!reduced) {
+          writer.write(String.format("<td>%.2f</td>\n", stats.percentNewHigh));
+        }
         writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[0]));
-        writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[1]));
+        if (!reduced) {
+          writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[1]));
+        }
         writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[2]));
-        writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[3]));
+        if (!reduced) {
+          writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[3]));
+        }
         writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[4]));
-        writer.write(String.format("<td>%.2f</td>\n", stats.calcScore()));
+        if (!reduced) {
+          writer.write(String.format("<td>%.2f</td>\n", stats.calcScore()));
+        }
         writer.write("</tr>\n");
       }
       writer.write("</tbody>\n</table>\n");
       writer.write("<h2>Explanation of Each Column</h2>");
       writer.write("<div><ul>");
-      writer.write(" <li><b>Strategy / Asset</b> - Name of the strategy or asset class</li>\n");
+      writer.write(" <li><b>Strategy</b> - Name of the strategy or asset class</li>\n");
       writer.write(" <li><b>CAGR</b> - Compound Annual Growth Rate</li>\n");
       writer.write(" <li><b>StdDev</b> - Standard deviation of annual returns</li>\n");
       writer.write(" <li><b>Drawdown</b> - Maximum drawdown (largest gap from peak to trough)</li>\n");
       writer
           .write(" <li><b>Down 10%</b> - Percentage of time (months) strategy is 10% or more below the previous peak</li>\n");
-      writer.write(" <li><b>New High %</b> - Percentage of time (months) strategy hits a new high</li>\n");
+      if (!reduced) {
+        writer.write(" <li><b>New High %</b> - Percentage of time (months) strategy hits a new high</li>\n");
+      }
       writer.write(" <li><b>Worst AR</b> - Return of worst year (biggest drop)</li>\n");
-      writer.write(" <li><b>25% AR</b> - Return of year at the 25th percentile</li>\n");
+      if (!reduced) {
+        writer.write(" <li><b>25% AR</b> - Return of year at the 25th percentile</li>\n");
+      }
       writer.write(" <li><b>Median AR</b> - Median annual return (50th percentile)</li>\n");
-      writer.write(" <li><b>75% AR</b> - Return of year at the 75th percentile</li>\n");
+      if (!reduced) {
+        writer.write(" <li><b>75% AR</b> - Return of year at the 75th percentile</li>\n");
+      }
       writer.write(" <li><b>Best AR</b> - Return of best year (biggest gain)</li>\n");
-      writer
-          .write(" <li><b>Score</b> - Semi-arbitrary combination of statistics used to rank strategies (higher is better)</li>\n");
+      if (!reduced) {
+        writer
+            .write(" <li><b>Score</b> - Semi-arbitrary combination of statistics used to rank strategies (higher is better)</li>\n");
+      }
       writer.write("</ul></div>");
       writer.write("</body></html>\n");
     }
@@ -373,17 +435,7 @@ public class Chart
 
   public static void printDecadeTable(Sequence cumulativeReturns)
   {
-    // Find start of decade.
-    Calendar cal = Library.now();
-    cal.setLenient(true);
-    int iStart = -1;
-    for (int i = 0; i < cumulativeReturns.length(); ++i) {
-      cal.setTimeInMillis(cumulativeReturns.getTimeMS(i));
-      if (cal.get(Calendar.MONTH) == 0 && cal.get(Calendar.YEAR) % 10 == 0) {
-        iStart = i;
-        break;
-      }
-    }
+    int iStart = Library.FindStartofFirstDecade(cumulativeReturns);
     if (iStart < 0) {
       return;
     }
@@ -393,6 +445,7 @@ public class Chart
         .printf("<tr><th>Decade</th><th>CAGR</th><th>StdDev</th><th>Drawdown</th><th>Down 10%%</th><th>Total<br/>Return</th></tr>\n");
     System.out.printf("</thead><tbody>\n");
 
+    Calendar cal = Library.now();
     for (int i = iStart; i + 120 < cumulativeReturns.length(); i += 120) {
       cal.setTimeInMillis(cumulativeReturns.getTimeMS(i));
       Sequence decade = cumulativeReturns.subseq(i, 121);
@@ -400,6 +453,34 @@ public class Chart
       System.out.printf(" <tr><td>%ds</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2fx</td></tr>\n",
           cal.get(Calendar.YEAR), stats.cagr, stats.devAnnualReturn, stats.maxDrawdown, stats.percentDown10,
           stats.totalReturn);
+    }
+    System.out.printf("</tbody>\n</table>\n");
+  }
+
+  public static void printDecadeTable(Sequence returns1, Sequence returns2)
+  {
+    assert returns1.length() == returns2.length();
+    int iStart = Library.FindStartofFirstDecade(returns1);
+    if (iStart < 0) {
+      return;
+    }
+
+    System.out.printf("<table id=\"decadeTable\" class=\"tablesorter\" style=\"width:100%%\"><thead>\n");
+    System.out.printf("<tr><th>Decade</th><th>%s<br/>CAGR</th><th>%s<br/>CAGR</th>\n", returns1.getName(),
+        returns2.getName());
+    System.out.printf("<th>%s<br/>StdDev</th><th>%s<br/>StdDev</th></tr>\n", returns1.getName(), returns2.getName());
+    System.out.printf("</thead><tbody>\n");
+
+    Calendar cal = Library.now();
+    for (int i = iStart; i + 120 < returns1.length(); i += 120) {
+      assert returns1.getTimeMS(i) == returns2.getTimeMS(i);
+      cal.setTimeInMillis(returns1.getTimeMS(i));
+      Sequence decade1 = returns1.subseq(i, 121);
+      Sequence decade2 = returns2.subseq(i, 121);
+      InvestmentStats stats1 = InvestmentStats.calcInvestmentStats(decade1);
+      InvestmentStats stats2 = InvestmentStats.calcInvestmentStats(decade2);
+      System.out.printf(" <tr><td>%ds</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>\n",
+          cal.get(Calendar.YEAR), stats1.cagr, stats2.cagr, stats1.devAnnualReturn, stats2.devAnnualReturn);
     }
     System.out.printf("</tbody></table>\n");
   }

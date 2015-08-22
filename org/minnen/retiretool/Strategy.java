@@ -212,7 +212,7 @@ public class Strategy
       }
     }
 
-    System.out.printf("Rebalances: %d\n", numRebalances);
+    // System.out.printf("Rebalances: %d\n", numRebalances);
     return returns;
   }
 

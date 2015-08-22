@@ -139,4 +139,21 @@ public class InvestmentStats
             annualPercentiles[2], annualPercentiles[3], annualPercentiles[4], percentUp, percentDown, percentNewHigh,
             percentDown10);
   }
+
+  /**
+   * Calculates the stats for a list of cumulative returns sequences.
+   * 
+   * @param cumulativeReturns array of cumulative returns.
+   * @return array of InvestmentStats corresponding to each input sequence.
+   */
+  public static InvestmentStats[] calc(Sequence... cumulativeReturns)
+  {
+    InvestmentStats[] stats = new InvestmentStats[cumulativeReturns.length];
+    for (int i = 0; i < cumulativeReturns.length; ++i) {
+      assert cumulativeReturns[i].length() == cumulativeReturns[0].length();
+      stats[i] = InvestmentStats.calcInvestmentStats(cumulativeReturns[i]);
+      cumulativeReturns[i].setName(String.format("%s (%.2f%%)", cumulativeReturns[i].getName(), stats[i].cagr));
+    }
+    return stats;
+  }
 }
