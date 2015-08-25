@@ -5,8 +5,11 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Calendar;
+import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.minnen.retiretool.ComparisonStats.Results;
 
 public class Chart
 {
@@ -410,10 +413,9 @@ public class Chart
       writer.write(" <li><b>CAGR</b> - Compound Annual Growth Rate</li>\n");
       writer.write(" <li><b>StdDev</b> - Standard deviation of annual returns</li>\n");
       writer.write(" <li><b>Drawdown</b> - Maximum drawdown (largest gap from peak to trough)</li>\n");
-      writer
-          .write(" <li><b>Down 10%</b> - Percentage of time (months) strategy is 10% or more below the previous peak</li>\n");
+      writer.write(" <li><b>Down 10%</b> - Percentage of time strategy is 10% or more below the previous peak</li>\n");
       if (!reduced) {
-        writer.write(" <li><b>New High %</b> - Percentage of time (months) strategy hits a new high</li>\n");
+        writer.write(" <li><b>New High %</b> - Percentage of time strategy hits a new high</li>\n");
       }
       writer.write(" <li><b>Worst AR</b> - Return of worst year (biggest drop)</li>\n");
       if (!reduced) {
@@ -429,6 +431,63 @@ public class Chart
             .write(" <li><b>Score</b> - Semi-arbitrary combination of statistics used to rank strategies (higher is better)</li>\n");
       }
       writer.write("</ul></div>");
+      writer.write("</body></html>\n");
+    }
+  }
+
+  /**
+   * Generate an HTML file with a table of comparison statistics.
+   * 
+   * @param file save HTML in this file
+   * @param stats comparison statistics to put in chart
+   * @throws IOException if there is a problem writing to the file
+   */
+  public static void saveComparisonTable(File file, int width, ComparisonStats stats) throws IOException
+  {
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+      writer.write("<html><head>\n");
+      writer.write("<title>Comparison Statistics</title>\n");
+      writer.write("<script src=\"http://code.jquery.com/jquery.min.js\"></script>\n");
+      writer.write("<script type=\"text/javascript\" src=\"js/jquery.tablesorter.min.js\"></script>\n");
+      writer.write("<script type=\"text/javascript\">\n");
+      writer.write(" $(document).ready(function() { $(\"#myTable\").tablesorter( {widgets: ['zebra']} ); } );\n");
+      writer.write("</script>\n");
+      writer
+          .write("<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
+      writer.write(String.format("</head><body style=\"width:%dpx\">\n", width));
+      writer.write("<h2>Strategy Comparison</h2>\n");
+      writer.write("<table id=\"comparisonTable\" class=\"tablesorter\">\n");
+      writer.write("<thead><tr>\n");
+      writer.write(" <th>Duration</th>\n");
+      writer.write(String.format(" <th>%s<br/>Win %%</th>\n", stats.returns1.getName()));
+      writer.write(String.format(" <th>%s<br/>Win %%</th>\n", stats.returns2.getName()));
+      writer.write(" <th>Mean<br/>Excesss</th>\n");      
+      writer.write(" <th>Worst<br/>Excess</th>\n");
+      writer.write(" <th>Median<br/>Excess</th>\n");
+      writer.write(" <th>Best<br/>Excess</th>\n");
+      writer.write("</tr></thead>\n");
+      writer.write("<tbody>\n");
+
+      for (Entry<Integer, Results> entry : stats.durationToResults.entrySet()) {
+        int duration = entry.getKey();
+        Results results = entry.getValue();
+        writer.write("<tr>\n");
+
+        if (duration < 12) {
+          writer.write(String.format("<td>%d Month%s</td>\n", duration, duration > 1 ? "s" : ""));
+        } else {
+          int years = duration / 12;
+          writer.write(String.format("<td>%d Year%s</td>\n", years, years > 1 ? "s" : ""));
+        }
+        writer.write(String.format("<td>%.1f</td>\n", results.winPercent1));
+        writer.write(String.format("<td>%.1f</td>\n", results.winPercent2));
+        writer.write(String.format("<td>%.2f</td>\n", results.meanExcess));
+        writer.write(String.format("<td>%.2f</td>\n", results.worstExcess));
+        writer.write(String.format("<td>%.2f</td>\n", results.medianExcess));
+        writer.write(String.format("<td>%.2f</td>\n", results.bestExcess));
+        writer.write("</tr>\n");
+      }
+      writer.write("</tbody>\n</table>\n");
       writer.write("</body></html>\n");
     }
   }

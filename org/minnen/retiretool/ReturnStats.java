@@ -4,6 +4,7 @@ import java.util.Arrays;
 
 public class ReturnStats
 {
+  // TODO merge with InvestmentStats
   public final Sequence cumulativeReturns;
   public final double   mean;
   public final double   sdev;

@@ -273,7 +273,8 @@ public class RetireTool
    * 
    * @param cumulativeReturns sequence of cumulative returns for the investment strategy
    * @param months number of months in the market
-   * @return sequence containing CAGRs for each time period of the given duration.
+   * @return sequence containing returns for each time period of the given duration, if nMonths<12 then the returns are
+   *         raw, else they are CAGRs.
    */
   public static Sequence calcReturnsForDuration(Sequence cumulativeReturns, int nMonths)
   {
@@ -281,8 +282,12 @@ public class RetireTool
     Sequence rois = new Sequence("ROIs: " + Library.getDurationString(nMonths));
     for (int i = 0; i + nMonths < N; i++) {
       double roi = getReturn(cumulativeReturns, i, i + nMonths);
-      double cagr = RetireTool.getAnnualReturn(roi, nMonths);
-      rois.addData(cagr, cumulativeReturns.getTimeMS(i));
+      if (nMonths >= 12) {
+        roi = RetireTool.getAnnualReturn(roi, nMonths);
+      } else {
+        roi *= 100.0;
+      }
+      rois.addData(roi, cumulativeReturns.getTimeMS(i));
     }
     return rois;
   }
@@ -527,7 +532,7 @@ public class RetireTool
     int nMonthsMomentum = 12;
     int rebalanceMonths = 12;
     double rebalanceBand = 0.0;
-    int iStartReturns = 12;
+    int iStartReturns = 0;
 
     Sequence snpData = Shiller.getStockData(shiller, iStart, iEnd);
     Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
@@ -573,11 +578,11 @@ public class RetireTool
         getLabelsFromHistogram(returnLiks), null, GRAPH_WIDTH, GRAPH_HEIGHT, 0.0, 1.0, Double.NaN, false, 0, liks);
 
     // Sequence[] assets = new Sequence[] { multiSmaRisky, daa, multiMomSafe, momentum, sma, raa, stock, bonds, mixed };
-    Sequence[] assets = new Sequence[] { stock };
+    Sequence[] assets = new Sequence[] { bonds };
     Sequence[] returns = new Sequence[assets.length];
     double vmin = 0.0, vmax = 0.0;
     for (int i = 0; i < assets.length; ++i) {
-      // ReturnStats.printDurationTable(assets[i]);
+      ReturnStats.printDurationTable(assets[i]);
       returns[i] = calcReturnsForDuration(assets[i], nMonths);
 
       // for (int j = 0; j < returns[i].length(); ++j) {
@@ -618,7 +623,7 @@ public class RetireTool
   {
     assert dir.isDirectory();
 
-    int nMonths = 1 * 12;
+    int nMonths = 30 * 12;
     int rebalanceMonths = 12;
     double rebalanceBand = 5.0;
     int iStartReturns = 0;
@@ -664,19 +669,30 @@ public class RetireTool
 
     Sequence[] assets = new Sequence[] { stock, bonds, mixed, multiMomRisky, multiMomMod, multiMomSafe, multiSmaRisky,
         multiSmaMod, multiSmaSafe, daa };
+
+    int player1 = 1;
+    int player2 = 0;
+    ComparisonStats comparison = ComparisonStats.calc(assets[player2], assets[player1]);
+    Chart.saveComparisonTable(new File(dir, "duel-comparison.html"), GRAPH_WIDTH, comparison);
+    InvestmentStats[] stats = InvestmentStats.calc(assets[player2], assets[player1]);
+    Chart.saveStatsTable(new File(dir, "duel-chart.html"), GRAPH_WIDTH, false, stats);
+
+    Chart.saveHighChart(new File(dir, "duel-cumulative.html"), ChartType.Line, "Cumulative Market Returns", null, null,
+        GRAPH_WIDTH, GRAPH_HEIGHT, 1, 1048576, 1.0, true, 0, assets[player2], assets[player1]);
+
+    // Calculate returns for each strategy for the requested duration.
     Sequence[] returns = new Sequence[assets.length];
     for (int i = 0; i < assets.length; ++i) {
       returns[i] = calcReturnsForDuration(assets[i], nMonths);
       returns[i].setName(assets[i].getName());
     }
-    Sequence returnsA = returns[1];
-    Sequence returnsB = returns[0];
+    Sequence returnsA = returns[player1];
+    Sequence returnsB = returns[player2];
 
     // Generate scatter plot comparing results.
     String title = String.format("%s vs. %s (%s)", returnsB.getName(), returnsA.getName(),
         Library.getDurationString(nMonths));
-    Chart.saveHighChartScatter(new File(dir, "duel-scatter.html"), title, GRAPH_WIDTH, GRAPH_HEIGHT, 0, returnsA,
-        returnsB);
+    Chart.saveHighChartScatter(new File(dir, "duel-scatter.html"), title, 730, GRAPH_HEIGHT, 0, returnsA, returnsB);
 
     // Generate histogram summarizing excess returns of B over A.
     title = String.format("Excess Returns: %s vs. %s (%s)", returnsB.getName(), returnsA.getName(),
@@ -1084,13 +1100,13 @@ public class RetireTool
 
     // genInterestRateGraph(shiller, new File(dir, "interest-rates.html"));
     // compareRebalancingMethods(shiller, new File(dir, "rebalance-comparison.html"));
-    // genReturnViz(shiller, new File(dir, "histogram-returns.html"), new File(dir, "future-returns.html"));
+    genReturnViz(shiller, new File(dir, "histogram-returns.html"), new File(dir, "future-returns.html"));
     // genReturnChart(shiller, new File(dir, "cumulative-returns.html"), new File(dir, "strategy-report.html"));
     // genSMASweepChart(shiller, new File(dir, "sma-sweep.html"));
     // genMomentumSweepChart(shiller, new File(dir, "momentum-sweep.html"));
     // genStockBondMixSweepChart(shiller, new File(dir, "stock-bond-sweep.html"), new File(dir,
     // "chart-stock-bond-sweep.html"));
-    genDuelViz(shiller, dir);
+    // genDuelViz(shiller, dir);
 
     System.exit(0);
 

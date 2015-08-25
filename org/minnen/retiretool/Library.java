@@ -377,7 +377,7 @@ public final class Library
       return "1 year";
     }
     if (nMonths < 18) {
-      return String.format("%d months");
+      return String.format("%d months", nMonths);
     }
     if (nMonths % 12 == 0) {
       return String.format("%d years", nMonths / 12);
