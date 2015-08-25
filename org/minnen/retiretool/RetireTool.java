@@ -756,9 +756,75 @@ public class RetireTool
         GRAPH_WIDTH, GRAPH_HEIGHT, 1.0, 262144.0, 1.0, true, 0, all);
     Chart.saveStatsTable(fileChart, GRAPH_WIDTH, true, stats);
 
-    all[0].setName("Stock");
-    all[all.length - 1].setName("Bonds");
-    Chart.printDecadeTable(all[0], all[all.length - 1]);
+    // all[0].setName("Stock");
+    // all[all.length - 1].setName("Bonds");
+    // Chart.printDecadeTable(all[0], all[all.length - 1]);
+  }
+
+  public static void genEfficientFrontier(Sequence shiller, File dir) throws IOException
+  {
+    int iStart = 0;
+    int iEnd = shiller.length() - 1;
+
+    Sequence stockData = Shiller.getStockData(shiller, iStart, iEnd);
+    Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
+
+    Sequence stock = calcSnpReturns(stockData, iStart, iEnd - iStart, DividendMethod.MONTHLY);
+    Sequence bonds = Bond.calcReturnsRebuy(bondData, iStart, iEnd);
+    assert stock.length() == bonds.length();
+
+    int[] percentStock = new int[] { 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0 };
+    int rebalanceMonths = 12;
+    double rebalanceBand = 10.0;
+    int duration = 5 * 12;
+
+    // Generate curve for each decade.
+    Calendar cal = Library.now();
+    List<Sequence> decades = new ArrayList<Sequence>();
+    int iDecadeStart = Library.FindStartofFirstDecade(stockData);
+    for (int i = iDecadeStart; i + 120 < stockData.length(); i += 120) {
+      cal.setTimeInMillis(stockData.getTimeMS(i));
+      Sequence decadeStock = calcSnpReturns(stockData, i, 120, DividendMethod.MONTHLY);
+      Sequence decadeBonds = Bond.calcReturnsRebuy(bondData, i, i + 120);
+      assert decadeStock.length() == decadeBonds.length();
+
+      Sequence decade = new Sequence(String.format("%ss", cal.get(Calendar.YEAR)));
+      for (int j = 0; j < percentStock.length; ++j) {
+        int pctStock = percentStock[j];
+        int pctBonds = 100 - percentStock[j];
+        Sequence mixed = Strategy.calcMixedReturns(new Sequence[] { decadeStock, decadeBonds }, new double[] {
+            pctStock, pctBonds }, rebalanceMonths, rebalanceBand);
+        InvestmentStats stats = InvestmentStats.calcInvestmentStats(mixed);
+        decade.addData(new FeatureVec(2, stats.cagr, stats.devAnnualReturn));
+        // System.out.printf("%ss: %d / %d => %.2f (%.2f), %.2f\n", cal.get(Calendar.YEAR), pctStock, pctBonds,
+        // stats.cagr, stats.meanAnnualReturn, stats.devAnnualReturn);
+      }
+      decades.add(decade);
+    }
+    Chart.saveHighChartSplines(new File(dir, "stock-bond-mix-decade-curves.html"), "Stock/Bond Decade Curves",
+        GRAPH_WIDTH, GRAPH_HEIGHT, decades.toArray(new Sequence[decades.size()]));
+
+    // Generate curve for requested duration.
+    Sequence frontier = new Sequence("Efficient Frontier");
+    for (int j = 0; j < percentStock.length; ++j) {
+      int pctStock = percentStock[j];
+      int pctBonds = 100 - percentStock[j];
+      Sequence mixed = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { pctStock, pctBonds },
+          rebalanceMonths, rebalanceBand);
+      ReturnStats stats = new ReturnStats(mixed, duration);
+      String name = "";
+      if (pctStock == 100) {
+        name = "100% Stock";
+      } else if (pctStock == 50) {
+        name = "50 / 50";
+      } else if (pctStock == 0) {
+        name = "100% Bonds";
+      }
+      frontier.addData(new FeatureVec(name, 2, stats.mean, stats.sdev));
+      System.out.printf("%d / %d: %.2f, %.2f\n", pctStock, pctBonds, stats.mean, stats.sdev);
+    }
+    Chart.saveHighChartSplines(new File(dir, "stock-bond-mix-duration-curve.html"), "Stock / Bond Frontier",
+        GRAPH_WIDTH, GRAPH_HEIGHT, frontier);
   }
 
   public static void genSMASweepChart(Sequence shiller, File file) throws IOException
@@ -1100,13 +1166,14 @@ public class RetireTool
 
     // genInterestRateGraph(shiller, new File(dir, "interest-rates.html"));
     // compareRebalancingMethods(shiller, new File(dir, "rebalance-comparison.html"));
-    genReturnViz(shiller, new File(dir, "histogram-returns.html"), new File(dir, "future-returns.html"));
+    // genReturnViz(shiller, new File(dir, "histogram-returns.html"), new File(dir, "future-returns.html"));
     // genReturnChart(shiller, new File(dir, "cumulative-returns.html"), new File(dir, "strategy-report.html"));
     // genSMASweepChart(shiller, new File(dir, "sma-sweep.html"));
     // genMomentumSweepChart(shiller, new File(dir, "momentum-sweep.html"));
     // genStockBondMixSweepChart(shiller, new File(dir, "stock-bond-sweep.html"), new File(dir,
     // "chart-stock-bond-sweep.html"));
     // genDuelViz(shiller, dir);
+    genEfficientFrontier(shiller, dir);
 
     System.exit(0);
 

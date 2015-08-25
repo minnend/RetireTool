@@ -327,6 +327,67 @@ public class Chart
     }
   }
 
+  public static void saveHighChartSplines(File file, String title, int width, int height, Sequence... splines)
+      throws IOException
+  {
+    // Write HTML to generate the graph.
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+      writer.write("<html><head>\n");
+      writer.write("<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js\"></script>\n");
+      writer.write("<script src=\"js/highcharts.js\"></script>\n");
+      writer.write("  <script type=\"text/javascript\">\n");
+      writer.write("$(function () {\n");
+      writer.write(" $('#chart').highcharts({\n");
+      writer.write("  title: { text: '" + title + "' },\n");
+      writer.write("  chart: { type: 'scatter' },\n");
+      writer.write("  xAxis: {\n");
+      writer.write("   title: {\n");
+      writer.write("    text: 'Annual Volatility',\n");
+      writer.write("    style: { fontSize: '18px' }\n");
+      writer.write("   }\n");
+      writer.write("  },\n");
+      writer.write("  yAxis: {\n");
+      writer.write("   title: {\n");
+      writer.write("    text: 'Annual Returns',\n");
+      writer.write("    style: { fontSize: '18px' }\n");
+      writer.write("   }\n");
+      writer.write("  },\n");
+      writer.write("  legend: { enabled: false },\n");
+      writer.write("  plotOptions: {\n");
+      writer.write("   scatter: {\n");
+      writer.write("    lineWidth: 2,\n");
+      writer.write("    dataLabels: {\n");
+      writer.write("     enabled: true,\n");      
+      writer.write("     formatter: function() { return this.point.name; }\n");
+      writer.write("    }\n");
+      writer.write("   }\n");
+      writer.write("  },\n");
+      writer.write("  series: [{\n");
+      for (int iSpline = 0; iSpline < splines.length; ++iSpline) {
+        Sequence spline = splines[iSpline];
+        writer.write("    name: '" + spline.getName() + "',\n");
+        writer.write("    data: [");
+        for (int i = 0; i < spline.length(); ++i) {
+          double cagr = spline.get(i, 0);
+          double stdev = spline.get(i, 1);
+          writer.write(String.format("{x:%.3f, y:%.3f, name: '%s'}", stdev, cagr, spline.get(i).getName()));
+          if (i < spline.length() - 1) {
+            writer.write(",");
+          }
+        }
+        writer.write("]\n");
+        writer.write(String.format("   }%s\n", iSpline == splines.length - 1 ? "" : ",{"));
+      }
+      writer.write("  ]\n");
+      writer.write(" });\n");
+      writer.write("});\n");
+
+      writer.write("</script></head><body style=\"width:" + width + "px;\">\n");
+      writer.write("<div id=\"chart\" style=\"width:100%; height:" + height + "px;\" />\n");
+      writer.write("</body></html>\n");
+    }
+  }
+
   /**
    * Generate an HTML file with a sortable table of strategy statistics.
    * 
@@ -461,7 +522,7 @@ public class Chart
       writer.write(" <th>Duration</th>\n");
       writer.write(String.format(" <th>%s<br/>Win %%</th>\n", stats.returns1.getName()));
       writer.write(String.format(" <th>%s<br/>Win %%</th>\n", stats.returns2.getName()));
-      writer.write(" <th>Mean<br/>Excesss</th>\n");      
+      writer.write(" <th>Mean<br/>Excesss</th>\n");
       writer.write(" <th>Worst<br/>Excess</th>\n");
       writer.write(" <th>Median<br/>Excess</th>\n");
       writer.write(" <th>Best<br/>Excess</th>\n");

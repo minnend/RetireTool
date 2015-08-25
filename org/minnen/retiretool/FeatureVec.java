@@ -8,6 +8,7 @@ public class FeatureVec
   /** actual data */
   private double[] vec;
   private long     timestamp = Library.TIME_ERROR;
+  private String   name;
 
   /**
    * Create a feature vec from the double array
@@ -36,6 +37,16 @@ public class FeatureVec
   }
 
   /**
+   * Create a named feature vector with 'nDims' using the supplied values; if too few are given, the last one is
+   * repeated (or zero if no values are provided).
+   */
+  public FeatureVec(String name, int nDims, double... x)
+  {
+    this(nDims, x);
+    this.name = name;
+  }
+
+  /**
    * Create a feature vector with 'nDims' using the supplied values; if too few are given, the last one is repeated (or
    * zero if no values are provided).
    */
@@ -50,6 +61,16 @@ public class FeatureVec
     double rep = (N > 0 ? x[N - 1] : 0);
     for (int i = M; i < nDims; i++)
       vec[i] = rep;
+  }
+
+  public String getName()
+  {
+    return name;
+  }
+
+  public void setName(String name)
+  {
+    this.name = name;
   }
 
   /** @return this*x' */
@@ -196,6 +217,7 @@ public class FeatureVec
   public void copyFrom(FeatureVec fv)
   {
     int n = fv.getNumDims();
+    name = fv.name;
     if (vec == null || getNumDims() != n)
       vec = new double[n];
     for (int i = 0; i < n; i++)
