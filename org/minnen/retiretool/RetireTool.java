@@ -639,10 +639,10 @@ public class RetireTool
     int iStartData = 0;
     int iEnd = shiller.length() - 1;
 
-    Sequence snpData = Shiller.getStockData(shiller, iStartData, iEnd);
+    Sequence stockData = Shiller.getStockData(shiller, iStartData, iEnd);
     Sequence bondData = Shiller.getBondData(shiller, iStartData, iEnd);
 
-    Sequence stockAll = calcSnpReturns(snpData, iStartData, iEnd - iStartData, DividendMethod.MONTHLY);
+    Sequence stockAll = calcSnpReturns(stockData, iStartData, iEnd - iStartData, DividendMethod.MONTHLY);
     Sequence bondsAll = Bond.calcReturnsRebuy(bondData, iStartData, iEnd);
     stockAll.setName("Stock");
     bondsAll.setName("Bonds");
@@ -667,11 +667,12 @@ public class RetireTool
     Sequence multiMomRisky = Strategy.calcMultiMomentumReturns(iStartReturns, stockAll, bondsAll, Disposition.Risky);
     Sequence multiMomMod = Strategy.calcMultiMomentumReturns(iStartReturns, stockAll, bondsAll, Disposition.Moderate);
     Sequence multiMomSafe = Strategy.calcMultiMomentumReturns(iStartReturns, stockAll, bondsAll, Disposition.Safe);
-    Sequence multiSmaRisky = Strategy
-        .calcMultiSmaReturns(iStartReturns, snpData, stockAll, bondsAll, Disposition.Risky);
-    Sequence multiSmaMod = Strategy.calcMultiSmaReturns(iStartReturns, snpData, stockAll, bondsAll,
+    Sequence multiSmaRisky = Strategy.calcMultiSmaReturns(iStartReturns, stockData, stockAll, bondsAll,
+        Disposition.Risky);
+    Sequence multiSmaMod = Strategy.calcMultiSmaReturns(iStartReturns, stockData, stockAll, bondsAll,
         Disposition.Moderate);
-    Sequence multiSmaSafe = Strategy.calcMultiSmaReturns(iStartReturns, snpData, stockAll, bondsAll, Disposition.Safe);
+    Sequence multiSmaSafe = Strategy
+        .calcMultiSmaReturns(iStartReturns, stockData, stockAll, bondsAll, Disposition.Safe);
     Sequence daa = Strategy.calcMixedReturns(new Sequence[] { multiSmaRisky, multiMomSafe }, new double[] { 50, 50 },
         rebalanceMonths, rebalanceBand);
     daa.setName("DAA");
@@ -1141,9 +1142,47 @@ public class RetireTool
 
   public static void genInterestRateGraph(Sequence shiller, File file) throws IOException
   {
-    // Sequence bondData = Shiller.getBondData(shiller);
     Chart.saveHighChart(file, ChartType.Area, "Interest Rates", null, null, GRAPH_WIDTH, GRAPH_HEIGHT, 0.0, 16.0, 1.0,
         false, Shiller.GS10, shiller);
+  }
+
+  public static Sequence calcCorrelation(Sequence returns1, Sequence returns2, int window)
+  {
+    double[] r1 = new double[returns1.length() - 1];
+    double[] r2 = new double[r1.length];
+    for (int i = 1; i <= r1.length; ++i) {
+      r1[i - 1] = returns1.get(i, 0) / returns1.get(i - 1, 0);
+      r2[i - 1] = returns2.get(i, 0) / returns2.get(i - 1, 0);
+    }
+
+    Sequence corr = new Sequence(String.format("Correlation (%s): %s vs. %s", Library.formatDurationMonths(window),
+        returns1.getName(), returns2.getName()));
+    double[] a = new double[window];
+    double[] b = new double[window];
+    for (int i = window; i < r1.length; ++i) {
+      Library.copy(r1, a, i - window, 0, window);
+      Library.copy(r2, b, i - window, 0, window);
+      corr.addData(Library.correlation(a, b), returns1.getTimeMS(i - window / 2));
+    }
+    return corr;
+  }
+
+  public static void genCorrelationGraph(Sequence shiller, File dir) throws IOException
+  {
+    int iStartData = 0; // shiller.getIndexForDate(1999, 1);
+    int iEndData = shiller.length() - 1;
+
+    Sequence stockData = Shiller.getStockData(shiller, iStartData, iEndData);
+    Sequence bondData = Shiller.getBondData(shiller, iStartData, iEndData);
+
+    Sequence bonds = Bond.calcReturnsRebuy(bondData, 0, bondData.length() - 1);
+    bonds.setName("Bonds");
+    Sequence stock = calcSnpReturns(stockData, 0, stockData.length() - 1, DividendMethod.MONTHLY);
+    stock.setName("Stock");
+
+    Sequence corr = calcCorrelation(stock, bonds, 3 * 12);
+    Chart.saveHighChart(new File(dir, "stock-bond-correlation.html"), ChartType.Area, corr.getName(), null, null,
+        GRAPH_WIDTH, GRAPH_HEIGHT, -1.0, 1.0, 0.25, false, 0, corr);
   }
 
   public static void main(String[] args) throws IOException
@@ -1187,7 +1226,8 @@ public class RetireTool
     // genStockBondMixSweepChart(shiller, new File(dir, "stock-bond-sweep.html"), new File(dir,
     // "chart-stock-bond-sweep.html"));
     // genDuelViz(shiller, dir);
-    genEfficientFrontier(shiller, dir);
+    // genEfficientFrontier(shiller, dir);
+    genCorrelationGraph(shiller, dir);
 
     System.exit(0);
 
