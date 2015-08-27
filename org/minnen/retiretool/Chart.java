@@ -344,20 +344,24 @@ public class Chart
       writer.write("   title: {\n");
       writer.write("    text: 'Annual Volatility',\n");
       writer.write("    style: { fontSize: '18px' }\n");
-      writer.write("   }\n");
+      writer.write("   },\n");
+      writer.write("   minorTickInterval: 0.5,\n");
+      writer.write("   min: 1.5,\n");
+      writer.write("   max: 5.0\n");
       writer.write("  },\n");
       writer.write("  yAxis: {\n");
       writer.write("   title: {\n");
       writer.write("    text: 'Annual Returns',\n");
       writer.write("    style: { fontSize: '18px' }\n");
-      writer.write("   }\n");
+      writer.write("   },\n");
+      writer.write("   minorTickInterval: 1.0\n");
       writer.write("  },\n");
-      writer.write("  legend: { enabled: false },\n");
+      writer.write("  legend: { enabled: true },\n");
       writer.write("  plotOptions: {\n");
       writer.write("   scatter: {\n");
       writer.write("    lineWidth: 2,\n");
       writer.write("    dataLabels: {\n");
-      writer.write("     enabled: true,\n");      
+      writer.write("     enabled: true,\n");
       writer.write("     formatter: function() { return this.point.name; }\n");
       writer.write("    }\n");
       writer.write("   }\n");
@@ -370,7 +374,8 @@ public class Chart
         for (int i = 0; i < spline.length(); ++i) {
           double cagr = spline.get(i, 0);
           double stdev = spline.get(i, 1);
-          writer.write(String.format("{x:%.3f, y:%.3f, name: '%s'}", stdev, cagr, spline.get(i).getName()));
+          String name = spline.get(i).getName();
+          writer.write(String.format("{x:%.3f, y:%.3f, name: '%s'}", stdev, cagr, name == null ? "" : name));
           if (i < spline.length() - 1) {
             writer.write(",");
           }

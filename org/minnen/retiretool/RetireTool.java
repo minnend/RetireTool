@@ -279,7 +279,7 @@ public class RetireTool
   public static Sequence calcReturnsForDuration(Sequence cumulativeReturns, int nMonths)
   {
     final int N = cumulativeReturns.size();
-    Sequence rois = new Sequence("ROIs: " + Library.getDurationString(nMonths));
+    Sequence rois = new Sequence("ROIs: " + Library.formatDurationMonths(nMonths));
     for (int i = 0; i + nMonths < N; i++) {
       double roi = getReturn(cumulativeReturns, i, i + nMonths);
       if (nMonths >= 12) {
@@ -384,7 +384,7 @@ public class RetireTool
     return failures;
   }
 
-  public static void compareRebalancingMethods(Sequence shiller, File file) throws IOException
+  public static void compareRebalancingMethods(Sequence shiller, File dir) throws IOException
   {
     int iStartData = 0;
     int iEndData = shiller.length() - 1;
@@ -399,29 +399,36 @@ public class RetireTool
     Sequence bondData = Shiller.getBondData(shiller, iStartData, iEndData);
 
     Sequence bonds = Bond.calcReturnsRebuy(bondData, iStartData, iEndData);
+    bonds.setName("Bonds");
     Sequence stock = calcSnpReturns(snpData, iStartData, iEndData - iStartData, DividendMethod.MONTHLY);
+    stock.setName("Stock");
 
     Sequence mixedNone = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
         percentBonds }, 0, 0.0);
-    mixedNone.setName(String.format("Stock/Bonds-%d/%d (No Rebalance)", percentStock, percentBonds));
+    // mixedNone.setName(String.format("Stock/Bonds-%d/%d (No Rebalance)", percentStock, percentBonds));
+    mixedNone.setName("No Rebalance");
 
     Sequence mixedM6 = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
         percentBonds }, 6, 0.0);
-    mixedM6.setName(String.format("Stock/Bonds-%d/%d (Rebalance M6)", percentStock, percentBonds));
+    // mixedM6.setName(String.format("Stock/Bonds-%d/%d (Rebalance M6)", percentStock, percentBonds));
+    mixedM6.setName("6 Months");
 
     Sequence mixedM12 = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
         percentBonds }, 12, 0.0);
-    mixedM12.setName(String.format("Stock/Bonds-%d/%d (Rebalance M12)", percentStock, percentBonds));
+    // mixedM12.setName(String.format("Stock/Bonds-%d/%d (Rebalance M12)", percentStock, percentBonds));
+    mixedM12.setName("12 Months");
 
     Sequence mixedB5 = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
         percentBonds }, 0, 5.0);
-    mixedB5.setName(String.format("Stock/Bonds-%d/%d (Rebalance B5)", percentStock, percentBonds));
+    // mixedB5.setName(String.format("Stock/Bonds-%d/%d (Rebalance B5)", percentStock, percentBonds));
+    mixedB5.setName("5% Band");
 
     Sequence mixedB10 = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
         percentBonds }, 0, 10.0);
-    mixedB10.setName(String.format("Stock/Bonds-%d/%d (Rebalance B10)", percentStock, percentBonds));
+    // mixedB10.setName(String.format("Stock/Bonds-%d/%d (Rebalance B10)", percentStock, percentBonds));
+    mixedB10.setName("10% Band");
 
-    Sequence[] all = new Sequence[] { bonds, stock, mixedNone, mixedM6, mixedM12, mixedB5, mixedB10 };
+    Sequence[] all = new Sequence[] { stock, bonds, mixedNone, mixedM6, mixedM12, mixedB5, mixedB10 };
     InvestmentStats[] stats = new InvestmentStats[all.length];
 
     for (int i = 0; i < all.length; ++i) {
@@ -431,7 +438,9 @@ public class RetireTool
       System.out.printf("%s\n", stats[i]);
     }
 
-    Chart.saveLineChart(file, "Cumulative Market Returns", GRAPH_WIDTH, GRAPH_HEIGHT, true, all);
+    Chart.saveLineChart(new File(dir, "rebalance-cumulative.html"), "Cumulative Market Returns", GRAPH_WIDTH,
+        GRAPH_HEIGHT, true, all);
+    Chart.saveStatsTable(new File(dir, "rebalance-table.html"), GRAPH_WIDTH, true, stats);
   }
 
   public static void genReturnChart(Sequence shiller, File fileChart, File fileTable) throws IOException
@@ -608,13 +617,13 @@ public class RetireTool
       histograms[i].setName(assets[i].getName());
     }
 
-    String title = "Histogram of Returns - " + Library.getDurationString(nMonths);
+    String title = "Histogram of Returns - " + Library.formatDurationMonths(nMonths);
     String[] labels = getLabelsFromHistogram(histograms[0]);
     Chart.saveHighChart(fileHistogram, Chart.ChartType.Bar, title, labels, null, GRAPH_WIDTH, GRAPH_HEIGHT, Double.NaN,
         Double.NaN, Double.NaN, false, 1, histograms);
 
     // Generate histogram showing future returns.
-    title = String.format("Future CAGR: %s (%s)", returns[0].getName(), Library.getDurationString(nMonths));
+    title = String.format("Future CAGR: %s (%s)", returns[0].getName(), Library.formatDurationMonths(nMonths));
     Chart.saveHighChart(fileFuture, Chart.ChartType.Area, title, null, null, GRAPH_WIDTH, GRAPH_HEIGHT, Double.NaN,
         Double.NaN, Double.NaN, false, 0, returns[0]);
   }
@@ -623,9 +632,9 @@ public class RetireTool
   {
     assert dir.isDirectory();
 
-    int nMonths = 30 * 12;
+    int nMonths = 10 * 12;
     int rebalanceMonths = 12;
-    double rebalanceBand = 5.0;
+    double rebalanceBand = 0.0;
     int iStartReturns = 0;
     int iStartData = 0;
     int iEnd = shiller.length() - 1;
@@ -670,7 +679,7 @@ public class RetireTool
     Sequence[] assets = new Sequence[] { stock, bonds, mixed, multiMomRisky, multiMomMod, multiMomSafe, multiSmaRisky,
         multiSmaMod, multiSmaSafe, daa };
 
-    int player1 = 1;
+    int player1 = 2;
     int player2 = 0;
     ComparisonStats comparison = ComparisonStats.calc(assets[player2], assets[player1]);
     Chart.saveComparisonTable(new File(dir, "duel-comparison.html"), GRAPH_WIDTH, comparison);
@@ -691,12 +700,12 @@ public class RetireTool
 
     // Generate scatter plot comparing results.
     String title = String.format("%s vs. %s (%s)", returnsB.getName(), returnsA.getName(),
-        Library.getDurationString(nMonths));
+        Library.formatDurationMonths(nMonths));
     Chart.saveHighChartScatter(new File(dir, "duel-scatter.html"), title, 730, GRAPH_HEIGHT, 0, returnsA, returnsB);
 
     // Generate histogram summarizing excess returns of B over A.
     title = String.format("Excess Returns: %s vs. %s (%s)", returnsB.getName(), returnsA.getName(),
-        Library.getDurationString(nMonths));
+        Library.formatDurationMonths(nMonths));
     Sequence excessReturns = returnsB.sub(returnsA);
     Sequence histogramExcess = computeHistogram(excessReturns, 0.5, 0.0);
     histogramExcess.setName(String.format("%s vs. %s", returnsB.getName(), returnsA.getName()));
@@ -776,7 +785,7 @@ public class RetireTool
     int[] percentStock = new int[] { 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0 };
     int rebalanceMonths = 12;
     double rebalanceBand = 10.0;
-    int duration = 5 * 12;
+    int[] durations = new int[] { 1, 5, 10, 15, 20, 30 };
 
     // Generate curve for each decade.
     Calendar cal = Library.now();
@@ -805,26 +814,31 @@ public class RetireTool
         GRAPH_WIDTH, GRAPH_HEIGHT, decades.toArray(new Sequence[decades.size()]));
 
     // Generate curve for requested duration.
-    Sequence frontier = new Sequence("Efficient Frontier");
-    for (int j = 0; j < percentStock.length; ++j) {
-      int pctStock = percentStock[j];
-      int pctBonds = 100 - percentStock[j];
-      Sequence mixed = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { pctStock, pctBonds },
-          rebalanceMonths, rebalanceBand);
-      ReturnStats stats = new ReturnStats(mixed, duration);
-      String name = "";
-      if (pctStock == 100) {
-        name = "100% Stock";
-      } else if (pctStock == 50) {
-        name = "50 / 50";
-      } else if (pctStock == 0) {
-        name = "100% Bonds";
+    Sequence[] frontiers = new Sequence[durations.length];
+    for (int i = 0; i < durations.length; ++i) {
+      int duration = durations[i] * 12;
+      Sequence frontier = new Sequence(Library.formatDurationMonths(duration));
+      for (int j = 0; j < percentStock.length; ++j) {
+        int pctStock = percentStock[j];
+        int pctBonds = 100 - percentStock[j];
+        Sequence mixed = Strategy.calcMixedReturns(new Sequence[] { stock, bonds },
+            new double[] { pctStock, pctBonds }, rebalanceMonths, rebalanceBand);
+        ReturnStats stats = new ReturnStats(mixed, duration);
+        String name = null;// String.format("%d", pctStock);
+        // if (pctStock == 100) {
+        // name = "100% Stock";
+        // } else if (pctStock == 50) {
+        // name = "50 / 50";
+        // } else if (pctStock == 0) {
+        // name = "100% Bonds";
+        // }
+        frontier.addData(new FeatureVec(name, 2, stats.mean, stats.sdev));
+        System.out.printf("%d / %d: %.2f, %.2f\n", pctStock, pctBonds, stats.mean, stats.sdev);
       }
-      frontier.addData(new FeatureVec(name, 2, stats.mean, stats.sdev));
-      System.out.printf("%d / %d: %.2f, %.2f\n", pctStock, pctBonds, stats.mean, stats.sdev);
+      frontiers[i] = frontier;
     }
     Chart.saveHighChartSplines(new File(dir, "stock-bond-mix-duration-curve.html"), "Stock / Bond Frontier",
-        GRAPH_WIDTH, GRAPH_HEIGHT, frontier);
+        GRAPH_WIDTH, GRAPH_HEIGHT, frontiers);
   }
 
   public static void genSMASweepChart(Sequence shiller, File file) throws IOException
@@ -1165,7 +1179,7 @@ public class RetireTool
     assert dir.isDirectory();
 
     // genInterestRateGraph(shiller, new File(dir, "interest-rates.html"));
-    // compareRebalancingMethods(shiller, new File(dir, "rebalance-comparison.html"));
+    // compareRebalancingMethods(shiller, dir);
     // genReturnViz(shiller, new File(dir, "histogram-returns.html"), new File(dir, "future-returns.html"));
     // genReturnChart(shiller, new File(dir, "cumulative-returns.html"), new File(dir, "strategy-report.html"));
     // genSMASweepChart(shiller, new File(dir, "sma-sweep.html"));

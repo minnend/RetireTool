@@ -16,7 +16,7 @@ public class TestInvestmentStats
     Sequence cumulativeReturns = new Sequence(new double[] {});
     InvestmentStats stats = InvestmentStats.calcInvestmentStats(cumulativeReturns);
     assertEquals(1.0, stats.totalReturn, eps);
-    assertEquals(0.0, stats.cagr, eps);
+    assertEquals(1.0, stats.cagr, eps);
     assertEquals(0.0, stats.maxDrawdown, eps);
     assertEquals(0.0, stats.percentNewHigh, eps);
     assertEquals(0.0, stats.percentDown10, eps);

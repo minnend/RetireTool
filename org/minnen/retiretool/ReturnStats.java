@@ -36,24 +36,11 @@ public class ReturnStats
       // Calculate returns for all periods of the requested duration.
       Sequence returns = RetireTool.calcReturnsForDuration(cumulativeReturns, nMonthsPerPeriod);
 
-      // Calculate mean return.
-      double sum = 0.0;
-      for (int i = 0; i < returns.length(); ++i) {
-        sum += returns.get(i, 0);
-      }
-      mean = sum / returns.length();
-
-      // Use mean to calculate standard deviation.
-      double s1 = 0.0, s2 = 0.0;
-      for (int i = 0; i < returns.length(); ++i) {
-        double diff = returns.get(i, 0) - mean;
-        s1 += diff * diff;
-        s2 += diff;
-      }
-      sdev = Math.sqrt((s1 - s2 * 2.0 / returns.length()) / (returns.length() - 1));
+      double[] r = returns.extractDim(0);
+      mean = Library.mean(r);
+      sdev = Library.stdev(r);
 
       // Calculate percentiles.
-      double[] r = returns.extractDim(0);
       Arrays.sort(r);
       min = r[0];
       percentile25 = r[Math.round(r.length * 0.25f)];

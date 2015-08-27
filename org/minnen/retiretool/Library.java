@@ -240,6 +240,20 @@ public final class Library
     return sRet;
   }
 
+  public static String formatDurationMonths(int nMonths)
+  {
+    if (nMonths == 12) {
+      return "1 year";
+    }
+    if (nMonths < 18) {
+      return String.format("%d months", nMonths);
+    }
+    if (nMonths % 12 == 0) {
+      return String.format("%d years", nMonths / 12);
+    }
+    return String.format("%.1f years", nMonths / 12.0);
+  }
+
   /**
    * Convert a string to the time it represents; yyyy MM dd hh mm ss[.s*] OR yyyy MM dd hh mm ss uuu OR X+ (ms since
    * epoch)
@@ -371,20 +385,6 @@ public final class Library
     return last;
   }
 
-  public static String getDurationString(int nMonths)
-  {
-    if (nMonths == 12) {
-      return "1 year";
-    }
-    if (nMonths < 18) {
-      return String.format("%d months", nMonths);
-    }
-    if (nMonths % 12 == 0) {
-      return String.format("%d years", nMonths / 12);
-    }
-    return String.format("%.1f years", nMonths / 12.0);
-  }
-
   /**
    * Sort the given array and return the resulting indices
    * 
@@ -451,13 +451,14 @@ public final class Library
 
   /**
    * Returns index corresponding to first entry of new decade (e.g. January 1880).
+   * 
    * @param seq Sequence with timestamps
    * @return index for first decade or -1 if none
    */
   public static int FindStartofFirstDecade(Sequence seq)
   {
     // Find start of decade.
-    Calendar cal = Library.now();    
+    Calendar cal = Library.now();
     int iStart = -1;
     for (int i = 0; i < seq.length(); ++i) {
       cal.setTimeInMillis(seq.getTimeMS(i));
@@ -467,5 +468,59 @@ public final class Library
       }
     }
     return iStart;
+  }
+
+  public static double mean(double[] a)
+  {
+    double sum = 0.0;
+    for (int i = 0; i < a.length; ++i) {
+      sum += a[i];
+    }
+    return sum / a.length;
+  }
+
+  public static double variance(double[] a)
+  {
+    double mean = mean(a);
+    double s1 = 0.0, s2 = 0.0;
+    for (int i = 0; i < a.length; ++i) {
+      double diff = a[i] - mean;
+      s1 += diff * diff;
+      s2 += diff;
+    }
+    return (s1 - s2 * s2 / a.length) / (a.length - 1);
+  }
+
+  public static double stdev(double[] a)
+  {
+    return Math.sqrt(variance(a));
+  }
+
+  public static double correlation(double[] a, double[] b)
+  {
+    assert a.length == b.length;
+
+    double sa = stdev(a);
+    double sb = stdev(b);
+
+    double cov = covariance(a, b);
+    return cov / (sa * sb);
+  }
+
+  public static double covariance(double[] a, double[] b)
+  {
+    assert a.length == b.length;
+
+    double ma = mean(a);
+    double mb = mean(b);
+
+    double sum = 0.0;
+    for (int i = 0; i < a.length; ++i) {
+      double da = a[i] - ma;
+      double db = b[i] - mb;
+      sum += da * db;
+    }
+
+    return sum / (a.length - 1);
   }
 }
