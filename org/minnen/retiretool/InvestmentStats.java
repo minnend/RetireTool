@@ -30,7 +30,7 @@ public class InvestmentStats
     stats.cumulativeReturns = cumulativeReturns;
     if (cumulativeReturns != null && !cumulativeReturns.isEmpty()) {
       stats.totalReturn = cumulativeReturns.getLast(0) / cumulativeReturns.getFirst(0);
-      stats.cagr = RetireTool.getAnnualReturn(stats.totalReturn, cumulativeReturns.size() - 1);
+      stats.cagr = FinLib.getAnnualReturn(stats.totalReturn, cumulativeReturns.size() - 1);
 
       ReturnStats rstats = new ReturnStats(cumulativeReturns, 12);
       stats.meanAnnualReturn = rstats.mean;
@@ -105,7 +105,7 @@ public class InvestmentStats
   public double calcScore()
   {
     List<WeightedValue> terms = new ArrayList<WeightedValue>();
-    double multiYearReturn = RetireTool.mul2ret(Math.pow(RetireTool.ret2mul(cagr), 10));
+    double multiYearReturn = FinLib.mul2ret(Math.pow(FinLib.ret2mul(cagr), 10));
     terms.add(new WeightedValue(multiYearReturn, 1000));
     terms.add(new WeightedValue(devAnnualReturn, -10));
     terms.add(new WeightedValue(maxDrawdown + 10.0, -1000));

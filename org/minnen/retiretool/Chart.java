@@ -487,7 +487,7 @@ public class Chart
           if (stats.cagr <= baseReturn) {
             writer.write("<td>--</td>\n");
           } else {
-            double speedup = RetireTool.speedup(stats.cagr, baseReturn);
+            double speedup = FinLib.speedup(stats.cagr, baseReturn);
             writer.write(String.format("<td>%.1f%%</td>\n", speedup * 100.0));
           }
           writer.write(String.format("<td>%.2f</td>\n", stats.calcScore()));

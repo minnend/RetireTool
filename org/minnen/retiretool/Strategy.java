@@ -185,7 +185,7 @@ public class Strategy
     for (int index = 1; index < N; ++index) {
       double balance = 0.0;
       for (int i = 0; i < numAssets; ++i) {
-        value[i] *= RetireTool.getReturn(assets[i], index - 1, index);
+        value[i] *= FinLib.getReturn(assets[i], index - 1, index);
         balance += value[i];
       }
       returns.addData(balance, assets[0].getTimeMS(index));

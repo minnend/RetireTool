@@ -29,12 +29,12 @@ public class ReturnStats
     int nMonths = cumulativeReturns.size() - 1;
     assert nMonths >= 2;
     if (nMonths < nMonthsPerPeriod) {
-      mean = RetireTool.getAnnualReturn(cumulativeReturns.getLast(0) / cumulativeReturns.getFirst(0), nMonths);
+      mean = FinLib.getAnnualReturn(cumulativeReturns.getLast(0) / cumulativeReturns.getFirst(0), nMonths);
       sdev = 0.0;
       min = percentile25 = median = percentile75 = max = mean;
     } else {
       // Calculate returns for all periods of the requested duration.
-      Sequence returns = RetireTool.calcReturnsForDuration(cumulativeReturns, nMonthsPerPeriod);
+      Sequence returns = FinLib.calcReturnsForDuration(cumulativeReturns, nMonthsPerPeriod);
 
       double[] r = returns.extractDim(0);
       mean = Library.mean(r);

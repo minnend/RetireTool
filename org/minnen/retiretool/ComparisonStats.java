@@ -45,8 +45,8 @@ public class ComparisonStats
     Results results = new Results();
     results.duration = nMonths;
 
-    returns1 = RetireTool.calcReturnsForDuration(returns1, nMonths);
-    returns2 = RetireTool.calcReturnsForDuration(returns2, nMonths);
+    returns1 = FinLib.calcReturnsForDuration(returns1, nMonths);
+    returns2 = FinLib.calcReturnsForDuration(returns2, nMonths);
 
     final int N = returns1.length();
     int win1 = 0, win2 = 0;
