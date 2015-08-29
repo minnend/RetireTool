@@ -646,6 +646,45 @@ public class RetireTool
         GRAPH_WIDTH, GRAPH_HEIGHT, -1.0, 1.0, 0.25, false, 0, corr);
   }
 
+  public static Sequence calcEndBalances(Sequence cumulativeReturns, int nMonths)
+  {
+    Sequence balances = new Sequence("End Balances - " + cumulativeReturns.getName());
+    for (int iStart = 0; iStart + nMonths < cumulativeReturns.size(); ++iStart) {
+      double balance = FinLib.calcEndSavings(cumulativeReturns, 0.0, 5500.0, 2000.0, 0.1, iStart, nMonths);
+      balances.addData(balance / 1e6, cumulativeReturns.getTimeMS(iStart));
+    }
+    return balances;
+  }
+
+  public static void genEndBalanceCharts(Sequence shiller, File dir) throws IOException
+  {
+    int nMonths = 20 * 12;
+
+    int iStartData = 0; // shiller.getIndexForDate(1999, 1);
+    int iEndData = shiller.length() - 1;
+    Sequence stockData = Shiller.getStockData(shiller, iStartData, iEndData);
+    Sequence bondData = Shiller.getBondData(shiller, iStartData, iEndData);
+
+    Sequence stock = FinLib.calcSnpReturns(stockData, 0, stockData.length() - 1, FinLib.DividendMethod.MONTHLY);
+    stock.setName("Stock");
+    Sequence bonds = Bond.calcReturnsRebuy(bondData, 0, bondData.length() - 1);
+    bonds.setName("Bonds");
+
+    int percentStock = 60;
+    int percentBonds = 40;
+
+    Sequence mixed = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
+        percentBonds }, 12, 0);
+
+    Sequence ebStocks = calcEndBalances(stock, nMonths);
+    Sequence ebBonds = calcEndBalances(bonds, nMonths);
+    Sequence ebMixed = calcEndBalances(mixed, nMonths);
+
+    Chart.saveHighChart(new File(dir, "end-balance.html"), ChartType.Line,
+        String.format("End Balances (%s)", Library.formatDurationMonths(nMonths)), null, null, GRAPH_WIDTH,
+        GRAPH_HEIGHT, Double.NaN, Double.NaN, 0.5, false, 0, ebStocks, ebBonds, ebMixed);
+  }
+
   public static void main(String[] args) throws IOException
   {
     if (args.length != 2) {
@@ -684,11 +723,12 @@ public class RetireTool
     // genReturnChart(shiller, new File(dir, "cumulative-returns.html"), new File(dir, "strategy-report.html"));
     // genSMASweepChart(shiller, new File(dir, "sma-sweep.html"));
     // genMomentumSweepChart(shiller, new File(dir, "momentum-sweep.html"));
-    genStockBondMixSweepChart(shiller, new File(dir, "stock-bond-sweep.html"), new File(dir,
-        "chart-stock-bond-sweep.html"));
+    // genStockBondMixSweepChart(shiller, new File(dir, "stock-bond-sweep.html"), new File(dir,
+    // "chart-stock-bond-sweep.html"));
     // genDuelViz(shiller, dir);
     // genEfficientFrontier(shiller, dir);
     // genCorrelationGraph(shiller, dir);
+    genEndBalanceCharts(shiller, dir);
 
     System.exit(0);
 

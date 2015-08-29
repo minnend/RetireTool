@@ -411,17 +411,57 @@ public final class FinLib
     return balance;
   }
 
-  public static void calcSavings(double principal, double depStartOfYear, double depMonthly, double annualGrowthRate,
-      int years)
+  /**
+   * Compute ending balance; not inflation-adjusted, assuming we re-invest dividends
+   * 
+   * @param cumulativeReturns sequence of cumulative returns for the investment strategy
+   * @param principal initial funds
+   * @param depStartOfYear deposit at the beginning of each calendar year
+   * @param depEndOfMonth deposit at the end of each month
+   * @param expenseRatio percentage of portfolio taken by manager (2.1 = 2.1% per year)
+   * @param iStart first index in SNP
+   * @param nMonths number of months (ticks) in S&P to consider
+   * @return ending balance
+   */
+  public static double calcEndSavings(Sequence cumulativeReturns, double principal, double depStartOfYear,
+      double depEndOfMonth, double expenseRatio, int iStart, int nMonths)
   {
-    double annualReturn = ret2mul(annualGrowthRate);
+    final int nData = cumulativeReturns.size();
+    assert (iStart >= 0 && nMonths >= 1 && iStart + nMonths < nData);
+
+    Calendar cal = Library.now();
+    final double monthlyExpenseRatio = (expenseRatio / 100.0) / 12.0;
+    double balance = principal;
+    for (int i = iStart; i < iStart + nMonths; ++i) {
+      // Make deposit at start of year.
+      cal.setTimeInMillis(cumulativeReturns.getTimeMS(i));
+      if (cal.get(Calendar.MONTH) == 0) {
+        balance += depStartOfYear;
+      }
+
+      // Update balance based on investment returns.
+      balance *= getReturn(cumulativeReturns, i, i + 1);
+
+      // Broker gets their cut.
+      balance *= (1.0 - monthlyExpenseRatio);
+
+      // Deposit at end of the month.
+      balance += depEndOfMonth;
+    }
+
+    return balance;
+  }
+
+  public static void calcSavings(double principal, double depStartOfYear, double depStartOfMonth, double cagr, int years)
+  {
+    double annualReturn = ret2mul(cagr);
     double monthlyReturn = Math.pow(annualReturn, Library.ONE_TWELFTH);
     double balance = principal;
     System.out.println("Starting Balance: $" + currencyFormatter.format(balance));
     for (int year = 0; year < years; ++year) {
       balance += depStartOfYear;
       for (int month = 0; month < 12; ++month) {
-        balance += depMonthly;
+        balance += depStartOfMonth;
         balance *= monthlyReturn;
       }
       System.out.printf("End of Year %d (%d): $%s\n", year + 2015, year + 35, currencyFormatter.format(balance));
@@ -480,8 +520,7 @@ public final class FinLib
         ++n;
       }
       double successRate = (double) nOK / n;
-      System.out.printf("$%s  %d/%d = %.2f%%\n", currencyFormatter.format(principal), nOK, n,
-          100.0 * successRate);
+      System.out.printf("$%s  %d/%d = %.2f%%\n", currencyFormatter.format(principal), nOK, n, 100.0 * successRate);
       if (successRate >= minLikelihood)
         maxSavings = principal;
       else
