@@ -440,7 +440,7 @@ public class RetireTool
 
     Chart.saveLineChart(new File(dir, "rebalance-cumulative.html"), "Cumulative Market Returns", GRAPH_WIDTH,
         GRAPH_HEIGHT, true, all);
-    Chart.saveStatsTable(new File(dir, "rebalance-table.html"), GRAPH_WIDTH, true, stats);
+    Chart.saveStatsTable(new File(dir, "rebalance-table.html"), GRAPH_WIDTH, false, stats);
   }
 
   public static void genReturnChart(Sequence shiller, File fileChart, File fileTable) throws IOException
@@ -752,7 +752,7 @@ public class RetireTool
     Sequence bonds = Bond.calcReturnsRebuy(bondData, iStart, iEnd);
 
     int[] percentStock = new int[] { 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0 };
-    int rebalanceMonths = 6;
+    int rebalanceMonths = 12;
     double rebalanceBand = 0.0;
 
     Sequence[] all = new Sequence[percentStock.length];
@@ -1087,6 +1087,21 @@ public class RetireTool
   }
 
   /**
+   * Returns the "speedup factor" = number of extra years per year needed for rslow to catch rfast.
+   * 
+   * @param rslow slower return that needs more time to catch up
+   * @param rfast faster return that sets the pace
+   * @return time multiplier for rslow to catch up to rfast
+   */
+  public static double speedup(double rfast, double rslow)
+  {
+    assert rfast >= rslow;
+    double mfast = ret2mul(rfast);
+    double mslow = ret2mul(rslow);
+    return Math.log(mfast) / Math.log(mslow) - 1.0;
+  }
+
+  /**
    * Calculates S&P ROI for the given range.
    * 
    * @param snp sequence of prices (d=0) and dividends (d=1)
@@ -1223,11 +1238,11 @@ public class RetireTool
     // genReturnChart(shiller, new File(dir, "cumulative-returns.html"), new File(dir, "strategy-report.html"));
     // genSMASweepChart(shiller, new File(dir, "sma-sweep.html"));
     // genMomentumSweepChart(shiller, new File(dir, "momentum-sweep.html"));
-    // genStockBondMixSweepChart(shiller, new File(dir, "stock-bond-sweep.html"), new File(dir,
-    // "chart-stock-bond-sweep.html"));
+    genStockBondMixSweepChart(shiller, new File(dir, "stock-bond-sweep.html"), new File(dir,
+        "chart-stock-bond-sweep.html"));
     // genDuelViz(shiller, dir);
     // genEfficientFrontier(shiller, dir);
-    genCorrelationGraph(shiller, dir);
+    // genCorrelationGraph(shiller, dir);
 
     System.exit(0);
 

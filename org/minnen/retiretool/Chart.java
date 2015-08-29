@@ -438,10 +438,26 @@ public class Chart
       }
       writer.write(" <th>Best AR</th>\n");
       if (!reduced) {
+        writer.write(" <th>Speedup</th>\n");
         writer.write(" <th>Score</th>\n");
       }
       writer.write("</tr></thead>\n");
       writer.write("<tbody>\n");
+
+      // Calculate base total returns.
+      double baseReturn = 1.0;
+      if (!reduced) {
+        baseReturn = Double.POSITIVE_INFINITY;
+        for (InvestmentStats stats : strategyStats) {
+          if (stats.cagr < baseReturn) {
+            baseReturn = stats.cagr;
+          }
+        }
+        if (baseReturn < 1.0) {
+          baseReturn = 1.0;
+        }
+      }
+
       for (InvestmentStats stats : strategyStats) {
         writer.write("<tr>\n");
         String name = stats.name();
@@ -468,6 +484,12 @@ public class Chart
         }
         writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[4]));
         if (!reduced) {
+          if (stats.cagr <= baseReturn) {
+            writer.write("<td>--</td>\n");
+          } else {
+            double speedup = RetireTool.speedup(stats.cagr, baseReturn);
+            writer.write(String.format("<td>%.1f%%</td>\n", speedup * 100.0));
+          }
           writer.write(String.format("<td>%.2f</td>\n", stats.calcScore()));
         }
         writer.write("</tr>\n");
@@ -493,6 +515,7 @@ public class Chart
       }
       writer.write(" <li><b>Best AR</b> - Return of best year (biggest gain)</li>\n");
       if (!reduced) {
+        writer.write(" <li><b>Speedup</b> - Percentage ahead of base returns per year</li>");
         writer
             .write(" <li><b>Score</b> - Semi-arbitrary combination of statistics used to rank strategies (higher is better)</li>\n");
       }
