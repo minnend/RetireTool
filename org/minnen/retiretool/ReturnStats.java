@@ -5,13 +5,15 @@ import java.util.Arrays;
 public class ReturnStats
 {
   // TODO merge with InvestmentStats
-  public final Sequence cumulativeReturns;
+  public final Sequence sourceSeq;
   public final double   mean;
   public final double   sdev;
   public final double   min;
+  public final double   percentile10;
   public final double   percentile25;
   public final double   median;
   public final double   percentile75;
+  public final double   percentile90;
   public final double   max;
   public final int      nMonthsPerPeriod;
 
@@ -23,7 +25,7 @@ public class ReturnStats
    */
   public ReturnStats(Sequence cumulativeReturns, int nMonthsPerPeriod)
   {
-    this.cumulativeReturns = cumulativeReturns;
+    this.sourceSeq = cumulativeReturns;
     this.nMonthsPerPeriod = nMonthsPerPeriod;
 
     int nMonths = cumulativeReturns.size() - 1;
@@ -31,7 +33,7 @@ public class ReturnStats
     if (nMonths < nMonthsPerPeriod) {
       mean = FinLib.getAnnualReturn(cumulativeReturns.getLast(0) / cumulativeReturns.getFirst(0), nMonths);
       sdev = 0.0;
-      min = percentile25 = median = percentile75 = max = mean;
+      min = percentile10 = percentile25 = median = percentile75 = percentile90 = max = mean;
     } else {
       // Calculate returns for all periods of the requested duration.
       Sequence returns = FinLib.calcReturnsForDuration(cumulativeReturns, nMonthsPerPeriod);
@@ -43,9 +45,11 @@ public class ReturnStats
       // Calculate percentiles.
       Arrays.sort(r);
       min = r[0];
+      percentile10 = r[Math.round(r.length * 0.1f)];
       percentile25 = r[Math.round(r.length * 0.25f)];
       median = r[Math.round(r.length * 0.5f)];
       percentile75 = r[Math.round(r.length * 0.75f)];
+      percentile90 = r[Math.round(r.length * 0.9f)];
       max = r[r.length - 1];
     }
   }

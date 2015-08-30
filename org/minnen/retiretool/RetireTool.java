@@ -97,19 +97,26 @@ public class RetireTool
     // mixedB10.setName(String.format("Stock/Bonds-%d/%d (Rebalance B10)", percentStock, percentBonds));
     mixedB10.setName("10% Band");
 
-    Sequence[] all = new Sequence[] { stock, bonds, mixedNone, mixedM6, mixedM12, mixedB5, mixedB10 };
-    InvestmentStats[] stats = new InvestmentStats[all.length];
-
+    Sequence[] all = new Sequence[] { stock, mixedM6, mixedM12, mixedB5, mixedB10 }; // bonds, mixedNone, 
+    InvestmentStats[] cumulativeStats = new InvestmentStats[all.length];
     for (int i = 0; i < all.length; ++i) {
       assert all[i].length() == all[0].length();
-      stats[i] = InvestmentStats.calcInvestmentStats(all[i]);
-      all[i].setName(String.format("%s (%.2f%%)", all[i].getName(), stats[i].cagr));
-      System.out.printf("%s\n", stats[i]);
+      cumulativeStats[i] = InvestmentStats.calcInvestmentStats(all[i]);
+      all[i].setName(String.format("%s (%.2f%%)", all[i].getName(), cumulativeStats[i].cagr));
+      System.out.printf("%s\n", cumulativeStats[i]);
     }
 
     Chart.saveLineChart(new File(dir, "rebalance-cumulative.html"), "Cumulative Market Returns", GRAPH_WIDTH,
         GRAPH_HEIGHT, true, all);
-    Chart.saveStatsTable(new File(dir, "rebalance-table.html"), GRAPH_WIDTH, false, stats);
+    Chart.saveStatsTable(new File(dir, "rebalance-table.html"), GRAPH_WIDTH, false, cumulativeStats);
+
+    int duration = 10 * 12;
+    ReturnStats[] stats = new ReturnStats[all.length];
+    for (int i = 0; i < all.length; ++i) {
+      stats[i] = new ReturnStats(all[i], duration);
+    }
+    Chart.saveBoxPlots(new File(dir, "rebalance-box.html"),
+        String.format("Return Stats (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0, stats);
   }
 
   public static void genReturnChart(Sequence shiller, File fileChart, File fileTable) throws IOException
@@ -401,7 +408,7 @@ public class RetireTool
     // }
   }
 
-  public static void genStockBondMixSweepChart(Sequence shiller, File fileGraph, File fileChart) throws IOException
+  public static void genStockBondMixSweepChart(Sequence shiller, File dir) throws IOException
   {
     int iStart = 0;
     int iEnd = shiller.length() - 1;
@@ -425,14 +432,24 @@ public class RetireTool
           100 - percentStock[i] }, rebalanceMonths, rebalanceBand);
       all[i].setName(String.format("%d / %d", percentStock[i], 100 - percentStock[i]));
     }
-    InvestmentStats[] stats = InvestmentStats.calc(all);
-    Chart.saveHighChart(fileGraph, ChartType.Line, "Cumulative Market Returns: Stock/Bond Mix", null, null,
-        GRAPH_WIDTH, GRAPH_HEIGHT, 1.0, 262144.0, 1.0, true, 0, all);
-    Chart.saveStatsTable(fileChart, GRAPH_WIDTH, true, stats);
+    InvestmentStats[] cumulativeStats = InvestmentStats.calc(all);
+    Chart.saveHighChart(new File(dir, "stock-bond-sweep.html"), ChartType.Line,
+        "Cumulative Market Returns: Stock/Bond Mix", null, null, GRAPH_WIDTH, GRAPH_HEIGHT, 1.0, 262144.0, 1.0, true,
+        0, all);
+    Chart.saveStatsTable(new File(dir, "chart-stock-bond-sweep.html"), GRAPH_WIDTH, true, cumulativeStats);
 
     // all[0].setName("Stock");
     // all[all.length - 1].setName("Bonds");
     // Chart.printDecadeTable(all[0], all[all.length - 1]);
+
+    int duration = 1 * 12;
+    ReturnStats[] stats = new ReturnStats[all.length];
+    for (int i = 0; i < all.length; ++i) {
+      stats[i] = new ReturnStats(all[i], duration);
+      all[i].setName(String.format("%d/%d (%.2f%%)", percentStock[i], 100 - percentStock[i], stats[i].mean));
+    }
+    Chart.saveBoxPlots(new File(dir, "stock-bond-sweep-box.html"),
+        String.format("Return Stats (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0, stats);
   }
 
   public static void genEfficientFrontier(Sequence shiller, File dir) throws IOException
@@ -672,7 +689,6 @@ public class RetireTool
 
     int percentStock = 60;
     int percentBonds = 40;
-
     Sequence mixed = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
         percentBonds }, 12, 0);
 
@@ -723,8 +739,7 @@ public class RetireTool
     // genReturnChart(shiller, new File(dir, "cumulative-returns.html"), new File(dir, "strategy-report.html"));
     // genSMASweepChart(shiller, new File(dir, "sma-sweep.html"));
     // genMomentumSweepChart(shiller, new File(dir, "momentum-sweep.html"));
-    // genStockBondMixSweepChart(shiller, new File(dir, "stock-bond-sweep.html"), new File(dir,
-    // "chart-stock-bond-sweep.html"));
+    // genStockBondMixSweepChart(shiller, dir);
     // genDuelViz(shiller, dir);
     // genEfficientFrontier(shiller, dir);
     // genCorrelationGraph(shiller, dir);

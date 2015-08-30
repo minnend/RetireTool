@@ -17,6 +17,16 @@ public class Chart
     Line, Bar, Area, PosNegArea
   };
 
+  public static String getNameWithBreak(String name)
+  {
+    int i = name == null ? -1 : name.indexOf(" (");
+    if (i >= 0) {
+      return name.substring(0, i) + "<br/>" + name.substring(i + 1);
+    } else {
+      return name;
+    }
+  }
+
   public static String chart2name(ChartType chartType)
   {
     if (chartType == ChartType.Line) {
@@ -35,55 +45,6 @@ public class Chart
   {
     saveHighChart(file, ChartType.Line, title, null, null, width, height, Double.NaN, Double.NaN, logarithmic ? 0.5
         : Double.NaN, logarithmic, 0, seqs);
-  }
-
-  public static void saveLineGoogleChart(File file, String title, int width, int height, boolean logarithmic,
-      Sequence... seqs) throws IOException
-  {
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
-      writer.write("<html><head><script type=\"text/javascript\"\n");
-      writer
-          .write(" src=\"https://www.google.com/jsapi?autoload={ 'modules':[{ 'name':'visualization', 'version':'1', 'packages':['corechart'] }] }\"></script>\n");
-      writer.write("  <script type=\"text/javascript\">\n");
-      writer.write("  google.setOnLoadCallback(drawChart);\n");
-      writer.write("   function drawChart() {\n");
-      writer.write("    var data = google.visualization.arrayToDataTable([\n");
-      writer.write("     ['Date', ");
-      for (int i = 0; i < seqs.length; ++i) {
-        writer.write("'" + seqs[i].getName() + "'");
-        if (i < seqs.length - 1) {
-          writer.write(", ");
-        }
-      }
-      writer.write("],\n");
-      int dt = 1;
-      for (int t = 0; t < seqs[0].length(); t += dt) {
-        writer.write("     ['" + Library.formatMonth(seqs[0].getTimeMS(t)) + "', ");
-        for (int i = 0; i < seqs.length; ++i) {
-          writer.write(String.format("%.2f%s", seqs[i].get(t, 0), i == seqs.length - 1 ? "" : ", "));
-        }
-        writer.write(t + dt >= seqs[0].length() ? "]\n" : "],\n");
-      }
-      writer.write("    ]);\n");
-      writer.write("    var options = {\n");
-      writer.write("     title: '" + title + "',\n");
-      writer.write("     legend: { position: 'right' },\n");
-      writer.write("     vAxis: {\n");
-      writer.write("      logScale: " + (logarithmic ? "true" : "false") + "\n");
-      writer.write("     },\n");
-      writer.write("     chartArea: {\n");
-      writer.write("      left: 100,\n");
-      writer.write("      width: \"75%\",\n");
-      writer.write("      height: \"80%\"\n");
-      writer.write("     }\n");
-      writer.write("    };\n");
-      writer.write("    var chart = new google.visualization.LineChart(document.getElementById('chart'));\n");
-      writer.write("    chart.draw(data, options);\n");
-      writer.write("  }\n");
-      writer.write("</script></head><body>\n");
-      writer.write("<div id=\"chart\" style=\"width: " + width + "px; height: " + height + "px\"></div>\n");
-      writer.write("</body></html>\n");
-    }
   }
 
   public static void saveHighChart(File file, ChartType chartType, String title, String[] labels, String[] colors,
@@ -393,6 +354,65 @@ public class Chart
     }
   }
 
+  public static void saveBoxPlots(File file, String title, int width, int height, double minorTickInterval,
+      ReturnStats... returnStats) throws IOException
+  {
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+      writer.write("<html><head>\n");
+      writer.write("<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js\"></script>\n");
+      writer.write("<script src=\"js/highcharts.js\"></script>\n");
+      writer.write("<script src=\"http://code.highcharts.com/highcharts-more.js\"></script>\n");
+      writer.write("<script type=\"text/javascript\">\n");
+
+      writer.write("$(function () {\n");
+      writer.write(" $('#chart').highcharts({\n");
+      writer.write("  title: { text: '" + title + "' },\n");
+      writer.write("  chart: { type: 'boxplot' },\n");
+      writer.write("  xAxis: { categories: [");
+      for (int i = 0; i < returnStats.length; ++i) {
+        writer.write(String.format("'%s'", getNameWithBreak(returnStats[i].sourceSeq.getName())));
+        if (i < returnStats.length - 1) {
+          writer.write(",");
+        }
+      }
+      writer.write("  ]},\n");
+      writer.write("  yAxis: {\n");
+      writer.write("   title: { text: null },\n");
+      if (!Double.isNaN(minorTickInterval)) {
+        writer.write(String.format("   minorTickInterval: %f,\n", minorTickInterval));
+      }
+      writer.write("  },\n");
+
+      writer.write("  plotOptions: {\n");
+      writer.write("    boxplot: {\n");
+      writer.write("        fillColor: {\n");
+      writer.write("          linearGradient: { x1: 0, y1: 0, x2: 1, y2: 1 },\n");
+      writer.write("          stops: [\n");
+      writer.write("            [0, 'rgba(200,220,255,0.8)'],\n");
+      writer.write("            [1, 'rgba(180,200,240,0.8)'],\n");
+      writer.write("          ]},\n");
+      writer.write("        lineWidth: 2,\n");
+      writer.write("        medianColor: '#0C5DA5',\n");
+      writer.write("    }\n");
+      writer.write("  },\n");
+
+      writer.write("  series: [{\n");
+      writer.write("    data: [\n");
+      for (int i = 0; i < returnStats.length; ++i) {
+        ReturnStats stats = returnStats[i];
+        writer.write(String.format("     [%.2f,%.2f,%.2f,%.2f,%.2f]%s\n", stats.min, stats.percentile10, stats.median,
+            stats.percentile90, stats.max, i < returnStats.length - 1 ? "," : ""));
+      }
+      writer.write("  ]}]\n");
+      writer.write(" });\n");
+      writer.write("});\n");
+
+      writer.write("</script></head><body style=\"width:" + width + "px;\">\n");
+      writer.write("<div id=\"chart\" style=\"width:100%; height:" + height + "px;\" />\n");
+      writer.write("</body></html>\n");
+    }
+  }
+
   /**
    * Generate an HTML file with a sortable table of strategy statistics.
    * 
@@ -484,7 +504,7 @@ public class Chart
         }
         writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[4]));
         if (!reduced) {
-          if (stats.cagr <= baseReturn) {
+          if (stats.cagr < baseReturn + 0.005) {
             writer.write("<td>--</td>\n");
           } else {
             double speedup = FinLib.speedup(stats.cagr, baseReturn);
