@@ -323,10 +323,16 @@ public class RetireTool
 
     int percentStock = 60;
     int percentBonds = 40;
+    double leverage = 1.165621;
     assert percentStock + percentBonds == 100;
     Sequence mixed = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
         percentBonds }, rebalanceMonths, 0.0);
     mixed.setName(String.format("Stock/Bonds-%d/%d (M12)", percentStock, percentBonds));
+    InvestmentStats mixedStats = InvestmentStats.calcInvestmentStats(mixed);
+    System.out.printf("Before: %f (%f) (total=%f)\n", mixedStats.cagr, mixedStats.devAnnualReturn, mixedStats.totalReturn);
+    mixed = FinLib.calcLeveragedReturns(mixed, leverage);
+    mixedStats = InvestmentStats.calcInvestmentStats(mixed);
+    System.out.printf("After: %f (%f) (total=%f)\n", mixedStats.cagr, mixedStats.devAnnualReturn, mixedStats.totalReturn);
 
     // Sequence mixedB5 = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
     // percentBonds }, 0, rebalanceBand);
@@ -357,6 +363,7 @@ public class RetireTool
     Chart.saveComparisonTable(new File(dir, "duel-comparison.html"), GRAPH_WIDTH, comparison);
     InvestmentStats[] stats = InvestmentStats.calc(assets[player2], assets[player1]);
     Chart.saveStatsTable(new File(dir, "duel-chart.html"), GRAPH_WIDTH, false, stats);
+    System.out.printf("CAGR Ratio: %f / %f = %f\n", stats[0].cagr, stats[1].cagr, stats[0].cagr / stats[1].cagr);
 
     Chart.saveHighChart(new File(dir, "duel-cumulative.html"), ChartType.Line, "Cumulative Market Returns", null, null,
         GRAPH_WIDTH, GRAPH_HEIGHT, 1, 1048576, 1.0, true, 0, assets[player2], assets[player1]);
@@ -740,10 +747,10 @@ public class RetireTool
     // genSMASweepChart(shiller, new File(dir, "sma-sweep.html"));
     // genMomentumSweepChart(shiller, new File(dir, "momentum-sweep.html"));
     // genStockBondMixSweepChart(shiller, dir);
-    // genDuelViz(shiller, dir);
+    genDuelViz(shiller, dir);
     // genEfficientFrontier(shiller, dir);
     // genCorrelationGraph(shiller, dir);
-    genEndBalanceCharts(shiller, dir);
+    // genEndBalanceCharts(shiller, dir);
 
     System.exit(0);
 

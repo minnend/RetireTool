@@ -606,4 +606,16 @@ public final class FinLib
     return corr;
   }
 
+  public static Sequence calcLeveragedReturns(Sequence returns, double leverage)
+  {
+    Sequence leveraged = new Sequence(String.format("%s (L=%.3f)", returns.getName(), leverage));
+    leveraged.addData(new FeatureVec(1, returns.get(0, 0)), returns.getTimeMS(0));
+    for (int i = 1; i < returns.size(); ++i) {
+      double r = getReturn(returns, i - 1, i);
+      double lr = leverage * (r - 1.0) + 1.0;
+      double v = Math.max(0.0, lr * leveraged.get(i - 1, 0));
+      leveraged.addData(new FeatureVec(1, v), returns.getTimeMS(i));
+    }
+    return leveraged;
+  }
 }
