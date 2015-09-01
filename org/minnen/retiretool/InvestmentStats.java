@@ -22,6 +22,7 @@ public class InvestmentStats
   public double   percentUp;
   public double   percentDown;
   public double[] annualPercentiles;
+  public double   leverage         = 1.0;
 
   public static InvestmentStats calcInvestmentStats(Sequence cumulativeReturns)
   {

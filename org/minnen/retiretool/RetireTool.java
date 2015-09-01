@@ -97,7 +97,7 @@ public class RetireTool
     // mixedB10.setName(String.format("Stock/Bonds-%d/%d (Rebalance B10)", percentStock, percentBonds));
     mixedB10.setName("10% Band");
 
-    Sequence[] all = new Sequence[] { stock, mixedM6, mixedM12, mixedB5, mixedB10 }; // bonds, mixedNone, 
+    Sequence[] all = new Sequence[] { stock, mixedM6, mixedM12, mixedB5, mixedB10 }; // bonds, mixedNone,
     InvestmentStats[] cumulativeStats = new InvestmentStats[all.length];
     for (int i = 0; i < all.length; ++i) {
       assert all[i].length() == all[0].length();
@@ -116,7 +116,8 @@ public class RetireTool
       stats[i] = new ReturnStats(all[i], duration);
     }
     Chart.saveBoxPlots(new File(dir, "rebalance-box.html"),
-        String.format("Return Stats (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0, stats);
+        String.format("Return Stats (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
+        stats);
   }
 
   public static void genReturnChart(Sequence shiller, File fileChart, File fileTable) throws IOException
@@ -318,21 +319,21 @@ public class RetireTool
     stockAll.setName("Stock");
     bondsAll.setName("Bonds");
 
+    // double leverage = 1.8794;
+    // bondsAll = FinLib.calcLeveragedReturns(bondsAll, leverage);
+
     Sequence stock = stockAll.subseq(iStartReturns, iEnd - iStartReturns + 1);
     Sequence bonds = bondsAll.subseq(iStartReturns, iEnd - iStartReturns + 1);
 
     int percentStock = 60;
     int percentBonds = 40;
-    double leverage = 1.165621;
     assert percentStock + percentBonds == 100;
     Sequence mixed = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
         percentBonds }, rebalanceMonths, 0.0);
     mixed.setName(String.format("Stock/Bonds-%d/%d (M12)", percentStock, percentBonds));
-    InvestmentStats mixedStats = InvestmentStats.calcInvestmentStats(mixed);
-    System.out.printf("Before: %f (%f) (total=%f)\n", mixedStats.cagr, mixedStats.devAnnualReturn, mixedStats.totalReturn);
-    mixed = FinLib.calcLeveragedReturns(mixed, leverage);
-    mixedStats = InvestmentStats.calcInvestmentStats(mixed);
-    System.out.printf("After: %f (%f) (total=%f)\n", mixedStats.cagr, mixedStats.devAnnualReturn, mixedStats.totalReturn);
+
+    // double leverage = 1.167; // 1.8794;
+    // mixed = FinLib.calcLeveragedReturns(mixed, leverage);
 
     // Sequence mixedB5 = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
     // percentBonds }, 0, rebalanceBand);
@@ -363,7 +364,6 @@ public class RetireTool
     Chart.saveComparisonTable(new File(dir, "duel-comparison.html"), GRAPH_WIDTH, comparison);
     InvestmentStats[] stats = InvestmentStats.calc(assets[player2], assets[player1]);
     Chart.saveStatsTable(new File(dir, "duel-chart.html"), GRAPH_WIDTH, false, stats);
-    System.out.printf("CAGR Ratio: %f / %f = %f\n", stats[0].cagr, stats[1].cagr, stats[0].cagr / stats[1].cagr);
 
     Chart.saveHighChart(new File(dir, "duel-cumulative.html"), ChartType.Line, "Cumulative Market Returns", null, null,
         GRAPH_WIDTH, GRAPH_HEIGHT, 1, 1048576, 1.0, true, 0, assets[player2], assets[player1]);
@@ -432,6 +432,7 @@ public class RetireTool
     int[] percentStock = new int[] { 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0 };
     int rebalanceMonths = 12;
     double rebalanceBand = 0.0;
+    boolean useLeverage = true;
 
     Sequence[] all = new Sequence[percentStock.length];
     for (int i = 0; i < percentStock.length; ++i) {
@@ -440,10 +441,20 @@ public class RetireTool
       all[i].setName(String.format("%d / %d", percentStock[i], 100 - percentStock[i]));
     }
     InvestmentStats[] cumulativeStats = InvestmentStats.calc(all);
+
+    if (useLeverage) {
+      for (int i = 0; i < all.length; ++i) {
+        double leverage = FinLib.calcEqualizingLeverage(all[i], cumulativeStats[0].cagr);
+        all[i] = FinLib.calcLeveragedReturns(all[i], leverage);
+        cumulativeStats[i] = InvestmentStats.calcInvestmentStats(all[i]);
+        cumulativeStats[i].leverage = leverage;
+      }
+    }
+
     Chart.saveHighChart(new File(dir, "stock-bond-sweep.html"), ChartType.Line,
         "Cumulative Market Returns: Stock/Bond Mix", null, null, GRAPH_WIDTH, GRAPH_HEIGHT, 1.0, 262144.0, 1.0, true,
         0, all);
-    Chart.saveStatsTable(new File(dir, "chart-stock-bond-sweep.html"), GRAPH_WIDTH, true, cumulativeStats);
+    Chart.saveStatsTable(new File(dir, "chart-stock-bond-sweep.html"), GRAPH_WIDTH, false, cumulativeStats);
 
     // all[0].setName("Stock");
     // all[all.length - 1].setName("Bonds");
@@ -456,7 +467,8 @@ public class RetireTool
       all[i].setName(String.format("%d/%d (%.2f%%)", percentStock[i], 100 - percentStock[i], stats[i].mean));
     }
     Chart.saveBoxPlots(new File(dir, "stock-bond-sweep-box.html"),
-        String.format("Return Stats (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0, stats);
+        String.format("Return Stats (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
+        stats);
   }
 
   public static void genEfficientFrontier(Sequence shiller, File dir) throws IOException
@@ -746,8 +758,8 @@ public class RetireTool
     // genReturnChart(shiller, new File(dir, "cumulative-returns.html"), new File(dir, "strategy-report.html"));
     // genSMASweepChart(shiller, new File(dir, "sma-sweep.html"));
     // genMomentumSweepChart(shiller, new File(dir, "momentum-sweep.html"));
-    // genStockBondMixSweepChart(shiller, dir);
-    genDuelViz(shiller, dir);
+    genStockBondMixSweepChart(shiller, dir);
+    // genDuelViz(shiller, dir);
     // genEfficientFrontier(shiller, dir);
     // genCorrelationGraph(shiller, dir);
     // genEndBalanceCharts(shiller, dir);

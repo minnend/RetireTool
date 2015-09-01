@@ -426,6 +426,15 @@ public class Chart
   public static void saveStatsTable(File file, int width, boolean reduced, InvestmentStats... strategyStats)
       throws IOException
   {
+    // Figure out if leverage should be included.
+    boolean includeLeverage = false;
+    for (InvestmentStats stats : strategyStats) {
+      if (stats.leverage != 1.0) {
+        includeLeverage = true;
+        break;
+      }
+    }
+    
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
       writer.write("<html><head>\n");
       writer.write("<title>Strategy Statistics</title>\n");
@@ -443,8 +452,15 @@ public class Chart
       writer.write(" <th>Strategy</th>\n");
       writer.write(" <th>CAGR</th>\n");
       writer.write(" <th>StdDev</th>\n");
+      if (includeLeverage) {
+        writer.write(" <th>Leverage</th>\n");
+      }
+      if (!reduced) {
+        writer.write(" <th>Risk-Adjusted<br/>Return</th>\n");
+      }
       writer.write(" <th>Drawdown</th>\n");
       writer.write(" <th>Down 10%</th>\n");
+      /*
       if (!reduced) {
         writer.write(" <th>New High %</th>\n");
       }
@@ -461,6 +477,7 @@ public class Chart
         writer.write(" <th>Speedup</th>\n");
         writer.write(" <th>Score</th>\n");
       }
+      */
       writer.write("</tr></thead>\n");
       writer.write("<tbody>\n");
 
@@ -489,8 +506,16 @@ public class Chart
         writer.write(String.format("<td><b>%s</b></td>\n", name));
         writer.write(String.format("<td>%.2f</td>\n", stats.cagr));
         writer.write(String.format("<td>%.2f</td>\n", stats.devAnnualReturn));
+        if (includeLeverage) {
+          writer.write(String.format("<td>%.2f</td>\n", stats.leverage));
+        }
+        if (!reduced) {
+          writer.write(String.format("<td>%.2f</td>\n", stats.cagr * strategyStats[0].devAnnualReturn
+              / stats.devAnnualReturn));
+        }
         writer.write(String.format("<td>%.2f</td>\n", stats.maxDrawdown));
         writer.write(String.format("<td>%.2f</td>\n", stats.percentDown10));
+        /*
         if (!reduced) {
           writer.write(String.format("<td>%.2f</td>\n", stats.percentNewHigh));
         }
@@ -512,6 +537,7 @@ public class Chart
           }
           writer.write(String.format("<td>%.2f</td>\n", stats.calcScore()));
         }
+        */
         writer.write("</tr>\n");
       }
       writer.write("</tbody>\n</table>\n");
@@ -520,6 +546,12 @@ public class Chart
       writer.write(" <li><b>Strategy</b> - Name of the strategy or asset class</li>\n");
       writer.write(" <li><b>CAGR</b> - Compound Annual Growth Rate</li>\n");
       writer.write(" <li><b>StdDev</b> - Standard deviation of annual returns</li>\n");
+      if (includeLeverage) {
+        writer.write(" <li><b>Leverage</b> - Multiplier for investments (via borrowing additional funds)</li>\n");
+      }
+      if (!reduced) {
+        writer.write(" <li><b>Risk-Adjusted Return</b> - Adjusted CAGR after accounting for volatility</li>\n");
+      }
       writer.write(" <li><b>Drawdown</b> - Maximum drawdown (largest gap from peak to trough)</li>\n");
       writer.write(" <li><b>Down 10%</b> - Percentage of time strategy is 10% or more below the previous peak</li>\n");
       if (!reduced) {

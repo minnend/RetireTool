@@ -606,16 +606,45 @@ public final class FinLib
     return corr;
   }
 
-  public static Sequence calcLeveragedReturns(Sequence returns, double leverage)
+  public static Sequence calcLeveragedReturns(Sequence cumulativeReturns, double leverage)
   {
-    Sequence leveraged = new Sequence(String.format("%s (L=%.3f)", returns.getName(), leverage));
-    leveraged.addData(new FeatureVec(1, returns.get(0, 0)), returns.getTimeMS(0));
-    for (int i = 1; i < returns.size(); ++i) {
-      double r = getReturn(returns, i - 1, i);
+    if (leverage == 1.0) {
+      return cumulativeReturns;
+    }
+
+    Sequence leveraged = new Sequence(String.format("%s (L=%.3f)", cumulativeReturns.getName(), leverage));
+    leveraged.addData(new FeatureVec(1, cumulativeReturns.get(0, 0)), cumulativeReturns.getTimeMS(0));
+    for (int i = 1; i < cumulativeReturns.size(); ++i) {
+      double r = getReturn(cumulativeReturns, i - 1, i);
       double lr = leverage * (r - 1.0) + 1.0;
       double v = Math.max(0.0, lr * leveraged.get(i - 1, 0));
-      leveraged.addData(new FeatureVec(1, v), returns.getTimeMS(i));
+      leveraged.addData(new FeatureVec(1, v), cumulativeReturns.getTimeMS(i));
     }
     return leveraged;
+  }
+
+  public static double calcEqualizingLeverage(Sequence cumulativeReturns, double desiredCAGR)
+  {
+    InvestmentStats stats = InvestmentStats.calcInvestmentStats(cumulativeReturns);
+    double ratio = desiredCAGR / stats.cagr;
+    double low = ratio / 2.0;
+    double high = ratio * 2.0;
+    double leverage = 1.0;
+
+    int iter = 1;
+    while (iter < 100 && Math.abs(stats.cagr - desiredCAGR) > 1e-5) {
+      leverage = (low + high) / 2.0;
+      Sequence levSeq = calcLeveragedReturns(cumulativeReturns, leverage);
+      stats = InvestmentStats.calcInvestmentStats(levSeq);
+      // System.out.printf("%d: [%f, %f] -> %f (%f)\n", iter, low, high, stats.cagr, desiredCAGR);
+      if (stats.cagr < desiredCAGR) {
+        low = leverage;
+      } else {
+        high = leverage;
+      }
+      ++iter;
+    }
+
+    return leverage;
   }
 }
