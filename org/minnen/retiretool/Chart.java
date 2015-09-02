@@ -434,14 +434,14 @@ public class Chart
         break;
       }
     }
-    
+
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
       writer.write("<html><head>\n");
       writer.write("<title>Strategy Statistics</title>\n");
       writer.write("<script src=\"http://code.jquery.com/jquery.min.js\"></script>\n");
       writer.write("<script type=\"text/javascript\" src=\"js/jquery.tablesorter.min.js\"></script>\n");
       writer.write("<script type=\"text/javascript\">\n");
-      writer.write(" $(document).ready(function() { $(\"#myTable\").tablesorter( {widgets: ['zebra']} ); } );\n");
+      writer.write(" $(document).ready(function() { $(\"#statsTable\").tablesorter( {widgets: ['zebra']} ); } );\n");
       writer.write("</script>\n");
       writer
           .write("<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
@@ -460,7 +460,7 @@ public class Chart
       }
       writer.write(" <th>Drawdown</th>\n");
       writer.write(" <th>Down 10%</th>\n");
-      /*
+
       if (!reduced) {
         writer.write(" <th>New High %</th>\n");
       }
@@ -477,7 +477,7 @@ public class Chart
         writer.write(" <th>Speedup</th>\n");
         writer.write(" <th>Score</th>\n");
       }
-      */
+
       writer.write("</tr></thead>\n");
       writer.write("<tbody>\n");
 
@@ -515,7 +515,7 @@ public class Chart
         }
         writer.write(String.format("<td>%.2f</td>\n", stats.maxDrawdown));
         writer.write(String.format("<td>%.2f</td>\n", stats.percentDown10));
-        /*
+
         if (!reduced) {
           writer.write(String.format("<td>%.2f</td>\n", stats.percentNewHigh));
         }
@@ -537,7 +537,7 @@ public class Chart
           }
           writer.write(String.format("<td>%.2f</td>\n", stats.calcScore()));
         }
-        */
+
         writer.write("</tr>\n");
       }
       writer.write("</tbody>\n</table>\n");

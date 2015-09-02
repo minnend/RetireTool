@@ -56,7 +56,7 @@ public class Shiller
   /** @return Sequence containing bond data in the given range (inclusive). */
   public static Sequence getBondData(Sequence shiller, int iStart, int iEnd)
   {
-    Sequence seq = new Sequence("US 10-year Bonds");
+    Sequence seq = new Sequence("10-Year Treasury Notes");
     for (int i = iStart; i <= iEnd; ++i) {
       seq.addData(shiller.get(i, GS10), shiller.getTimeMS(i));
     }

@@ -18,7 +18,7 @@ public final class FinLib
     Ignore, Include
   };
 
-  public static DecimalFormat currencyFormatter = new DecimalFormat("#,###.00");
+  public static DecimalFormat currencyFormatter = new DecimalFormat("#,##0.00");
 
   /**
    * Compute compound annual growth rate (CAGR) based on total multiplier.
@@ -34,6 +34,16 @@ public final class FinLib
     }
     // x^n = y -> x = y ^ (1/n)
     return (Math.pow(totalReturn, 12.0 / nMonths) - 1) * 100;
+  }
+
+  public static double getFutureValue(double presentValue, double interestRate, int nMonths)
+  {
+    return presentValue * Math.pow(FinLib.ret2mul(interestRate), nMonths / 12.0);
+  }
+
+  public static double getPresentValue(double futureValue, double interestRate, int nMonths)
+  {
+    return futureValue * Math.pow(FinLib.ret2mul(interestRate), -nMonths / 12.0);
   }
 
   /**

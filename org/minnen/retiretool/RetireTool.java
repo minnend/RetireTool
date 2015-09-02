@@ -67,7 +67,7 @@ public class RetireTool
     Sequence snpData = Shiller.getStockData(shiller, iStartData, iEndData);
     Sequence bondData = Shiller.getBondData(shiller, iStartData, iEndData);
 
-    Sequence bonds = Bond.calcReturnsRebuy(bondData, iStartData, iEndData);
+    Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStartData, iEndData);
     bonds.setName("Bonds");
     Sequence stock = FinLib.calcSnpReturns(snpData, iStartData, iEndData - iStartData, FinLib.DividendMethod.MONTHLY);
     stock.setName("Stock");
@@ -120,8 +120,11 @@ public class RetireTool
         stats);
   }
 
-  public static void genReturnChart(Sequence shiller, File fileChart, File fileTable) throws IOException
+  public static void genReturnChart(Sequence shiller, Sequence tbills, File fileChart, File fileTable)
+      throws IOException
   {
+    assert shiller.length() == tbills.length();
+
     int iStartData = 0;
     int iEndData = shiller.length() - 1;
 
@@ -140,16 +143,19 @@ public class RetireTool
     Sequence snpData = Shiller.getStockData(shiller, iStartData, iEndData);
     Sequence bondData = Shiller.getBondData(shiller, iStartData, iEndData);
 
-    Sequence bondsAll = Bond.calcReturnsRebuy(bondData, iStartData, iEndData);
+    Sequence bondsAll = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStartData, iEndData);
     Sequence stockAll = FinLib
         .calcSnpReturns(snpData, iStartData, iEndData - iStartData, FinLib.DividendMethod.MONTHLY);
     // Sequence stockAllNoDiv = calcSnpReturns(snpData, iStartData, iEndData - iStartData,
     // FinLib.DividendMethod.NO_REINVEST);
+    Sequence billsAll = Bond.calcReturnsRebuy(BondFactory.bill3Month, tbills, iStartData, iEndData);
 
-    Sequence bonds = bondsAll.subseq(iStartReturns, iEndData - iStartReturns + 1);
     Sequence stock = stockAll.subseq(iStartReturns, iEndData - iStartReturns + 1);
+    Sequence bonds = bondsAll.subseq(iStartReturns, iEndData - iStartReturns + 1);
+    Sequence bills = billsAll.subseq(iStartReturns, iEndData - iStartReturns + 1);
 
-    Sequence bondsHold = Bond.calcReturnsHold(bondData, iStartReturns, iEndData);
+    Sequence bondsHold = Bond.calcReturnsHold(BondFactory.note10Year, bondData, iStartReturns, iEndData);
+    Sequence billsHold = Bond.calcReturnsHold(BondFactory.bill3Month, tbills, iStartReturns, iEndData);
 
     Sequence stockNoDiv = FinLib.calcSnpReturns(snpData, iStartReturns, iEndData - iStartReturns,
         FinLib.DividendMethod.NO_REINVEST);
@@ -173,8 +179,11 @@ public class RetireTool
         rebalanceMonths, rebalanceBand);
     daa.setName("DAA");
 
-    Sequence[] all = new Sequence[] { bonds, bondsHold, stock, stockNoDiv, mixed, momentum, sma, raa, daa,
-        multiMomRisky, multiMomMod, multiMomSafe, multiSmaRisky, multiSmaMod, multiSmaSafe };
+    Sequence[] all = new Sequence[] { bills, billsHold, bonds, bondsHold, stock, stockNoDiv };
+    // Sequence[] all = new Sequence[] { bonds, bondsHold, stock, stockNoDiv, mixed, momentum, sma, raa, daa,
+    // multiMomRisky, multiMomMod, multiMomSafe, multiSmaRisky, multiSmaMod, multiSmaSafe };
+    // Sequence[] all = new Sequence[] { stock, momentum, sma, raa, daa, multiMomRisky, multiMomMod, multiMomSafe,
+    // multiSmaRisky, multiSmaMod, multiSmaSafe };
     InvestmentStats[] stats = new InvestmentStats[all.length];
     double[] scores = new double[all.length];
 
@@ -185,8 +194,9 @@ public class RetireTool
       all[i].setName(String.format("%s (%.2f%%)", all[i].getName(), stats[i].cagr));
     }
 
-    Chart.saveLineChart(fileChart, "Cumulative Market Returns", GRAPH_WIDTH, GRAPH_HEIGHT, true, multiSmaRisky, daa,
-        multiMomSafe, sma, raa, momentum, stock, mixed, bonds, bondsHold);
+    // Chart.saveLineChart(fileChart, "Cumulative Market Returns", GRAPH_WIDTH, GRAPH_HEIGHT, true, multiSmaRisky, daa,
+    // multiMomSafe, sma, raa, momentum, stock, mixed, bonds, bondsHold);
+    Chart.saveLineChart(fileChart, "Cumulative Market Returns", GRAPH_WIDTH, GRAPH_HEIGHT, true, all);
 
     int[] ii = Library.sort(scores, false);
     for (int i = 0; i < all.length; ++i) {
@@ -218,7 +228,7 @@ public class RetireTool
     Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
 
     Sequence stockAll = FinLib.calcSnpReturns(snpData, iStart, iEnd - iStart, FinLib.DividendMethod.MONTHLY);
-    Sequence bondsAll = Bond.calcReturnsRebuy(bondData, iStart, iEnd);
+    Sequence bondsAll = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStart, iEnd);
 
     // Chart.saveLineChart(new File(dir, "stock-prices.html"), "S&P 500 Prices", GRAPH_WIDTH, GRAPH_HEIGHT, false,
     // snpData);
@@ -300,9 +310,10 @@ public class RetireTool
         Double.NaN, Double.NaN, false, 0, returns[0]);
   }
 
-  public static void genDuelViz(Sequence shiller, File dir) throws IOException
+  public static void genDuelViz(Sequence shiller, Sequence tbills, File dir) throws IOException
   {
     assert dir.isDirectory();
+    assert shiller.length() == tbills.length();
 
     int nMonths = 10 * 12;
     int rebalanceMonths = 12;
@@ -315,15 +326,19 @@ public class RetireTool
     Sequence bondData = Shiller.getBondData(shiller, iStartData, iEnd);
 
     Sequence stockAll = FinLib.calcSnpReturns(stockData, iStartData, iEnd - iStartData, FinLib.DividendMethod.MONTHLY);
-    Sequence bondsAll = Bond.calcReturnsRebuy(bondData, iStartData, iEnd);
+    Sequence bondsAll = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStartData, iEnd);
+    Sequence billsAll = Bond.calcReturnsRebuy(BondFactory.bill3Month, tbills, iStartData, iEnd);
+
     stockAll.setName("Stock");
     bondsAll.setName("Bonds");
+    billsAll.setName("Bills");
 
     // double leverage = 1.8794;
     // bondsAll = FinLib.calcLeveragedReturns(bondsAll, leverage);
 
     Sequence stock = stockAll.subseq(iStartReturns, iEnd - iStartReturns + 1);
     Sequence bonds = bondsAll.subseq(iStartReturns, iEnd - iStartReturns + 1);
+    Sequence bills = billsAll.subseq(iStartReturns, iEnd - iStartReturns + 1);
 
     int percentStock = 60;
     int percentBonds = 40;
@@ -355,18 +370,18 @@ public class RetireTool
         rebalanceMonths, rebalanceBand);
     daa.setName("DAA");
 
-    Sequence[] assets = new Sequence[] { stock, bonds, mixed, multiMomRisky, multiMomMod, multiMomSafe, multiSmaRisky,
-        multiSmaMod, multiSmaSafe, daa };
+    Sequence[] assets = new Sequence[] { stock, bonds, bills, mixed, multiMomRisky, multiMomMod, multiMomSafe,
+        multiSmaRisky, multiSmaMod, multiSmaSafe, daa };
 
     int player1 = 2;
-    int player2 = 0;
+    int player2 = 1;
     ComparisonStats comparison = ComparisonStats.calc(assets[player2], assets[player1]);
     Chart.saveComparisonTable(new File(dir, "duel-comparison.html"), GRAPH_WIDTH, comparison);
     InvestmentStats[] stats = InvestmentStats.calc(assets[player2], assets[player1]);
     Chart.saveStatsTable(new File(dir, "duel-chart.html"), GRAPH_WIDTH, false, stats);
 
     Chart.saveHighChart(new File(dir, "duel-cumulative.html"), ChartType.Line, "Cumulative Market Returns", null, null,
-        GRAPH_WIDTH, GRAPH_HEIGHT, 1, 1048576, 1.0, true, 0, assets[player2], assets[player1]);
+        GRAPH_WIDTH, GRAPH_HEIGHT, 1, Double.NaN, 1.0, true, 0, assets[player2], assets[player1]);
 
     // Calculate returns for each strategy for the requested duration.
     Sequence[] returns = new Sequence[assets.length];
@@ -376,6 +391,9 @@ public class RetireTool
     }
     Sequence returnsA = returns[player1];
     Sequence returnsB = returns[player2];
+
+//    ReturnStats.printDurationTable(assets[player1]);
+//    ReturnStats.printDurationTable(assets[player2]);
 
     // Generate scatter plot comparing results.
     String title = String.format("%s vs. %s (%s)", returnsB.getName(), returnsA.getName(),
@@ -427,7 +445,7 @@ public class RetireTool
     Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
 
     Sequence snp = FinLib.calcSnpReturns(snpData, iStart, iEnd - iStart, FinLib.DividendMethod.MONTHLY);
-    Sequence bonds = Bond.calcReturnsRebuy(bondData, iStart, iEnd);
+    Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStart, iEnd);
 
     int[] percentStock = new int[] { 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0 };
     int rebalanceMonths = 12;
@@ -480,7 +498,7 @@ public class RetireTool
     Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
 
     Sequence stock = FinLib.calcSnpReturns(stockData, iStart, iEnd - iStart, FinLib.DividendMethod.MONTHLY);
-    Sequence bonds = Bond.calcReturnsRebuy(bondData, iStart, iEnd);
+    Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStart, iEnd);
     assert stock.length() == bonds.length();
 
     int[] percentStock = new int[] { 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0 };
@@ -495,7 +513,7 @@ public class RetireTool
     for (int i = iDecadeStart; i + 120 < stockData.length(); i += 120) {
       cal.setTimeInMillis(stockData.getTimeMS(i));
       Sequence decadeStock = FinLib.calcSnpReturns(stockData, i, 120, FinLib.DividendMethod.MONTHLY);
-      Sequence decadeBonds = Bond.calcReturnsRebuy(bondData, i, i + 120);
+      Sequence decadeBonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, i, i + 120);
       assert decadeStock.length() == decadeBonds.length();
 
       Sequence decade = new Sequence(String.format("%ss", cal.get(Calendar.YEAR)));
@@ -555,7 +573,7 @@ public class RetireTool
     Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
 
     Sequence stock = FinLib.calcSnpReturns(snpData, iStart, iEnd - iStart, FinLib.DividendMethod.MONTHLY);
-    Sequence bonds = Bond.calcReturnsRebuy(bondData, iStart, iEnd);
+    Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStart, iEnd);
 
     int[] months = new int[] { 1, 2, 3, 4, 5, 6, 9, 10, 12 }; // , 15, 18, 21, 24, 30, 36 };
 
@@ -584,7 +602,7 @@ public class RetireTool
     Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
 
     Sequence snp = FinLib.calcSnpReturns(snpData, iStart, iEnd - iStart, FinLib.DividendMethod.MONTHLY);
-    Sequence bonds = Bond.calcReturnsRebuy(bondData, iStart, iEnd);
+    Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStart, iEnd);
 
     int[] months = new int[] { 1, 2, 3, 5, 6, 9, 10, 12 }; // , 15, 18, 21, 24, 30, 36 };
 
@@ -617,7 +635,7 @@ public class RetireTool
     Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
 
     Sequence cumulativeSNP = FinLib.calcSnpReturns(snpData, iStart, iEnd - iStart, FinLib.DividendMethod.MONTHLY);
-    Sequence cumulativeBonds = Bond.calcReturnsRebuy(bondData, iStart, iEnd);
+    Sequence cumulativeBonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStart, iEnd);
     Sequence cumulativeMixed = Strategy.calcMixedReturns(new Sequence[] { cumulativeSNP, cumulativeBonds },
         new double[] { percentStock, percentBonds }, 6, 0.0);
     assert cumulativeSNP.length() == cumulativeBonds.length();
@@ -658,10 +676,11 @@ public class RetireTool
     Chart.saveLineChart(file, title, GRAPH_WIDTH, GRAPH_HEIGHT, false, snp, bonds);
   }
 
-  public static void genInterestRateGraph(Sequence shiller, File file) throws IOException
+  public static void genInterestRateGraph(Sequence shiller, Sequence tbills, File file) throws IOException
   {
-    Chart.saveHighChart(file, ChartType.Area, "Interest Rates", null, null, GRAPH_WIDTH, GRAPH_HEIGHT, 0.0, 16.0, 1.0,
-        false, Shiller.GS10, shiller);
+    Sequence bonds = Shiller.getBondData(shiller);
+    Chart.saveHighChart(file, ChartType.Line, "Interest Rates", null, null, GRAPH_WIDTH, GRAPH_HEIGHT, 0.0, 16.0, 1.0,
+        false, 0, bonds, tbills);
   }
 
   public static void genCorrelationGraph(Sequence shiller, File dir) throws IOException
@@ -672,7 +691,7 @@ public class RetireTool
     Sequence stockData = Shiller.getStockData(shiller, iStartData, iEndData);
     Sequence bondData = Shiller.getBondData(shiller, iStartData, iEndData);
 
-    Sequence bonds = Bond.calcReturnsRebuy(bondData, 0, bondData.length() - 1);
+    Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, bondData.length() - 1);
     bonds.setName("Bonds");
     Sequence stock = FinLib.calcSnpReturns(stockData, 0, stockData.length() - 1, FinLib.DividendMethod.MONTHLY);
     stock.setName("Stock");
@@ -703,7 +722,7 @@ public class RetireTool
 
     Sequence stock = FinLib.calcSnpReturns(stockData, 0, stockData.length() - 1, FinLib.DividendMethod.MONTHLY);
     stock.setName("Stock");
-    Sequence bonds = Bond.calcReturnsRebuy(bondData, 0, bondData.length() - 1);
+    Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, bondData.length() - 1);
     bonds.setName("Bonds");
 
     int percentStock = 60;
@@ -729,6 +748,7 @@ public class RetireTool
 
     Sequence shiller = DataIO.loadShillerData(args[0]);
     Sequence tbills = DataIO.loadDateValueCSV(args[1]);
+    tbills.setName("3-Month Treasury Bills");
 
     long commonStart = Library.calcCommonStart(shiller, tbills);
     long commonEnd = Library.calcCommonEnd(shiller, tbills);
@@ -739,8 +759,8 @@ public class RetireTool
         Library.formatDate(tbills.getEndMS()));
     System.out.printf("Common: [%s] -> [%s]\n", Library.formatDate(commonStart), Library.formatDate(commonEnd));
 
-    // shiller = shiller.subseq(commonStart, commonEnd);
-    // tbills = tbills.subseq(commonStart, commonEnd);
+    shiller = shiller.subseq(commonStart, commonEnd);
+    tbills = tbills.subseq(commonStart, commonEnd);
 
     // shiller.printWithdrawalLikelihoods(30, 0.1);
     // shiller.genReturnChart(Inflation.Ignore, new File("g:/test.html"));
@@ -752,14 +772,14 @@ public class RetireTool
     File dir = new File("g:/web/");
     assert dir.isDirectory();
 
-    // genInterestRateGraph(shiller, new File(dir, "interest-rates.html"));
+    genInterestRateGraph(shiller, tbills, new File(dir, "interest-rates.html"));
     // compareRebalancingMethods(shiller, dir);
     // genReturnViz(shiller, new File(dir, "histogram-returns.html"), new File(dir, "future-returns.html"));
-    // genReturnChart(shiller, new File(dir, "cumulative-returns.html"), new File(dir, "strategy-report.html"));
+    // genReturnChart(shiller, tbills, new File(dir, "cumulative-returns.html"), new File(dir, "strategy-report.html"));
     // genSMASweepChart(shiller, new File(dir, "sma-sweep.html"));
     // genMomentumSweepChart(shiller, new File(dir, "momentum-sweep.html"));
-    genStockBondMixSweepChart(shiller, dir);
-    // genDuelViz(shiller, dir);
+    // genStockBondMixSweepChart(shiller, dir);
+    genDuelViz(shiller, tbills, dir);
     // genEfficientFrontier(shiller, dir);
     // genCorrelationGraph(shiller, dir);
     // genEndBalanceCharts(shiller, dir);

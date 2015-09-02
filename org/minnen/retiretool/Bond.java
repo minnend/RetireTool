@@ -25,9 +25,15 @@ public class Bond
     this.annualFreq = annualFreq;
     this.startIndex = startIndex;
     this.endIndex = endIndex;
-    assert Math.abs(par - price(startIndex)) < 0.01;
   }
 
+  /**
+   * Create a 10-year bond that pays semi-annually.
+   * 
+   * @param bondData interest rate data
+   * @param par face value of bond
+   * @param startIndex index into bondData when the bond is purchased
+   */
   public Bond(Sequence bondData, double par, int startIndex)
   {
     this(bondData, par, par * bondData.get(startIndex, 0) / 100.0, 2, startIndex, startIndex + 120);
@@ -56,7 +62,11 @@ public class Bond
 
   public double couponPayment()
   {
-    return coupon / annualFreq;
+    if (coupon == 0.0 || annualFreq == 0.0) {
+      return 0.0;
+    } else {
+      return coupon / annualFreq;
+    }
   }
 
   public double paymentThisMonth(int index)
@@ -66,9 +76,19 @@ public class Bond
     return couponPayment + parPayment;
   }
 
+  /** @return number of months bond is active */
+  public int duration()
+  {
+    return endIndex - startIndex;
+  }
+
   public int getMonthsBetweenPayments()
   {
-    return (int) Math.round(12.0 / annualFreq);
+    if (annualFreq <= 0.0) {
+      return duration();
+    } else {
+      return (int) Math.round(12.0 / annualFreq);
+    }
   }
 
   public int getNextPaymentMonth(int index)
@@ -92,17 +112,17 @@ public class Bond
     // Calculations for number of payments left.
     int nextPaymentIndex = getNextPaymentMonth(index);
     assert nextPaymentIndex >= index;
+    int numMonthsToPayment = nextPaymentIndex - index;
 
     int monthsBetweenPayments = getMonthsBetweenPayments();
     int n = (int) Math.ceil((double) (endIndex - index) / monthsBetweenPayments);
-    double years = n / annualFreq;
+    double years = annualFreq <= 0.0 ? numMonthsToPayment / 12.0 : n / annualFreq;
 
     // System.out.printf("| index=%d  interest=%.3f  nextPayment=%d  monthsBetween=%d  n=%d  years=%f\n", index,
     // interestRate, nextPaymentIndex, monthsBetweenPayments, n, years);
 
     // Calculations for fractional interest.
     double fractionalInterest = 0.0;
-    int numMonthsToPayment = nextPaymentIndex - index;
     assert numMonthsToPayment >= 0 && numMonthsToPayment <= monthsBetweenPayments;
     if (numMonthsToPayment > 0) {
       fractionalInterest = 1.0 - (double) numMonthsToPayment / monthsBetweenPayments;
@@ -140,7 +160,7 @@ public class Bond
     double maturityPrice = parValue * x;
 
     double accruedInterest = 0.0;
-    if (fractionalInterest > 0.0) {
+    if (coupon > 0.0 && fractionalInterest > 0.0) {
       double curPrice = couponPrice + maturityPrice;
       double futurePrice = calcPrice(coupon, interestRate, parValue, years - 1.0 / annualFreq, annualFreq, 0.0)
           + couponPayment;
@@ -156,37 +176,42 @@ public class Bond
   /**
    * Calculates bond ROI for the given range using the rebuy approach.
    * 
-   * Each month, the existing bond is sold and a new one is purchased.
+   * Each month, the existing bond is sold and a new one is purchased. Bonds are modeled as 10-year bonds that pay
+   * semi-annually.
    * 
+   * @param factory buys a particular kind of bond
    * @param bondData interest rates for bonds
    * @param iStart start simulation at this index in the data sequence
    * @param iEnd end simulation at this index in the data sequence
    * @return sequence of ROIs
    */
-  public static Sequence calcReturnsRebuy(Sequence bondData, int iStart, int iEnd)
+  public static Sequence calcReturnsRebuy(BondFactory factory, Sequence bondData, int iStart, int iEnd)
   {
     if (iStart < 0 || iEnd < iStart || iEnd >= bondData.size()) {
       throw new IllegalArgumentException(String.format("iStart=%d, iEnd=%d, size=%d", iStart, iEnd, bondData.size()));
     }
 
-    double cash = 1.0; // start with one dollar
-    Sequence seq = new Sequence("Bonds (Rebuy)");
+    final double principal = 10000.0;
+    double cash = principal;
+    Sequence seq = new Sequence(factory.name() + " (Rebuy)");
     seq.addData(cash, bondData.getTimeMS(iStart));
 
     for (int i = iStart; i < iEnd; ++i) {
       // Buy bond at start of this month.
-      Bond bond = new Bond(bondData, cash, i);
+      BondFactory.Receipt receipt = factory.buy(bondData, cash, i);
+      Bond bond = receipt.bond;
+      cash = receipt.cash;
       // System.out.printf("Bought %d: cash=%f, price=%f\n", i, cash, bond.price(i));
 
       // Sell bond at end of the month (we use start of next month).
-      cash = bond.price(i + 1);
-      // System.out.printf("  Sell %d: price=%f\n", i+1, cash);
+      cash += bond.price(i + 1);
+      // System.out.printf("  Sell %d: price=%f\n", i + 1, cash);
 
       // Add sequence data point for new month.
       seq.addData(cash, bondData.getTimeMS(i + 1));
     }
 
-    return seq;
+    return seq._div(principal);
   }
 
   /**
@@ -194,21 +219,21 @@ public class Bond
    * 
    * All bonds are held to maturity and coupon payments are used to buy more bonds.
    * 
+   * @param factory buys a particular kind of bond
    * @param bondData interest rates for bonds
    * @param iStart start simulation at this index in the data sequence
    * @param iEnd end simulation at this index in the data sequence
    * @return sequence of ROIs
    */
-  public static Sequence calcReturnsHold(Sequence bondData, int iStart, int iEnd)
+  public static Sequence calcReturnsHold(BondFactory factory, Sequence bondData, int iStart, int iEnd)
   {
     if (iStart < 0 || iEnd < iStart || iEnd >= bondData.size()) {
       throw new IllegalArgumentException(String.format("iStart=%d, iEnd=%d, size=%d", iStart, iEnd, bondData.size()));
     }
 
-    final double principal = 1000.0;
-    final double bondQuantum = 10.0; // bonds can only be purchased in fixed increments
+    final double principal = 10000.0;
     double cash = principal;
-    Sequence seq = new Sequence("Bonds (Hold)");
+    Sequence seq = new Sequence(factory.name() + " (Hold)");
     seq.addData(cash, bondData.getTimeMS(iStart));
     List<Bond> bonds = new ArrayList<Bond>(); // TODO not an efficient data structure
 
@@ -225,10 +250,10 @@ public class Bond
       }
 
       // Buy new bonds.
-      double bondValue = bondQuantum * Math.floor(cash / bondQuantum);
-      if (bondValue > 0.0) {
-        bonds.add(new Bond(bondData, bondValue, i));
-        cash -= bondValue;
+      BondFactory.Receipt receipt = factory.buy(bondData, cash, i);
+      cash = receipt.cash;
+      if (receipt.bond != null) {
+        bonds.add(receipt.bond);
       }
 
       // Add sequence data point for new month.
