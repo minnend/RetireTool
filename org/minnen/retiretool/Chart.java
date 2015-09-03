@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Calendar;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -43,7 +44,7 @@ public class Chart
   public static void saveLineChart(File file, String title, int width, int height, boolean logarithmic,
       Sequence... seqs) throws IOException
   {
-    saveHighChart(file, ChartType.Line, title, null, null, width, height, Double.NaN, Double.NaN, logarithmic ? 0.5
+    saveHighChart(file, ChartType.Line, title, null, null, width, height, 1.0, Double.NaN, logarithmic ? 0.5
         : Double.NaN, logarithmic, 0, seqs);
   }
 
@@ -234,7 +235,6 @@ public class Chart
       writer.write("     fontSize: '18px'\n");
       writer.write("    }\n");
       writer.write("   }\n");
-
       writer.write("  },\n");
       writer.write("  legend: { enabled: false },\n");
       writer.write("  plotOptions: {\n");
@@ -288,6 +288,73 @@ public class Chart
     }
   }
 
+  public static void saveScatterPlot(File file, String title, int width, int height, int radius, Sequence scatter)
+      throws IOException
+  {
+    assert scatter.getNumDims() >= 2;
+
+    // Write HTML to generate the graph.
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+      writer.write("<html><head>\n");
+      writer.write("<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js\"></script>\n");
+      writer.write("<script src=\"js/highcharts.js\"></script>\n");
+      writer.write("  <script type=\"text/javascript\">\n");
+      writer.write("$(function () {\n");
+      writer.write(" $('#chart').highcharts({\n");
+      writer.write("  title: { text: '" + title + "' },\n");
+      writer.write("  chart: {\n");
+      writer.write("   type: 'scatter',\n");
+      writer.write("   zoomType: 'xy'\n");
+      writer.write("  },\n");
+      writer.write("  xAxis: {\n");
+      writer.write("   gridLineWidth: 1\n");
+      writer.write("  },\n");
+      writer.write("  yAxis: {\n");
+      writer.write("   title: {\n");
+      writer.write("    text: null,\n");//Compound Annual Growth Rate',\n");
+      writer.write("    style: {\n");
+      writer.write("     fontSize: '18px'\n");
+      writer.write("    }\n");
+      writer.write("   }\n");
+      writer.write("  },\n");
+      writer.write("  legend: { enabled: false },\n");
+      writer.write("  plotOptions: {\n");
+      writer.write("   scatter: {\n");
+      writer.write(String.format("    marker: { radius: %d, symbol: 'circle' },\n", radius));
+      writer.write("    dataLabels: {\n");
+      writer.write("      enabled: true,\n");
+      writer.write("      format: '{point.name}'\n");
+      writer.write("    },\n");
+      writer.write("    tooltip: {\n");
+      writer.write("     headerFormat: '',\n");
+      writer
+          .write("     pointFormat: '<b>{point.name}</b><br/>CAGR: <b>{point.y}</b><br/>Volatility: <b>{point.x}</b>'\n");
+      writer.write("    }\n");
+      writer.write("   }\n");
+      writer.write("  },\n");
+      writer.write("  series: [{\n");
+      writer.write("   data: [");
+      for (int i = 0; i < scatter.size(); ++i) {
+        FeatureVec v = scatter.get(i);
+        // writer.write(String.format("[%.3f,%.3f]", v.get(0), v.get(1)));
+        double cagr = v.get(0);
+        double stdev = v.get(1);
+        String name = v.getName();
+        writer.write(String.format("{x:%.3f, y:%.3f, name: '%s'}", stdev, cagr, name == null ? "" : name));
+        if (i < scatter.length() - 1) {
+          writer.write(",\n");
+        }
+      }
+      writer.write("]}]\n");
+      writer.write(" });\n");
+      writer.write("});\n");
+
+      writer.write("</script></head><body style=\"width:" + width + "px;\">\n");
+      writer.write("<div id=\"chart\" style=\"width:100%; height:" + height + "px;\" />\n");
+      writer.write("</body></html>\n");
+    }
+  }
+
   public static void saveHighChartSplines(File file, String title, int width, int height, Sequence... splines)
       throws IOException
   {
@@ -307,8 +374,8 @@ public class Chart
       writer.write("    style: { fontSize: '18px' }\n");
       writer.write("   },\n");
       writer.write("   minorTickInterval: 0.5,\n");
-      writer.write("   min: 1.5,\n");
-      writer.write("   max: 5.0\n");
+      // writer.write("   min: 1.5,\n");
+      // writer.write("   max: 5.0\n");
       writer.write("  },\n");
       writer.write("  yAxis: {\n");
       writer.write("   title: {\n");
@@ -352,6 +419,13 @@ public class Chart
       writer.write("<div id=\"chart\" style=\"width:100%; height:" + height + "px;\" />\n");
       writer.write("</body></html>\n");
     }
+  }
+
+  public static void saveBoxPlots(File file, String title, int width, int height, double minorTickInterval,
+      List<ReturnStats> stats) throws IOException
+  {
+
+    saveBoxPlots(file, title, width, height, minorTickInterval, stats.toArray(new ReturnStats[stats.size()]));
   }
 
   public static void saveBoxPlots(File file, String title, int width, int height, double minorTickInterval,
@@ -420,12 +494,31 @@ public class Chart
    * 
    * @param file save HTML in this file
    * @param reduced true => hide some columns to save space
+   * @param stats List of strategies to include
+   * @throws IOException if there is a problem writing to the file
+   */
+  public static void saveStatsTable(File file, int width, boolean reduced, List<InvestmentStats> stats)
+      throws IOException
+  {
+    saveStatsTable(file, width, reduced, stats.toArray(new InvestmentStats[stats.size()]));
+  }
+
+  /**
+   * Generate an HTML file with a sortable table of strategy statistics.
+   * 
+   * Documentation for sortable table: http://tablesorter.com/docs/
+   * 
+   * @param file save HTML in this file
+   * @param reduced true => hide some columns to save space
    * @param strategyStats List of strategies to include
    * @throws IOException if there is a problem writing to the file
    */
   public static void saveStatsTable(File file, int width, boolean reduced, InvestmentStats... strategyStats)
       throws IOException
   {
+    final boolean includeRiskAdjusted = false;
+    final boolean includeQuartiles = false;
+
     // Figure out if leverage should be included.
     boolean includeLeverage = false;
     for (InvestmentStats stats : strategyStats) {
@@ -455,7 +548,7 @@ public class Chart
       if (includeLeverage) {
         writer.write(" <th>Leverage</th>\n");
       }
-      if (!reduced) {
+      if (!reduced && includeRiskAdjusted) {
         writer.write(" <th>Risk-Adjusted<br/>Return</th>\n");
       }
       writer.write(" <th>Drawdown</th>\n");
@@ -465,11 +558,11 @@ public class Chart
         writer.write(" <th>New High %</th>\n");
       }
       writer.write(" <th>Worst AR</th>\n");
-      if (!reduced) {
+      if (!reduced && includeQuartiles) {
         writer.write(" <th>25% AR</th>\n");
       }
       writer.write(" <th>Median AR</th>\n");
-      if (!reduced) {
+      if (!reduced && includeQuartiles) {
         writer.write(" <th>75% AR</th>\n");
       }
       writer.write(" <th>Best AR</th>\n");
@@ -509,7 +602,7 @@ public class Chart
         if (includeLeverage) {
           writer.write(String.format("<td>%.2f</td>\n", stats.leverage));
         }
-        if (!reduced) {
+        if (!reduced && includeRiskAdjusted) {
           writer.write(String.format("<td>%.2f</td>\n", stats.cagr * strategyStats[0].devAnnualReturn
               / stats.devAnnualReturn));
         }
@@ -520,11 +613,11 @@ public class Chart
           writer.write(String.format("<td>%.2f</td>\n", stats.percentNewHigh));
         }
         writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[0]));
-        if (!reduced) {
+        if (!reduced && includeQuartiles) {
           writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[1]));
         }
         writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[2]));
-        if (!reduced) {
+        if (!reduced && includeQuartiles) {
           writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[3]));
         }
         writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[4]));
@@ -549,7 +642,7 @@ public class Chart
       if (includeLeverage) {
         writer.write(" <li><b>Leverage</b> - Multiplier for investments (via borrowing additional funds)</li>\n");
       }
-      if (!reduced) {
+      if (!reduced && includeRiskAdjusted) {
         writer.write(" <li><b>Risk-Adjusted Return</b> - Adjusted CAGR after accounting for volatility</li>\n");
       }
       writer.write(" <li><b>Drawdown</b> - Maximum drawdown (largest gap from peak to trough)</li>\n");
@@ -558,11 +651,11 @@ public class Chart
         writer.write(" <li><b>New High %</b> - Percentage of time strategy hits a new high</li>\n");
       }
       writer.write(" <li><b>Worst AR</b> - Return of worst year (biggest drop)</li>\n");
-      if (!reduced) {
+      if (!reduced && includeQuartiles) {
         writer.write(" <li><b>25% AR</b> - Return of year at the 25th percentile</li>\n");
       }
       writer.write(" <li><b>Median AR</b> - Median annual return (50th percentile)</li>\n");
-      if (!reduced) {
+      if (!reduced && includeQuartiles) {
         writer.write(" <li><b>75% AR</b> - Return of year at the 75th percentile</li>\n");
       }
       writer.write(" <li><b>Best AR</b> - Return of best year (biggest gain)</li>\n");

@@ -6,7 +6,7 @@ import java.util.TreeMap;
 public class Strategy
 {
   public enum Disposition {
-    Safe, Moderate, Risky
+    Safe, Cautious, Moderate, Risky
   }
 
   /**
@@ -34,7 +34,7 @@ public class Strategy
       Sequence bestSeq = null;
       double bestReturn = 0.0;
       for (Sequence seq : seqs) {
-        double r = seq.get(b, 0) / seq.get(a, 0);
+        double r = FinLib.getReturn(seq, a, b);
         if (r > bestReturn) {
           bestSeq = seq;
           bestReturn = r;
@@ -42,9 +42,9 @@ public class Strategy
       }
 
       // Invest everything in best asset for this month.
+      // No bestSeq => hold everything in cash for no gain and no loss.
       if (bestSeq != null) {
-        double lastMonthReturn = bestSeq.get(i, 0) / bestSeq.get(b, 0);
-        balance *= lastMonthReturn;
+        balance *= FinLib.getReturn(bestSeq, b, i); // return for current month
       }
       momentum.addData(balance, seqs[0].getTimeMS(i));
     }
@@ -382,9 +382,14 @@ public class Strategy
   {
     assert code >= 0 && code <= 7;
 
+    // Complete support.
+    if (code == 7) {
+      return risky;
+    }
+
     // Shortest + support => always risky.
     if (code >= 5) {
-      return risky;
+      return disposition == Disposition.Safe ? safe : risky;
     }
 
     // Not shortest and zero or one other => always safe.
@@ -392,8 +397,9 @@ public class Strategy
       return safe;
     }
 
+    // Not shortest but both others.
     if (code == 3) {
-      return disposition == Disposition.Safe ? safe : risky;
+      return disposition == Disposition.Safe || disposition == Disposition.Cautious ? safe : risky;
     }
 
     // Only short-term support.

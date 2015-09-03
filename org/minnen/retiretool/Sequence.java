@@ -435,6 +435,12 @@ public class Sequence implements Iterable<FeatureVec>
     return getClosestIndex(ms);
   }
 
+  /** @return subsequence starting at index iStart through end of the sequence. */
+  public Sequence subseq(int iStart)
+  {
+    return subseq(iStart, size() - iStart);
+  }
+
   /** @return subsequence with numElements starting at index iStart. */
   public Sequence subseq(int iStart, int numElements)
   {

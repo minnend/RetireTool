@@ -17,6 +17,11 @@ public class ReturnStats
   public final double   max;
   public final int      nMonthsPerPeriod;
 
+  public static ReturnStats calc(Sequence cumulativeReturns, int nMonthsPerPeriod)
+  {
+    return new ReturnStats(cumulativeReturns, nMonthsPerPeriod);
+  }
+
   /**
    * Create return statistics object from the given return sequence and duration.
    * 
