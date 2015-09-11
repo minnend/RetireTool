@@ -12,12 +12,12 @@ public class Strategy
   /**
    * Invest 100% in asset with highest CAGR over last N months.
    * 
-   * @param numMonths calculate CAGR over last N months.
+   * @param nMonths calculate CAGR over last N months.
    * @param iStart index of month to start investing.
    * @param seqs cumulative returns for each asset.
    * @return sequence of returns using the momentum strategy
    */
-  public static Sequence calcMomentumReturns(int numMonths, int iStart, Sequence... seqs)
+  public static Sequence calcMomentumReturns(int nMonths, int iStart, Sequence... seqs)
   {
     assert seqs.length > 1;
     int N = seqs[0].length();
@@ -25,29 +25,42 @@ public class Strategy
       assert seqs[i].length() == N;
     }
 
-    Sequence momentum = new Sequence("Momentum-" + numMonths);
+    Sequence momentum = new Sequence("Momentum-" + nMonths);
     double balance = 1.0;
+    int nCorrect = 0, nWrong = 0;
     for (int i = iStart; i < N; ++i) {
       // Select asset with best return over previous 12 months.
-      int a = Math.max(0, i - numMonths - 1);
+      int a = Math.max(0, i - nMonths - 1);
       int b = Math.max(0, i - 1);
       Sequence bestSeq = null;
-      double bestReturn = 0.0;
+      double bestReturn = 0.0, correctReturn = 1.0;
       for (Sequence seq : seqs) {
         double r = FinLib.getReturn(seq, a, b);
         if (r > bestReturn) {
           bestSeq = seq;
           bestReturn = r;
         }
+
+        r = FinLib.getReturn(seq, b, i);
+        if (r > correctReturn) {
+          correctReturn = r;
+        }
       }
 
       // Invest everything in best asset for this month.
       // No bestSeq => hold everything in cash for no gain and no loss.
-      if (bestSeq != null) {
-        balance *= FinLib.getReturn(bestSeq, b, i); // return for current month
-      }
+      double realizedReturn = bestSeq != null ? FinLib.getReturn(bestSeq, b, i) : 1.0;
+      balance *= realizedReturn;
       momentum.addData(balance, seqs[0].getTimeMS(i));
+
+      if (realizedReturn > correctReturn - 1e-6) {
+        ++nCorrect;
+      } else {
+        ++nWrong;
+      }
     }
+    System.out.printf("Momentum-%d: %.2f%% Correct (%d vs. %d / %d)\n", nMonths, nCorrect * 100.0
+        / (nCorrect + nWrong), nCorrect, nWrong, nCorrect + nWrong);
     return momentum;
   }
 
@@ -224,7 +237,7 @@ public class Strategy
 
     int[] numMonths = new int[] { 1, 3, 12 };
 
-    Sequence momentum = new Sequence("MultiMomentum-" + disposition);
+    Sequence momentum = new Sequence("MultiMom-" + disposition);
     double balance = 1.0;
     for (int i = iStart; i < N; ++i) {
       int code = calcMomentumCode(i, numMonths, seqs);
@@ -247,7 +260,7 @@ public class Strategy
     public double r1 = 1.0, r2 = 1.0;
   };
 
-  public static void calcMomentumStats(Sequence s1, Sequence s2)
+  public static void calcMultiMomentumStats(Sequence s1, Sequence s2)
   {
     int N = s1.length();
     assert s2.length() == N;

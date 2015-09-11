@@ -14,6 +14,8 @@ public class Sequence implements Iterable<FeatureVec>
   /** data stored in this data set */
   private List<FeatureVec> data;
   private String           name;
+  private int              lockStart = -1;
+  private int              lockEnd   = -1;
 
   /**
    * Create an anonymous sequence at 1Hz
@@ -87,54 +89,115 @@ public class Sequence implements Iterable<FeatureVec>
   {
     if (data.isEmpty())
       return 0;
-    return data.get(0).getNumDims();
+    return get(0).getNumDims();
   }
 
+  public void lock(int iStart, int iEnd)
+  {
+    assert (iStart >= -1 && iStart <= length() - 1);
+    assert (iEnd >= -1 && iEnd <= length() - 1);
+    assert (iStart <= iEnd);
+    lockStart = iStart;
+    lockEnd = iEnd;
+  }
+
+  public void clearLock()
+  {
+    lockStart = lockEnd = -1;
+  }
+
+  public boolean isLocked()
+  {
+    return lockStart >= 0 || lockEnd >= 0;
+  }
+
+  /** @return First real (internal) index that respects lock. */
+  private int getFirstIndex()
+  {
+    return Math.max(lockStart, 0);
+  }
+
+  /** @return Last real (internal) index that respects lock. */
+  private int getLastIndex()
+  {
+    if (lockEnd < 0) {
+      return data.size() - 1;
+    } else {
+      return lockEnd;
+    }
+  }
+
+  /** @return index adjusted to respect current lock boundaries. */
+  private int adjustIndex(int i)
+  {
+    int iStart = getFirstIndex();
+    int iEnd = getLastIndex();
+    if (i < 0 || i >= length()) {
+      throw new IndexOutOfBoundsException(String.format("%d vs. [%d, %d]", i, iStart, iEnd));
+    }
+    return iStart + i;
+  }
+
+  /** @return length of this sequence */
   public int size()
   {
-    return data.size();
+    return getLastIndex() - getFirstIndex() + 1;
+  }
+
+  /** @return length of this sequence */
+  public int length()
+  {
+    return size();
   }
 
   /** @return i^th feature vector */
   public FeatureVec get(int i)
   {
+    i = adjustIndex(i);
     return data.get(i);
   }
 
   /** @return value of the d^th dimension in the i^th feature vector */
   public double get(int i, int d)
   {
-    return data.get(i).get(d);
+    return get(i).get(d);
   }
 
   /** set the i^th feature vector */
   public void set(int i, FeatureVec fv)
   {
+    i = adjustIndex(i);
     data.set(i, fv);
   }
 
   /** set the d^th dimension in the i^th feature vector */
   public void set(int i, int d, double x)
   {
-    data.get(i).set(d, x);
+    get(i).set(d, x);
+  }
+
+  /** @return first feature vector in this sequence. */
+  public FeatureVec getFirst()
+  {
+    return get(0);
   }
 
   /** @return value of given dimension of first feature vector in this sequence. */
   public double getFirst(int d)
   {
-    return data.get(0).get(d);
+    return getFirst().get(d);
   }
 
   /** @return last feature vector in this sequence. */
   public FeatureVec getLast()
   {
-    return data.get(data.size() - 1);
+    return get(length() - 1);
   }
 
   /** @return value of given dimension of last feature vector in this sequence. */
   public double getLast(int d)
   {
-    return data.get(data.size() - 1).get(d);
+    return getLast().get(d);
   }
 
   /** @return FeatureVec with minimum value for each dimension. */
@@ -165,12 +228,6 @@ public class Sequence implements Iterable<FeatureVec>
     return v;
   }
 
-  /** @return length of this sequence */
-  public int length()
-  {
-    return data.size();
-  }
-
   /**
    * @return start time (time of first sample in ms) of this sequence
    */
@@ -179,7 +236,7 @@ public class Sequence implements Iterable<FeatureVec>
     if (isEmpty()) {
       return Library.TIME_ERROR;
     } else {
-      return data.get(0).getTime();
+      return getFirst().getTime();
     }
   }
 
@@ -188,10 +245,11 @@ public class Sequence implements Iterable<FeatureVec>
    */
   public long getEndMS()
   {
-    int T = length();
-    if (T == 0)
-      return getStartMS();
-    return getTimeMS(T - 1);
+    if (isEmpty()) {
+      return Library.TIME_ERROR;
+    } else {
+      return getLast().getTime();
+    }
   }
 
   /**
@@ -205,14 +263,14 @@ public class Sequence implements Iterable<FeatureVec>
   /** @return time in ms of the given data frame */
   public long getTimeMS(int i)
   {
-    FeatureVec fv = data.get(i);
+    FeatureVec fv = get(i);
     assert fv.hasTime();
     return fv.getTime();
   }
 
-  public void setDate(int ix, long ms)
+  public void setTime(int i, long ms)
   {
-    data.get(ix).setTime(ms);
+    get(i).setTime(ms);
   }
 
   /** @return true if this data set has no data */
@@ -229,9 +287,10 @@ public class Sequence implements Iterable<FeatureVec>
    */
   public Sequence _appendDims(Sequence seq)
   {
+    assert !isLocked();
     assert length() == seq.length();
     for (int i = 0; i < length(); ++i) {
-      data.get(i)._appendDims(seq.get(i));
+      get(i)._appendDims(seq.get(i));
     }
     return this;
   }
@@ -247,7 +306,7 @@ public class Sequence implements Iterable<FeatureVec>
   public int addData(FeatureVec value, long ms)
   {
     int ix = addData(value);
-    setDate(ix, ms);
+    setTime(ix, ms);
     return ix;
   }
 
@@ -268,7 +327,7 @@ public class Sequence implements Iterable<FeatureVec>
   public int addData(double x, long ms)
   {
     int ix = addData(x);
-    setDate(ix, ms);
+    setTime(ix, ms);
     return ix;
   }
 
@@ -377,7 +436,7 @@ public class Sequence implements Iterable<FeatureVec>
     Sequence ret = new Sequence(getName());
 
     // loop through remaining time steps
-    int n = size();
+    int n = length();
     for (int i = 0; i < n; i++)
       ret.addData(get(i).selectDims(dims));
     return ret;
@@ -398,7 +457,7 @@ public class Sequence implements Iterable<FeatureVec>
    */
   public double[] extractDim(int iDim, int iStart)
   {
-    return extractDim(iDim, iStart, size() - iStart);
+    return extractDim(iDim, iStart, length() - iStart);
   }
 
   /**
@@ -425,7 +484,7 @@ public class Sequence implements Iterable<FeatureVec>
    */
   public double[] extractDim(int iDim)
   {
-    return extractDim(iDim, 0, size());
+    return extractDim(iDim, 0, length());
   }
 
   /** @return index in data sequence for the given year and month (January == 1). */
@@ -438,7 +497,7 @@ public class Sequence implements Iterable<FeatureVec>
   /** @return subsequence starting at index iStart through end of the sequence. */
   public Sequence subseq(int iStart)
   {
-    return subseq(iStart, size() - iStart);
+    return subseq(iStart, length() - iStart);
   }
 
   /** @return subsequence with numElements starting at index iStart. */

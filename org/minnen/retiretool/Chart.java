@@ -20,9 +20,25 @@ public class Chart
 
   public static String getNameWithBreak(String name)
   {
-    int i = name == null ? -1 : name.indexOf(" (");
+    if (name == null) {
+      return "";
+    }
+    int i = name.indexOf(" (");
     if (i >= 0) {
       return name.substring(0, i) + "<br/>" + name.substring(i + 1);
+    } else {
+      return name;
+    }
+  }
+
+  public static String getBaseName(String name)
+  {
+    if (name == null) {
+      return "";
+    }
+    int i = name.indexOf(" (");
+    if (i >= 0) {
+      return name.substring(0, i);
     } else {
       return name;
     }
@@ -311,7 +327,7 @@ public class Chart
       writer.write("  },\n");
       writer.write("  yAxis: {\n");
       writer.write("   title: {\n");
-      writer.write("    text: null,\n");//Compound Annual Growth Rate',\n");
+      writer.write("    text: null,\n");// Compound Annual Growth Rate',\n");
       writer.write("    style: {\n");
       writer.write("     fontSize: '18px'\n");
       writer.write("    }\n");
@@ -340,7 +356,7 @@ public class Chart
         double cagr = v.get(0);
         double stdev = v.get(1);
         String name = v.getName();
-        writer.write(String.format("{x:%.3f, y:%.3f, name: '%s'}", stdev, cagr, name == null ? "" : name));
+        writer.write(String.format("{x:%.3f, y:%.3f, name: '%s'}", stdev, cagr, getBaseName(name)));
         if (i < scatter.length() - 1) {
           writer.write(",\n");
         }
@@ -726,6 +742,56 @@ public class Chart
     }
   }
 
+  public static void saveComparisonTable(File file, int width, List<ComparisonStats> stats) throws IOException
+  {
+    saveComparisonTable(file, width, stats.toArray(new ComparisonStats[stats.size()]));
+  }
+
+  public static void saveComparisonTable(File file, int width, ComparisonStats... allStats) throws IOException
+  {
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+      writer.write("<html><head>\n");
+      writer.write("<title>Comparison Statistics</title>\n");
+      writer.write("<script src=\"http://code.jquery.com/jquery.min.js\"></script>\n");
+      writer.write("<script type=\"text/javascript\" src=\"js/jquery.tablesorter.min.js\"></script>\n");
+      writer.write("<script type=\"text/javascript\">\n");
+      writer.write(" $(document).ready(function() { $(\"#myTable\").tablesorter( {widgets: ['zebra']} ); } );\n");
+      writer.write("</script>\n");
+      writer
+          .write("<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
+      writer.write(String.format("</head><body style=\"width:%dpx\">\n", width));
+      writer.write("<h2>Strategy Comparison</h2>\n");
+      writer.write("<table id=\"comparisonTable\" class=\"tablesorter\">\n");
+      writer.write("<thead><tr>\n");
+      writer.write(" <th>Duration</th>\n");
+      for (ComparisonStats stats : allStats) {
+        writer.write(String.format(" <th>%s</th>\n", getBaseName(stats.returns1.getName())));
+      }
+      writer.write("</tr></thead>\n");
+      writer.write("<tbody>\n");
+
+      for (Entry<Integer, Results> entry : allStats[0].durationToResults.entrySet()) {
+        int duration = entry.getKey();
+        writer.write("<tr>\n");
+
+        if (duration < 12) {
+          writer.write(String.format("<td>%d Month%s</td>\n", duration, duration > 1 ? "s" : ""));
+        } else {
+          int years = duration / 12;
+          writer.write(String.format("<td>%d Year%s</td>\n", years, years > 1 ? "s" : ""));
+        }
+
+        for (ComparisonStats stats : allStats) {
+          Results results = stats.durationToResults.get(duration);
+          writer.write(String.format("<td>%.1f (%.1f)</td>\n", results.winPercent1, results.winPercent2));          
+        }
+        writer.write("</tr>\n");
+      }
+      writer.write("</tbody>\n</table>\n");
+      writer.write("</body></html>\n");
+    }
+  }
+
   public static void printDecadeTable(Sequence cumulativeReturns)
   {
     int iStart = Library.FindStartofFirstDecade(cumulativeReturns);
@@ -750,6 +816,12 @@ public class Chart
     System.out.printf("</tbody>\n</table>\n");
   }
 
+  /**
+   * Print an HTML chart comparing the returns from two strategies for each decade.
+   * 
+   * @param returns1 cumulative returns for Strategy #1
+   * @param returns2 cumulative returns for Strategy #2
+   */
   public static void printDecadeTable(Sequence returns1, Sequence returns2)
   {
     assert returns1.length() == returns2.length();
@@ -758,7 +830,7 @@ public class Chart
       return;
     }
 
-    System.out.printf("<table id=\"decadeTable\" class=\"tablesorter\" style=\"width:100%%\"><thead>\n");
+    System.out.printf("<table id=\"decadeComparisonTable\" class=\"tablesorter\"><thead>\n");
     System.out.printf("<tr><th>Decade</th><th>%s<br/>CAGR</th><th>%s<br/>CAGR</th>\n", returns1.getName(),
         returns2.getName());
     System.out.printf("<th>%s<br/>StdDev</th><th>%s<br/>StdDev</th></tr>\n", returns1.getName(), returns2.getName());
@@ -775,6 +847,6 @@ public class Chart
       System.out.printf(" <tr><td>%ds</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>\n",
           cal.get(Calendar.YEAR), stats1.cagr, stats2.cagr, stats1.devAnnualReturn, stats2.devAnnualReturn);
     }
-    System.out.printf("</tbody></table>\n");
+    System.out.printf("</tbody>\n</table>\n");
   }
 }

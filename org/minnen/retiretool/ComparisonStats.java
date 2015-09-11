@@ -66,7 +66,7 @@ public class ComparisonStats
     }
 
     Arrays.sort(r);
-    ;
+
     results.meanExcess = excessSum / N;
     results.winPercent1 = 100.0 * win1 / N;
     results.winPercent2 = 100.0 * win2 / N;

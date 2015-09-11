@@ -120,8 +120,7 @@ public class RetireTool
         stats);
   }
 
-  public static void genReturnChart(Sequence shiller, Sequence tbills, File fileChart, File fileTable)
-      throws IOException
+  public static void genReturnChart(Sequence shiller, Sequence tbills, File dir) throws IOException
   {
     assert tbills == null || shiller.length() == tbills.length();
 
@@ -132,7 +131,6 @@ public class RetireTool
     // iEnd = shiller.getIndexForDate(2010, 1);
 
     int nMonthsSMA = 10;
-    int nMonthsMomentum = 12;
     int rebalanceMonths = 12;
     double rebalanceBand = 0.0;
     int iStartReturns = 12;
@@ -177,10 +175,12 @@ public class RetireTool
     Sequence risky = stockAll;
     Sequence safe = bondsAll;
 
-    Sequence momentum = Strategy.calcMomentumReturns(nMonthsMomentum, iStartReturns, risky, safe);
+    Sequence mom1 = Strategy.calcMomentumReturns(1, iStartReturns, risky, safe);
+    Sequence mom3 = Strategy.calcMomentumReturns(3, iStartReturns, risky, safe);
+    Sequence mom12 = Strategy.calcMomentumReturns(12, iStartReturns, risky, safe);
     Sequence sma = Strategy.calcSMAReturns(nMonthsSMA, iStartReturns, snpData, risky, safe);
-    Sequence raa = Strategy.calcMixedReturns(new Sequence[] { sma, momentum }, new double[] { 50, 50 },
-        rebalanceMonths, rebalanceBand);
+    Sequence raa = Strategy.calcMixedReturns(new Sequence[] { sma, mom12 }, new double[] { 50, 50 }, rebalanceMonths,
+        rebalanceBand);
     raa.setName("RAA");
     Sequence multiMomRisky = Strategy.calcMultiMomentumReturns(iStartReturns, risky, safe, Disposition.Risky);
     Sequence multiMomMod = Strategy.calcMultiMomentumReturns(iStartReturns, risky, safe, Disposition.Moderate);
@@ -194,34 +194,59 @@ public class RetireTool
         rebalanceMonths, rebalanceBand);
     daa.setName("DAA");
 
+    // ReturnStats.printDurationTable(mom12);
+    // Chart.printDecadeTable(mom12, stock);
+
     // Sequence[] all = new Sequence[] { bills, billsHold, bonds, bondsHold, stock, stockNoDiv };
     // Sequence[] all = new Sequence[] { bonds, bondsHold, stock, stockNoDiv, mixed, momentum, sma, raa, daa,
     // multiMomRisky, multiMomMod, multiMomSafe, multiSmaRisky, multiSmaMod, multiSmaSafe };
     // Sequence[] all = new Sequence[] { stock, momentum, multiMomRisky, multiMomMod, multiMomCautious, multiMomSafe };
-    Sequence[] all = new Sequence[] { stock, momentum, sma, raa, daa, multiMomRisky, multiMomMod, multiMomCautious,
-        multiMomSafe, multiSmaRisky, multiSmaMod, multiSmaCautious, multiSmaSafe };
-    InvestmentStats[] stats = new InvestmentStats[all.length];
+    // Sequence[] all = new Sequence[] { stock, mom12, sma, raa, daa, multiMomRisky, multiMomMod, multiMomCautious,
+    // multiMomSafe, multiSmaRisky, multiSmaMod, multiSmaCautious, multiSmaSafe };
+    Sequence[] all = new Sequence[] { stock, mom1, mom3, mom12, multiMomSafe, multiMomCautious, multiMomMod,
+        multiMomRisky };
+    InvestmentStats[] cumulativeStats = new InvestmentStats[all.length];
+    ReturnStats[] rstats = new ReturnStats[all.length];
     double[] scores = new double[all.length];
 
+    Sequence scatter = new Sequence("Returns vs. Volatility");
+    int duration = 10 * 12;
     for (int i = 0; i < all.length; ++i) {
       assert all[i].length() == all[0].length();
-      stats[i] = InvestmentStats.calcInvestmentStats(all[i]);
-      scores[i] = stats[i].calcScore();
-      all[i].setName(String.format("%s (%.2f%%)", all[i].getName(), stats[i].cagr));
+      cumulativeStats[i] = InvestmentStats.calcInvestmentStats(all[i]);
+      rstats[i] = ReturnStats.calc(all[i], duration);
+      scores[i] = cumulativeStats[i].calcScore();
+      all[i].setName(String.format("%s (%.2f%%)", all[i].getName(), cumulativeStats[i].cagr));
+      scatter.addData(new FeatureVec(all[i].getName(), 2, rstats[i].mean, rstats[i].sdev));
     }
 
     // Chart.saveLineChart(fileChart, "Cumulative Market Returns", GRAPH_WIDTH, GRAPH_HEIGHT, true, multiSmaRisky, daa,
     // multiMomSafe, sma, raa, momentum, stock, mixed, bonds, bondsHold);
-    Chart.saveLineChart(fileChart, "Cumulative Market Returns", GRAPH_WIDTH, GRAPH_HEIGHT, true, all);
+    Chart.saveLineChart(new File(dir, "cumulative-returns.html"), "Cumulative Market Returns", GRAPH_WIDTH,
+        GRAPH_HEIGHT, true, all);
 
     int[] ii = Library.sort(scores, false);
     for (int i = 0; i < all.length; ++i) {
-      System.out.printf("%d [%.1f]: %s\n", i + 1, scores[i], stats[ii[i]]);
+      System.out.printf("%d [%.1f]: %s\n", i + 1, scores[i], cumulativeStats[ii[i]]);
     }
-    Chart.saveStatsTable(fileTable, GRAPH_WIDTH, false, stats);
+    Chart.saveStatsTable(new File(dir, "strategy-report.html"), GRAPH_WIDTH, true, cumulativeStats);
+
+    Chart.saveBoxPlots(new File(dir, "strategy-box.html"),
+        String.format("Return Stats (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
+        rstats);
+
+    Chart.saveScatterPlot(new File(dir, "strategy-scatter.html"),
+        String.format("Momentum: Returns vs. Volatility (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH,
+        GRAPH_HEIGHT, 5, scatter);
+
+    List<ComparisonStats> comparisons = new ArrayList<ComparisonStats>();
+    for (int i = 1; i < all.length; ++i) {
+      comparisons.add(ComparisonStats.calc(all[i], all[0]));
+    }
+    Chart.saveComparisonTable(new File(dir, "strategy-comparisons.html"), GRAPH_WIDTH, comparisons);
   }
 
-  public static void genReturnViz(Sequence shiller, File fileHistogram, File fileFuture) throws IOException
+  public static void genReturnViz(Sequence shiller, File dir) throws IOException
   {
     int iStart = 0;
     int iEnd = shiller.length() - 1;
@@ -280,7 +305,7 @@ public class RetireTool
           Chart.ChartType.Area, "Return Likelihoods", FinLib.getLabelsFromHistogram(returnLiks), null, GRAPH_WIDTH,
           GRAPH_HEIGHT, 0.0, 1.0, Double.NaN, false, 0, liks[i]);
     }
-    Chart.saveHighChart(new File("g:/web/return-likelihoods.html"), Chart.ChartType.Line, "Return Likelihoods",
+    Chart.saveHighChart(new File(dir, "return-likelihoods.html"), Chart.ChartType.Line, "Return Likelihoods",
         FinLib.getLabelsFromHistogram(returnLiks), null, GRAPH_WIDTH, GRAPH_HEIGHT, 0.0, 1.0, Double.NaN, false, 0,
         liks);
 
@@ -317,24 +342,24 @@ public class RetireTool
 
     String title = "Histogram of Returns - " + Library.formatDurationMonths(nMonths);
     String[] labels = FinLib.getLabelsFromHistogram(histograms[0]);
-    Chart.saveHighChart(fileHistogram, Chart.ChartType.Bar, title, labels, null, GRAPH_WIDTH, GRAPH_HEIGHT, Double.NaN,
-        Double.NaN, Double.NaN, false, 1, histograms);
+    Chart.saveHighChart(new File(dir, "histogram-returns.html"), Chart.ChartType.Bar, title, labels, null, GRAPH_WIDTH,
+        GRAPH_HEIGHT, Double.NaN, Double.NaN, Double.NaN, false, 1, histograms);
 
     // Generate histogram showing future returns.
     title = String.format("Future CAGR: %s (%s)", returns[0].getName(), Library.formatDurationMonths(nMonths));
-    Chart.saveHighChart(fileFuture, Chart.ChartType.Area, title, null, null, GRAPH_WIDTH, GRAPH_HEIGHT, Double.NaN,
-        Double.NaN, Double.NaN, false, 0, returns[0]);
+    Chart.saveHighChart(new File(dir, "future-returns.html"), Chart.ChartType.Area, title, null, null, GRAPH_WIDTH,
+        GRAPH_HEIGHT, Double.NaN, Double.NaN, Double.NaN, false, 0, returns[0]);
   }
 
   public static void genDuelViz(Sequence shiller, Sequence tbills, File dir) throws IOException
   {
     assert dir.isDirectory();
-    assert shiller.length() == tbills.length();
+    assert tbills == null || shiller.length() == tbills.length();
 
     int nMonths = 10 * 12;
     int rebalanceMonths = 12;
     double rebalanceBand = 0.0;
-    int iStartReturns = 0;
+    int iStartReturns = 12;
     int iStartData = 0;
     int iEnd = shiller.length() - 1;
 
@@ -343,18 +368,21 @@ public class RetireTool
 
     Sequence stockAll = FinLib.calcSnpReturns(stockData, iStartData, iEnd - iStartData, FinLib.DividendMethod.MONTHLY);
     Sequence bondsAll = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStartData, iEnd);
-    Sequence billsAll = Bond.calcReturnsRebuy(BondFactory.bill3Month, tbills, iStartData, iEnd);
-
     stockAll.setName("Stock");
     bondsAll.setName("Bonds");
-    billsAll.setName("Bills");
-
-    // double leverage = 1.8794;
-    // bondsAll = FinLib.calcLeveragedReturns(bondsAll, leverage);
 
     Sequence stock = stockAll.subseq(iStartReturns);
     Sequence bonds = bondsAll.subseq(iStartReturns);
-    Sequence bills = billsAll.subseq(iStartReturns);
+
+    Sequence billsAll = null, bills = null;
+    if (tbills != null) {
+      billsAll = Bond.calcReturnsRebuy(BondFactory.bill3Month, tbills, iStartData, iEnd);
+      billsAll.setName("Bills");
+      bills = billsAll.subseq(iStartReturns);
+    }
+
+    // double leverage = 1.8794;
+    // bondsAll = FinLib.calcLeveragedReturns(bondsAll, leverage);
 
     int percentStock = 60;
     int percentBonds = 40;
@@ -370,9 +398,12 @@ public class RetireTool
     // percentBonds }, 0, rebalanceBand);
     // mixedB5.setName(String.format("Stock/Bonds-%d/%d (B5)", percentStock, percentBonds));
 
-    // Strategy.calcMomentumStats(stockAll, bondsAll);
+    Strategy.calcMultiMomentumStats(stockAll, bondsAll);
     // Strategy.calcSmaStats(snpData, stockAll, bondsAll);
 
+    Sequence mom1 = Strategy.calcMomentumReturns(1, iStartReturns, stockAll, bondsAll);
+    Sequence mom3 = Strategy.calcMomentumReturns(3, iStartReturns, stockAll, bondsAll);
+    Sequence mom12 = Strategy.calcMomentumReturns(12, iStartReturns, stockAll, bondsAll);
     Sequence multiMomRisky = Strategy.calcMultiMomentumReturns(iStartReturns, stockAll, bondsAll, Disposition.Risky);
     Sequence multiMomMod = Strategy.calcMultiMomentumReturns(iStartReturns, stockAll, bondsAll, Disposition.Moderate);
     Sequence multiMomCautious = Strategy.calcMultiMomentumReturns(iStartReturns, stockAll, bondsAll,
@@ -390,11 +421,11 @@ public class RetireTool
         rebalanceMonths, rebalanceBand);
     daa.setName("DAA");
 
-    Sequence[] assets = new Sequence[] { stock, bonds, bills, mixed, multiMomRisky, multiMomMod, multiMomCautious,
-        multiMomSafe, multiSmaRisky, multiSmaMod, multiSmaCautious, multiSmaSafe, daa };
+    Sequence[] assets = new Sequence[] { stock, bonds, mixed, mom1, mom3, mom12, multiMomRisky, multiMomMod,
+        multiMomCautious, multiMomSafe, multiSmaRisky, multiSmaMod, multiSmaCautious, multiSmaSafe, daa };
 
-    int player1 = 2;
-    int player2 = 1;
+    int player1 = 0;
+    int player2 = 6;
     ComparisonStats comparison = ComparisonStats.calc(assets[player2], assets[player1]);
     Chart.saveComparisonTable(new File(dir, "duel-comparison.html"), GRAPH_WIDTH, comparison);
     InvestmentStats[] stats = InvestmentStats.calc(assets[player2], assets[player1]);
@@ -612,7 +643,8 @@ public class RetireTool
   public static void genMomentumSweepChart(Sequence shiller, File dir) throws IOException
   {
     final int[] momentumMonths = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 18 }; // , 21, 24, 30, 36 };
-    final int[] durations = new int[] { 5, 10, 15, 20, 25, 30 };
+    // final int[] momentumMonths = new int[] { 1, 3, 12 };
+    // final int[] durations = new int[] { 5, 10, 15, 20, 25, 30 };
 
     // iStart = shiller.getIndexForDate(1900, 1);
     // iEnd = shiller.getIndexForDate(2010, 1);
@@ -636,19 +668,19 @@ public class RetireTool
     ReturnStats stockReturns = ReturnStats.calc(stock, duration);
 
     Sequence scatter = new Sequence("Momentum Results");
-    Sequence[] seqs = new Sequence[momentumMonths.length + 1];
+    List<Sequence> seqs = new ArrayList<Sequence>();
     List<InvestmentStats> cumulativeStats = new ArrayList<InvestmentStats>();
     List<ReturnStats> rstats = new ArrayList<ReturnStats>();
     for (int i = 0; i < momentumMonths.length; ++i) {
-      seqs[i] = Strategy.calcMomentumReturns(momentumMonths[i], iStartSimulation, stockAll, bondsAll);
-      cumulativeStats.add(InvestmentStats.calcInvestmentStats(seqs[i]));
-      rstats.add(ReturnStats.calc(seqs[i], duration));
-      seqs[i].setName(String.format("Momentum-%d (%.2f%%)", momentumMonths[i], cumulativeStats.get(i).cagr));
-      scatter
-          .addData(new FeatureVec(String.format("%d", momentumMonths[i]), 2, rstats.get(i).mean, rstats.get(i).sdev));
+      Sequence mom = Strategy.calcMomentumReturns(momentumMonths[i], iStartSimulation, stockAll, bondsAll);
+      cumulativeStats.add(InvestmentStats.calcInvestmentStats(mom));
+      rstats.add(ReturnStats.calc(mom, duration));
+      mom.setName(String.format("Momentum-%d (%.2f%%)", momentumMonths[i], cumulativeStats.get(i).cagr));
+      scatter.addData(new FeatureVec("" + momentumMonths[i], 2, rstats.get(i).mean, rstats.get(i).sdev));
+      seqs.add(mom);
       // System.out.println(InvestmentStats.calcInvestmentStats(mom));
     }
-    seqs[seqs.length - 1] = stock;
+    seqs.add(0, stock);
     scatter.addData(new FeatureVec("Stock", 2, stockReturns.mean, stockReturns.sdev));
 
     // Sequence multiMom = Strategy.calcMultiMomentumReturns(months[months.length - 1], snp, bonds, Disposition.Safe);
@@ -657,10 +689,10 @@ public class RetireTool
     // seqs[months.length] = multiMom;
 
     Chart.saveLineChart(new File(dir, "momentum-cumulative.html"), "Cumulative Market Returns: Momentum Strategy",
-        GRAPH_WIDTH, GRAPH_HEIGHT, true, seqs);
+        GRAPH_WIDTH, GRAPH_HEIGHT, true, seqs.toArray(new Sequence[seqs.size()]));
 
-    rstats.add(stockReturns);
-    cumulativeStats.add(cumulativeStockStats);
+    rstats.add(0, stockReturns);
+    cumulativeStats.add(0, cumulativeStockStats);
     Chart.saveBoxPlots(new File(dir, "momentum-box-plots.html"),
         String.format("Momentum Returns (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
         rstats);
@@ -671,20 +703,20 @@ public class RetireTool
         GRAPH_HEIGHT, 5, scatter);
 
     // Generate efficient frontier curves.
-    Sequence[] frontiers = new Sequence[durations.length];
-    for (int i = 0; i < durations.length; ++i) {
-      duration = durations[i] * 12;
-      Sequence frontier = new Sequence(Library.formatDurationMonths(duration));
-      for (int j = 0; j < momentumMonths.length; ++j) {
-        Sequence mom = Strategy.calcMomentumReturns(momentumMonths[j], iStartSimulation, stock, bonds);
-        ReturnStats stats = new ReturnStats(mom, duration);
-        String name = String.format("%d", momentumMonths[j]);
-        frontier.addData(new FeatureVec(name, 2, stats.mean, stats.sdev));
-      }
-      frontiers[i] = frontier;
-    }
-    Chart.saveHighChartSplines(new File(dir, "momentum-duration-curves.html"), "Momentum Frontier", GRAPH_WIDTH,
-        GRAPH_HEIGHT, frontiers);
+    // Sequence[] frontiers = new Sequence[durations.length];
+    // for (int i = 0; i < durations.length; ++i) {
+    // duration = durations[i] * 12;
+    // Sequence frontier = new Sequence(Library.formatDurationMonths(duration));
+    // for (int j = 0; j < momentumMonths.length; ++j) {
+    // Sequence mom = Strategy.calcMomentumReturns(momentumMonths[j], iStartSimulation, stock, bonds);
+    // ReturnStats stats = new ReturnStats(mom, duration);
+    // String name = String.format("%d", momentumMonths[j]);
+    // frontier.addData(new FeatureVec(name, 2, stats.mean, stats.sdev));
+    // }
+    // frontiers[i] = frontier;
+    // }
+    // Chart.saveHighChartSplines(new File(dir, "momentum-duration-curves.html"), "Momentum Frontier", GRAPH_WIDTH,
+    // GRAPH_HEIGHT, frontiers);
   }
 
   public static void genReturnComparison(Sequence shiller, int numMonths, File file) throws IOException
@@ -838,10 +870,10 @@ public class RetireTool
 
     // genInterestRateGraph(shiller, tbills, new File(dir, "interest-rates.html"));
     // compareRebalancingMethods(shiller, dir);
-    // genReturnViz(shiller, new File(dir, "histogram-returns.html"), new File(dir, "future-returns.html"));
-    genReturnChart(shiller, tbills, new File(dir, "cumulative-returns.html"), new File(dir, "strategy-report.html"));
+    // genReturnViz(shiller, dir);
+    // genReturnChart(shiller, tbills, dir);
     // genSMASweepChart(shiller, new File(dir, "sma-sweep.html"));
-    // genMomentumSweepChart(shiller, dir);
+    genMomentumSweepChart(shiller, dir);
     // genStockBondMixSweepChart(shiller, dir);
     // genDuelViz(shiller, tbills, dir);
     // genEfficientFrontier(shiller, dir);
