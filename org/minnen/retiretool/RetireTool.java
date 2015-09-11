@@ -651,7 +651,7 @@ public class RetireTool
 
     final int iStart = 0;
     final int iEnd = shiller.length() - 1;
-    final int iStartSimulation = momentumMonths[momentumMonths.length - 1];
+    final int iStartSimulation = momentumMonths[momentumMonths.length - 1] + 1;
     int duration = 10 * 12;
 
     Sequence stockData = Shiller.getStockData(shiller, iStart, iEnd);
@@ -663,9 +663,18 @@ public class RetireTool
     Sequence stock = stockAll.subseq(iStartSimulation);
     Sequence bonds = bondsAll.subseq(iStartSimulation);
 
-    InvestmentStats cumulativeStockStats = InvestmentStats.calcInvestmentStats(stock);
-    stock.setName(String.format("Stock (%.2f%%)", cumulativeStockStats.cagr));
+    InvestmentStats stockStats = InvestmentStats.calcInvestmentStats(stock);
+    stock.setName(String.format("Stock (%.2f%%)", stockStats.cagr));
     ReturnStats stockReturns = ReturnStats.calc(stock, duration);
+
+    InvestmentStats bondStats = InvestmentStats.calcInvestmentStats(bonds);
+    bonds.setName(String.format("Bonds (%.2f%%)", bondStats.cagr));
+    ReturnStats bondReturns = ReturnStats.calc(bonds, duration);
+
+    Sequence perfect = Strategy.calcPerfectReturns(iStartSimulation, stockAll, bondsAll);
+    InvestmentStats perfectStats = InvestmentStats.calcInvestmentStats(perfect);
+    perfect.setName(String.format("Perfect (%.2f%%)", perfectStats.cagr));
+    ReturnStats perfectReturns = ReturnStats.calc(perfect, duration);
 
     Sequence scatter = new Sequence("Momentum Results");
     List<Sequence> seqs = new ArrayList<Sequence>();
@@ -681,6 +690,8 @@ public class RetireTool
       // System.out.println(InvestmentStats.calcInvestmentStats(mom));
     }
     seqs.add(0, stock);
+    seqs.add(1, bonds);
+    seqs.add(2, perfect);
     scatter.addData(new FeatureVec("Stock", 2, stockReturns.mean, stockReturns.sdev));
 
     // Sequence multiMom = Strategy.calcMultiMomentumReturns(months[months.length - 1], snp, bonds, Disposition.Safe);
@@ -692,7 +703,11 @@ public class RetireTool
         GRAPH_WIDTH, GRAPH_HEIGHT, true, seqs.toArray(new Sequence[seqs.size()]));
 
     rstats.add(0, stockReturns);
-    cumulativeStats.add(0, cumulativeStockStats);
+    rstats.add(1, bondReturns);
+    rstats.add(2, perfectReturns);
+    cumulativeStats.add(0, stockStats);
+    cumulativeStats.add(1, bondStats);
+    cumulativeStats.add(2, perfectStats);
     Chart.saveBoxPlots(new File(dir, "momentum-box-plots.html"),
         String.format("Momentum Returns (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
         rstats);

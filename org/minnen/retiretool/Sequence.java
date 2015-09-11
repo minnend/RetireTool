@@ -138,6 +138,20 @@ public class Sequence implements Iterable<FeatureVec>
     return iStart + i;
   }
 
+  public static void lock(int iStart, int iEnd, Sequence... seqs)
+  {
+    for (Sequence seq : seqs) {
+      seq.lock(iStart, iEnd);
+    }
+  }
+
+  public static void clearLock(Sequence... seqs)
+  {
+    for (Sequence seq : seqs) {
+      seq.clearLock();
+    }
+  }
+
   /** @return length of this sequence */
   public int size()
   {
@@ -573,5 +587,4 @@ public class Sequence implements Iterable<FeatureVec>
     }
     return seq;
   }
-
 }

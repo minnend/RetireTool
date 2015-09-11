@@ -30,18 +30,19 @@ public class Strategy
     int nCorrect = 0, nWrong = 0;
     for (int i = iStart; i < N; ++i) {
       // Select asset with best return over previous 12 months.
-      int a = Math.max(0, i - nMonths - 1);
-      int b = Math.max(0, i - 1);
       Sequence bestSeq = null;
       double bestReturn = 0.0, correctReturn = 1.0;
       for (Sequence seq : seqs) {
-        double r = FinLib.getReturn(seq, a, b);
+        seq.lock(0, i - 1);
+        int len = seq.length();
+        double r = FinLib.getReturn(seq, len - nMonths - 1, len - 1);
         if (r > bestReturn) {
           bestSeq = seq;
           bestReturn = r;
         }
 
-        r = FinLib.getReturn(seq, b, i);
+        seq.clearLock();
+        r = FinLib.getReturn(seq, i - 1, i);
         if (r > correctReturn) {
           correctReturn = r;
         }
@@ -49,7 +50,7 @@ public class Strategy
 
       // Invest everything in best asset for this month.
       // No bestSeq => hold everything in cash for no gain and no loss.
-      double realizedReturn = bestSeq != null ? FinLib.getReturn(bestSeq, b, i) : 1.0;
+      double realizedReturn = bestSeq != null ? FinLib.getReturn(bestSeq, i - 1, i) : 1.0;
       balance *= realizedReturn;
       momentum.addData(balance, seqs[0].getTimeMS(i));
 
@@ -59,8 +60,8 @@ public class Strategy
         ++nWrong;
       }
     }
-    System.out.printf("Momentum-%d: %.2f%% Correct (%d vs. %d / %d)\n", nMonths, nCorrect * 100.0
-        / (nCorrect + nWrong), nCorrect, nWrong, nCorrect + nWrong);
+    System.out.printf("Momentum-%d: %.2f%% Correct (%d vs. %d / %d)\n", nMonths,
+        nCorrect * 100.0 / (nCorrect + nWrong), nCorrect, nWrong, nCorrect + nWrong);
     return momentum;
   }
 
@@ -140,9 +141,9 @@ public class Strategy
     double balance = 1.0;
     perfect.addData(balance, seqs[0].getTimeMS(iStart));
     for (int i = iStart + 1; i < seqs[0].length(); ++i) {
-      double bestReturn = 0.0;
+      double bestReturn = 1.0; // can always hold cash
       for (Sequence seq : seqs) {
-        double r = seq.get(i, 0) / seq.get(i - 1, 0);
+        double r = FinLib.getReturn(seq, i - 1, i);
         if (r > bestReturn) {
           bestReturn = r;
         }
@@ -233,22 +234,21 @@ public class Strategy
   {
     int N = risky.length();
     assert safe.length() == N;
-    Sequence[] seqs = new Sequence[] { risky, safe };
 
     int[] numMonths = new int[] { 1, 3, 12 };
 
     Sequence momentum = new Sequence("MultiMom-" + disposition);
     double balance = 1.0;
     for (int i = iStart; i < N; ++i) {
-      int code = calcMomentumCode(i, numMonths, seqs);
+      int code = calcMomentumCode(i, numMonths, risky, safe);
 
       // Use votes to select asset.
       Sequence bestSeq = selectAsset(code, disposition, risky, safe);
 
       // Invest everything in best asset for this month.
-      double lastMonthReturn = bestSeq.get(i, 0) / bestSeq.get(Math.max(0, i - 1), 0);
+      double lastMonthReturn = FinLib.getReturn(bestSeq, i - 1, i);
       balance *= lastMonthReturn;
-      momentum.addData(balance, seqs[0].getTimeMS(i));
+      momentum.addData(balance, risky.getTimeMS(i));
     }
 
     return momentum;
