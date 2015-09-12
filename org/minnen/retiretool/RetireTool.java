@@ -642,26 +642,42 @@ public class RetireTool
 
   public static void genMomentumSweepChart(Sequence shiller, File dir) throws IOException
   {
-    final int[] momentumMonths = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 18 }; // , 21, 24, 30, 36 };
-    // final int[] momentumMonths = new int[] { 1, 3, 12 };
+    // final int[] momentumMonths = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 18 }; // , 21, 24, 30, 36 };
+    final int[] momentumMonths = new int[] { 1, 3, 12 };
     // final int[] durations = new int[] { 5, 10, 15, 20, 25, 30 };
 
     // iStart = shiller.getIndexForDate(1900, 1);
     // iEnd = shiller.getIndexForDate(2010, 1);
 
-    final int iStart = 0;
-    final int iEnd = shiller.length() - 1;
-    final int iStartSimulation = momentumMonths[momentumMonths.length - 1] + 1;
+    final int iStart = shiller.getIndexForDate(2003, 12);
+    // final int iEnd = shiller.length() - 1;
+    final int iEnd = shiller.getIndexForDate(2014, 12);
+    final int iStartSimulation = momentumMonths[momentumMonths.length - 1];
     int duration = 10 * 12;
 
     Sequence stockData = Shiller.getStockData(shiller, iStart, iEnd);
     Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
+    assert stockData.length() == bondData.length();
+    System.out.printf("Data: [%s] - [%s]\n", Library.formatMonth(stockData.getStartMS()),
+        Library.formatMonth(stockData.getEndMS()));
 
     Sequence stockAll = FinLib.calcSnpReturns(stockData, 0, stockData.size() - 1, FinLib.DividendMethod.MONTHLY);
     Sequence bondsAll = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, bondData.size() - 1);
+    assert stockAll.length() == bondsAll.length();
+    assert Math.abs(stockAll.getFirst(0) - 1.0) < 1e-8;
+    assert Math.abs(bondsAll.getFirst(0) - 1.0) < 1e-8;
+    System.out.printf("All: [%s] - [%s]\n", Library.formatMonth(stockAll.getStartMS()),
+        Library.formatMonth(bondsAll.getEndMS()));
 
     Sequence stock = stockAll.subseq(iStartSimulation);
     Sequence bonds = bondsAll.subseq(iStartSimulation);
+    stock._div(stock.getFirst(0));
+    bonds._div(bonds.getFirst(0));
+    assert stock.length() == bonds.length();
+    assert Math.abs(stock.getFirst(0) - 1.0) < 1e-8;
+    assert Math.abs(bonds.getFirst(0) - 1.0) < 1e-8;
+    System.out.printf("Sim: [%s] - [%s]\n", Library.formatMonth(stock.getStartMS()),
+        Library.formatMonth(bonds.getEndMS()));
 
     InvestmentStats stockStats = InvestmentStats.calcInvestmentStats(stock);
     stock.setName(String.format("Stock (%.2f%%)", stockStats.cagr));
@@ -676,12 +692,21 @@ public class RetireTool
     perfect.setName(String.format("Perfect (%.2f%%)", perfectStats.cagr));
     ReturnStats perfectReturns = ReturnStats.calc(perfect, duration);
 
+    Sequence mixed = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { 60, 40 }, 12, 0.0);
+    assert Math.abs(mixed.getFirst(0) - 1.0) < 1e-8;
+    InvestmentStats mixedStats = InvestmentStats.calcInvestmentStats(mixed);
+    mixed.setName(String.format("60/40 (%.2f%%)", mixedStats.cagr));
+
     Sequence scatter = new Sequence("Momentum Results");
     List<Sequence> seqs = new ArrayList<Sequence>();
     List<InvestmentStats> cumulativeStats = new ArrayList<InvestmentStats>();
     List<ReturnStats> rstats = new ArrayList<ReturnStats>();
     for (int i = 0; i < momentumMonths.length; ++i) {
       Sequence mom = Strategy.calcMomentumReturns(momentumMonths[i], iStartSimulation, stockAll, bondsAll);
+      assert Math.abs(mom.getFirst(0) - 1.0) < 1e-8;
+      assert mom.length() == stock.length();
+      System.out.printf("Mom-%d: [%s] - [%s]\n", momentumMonths[i], Library.formatMonth(mom.getStartMS()),
+          Library.formatMonth(mom.getEndMS()));
       cumulativeStats.add(InvestmentStats.calcInvestmentStats(mom));
       rstats.add(ReturnStats.calc(mom, duration));
       mom.setName(String.format("Momentum-%d (%.2f%%)", momentumMonths[i], cumulativeStats.get(i).cagr));
@@ -691,7 +716,7 @@ public class RetireTool
     }
     seqs.add(0, stock);
     seqs.add(1, bonds);
-    seqs.add(2, perfect);
+    seqs.add(2, mixed);
     scatter.addData(new FeatureVec("Stock", 2, stockReturns.mean, stockReturns.sdev));
 
     // Sequence multiMom = Strategy.calcMultiMomentumReturns(months[months.length - 1], snp, bonds, Disposition.Safe);
@@ -704,7 +729,7 @@ public class RetireTool
 
     rstats.add(0, stockReturns);
     rstats.add(1, bondReturns);
-    rstats.add(2, perfectReturns);
+    // rstats.add(2, perfectReturns);
     cumulativeStats.add(0, stockStats);
     cumulativeStats.add(1, bondStats);
     cumulativeStats.add(2, perfectStats);

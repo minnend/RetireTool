@@ -25,23 +25,24 @@ public class Strategy
       assert seqs[i].length() == N;
     }
 
-    Sequence momentum = new Sequence("Momentum-" + nMonths);
     double balance = 1.0;
+    Sequence momentum = new Sequence("Momentum-" + nMonths);
+    momentum.addData(balance, seqs[0].getTimeMS(iStart));
     int nCorrect = 0, nWrong = 0;
-    for (int i = iStart; i < N; ++i) {
+    for (int i = iStart + 1; i < N; ++i) {
       // Select asset with best return over previous 12 months.
       Sequence bestSeq = null;
       double bestReturn = 0.0, correctReturn = 1.0;
       for (Sequence seq : seqs) {
-        seq.lock(0, i - 1);
-        int len = seq.length();
-        double r = FinLib.getReturn(seq, len - nMonths - 1, len - 1);
+        seq.lock(0, i - 1); // lock sequence so only historical data is accessible
+        int iLast = seq.length() - 1;
+        double r = FinLib.getReturn(seq, iLast - nMonths, iLast);
+        seq.clearLock();
         if (r > bestReturn) {
           bestSeq = seq;
           bestReturn = r;
         }
 
-        seq.clearLock();
         r = FinLib.getReturn(seq, i - 1, i);
         if (r > correctReturn) {
           correctReturn = r;

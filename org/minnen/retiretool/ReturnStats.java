@@ -50,11 +50,11 @@ public class ReturnStats
       // Calculate percentiles.
       Arrays.sort(r);
       min = r[0];
-      percentile10 = r[Math.round(r.length * 0.1f)];
-      percentile25 = r[Math.round(r.length * 0.25f)];
-      median = r[Math.round(r.length * 0.5f)];
-      percentile75 = r[Math.round(r.length * 0.75f)];
-      percentile90 = r[Math.round(r.length * 0.9f)];
+      percentile10 = r[Math.min(Math.round(r.length * 0.1f), r.length - 1)];
+      percentile25 = r[Math.min(Math.round(r.length * 0.25f), r.length - 1)];
+      median = r[Math.min(Math.round(r.length * 0.5f), r.length - 1)];
+      percentile75 = r[Math.min(Math.round(r.length * 0.75f), r.length - 1)];
+      percentile90 = r[Math.min(Math.round(r.length * 0.9f), r.length - 1)];
       max = r[r.length - 1];
     }
   }
