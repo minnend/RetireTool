@@ -2,7 +2,6 @@ package org.minnen.retiretool;
 
 import java.io.File;
 import java.io.IOException;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -13,8 +12,104 @@ import org.minnen.retiretool.Strategy.Disposition;
 
 public class RetireTool
 {
-  public static final int GRAPH_WIDTH  = 710;
-  public static final int GRAPH_HEIGHT = 450;
+  public static final int                    GRAPH_WIDTH  = 710;
+  public static final int                    GRAPH_HEIGHT = 450;
+
+  public final static CumulativeReturnsStore store        = new CumulativeReturnsStore();
+
+  public static void calcCumulativeReturns(Sequence shiller, Sequence tbills)
+  {
+    assert tbills == null || shiller.length() == tbills.length();
+
+    final int iStartData = 0;
+    final int iEndData = shiller.length() - 1;
+
+    // iStart = shiller.getIndexForDate(1980, 1);
+    // iEnd = shiller.getIndexForDate(2010, 1);
+
+    final int rebalanceMonths = 12;
+    final double rebalanceBand = 0.0;
+    final int iStartSimulation = 12;
+
+    // Extract stock and bond data from shiller sequence.
+    Sequence stockData = Shiller.getStockData(shiller, iStartData, iEndData);
+    Sequence bondData = Shiller.getBondData(shiller, iStartData, iEndData);
+    assert stockData.length() == bondData.length();
+
+    // Calculate cumulative returns for full stock, bond, and t-bill data.
+    Sequence stockAll = FinLib.calcSnpReturns(stockData, 0, stockData.size() - 1, FinLib.DividendMethod.MONTHLY);
+    Sequence bondsAll = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, bondData.size() - 1);
+    assert stockAll.length() == bondsAll.length();
+    Sequence billsAll = null;
+    if (tbills != null) {
+      billsAll = Bond.calcReturnsRebuy(BondFactory.bill3Month, tbills, iStartData, iEndData);
+      assert billsAll.length() == stockAll.length();
+    }
+
+    // Extract requested subsequences from cumulative returns for stock, bonds, and t-bills.
+    Sequence stock = stockAll.subseq(iStartSimulation);
+    Sequence bonds = bondsAll.subseq(iStartSimulation);
+    stock._div(stock.getFirst(0));
+    bonds._div(bonds.getFirst(0));
+    assert stock.length() == bonds.length();
+    store.add(stock, "Stock");
+    store.add(bonds, "Bonds");
+
+    Sequence bills = null;
+    if (billsAll != null) {
+      bills = billsAll.subseq(iStartSimulation);
+      bills._div(bills.getFirst(0));
+      store.add(bills, "Bills");
+    }
+
+    Sequence stockQuarterlyDiv = FinLib.calcSnpReturns(stockData, iStartSimulation, iEndData - iStartSimulation,
+        FinLib.DividendMethod.QUARTERLY);
+    store.add(stockQuarterlyDiv, "Stock [QuarterlyDiv]");
+    Sequence stockNoDiv = FinLib.calcSnpReturns(stockData, iStartSimulation, iEndData - iStartSimulation,
+        FinLib.DividendMethod.NO_REINVEST);
+    store.add(stockNoDiv, "Stock [NoDiv]");
+    Sequence bondsHold = Bond.calcReturnsHold(BondFactory.note10Year, bondData, iStartSimulation, iEndData);
+    store.add(bondsHold, "Bonds [Hold]");
+
+    // Stock / Bond mixes.
+    int[] percentStock = new int[] { 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0 };
+    for (int i = 0; i < percentStock.length; ++i) {
+      int percentBonds = 100 - percentStock[i];
+      Sequence mix = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock[i],
+          percentBonds }, rebalanceMonths, rebalanceBand);
+      mix.setName(String.format("Stock/Bonds [%d/%d]", percentStock[i], percentBonds));
+      store.add(mix);
+    }
+
+    // Momentum sweep.
+    Sequence risky = stockAll;
+    Sequence safe = bondsAll;
+    final int[] momentumMonths = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 18 };
+
+    //
+    // Sequence mom1 = Strategy.calcMomentumReturns(1, iStartSimulation, risky, safe);
+    // Sequence mom3 = Strategy.calcMomentumReturns(3, iStartSimulation, risky, safe);
+    // Sequence mom12 = Strategy.calcMomentumReturns(12, iStartSimulation, risky, safe);
+    // Sequence sma = Strategy.calcSMAReturns(nMonthsSMA, iStartSimulation, stockData, risky, safe);
+    // Sequence raa = Strategy.calcMixedReturns(new Sequence[] { sma, mom12 }, new double[] { 50, 50 }, rebalanceMonths,
+    // rebalanceBand);
+    // raa.setName("RAA");
+    // Sequence multiMomRisky = Strategy.calcMultiMomentumReturns(iStartSimulation, risky, safe, Disposition.Risky);
+    // Sequence multiMomMod = Strategy.calcMultiMomentumReturns(iStartSimulation, risky, safe, Disposition.Moderate);
+    // Sequence multiMomCautious = Strategy.calcMultiMomentumReturns(iStartSimulation, risky, safe,
+    // Disposition.Cautious);
+    // Sequence multiMomSafe = Strategy.calcMultiMomentumReturns(iStartSimulation, risky, safe, Disposition.Safe);
+    // Sequence multiSmaRisky = Strategy.calcMultiSmaReturns(iStartSimulation, stockData, risky, safe,
+    // Disposition.Risky);
+    // Sequence multiSmaMod = Strategy.calcMultiSmaReturns(iStartSimulation, stockData, risky, safe,
+    // Disposition.Moderate);
+    // Sequence multiSmaCautious = Strategy.calcMultiSmaReturns(iStartSimulation, stockData, risky, safe,
+    // Disposition.Cautious);
+    // Sequence multiSmaSafe = Strategy.calcMultiSmaReturns(iStartSimulation, stockData, risky, safe, Disposition.Safe);
+    // Sequence daa = Strategy.calcMixedReturns(new Sequence[] { multiSmaRisky, multiSmaSafe }, new double[] { 30, 70 },
+    // rebalanceMonths, rebalanceBand);
+    // daa.setName("DAA");
+  }
 
   public static void printReturnLikelihoods(Sequence cumulativeReturns, boolean bInvert)
   {
@@ -898,15 +993,10 @@ public class RetireTool
     // shiller = shiller.subseq(commonStart, commonEnd);
     tbills = null; // tbills.subseq(commonStart, commonEnd);
 
-    // shiller.printWithdrawalLikelihoods(30, 0.1);
-    // shiller.genReturnChart(Inflation.Ignore, new File("g:/test.html"));
-    // int[] years = new int[] { 1, 2, 5, 10, 15, 20, 30, 40, 50 };
-    // for (int i = 0; i < years.length; ++i) {
-    // shiller.genReturnComparison(years[i] * 12, Inflation.Ignore, new File("g:/test.html"));
-    // }
-
     File dir = new File("g:/web/");
     assert dir.isDirectory();
+
+    calcCumulativeReturns(shiller, tbills);
 
     // genInterestRateGraph(shiller, tbills, new File(dir, "interest-rates.html"));
     // compareRebalancingMethods(shiller, dir);
