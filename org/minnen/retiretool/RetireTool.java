@@ -21,11 +21,8 @@ public class RetireTool
   {
     assert tbills == null || shiller.length() == tbills.length();
 
-    final int iStartData = 0;
-    final int iEndData = shiller.length() - 1;
-
-    // iStart = shiller.getIndexForDate(1980, 1);
-    // iEnd = shiller.getIndexForDate(2010, 1);
+    final int iStartData = 0; //shiller.getIndexForDate(1993, 6);
+    final int iEndData = -1; //shiller.getIndexForDate(2004, 12);
 
     final int rebalanceMonths = 12;
     final double rebalanceBand = 0.0;
@@ -37,8 +34,8 @@ public class RetireTool
     assert stockData.length() == bondData.length();
 
     // Calculate cumulative returns for full stock, bond, and t-bill data.
-    Sequence stockAll = FinLib.calcSnpReturns(stockData, 0, stockData.size() - 1, FinLib.DividendMethod.MONTHLY);
-    Sequence bondsAll = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, bondData.size() - 1);
+    Sequence stockAll = FinLib.calcSnpReturns(stockData, 0, -1, FinLib.DividendMethod.MONTHLY);
+    Sequence bondsAll = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, -1);
     assert stockAll.length() == bondsAll.length();
     Sequence billsAll = null;
     if (tbills != null) {
@@ -62,13 +59,12 @@ public class RetireTool
       store.add(bills, "Bills");
     }
 
-    Sequence stockQuarterlyDiv = FinLib.calcSnpReturns(stockData, iStartSimulation, iEndData - iStartSimulation,
-        FinLib.DividendMethod.QUARTERLY);
+    Sequence stockQuarterlyDiv = FinLib
+        .calcSnpReturns(stockData, iStartSimulation, -1, FinLib.DividendMethod.QUARTERLY);
     store.add(stockQuarterlyDiv, "Stock [QuarterlyDiv]");
-    Sequence stockNoDiv = FinLib.calcSnpReturns(stockData, iStartSimulation, iEndData - iStartSimulation,
-        FinLib.DividendMethod.NO_REINVEST);
+    Sequence stockNoDiv = FinLib.calcSnpReturns(stockData, iStartSimulation, -1, FinLib.DividendMethod.NO_REINVEST);
     store.add(stockNoDiv, "Stock [NoDiv]");
-    Sequence bondsHold = Bond.calcReturnsHold(BondFactory.note10Year, bondData, iStartSimulation, iEndData);
+    Sequence bondsHold = Bond.calcReturnsHold(BondFactory.note10Year, bondData, iStartSimulation, -1);
     store.add(bondsHold, "Bonds [Hold]");
 
     // Stock / Bond mixes.
@@ -172,9 +168,9 @@ public class RetireTool
     Sequence snpData = Shiller.getStockData(shiller, iStartData, iEndData);
     Sequence bondData = Shiller.getBondData(shiller, iStartData, iEndData);
 
-    Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStartData, iEndData);
+    Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStartData, -1);
     bonds.setName("Bonds");
-    Sequence stock = FinLib.calcSnpReturns(snpData, iStartData, iEndData - iStartData, FinLib.DividendMethod.MONTHLY);
+    Sequence stock = FinLib.calcSnpReturns(snpData, iStartData, -1, FinLib.DividendMethod.MONTHLY);
     stock.setName("Stock");
 
     Sequence mixedNone = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
@@ -206,7 +202,7 @@ public class RetireTool
     CumulativeStats[] cumulativeStats = new CumulativeStats[all.length];
     for (int i = 0; i < all.length; ++i) {
       assert all[i].length() == all[0].length();
-      cumulativeStats[i] = CumulativeStats.calcInvestmentStats(all[i]);
+      cumulativeStats[i] = CumulativeStats.calc(all[i]);
       all[i].setName(String.format("%s (%.2f%%)", all[i].getName(), cumulativeStats[i].cagr));
       System.out.printf("%s\n", cumulativeStats[i]);
     }
@@ -243,9 +239,8 @@ public class RetireTool
     Sequence snpData = Shiller.getStockData(shiller, iStartData, iEndData);
     Sequence bondData = Shiller.getBondData(shiller, iStartData, iEndData);
 
-    Sequence bondsAll = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStartData, iEndData);
-    Sequence stockAll = FinLib
-        .calcSnpReturns(snpData, iStartData, iEndData - iStartData, FinLib.DividendMethod.MONTHLY);
+    Sequence bondsAll = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStartData, -1);
+    Sequence stockAll = FinLib.calcSnpReturns(snpData, iStartData, -1, FinLib.DividendMethod.MONTHLY);
     // Sequence stockAllNoDiv = calcSnpReturns(snpData, iStartData, iEndData - iStartData,
     // FinLib.DividendMethod.NO_REINVEST);
     Sequence billsAll = tbills == null ? null : Bond.calcReturnsRebuy(BondFactory.bill3Month, tbills, iStartData,
@@ -254,7 +249,7 @@ public class RetireTool
     Sequence stock = stockAll.subseq(iStartReturns);
     Sequence bonds = bondsAll.subseq(iStartReturns);
 
-    Sequence bondsHold = Bond.calcReturnsHold(BondFactory.note10Year, bondData, iStartReturns, iEndData);
+    Sequence bondsHold = Bond.calcReturnsHold(BondFactory.note10Year, bondData, iStartReturns, -1);
 
     Sequence bills = null, billsHold = null;
     if (tbills != null) {
@@ -318,7 +313,7 @@ public class RetireTool
     int duration = 10 * 12;
     for (int i = 0; i < all.length; ++i) {
       assert all[i].length() == all[0].length();
-      cumulativeStats[i] = CumulativeStats.calcInvestmentStats(all[i]);
+      cumulativeStats[i] = CumulativeStats.calc(all[i]);
       rstats[i] = DurationalStats.calc(all[i], duration);
       scores[i] = cumulativeStats[i].calcScore();
       all[i].setName(String.format("%s (%.2f%%)", all[i].getName(), cumulativeStats[i].cagr));
@@ -373,8 +368,8 @@ public class RetireTool
     Sequence snpData = Shiller.getStockData(shiller, iStart, iEnd);
     Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
 
-    Sequence stockAll = FinLib.calcSnpReturns(snpData, iStart, iEnd - iStart, FinLib.DividendMethod.MONTHLY);
-    Sequence bondsAll = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStart, iEnd);
+    Sequence stockAll = FinLib.calcSnpReturns(snpData, iStart, -1, FinLib.DividendMethod.MONTHLY);
+    Sequence bondsAll = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStart, -1);
 
     // Chart.saveLineChart(new File(dir, "stock-prices.html"), "S&P 500 Prices", GRAPH_WIDTH, GRAPH_HEIGHT, false,
     // snpData);
@@ -471,8 +466,8 @@ public class RetireTool
     Sequence stockData = Shiller.getStockData(shiller, iStartData, iEnd);
     Sequence bondData = Shiller.getBondData(shiller, iStartData, iEnd);
 
-    Sequence stockAll = FinLib.calcSnpReturns(stockData, iStartData, iEnd - iStartData, FinLib.DividendMethod.MONTHLY);
-    Sequence bondsAll = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStartData, iEnd);
+    Sequence stockAll = FinLib.calcSnpReturns(stockData, iStartData, -1, FinLib.DividendMethod.MONTHLY);
+    Sequence bondsAll = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStartData, -1);
     stockAll.setName("Stock");
     bondsAll.setName("Bonds");
 
@@ -600,8 +595,8 @@ public class RetireTool
     Sequence snpData = Shiller.getStockData(shiller, iStart, iEnd);
     Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
 
-    Sequence snp = FinLib.calcSnpReturns(snpData, iStart, iEnd - iStart, FinLib.DividendMethod.MONTHLY);
-    Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStart, iEnd);
+    Sequence snp = FinLib.calcSnpReturns(snpData, iStart, -1, FinLib.DividendMethod.MONTHLY);
+    Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStart, -1);
 
     int[] percentStock = new int[] { 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0 };
     int rebalanceMonths = 12;
@@ -620,7 +615,7 @@ public class RetireTool
       for (int i = 0; i < all.length; ++i) {
         double leverage = FinLib.calcEqualizingLeverage(all[i], cumulativeStats[0].cagr);
         all[i] = FinLib.calcLeveragedReturns(all[i], leverage);
-        cumulativeStats[i] = CumulativeStats.calcInvestmentStats(all[i]);
+        cumulativeStats[i] = CumulativeStats.calc(all[i]);
         cumulativeStats[i].leverage = leverage;
       }
     }
@@ -653,8 +648,8 @@ public class RetireTool
     Sequence stockData = Shiller.getStockData(shiller, iStart, iEnd);
     Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
 
-    Sequence stock = FinLib.calcSnpReturns(stockData, iStart, iEnd - iStart, FinLib.DividendMethod.MONTHLY);
-    Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStart, iEnd);
+    Sequence stock = FinLib.calcSnpReturns(stockData, iStart, -1, FinLib.DividendMethod.MONTHLY);
+    Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStart, -1);
     assert stock.length() == bonds.length();
 
     int[] percentStock = new int[] { 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0 };
@@ -678,7 +673,7 @@ public class RetireTool
         int pctBonds = 100 - percentStock[j];
         Sequence mixed = Strategy.calcMixedReturns(new Sequence[] { decadeStock, decadeBonds }, new double[] {
             pctStock, pctBonds }, rebalanceMonths, rebalanceBand);
-        CumulativeStats stats = CumulativeStats.calcInvestmentStats(mixed);
+        CumulativeStats stats = CumulativeStats.calc(mixed);
         decade.addData(new FeatureVec(2, stats.cagr, stats.devAnnualReturn));
         // System.out.printf("%ss: %d / %d => %.2f (%.2f), %.2f\n", cal.get(Calendar.YEAR), pctStock, pctBonds,
         // stats.cagr, stats.meanAnnualReturn, stats.devAnnualReturn);
@@ -728,8 +723,8 @@ public class RetireTool
     Sequence snpData = Shiller.getStockData(shiller, iStart, iEnd);
     Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
 
-    Sequence stock = FinLib.calcSnpReturns(snpData, iStart, iEnd - iStart, FinLib.DividendMethod.MONTHLY);
-    Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStart, iEnd);
+    Sequence stock = FinLib.calcSnpReturns(snpData, iStart, -1, FinLib.DividendMethod.MONTHLY);
+    Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStart, -1);
 
     int[] months = new int[] { 1, 2, 3, 4, 5, 6, 9, 10, 12 }; // , 15, 18, 21, 24, 30, 36 };
 
@@ -747,25 +742,43 @@ public class RetireTool
 
   public static void genMomentumSweepChart(Sequence shiller, File dir) throws IOException
   {
-    // final int[] momentumMonths = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 18 };
-//    final int[] momentumMonths = new int[] { 1, 3, 12 };
-//
-//    int duration = 10 * 12;
-//
-//    Sequence scatter = new Sequence("Momentum Results");
-//    scatter.addData(new FeatureVec("Stock", 2, stockReturns.mean, stockReturns.sdev));
-//
-//    Chart.saveLineChart(new File(dir, "momentum-cumulative.html"), "Cumulative Market Returns: Momentum Strategy",
-//        GRAPH_WIDTH, GRAPH_HEIGHT, true, seqs.toArray(new Sequence[seqs.size()]));
-//
-//    Chart.saveBoxPlots(new File(dir, "momentum-box-plots.html"),
-//        String.format("Momentum Returns (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
-//        rstats);
-//    Chart.saveStatsTable(new File(dir, "momentum-chart.html"), GRAPH_WIDTH, true, cumulativeStats);
-//
-//    Chart.saveScatterPlot(new File(dir, "momentum-scatter.html"),
-//        String.format("Momentum: Returns vs. Volatility (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH,
-//        GRAPH_HEIGHT, 5, scatter);
+    final int[] momentumMonths = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 18 };
+    final int duration = 10 * 12;
+    store.calcDurationalStats(duration);
+
+    // Build list of names of assets/strategies that we care about for scatter plot.
+    List<String> nameList = new ArrayList<>();
+    for (int i = 0; i < momentumMonths.length; ++i) {
+      nameList.add("momentum-" + momentumMonths[i]);
+    }
+    nameList.add("stock");
+    String[] names = nameList.toArray(new String[nameList.size()]);
+
+    // Create scatterplot of returns vs. volatility.
+    List<DurationalStats> dstats = store.getDurationalStats(names);
+    Sequence scatter = new Sequence("Momentum Results");
+    for (int i = 0; i < dstats.size(); ++i) {
+      DurationalStats stats = dstats.get(i);
+      String label = "Stock";
+      if (i < momentumMonths.length) {
+        label = "" + momentumMonths[i];
+      }
+      scatter.addData(new FeatureVec(label, 2, stats.mean, stats.sdev));
+    }
+    Chart.saveScatterPlot(new File(dir, "momentum-scatter.html"),
+        String.format("Momentum: Returns vs. Volatility (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH,
+        GRAPH_HEIGHT, 5, scatter);
+
+    names = new String[] { "stock", "bonds", "stock/bonds [60/40]", "momentum-12" };
+    Chart.saveLineChart(new File(dir, "momentum-cumulative.html"), "Cumulative Market Returns: Momentum Strategy",
+        GRAPH_WIDTH, GRAPH_HEIGHT, true, store.getSequences(names));
+
+    Chart.saveBoxPlots(new File(dir, "momentum-box-plots.html"),
+        String.format("Momentum Returns (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
+        store.getDurationalStats(names));
+
+    List<CumulativeStats> cstats = store.getCumulativeStats(names);
+    Chart.saveStatsTable(new File(dir, "momentum-chart.html"), GRAPH_WIDTH, true, cstats);
   }
 
   public static void genReturnComparison(Sequence shiller, int numMonths, File file) throws IOException
@@ -779,8 +792,8 @@ public class RetireTool
     Sequence snpData = Shiller.getStockData(shiller, iStart, iEnd);
     Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
 
-    Sequence cumulativeSNP = FinLib.calcSnpReturns(snpData, iStart, iEnd - iStart, FinLib.DividendMethod.MONTHLY);
-    Sequence cumulativeBonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStart, iEnd);
+    Sequence cumulativeSNP = FinLib.calcSnpReturns(snpData, iStart, -1, FinLib.DividendMethod.MONTHLY);
+    Sequence cumulativeBonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStart, -1);
     Sequence cumulativeMixed = Strategy.calcMixedReturns(new Sequence[] { cumulativeSNP, cumulativeBonds },
         new double[] { percentStock, percentBonds }, 6, 0.0);
     assert cumulativeSNP.length() == cumulativeBonds.length();
@@ -836,9 +849,9 @@ public class RetireTool
     Sequence stockData = Shiller.getStockData(shiller, iStartData, iEndData);
     Sequence bondData = Shiller.getBondData(shiller, iStartData, iEndData);
 
-    Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, bondData.length() - 1);
+    Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, -1);
     bonds.setName("Bonds");
-    Sequence stock = FinLib.calcSnpReturns(stockData, 0, stockData.length() - 1, FinLib.DividendMethod.MONTHLY);
+    Sequence stock = FinLib.calcSnpReturns(stockData, 0, -1, FinLib.DividendMethod.MONTHLY);
     stock.setName("Stock");
 
     Sequence corr = FinLib.calcCorrelation(stock, bonds, 3 * 12);
@@ -865,9 +878,9 @@ public class RetireTool
     Sequence stockData = Shiller.getStockData(shiller, iStartData, iEndData);
     Sequence bondData = Shiller.getBondData(shiller, iStartData, iEndData);
 
-    Sequence stock = FinLib.calcSnpReturns(stockData, 0, stockData.length() - 1, FinLib.DividendMethod.MONTHLY);
+    Sequence stock = FinLib.calcSnpReturns(stockData, 0, -1, FinLib.DividendMethod.MONTHLY);
     stock.setName("Stock");
-    Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, bondData.length() - 1);
+    Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, -1);
     bonds.setName("Bonds");
 
     int percentStock = 60;

@@ -545,15 +545,18 @@ public final class FinLib
    * Calculates S&P ROI for the given range.
    * 
    * @param snp sequence of prices (d=0) and dividends (d=1)
-   * @param iStart first index in SNP
-   * @param nMonths number of months (ticks) in snp to consider
+   * @param iStart first index in S&P to consider
+   * @param iEnd last index in S&P to consider (negative => count back from end of sequence)
    * @param divMethod how should we handle dividend reinvestment
    * @return sequence of ROIs
    */
-  public static Sequence calcSnpReturns(Sequence snp, int iStart, int nMonths, DividendMethod divMethod)
+  public static Sequence calcSnpReturns(Sequence snp, int iStart, int iEnd, DividendMethod divMethod)
   {
-    if (iStart < 0 || nMonths < 1 || iStart + nMonths >= snp.size()) {
-      throw new IllegalArgumentException(String.format("iStart=%d, nMonths=%d, size=%d", iStart, nMonths, snp.size()));
+    if (iEnd < 0) {
+      iEnd += snp.length();
+    }
+    if (iStart < 0 || iEnd < iStart || iEnd >= snp.length()) {
+      throw new IllegalArgumentException(String.format("iStart=%d, iEnd=%d, length=%d", iStart, iEnd, snp.length()));
     }
 
     Sequence seq = new Sequence(divMethod == DividendMethod.NO_REINVEST ? "S&P-NoReinvest" : "S&P");
@@ -563,7 +566,7 @@ public final class FinLib
     double baseValue = 1.0;
     double shares = baseValue / snp.get(iStart, 0);
     seq.addData(baseValue, snp.getTimeMS(iStart));
-    for (int i = iStart; i < iStart + nMonths; ++i) {
+    for (int i = iStart; i < iEnd; ++i) {
       double div = 0.0;
       if (divMethod == DividendMethod.NO_REINVEST)
         divCash += shares * snp.get(i, 1);
@@ -635,7 +638,7 @@ public final class FinLib
 
   public static double calcEqualizingLeverage(Sequence cumulativeReturns, double desiredCAGR)
   {
-    CumulativeStats stats = CumulativeStats.calcInvestmentStats(cumulativeReturns);
+    CumulativeStats stats = CumulativeStats.calc(cumulativeReturns);
     double ratio = desiredCAGR / stats.cagr;
     double low = ratio / 2.0;
     double high = ratio * 2.0;
@@ -645,7 +648,7 @@ public final class FinLib
     while (iter < 100 && Math.abs(stats.cagr - desiredCAGR) > 1e-5) {
       leverage = (low + high) / 2.0;
       Sequence levSeq = calcLeveragedReturns(cumulativeReturns, leverage);
-      stats = CumulativeStats.calcInvestmentStats(levSeq);
+      stats = CumulativeStats.calc(levSeq);
       // System.out.printf("%d: [%f, %f] -> %f (%f)\n", iter, low, high, stats.cagr, desiredCAGR);
       if (stats.cagr < desiredCAGR) {
         low = leverage;

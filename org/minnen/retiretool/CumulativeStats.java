@@ -24,7 +24,7 @@ public class CumulativeStats
   public double[] annualPercentiles = new double[5];
   public double   leverage          = 1.0;
 
-  public static CumulativeStats calcInvestmentStats(Sequence cumulativeReturns)
+  public static CumulativeStats calc(Sequence cumulativeReturns)
   {
     CumulativeStats stats = new CumulativeStats();
 
@@ -151,7 +151,7 @@ public class CumulativeStats
     CumulativeStats[] stats = new CumulativeStats[cumulativeReturns.length];
     for (int i = 0; i < cumulativeReturns.length; ++i) {
       assert cumulativeReturns[i].length() == cumulativeReturns[0].length();
-      stats[i] = CumulativeStats.calcInvestmentStats(cumulativeReturns[i]);
+      stats[i] = CumulativeStats.calc(cumulativeReturns[i]);
       cumulativeReturns[i].setName(String.format("%s (%.2f%%)", cumulativeReturns[i].getName(), stats[i].cagr));
     }
     return stats;

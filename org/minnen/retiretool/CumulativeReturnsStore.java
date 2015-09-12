@@ -18,11 +18,12 @@ import java.util.Set;
  */
 public class CumulativeReturnsStore implements Iterable<Sequence>
 {
-  public final double                startValue;
-  public final List<Sequence>        seqs            = new ArrayList<>();
-  public final List<CumulativeStats> cumulativeStats = new ArrayList<>();
-  public final List<DurationalStats>     durationStats   = new ArrayList<>();
-  public final Map<String, Integer>  nameToIndex     = new HashMap<>();
+  public final double                 startValue;
+  public int                          defaultStatsDurationInMonths = 10 * 12;
+  private final List<Sequence>        seqs                         = new ArrayList<>();
+  private final List<CumulativeStats> cumulativeStats              = new ArrayList<>();
+  private final List<DurationalStats> durationalStats              = new ArrayList<>();
+  private final Map<String, Integer>  nameToIndex                  = new HashMap<>();
 
   public CumulativeReturnsStore()
   {
@@ -92,6 +93,18 @@ public class CumulativeReturnsStore implements Iterable<Sequence>
     seqs.add(cumulativeReturns);
     nameToIndex.put(name.toLowerCase(), index);
     assert get(name) == cumulativeReturns;
+
+    // Calculate cumulative stats for this strategy.
+    CumulativeStats cstats = CumulativeStats.calc(cumulativeReturns);
+    cumulativeReturns.setName(String.format("%s (%.2f%%)", cumulativeReturns.getName(), cstats.cagr));
+    cumulativeStats.add(cstats);
+    assert cumulativeStats.size() == seqs.size();
+
+    // Calculate durational stats for this strategy.
+    DurationalStats dstats = DurationalStats.calc(cumulativeReturns, defaultStatsDurationInMonths);
+    durationalStats.add(dstats);
+    assert durationalStats.size() == seqs.size();
+
     // System.out.printf("Added: \"%s\"\n", name);
     return index;
   }
@@ -106,14 +119,76 @@ public class CumulativeReturnsStore implements Iterable<Sequence>
     return seqs.get(i);
   }
 
+  public int getIndex(String name)
+  {
+    return nameToIndex.get(name.toLowerCase());
+  }
+
   public Sequence get(String name)
   {
-    return seqs.get(nameToIndex.get(name.toLowerCase()));
+    return seqs.get(getIndex(name));
+  }
+
+  public CumulativeStats getCumulativeStats(int i)
+  {
+    return cumulativeStats.get(i);
+  }
+
+  public CumulativeStats getCumulativeStats(String name)
+  {
+    return cumulativeStats.get(getIndex(name));
+  }
+
+  public List<CumulativeStats> getCumulativeStats(String... names)
+  {
+    List<CumulativeStats> stats = new ArrayList<>();
+    for (String name : names) {
+      stats.add(getCumulativeStats(name));
+    }
+    return stats;
+  }
+
+  public DurationalStats getDurationalStats(int i)
+  {
+    return durationalStats.get(i);
+  }
+
+  public DurationalStats getDurationalStats(String name)
+  {
+    return durationalStats.get(getIndex(name));
+  }
+
+  public List<DurationalStats> getDurationalStats(String... names)
+  {
+    List<DurationalStats> stats = new ArrayList<>();
+    for (String name : names) {
+      stats.add(getDurationalStats(name));
+    }
+    return stats;
+  }
+
+  public List<Sequence> getSequences(String... names)
+  {
+    List<Sequence> seqs = new ArrayList<>();
+    for (String name : names) {
+      seqs.add(get(name));
+    }
+    return seqs;
   }
 
   public Set<String> getNames()
   {
     return nameToIndex.keySet();
+  }
+
+  /**
+   * Calculate durational states for each stored sequence using the given duration.
+   */
+  public void calcDurationalStats(int nMonths)
+  {
+    for (int i = 0; i < seqs.size(); ++i) {
+      durationalStats.set(i, DurationalStats.calc(seqs.get(i), nMonths));
+    }
   }
 
   @Override

@@ -23,6 +23,7 @@ public class Strategy
     int N = seqs[0].length();
     for (int i = 1; i < seqs.length; ++i) {
       assert seqs[i].length() == N;
+      assert seqs[i].getStartMS() == seqs[0].getStartMS();
     }
 
     double balance = 1.0;
@@ -43,6 +44,7 @@ public class Strategy
           bestReturn = r;
         }
 
+        // The correct return is the one actually realized for the current month.
         r = FinLib.getReturn(seq, i - 1, i);
         if (r > correctReturn) {
           correctReturn = r;
@@ -61,7 +63,7 @@ public class Strategy
         ++nWrong;
       }
     }
-    // TODO(dminnen) store correct % somewhere
+    // TODO store correct % somewhere
     // System.out.printf("Momentum-%d: %.2f%% Correct (%d vs. %d / %d)\n", nMonths,
     // nCorrect * 100.0 / (nCorrect + nWrong), nCorrect, nWrong, nCorrect + nWrong);
     return momentum;

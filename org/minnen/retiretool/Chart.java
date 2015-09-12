@@ -38,6 +38,13 @@ public class Chart
         : Double.NaN, logarithmic, 0, seqs);
   }
 
+  public static void saveLineChart(File file, String title, int width, int height, boolean logarithmic,
+      List<Sequence> seqs) throws IOException
+  {
+    saveHighChart(file, ChartType.Line, title, null, null, width, height, 0.5, Double.NaN, logarithmic ? 0.5
+        : Double.NaN, logarithmic, 0, seqs.toArray(new Sequence[seqs.size()]));
+  }
+
   public static void saveHighChart(File file, ChartType chartType, String title, String[] labels, String[] colors,
       int width, int height, double ymin, double ymax, double minorTickInterval, boolean logarithmic, int dim,
       Sequence... seqs) throws IOException
@@ -782,7 +789,7 @@ public class Chart
     for (int i = iStart; i + 120 < cumulativeReturns.length(); i += 120) {
       cal.setTimeInMillis(cumulativeReturns.getTimeMS(i));
       Sequence decade = cumulativeReturns.subseq(i, 121);
-      CumulativeStats stats = CumulativeStats.calcInvestmentStats(decade);
+      CumulativeStats stats = CumulativeStats.calc(decade);
       System.out.printf(" <tr><td>%ds</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2fx</td></tr>\n",
           cal.get(Calendar.YEAR), stats.cagr, stats.devAnnualReturn, stats.maxDrawdown, stats.percentDown10,
           stats.totalReturn);
@@ -816,8 +823,8 @@ public class Chart
       cal.setTimeInMillis(returns1.getTimeMS(i));
       Sequence decade1 = returns1.subseq(i, 121);
       Sequence decade2 = returns2.subseq(i, 121);
-      CumulativeStats stats1 = CumulativeStats.calcInvestmentStats(decade1);
-      CumulativeStats stats2 = CumulativeStats.calcInvestmentStats(decade2);
+      CumulativeStats stats1 = CumulativeStats.calc(decade1);
+      CumulativeStats stats2 = CumulativeStats.calc(decade2);
       System.out.printf(" <tr><td>%ds</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>\n",
           cal.get(Calendar.YEAR), stats1.cagr, stats2.cagr, stats1.devAnnualReturn, stats2.devAnnualReturn);
     }

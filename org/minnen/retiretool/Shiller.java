@@ -40,6 +40,12 @@ public class Shiller
   /** @return Sequence containing stock and dividend data in the given range (inclusive). */
   public static Sequence getStockData(Sequence shiller, int iStart, int iEnd)
   {
+    if (iStart < 0) {
+      iStart += shiller.length();
+    }
+    if (iEnd < 0) {
+      iEnd += shiller.length();
+    }
     Sequence seq = new Sequence("S&P");
     for (int i = iStart; i <= iEnd; ++i) {
       seq.addData(new FeatureVec(2, shiller.get(i, PRICE), shiller.get(i, DIV)), shiller.getTimeMS(i));
@@ -56,6 +62,12 @@ public class Shiller
   /** @return Sequence containing bond data in the given range (inclusive). */
   public static Sequence getBondData(Sequence shiller, int iStart, int iEnd)
   {
+    if (iStart < 0) {
+      iStart += shiller.length();
+    }
+    if (iEnd < 0) {
+      iEnd += shiller.length();
+    }
     Sequence seq = new Sequence("10-Year Treasury Notes");
     for (int i = iStart; i <= iEnd; ++i) {
       seq.addData(shiller.get(i, GS10), shiller.getTimeMS(i));

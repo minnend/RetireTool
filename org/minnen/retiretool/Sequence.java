@@ -92,6 +92,16 @@ public class Sequence implements Iterable<FeatureVec>
     return get(0).getNumDims();
   }
 
+  /**
+   * Lock this sequence so that only elements in [iStart, iEnd] can be access.
+   * 
+   * The typical motivation for locking a sequence is ensuring against bugs that allow a strategy to
+   * "look in to the future". When simulating a particular point in time, you can lock the sequence to points in the
+   * past [0, t-1] and protect against accidental cheating.
+   * 
+   * @param iStart first index that can be accessed
+   * @param iEnd last index that can be accessed
+   */
   public void lock(int iStart, int iEnd)
   {
     assert (iStart >= -1 && iStart <= length() - 1);
