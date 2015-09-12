@@ -61,8 +61,9 @@ public class Strategy
         ++nWrong;
       }
     }
-    System.out.printf("Momentum-%d: %.2f%% Correct (%d vs. %d / %d)\n", nMonths,
-        nCorrect * 100.0 / (nCorrect + nWrong), nCorrect, nWrong, nCorrect + nWrong);
+    // TODO(dminnen) store correct % somewhere
+    // System.out.printf("Momentum-%d: %.2f%% Correct (%d vs. %d / %d)\n", nMonths,
+    // nCorrect * 100.0 / (nCorrect + nWrong), nCorrect, nWrong, nCorrect + nWrong);
     return momentum;
   }
 

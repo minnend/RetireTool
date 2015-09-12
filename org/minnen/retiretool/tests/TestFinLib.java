@@ -54,13 +54,35 @@ public class TestFinLib
   public void testRet2Mul()
   {
     assertEquals(1.0, FinLib.ret2mul(0.0), 1e-6);
-    
+
     assertEquals(1.02, FinLib.ret2mul(2.0), 1e-6);
     assertEquals(1.5, FinLib.ret2mul(50.0), 1e-6);
     assertEquals(2.0, FinLib.ret2mul(100.0), 1e-6);
-    
+
     assertEquals(0.98, FinLib.ret2mul(-2.0), 1e-6);
     assertEquals(0.8, FinLib.ret2mul(-20.0), 1e-6);
     assertEquals(0.2, FinLib.ret2mul(-80.0), 1e-6);
+  }
+
+  @Test
+  public void testGetNameWithBreak()
+  {
+    assertEquals("", FinLib.getNameWithBreak(null));
+    assertEquals("", FinLib.getNameWithBreak(""));
+    assertEquals(" ", FinLib.getNameWithBreak(" "));
+    assertEquals("foo", FinLib.getNameWithBreak("foo"));
+    assertEquals("foo<br/>(bar)", FinLib.getNameWithBreak("foo (bar)"));
+    assertEquals("foo (bar)<br/>(buzz)", FinLib.getNameWithBreak("foo (bar) (buzz)"));
+  }
+
+  @Test
+  public void testGetBaseName()
+  {
+    assertEquals("", FinLib.getBaseName(null));
+    assertEquals("", FinLib.getBaseName(""));
+    assertEquals(" ", FinLib.getBaseName(" "));
+    assertEquals("foo", FinLib.getBaseName("foo"));
+    assertEquals("foo", FinLib.getBaseName("foo (bar)"));
+    assertEquals("foo (bar)", FinLib.getBaseName("foo (bar) (buzz)"));
   }
 }

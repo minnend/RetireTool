@@ -18,32 +18,6 @@ public class Chart
     Line, Bar, Area, PosNegArea
   };
 
-  public static String getNameWithBreak(String name)
-  {
-    if (name == null) {
-      return "";
-    }
-    int i = name.indexOf(" (");
-    if (i >= 0) {
-      return name.substring(0, i) + "<br/>" + name.substring(i + 1);
-    } else {
-      return name;
-    }
-  }
-
-  public static String getBaseName(String name)
-  {
-    if (name == null) {
-      return "";
-    }
-    int i = name.indexOf(" (");
-    if (i >= 0) {
-      return name.substring(0, i);
-    } else {
-      return name;
-    }
-  }
-
   public static String chart2name(ChartType chartType)
   {
     if (chartType == ChartType.Line) {
@@ -356,7 +330,7 @@ public class Chart
         double cagr = v.get(0);
         double stdev = v.get(1);
         String name = v.getName();
-        writer.write(String.format("{x:%.3f, y:%.3f, name: '%s'}", stdev, cagr, getBaseName(name)));
+        writer.write(String.format("{x:%.3f, y:%.3f, name: '%s'}", stdev, cagr, FinLib.getBaseName(name)));
         if (i < scatter.length() - 1) {
           writer.write(",\n");
         }
@@ -460,7 +434,7 @@ public class Chart
       writer.write("  chart: { type: 'boxplot' },\n");
       writer.write("  xAxis: { categories: [");
       for (int i = 0; i < returnStats.length; ++i) {
-        writer.write(String.format("'%s'", getNameWithBreak(returnStats[i].sourceSeq.getName())));
+        writer.write(String.format("'%s'", FinLib.getNameWithBreak(returnStats[i].sourceSeq.getName())));
         if (i < returnStats.length - 1) {
           writer.write(",");
         }
@@ -765,7 +739,7 @@ public class Chart
       writer.write("<thead><tr>\n");
       writer.write(" <th>Duration</th>\n");
       for (ComparisonStats stats : allStats) {
-        writer.write(String.format(" <th>%s</th>\n", getBaseName(stats.returns1.getName())));
+        writer.write(String.format(" <th>%s</th>\n", FinLib.getBaseName(stats.returns1.getName())));
       }
       writer.write("</tr></thead>\n");
       writer.write("<tbody>\n");
@@ -783,7 +757,7 @@ public class Chart
 
         for (ComparisonStats stats : allStats) {
           Results results = stats.durationToResults.get(duration);
-          writer.write(String.format("<td>%.1f (%.1f)</td>\n", results.winPercent1, results.winPercent2));          
+          writer.write(String.format("<td>%.1f (%.1f)</td>\n", results.winPercent1, results.winPercent2));
         }
         writer.write("</tr>\n");
       }

@@ -17,7 +17,7 @@ public class RetireTool
 
   public final static CumulativeReturnsStore store        = new CumulativeReturnsStore();
 
-  public static void calcCumulativeReturns(Sequence shiller, Sequence tbills)
+  public static void buildCumulativeReturnsStore(Sequence shiller, Sequence tbills)
   {
     assert tbills == null || shiller.length() == tbills.length();
 
@@ -29,7 +29,7 @@ public class RetireTool
 
     final int rebalanceMonths = 12;
     final double rebalanceBand = 0.0;
-    final int iStartSimulation = 12;
+    final int iStartSimulation = 18;
 
     // Extract stock and bond data from shiller sequence.
     Sequence stockData = Shiller.getStockData(shiller, iStartData, iEndData);
@@ -81,34 +81,40 @@ public class RetireTool
       store.add(mix);
     }
 
-    // Momentum sweep.
+    // Setup risky and safe assets for use with dynamic asset allocation strategies.
     Sequence risky = stockAll;
     Sequence safe = bondsAll;
-    final int[] momentumMonths = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 18 };
 
-    //
-    // Sequence mom1 = Strategy.calcMomentumReturns(1, iStartSimulation, risky, safe);
-    // Sequence mom3 = Strategy.calcMomentumReturns(3, iStartSimulation, risky, safe);
-    // Sequence mom12 = Strategy.calcMomentumReturns(12, iStartSimulation, risky, safe);
-    // Sequence sma = Strategy.calcSMAReturns(nMonthsSMA, iStartSimulation, stockData, risky, safe);
-    // Sequence raa = Strategy.calcMixedReturns(new Sequence[] { sma, mom12 }, new double[] { 50, 50 }, rebalanceMonths,
-    // rebalanceBand);
-    // raa.setName("RAA");
-    // Sequence multiMomRisky = Strategy.calcMultiMomentumReturns(iStartSimulation, risky, safe, Disposition.Risky);
-    // Sequence multiMomMod = Strategy.calcMultiMomentumReturns(iStartSimulation, risky, safe, Disposition.Moderate);
-    // Sequence multiMomCautious = Strategy.calcMultiMomentumReturns(iStartSimulation, risky, safe,
-    // Disposition.Cautious);
-    // Sequence multiMomSafe = Strategy.calcMultiMomentumReturns(iStartSimulation, risky, safe, Disposition.Safe);
-    // Sequence multiSmaRisky = Strategy.calcMultiSmaReturns(iStartSimulation, stockData, risky, safe,
-    // Disposition.Risky);
-    // Sequence multiSmaMod = Strategy.calcMultiSmaReturns(iStartSimulation, stockData, risky, safe,
-    // Disposition.Moderate);
-    // Sequence multiSmaCautious = Strategy.calcMultiSmaReturns(iStartSimulation, stockData, risky, safe,
-    // Disposition.Cautious);
-    // Sequence multiSmaSafe = Strategy.calcMultiSmaReturns(iStartSimulation, stockData, risky, safe, Disposition.Safe);
-    // Sequence daa = Strategy.calcMixedReturns(new Sequence[] { multiSmaRisky, multiSmaSafe }, new double[] { 30, 70 },
-    // rebalanceMonths, rebalanceBand);
-    // daa.setName("DAA");
+    // Momentum sweep.
+    final int[] momentumMonths = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 18 };
+    for (int i = 0; i < momentumMonths.length; ++i) {
+      Sequence mom = Strategy.calcMomentumReturns(momentumMonths[i], iStartSimulation, risky, safe);
+      store.add(mom);
+    }
+
+    // SMA sweep.
+    int[] smaMonths = new int[] { 1, 2, 3, 4, 5, 6, 9, 10, 12, 15, 18 };
+    for (int i = 0; i < smaMonths.length; ++i) {
+      Sequence sma = Strategy.calcSMAReturns(smaMonths[i], iStartSimulation, stockData, risky, safe);
+      store.add(sma);
+    }
+
+    // RAA = 50/50 sma-10 & mom-12
+    Sequence raa = Strategy.calcMixedReturns(new Sequence[] { store.get("sma-10"), store.get("momentum-12") },
+        new double[] { 50, 50 }, rebalanceMonths, rebalanceBand);
+    store.add(raa, "RAA");
+
+    // Multi-scale Momentum and SMA methods.
+    for (Disposition disposition : Disposition.values()) {
+      store.add(Strategy.calcMultiMomentumReturns(iStartSimulation, risky, safe, disposition));
+      store.add(Strategy.calcMultiSmaReturns(iStartSimulation, stockData, risky, safe, disposition));
+    }
+
+    // DAA = 50/50 SMA-risky & Momentum-safe.
+    Sequence daa = Strategy.calcMixedReturns(
+        new Sequence[] { store.get("multisma-risky"), store.get("multimom-safe") }, new double[] { 50, 50 },
+        rebalanceMonths, rebalanceBand);
+    store.add(daa, "DAA");
   }
 
   public static void printReturnLikelihoods(Sequence cumulativeReturns, boolean bInvert)
@@ -996,7 +1002,7 @@ public class RetireTool
     File dir = new File("g:/web/");
     assert dir.isDirectory();
 
-    calcCumulativeReturns(shiller, tbills);
+    buildCumulativeReturnsStore(shiller, tbills);
 
     // genInterestRateGraph(shiller, tbills, new File(dir, "interest-rates.html"));
     // compareRebalancingMethods(shiller, dir);

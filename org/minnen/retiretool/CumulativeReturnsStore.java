@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * This class stores sequences that hold cumulative returns for a particular asset / strategy. The store ensures that
@@ -87,8 +88,8 @@ public class CumulativeReturnsStore implements Iterable<Sequence>
     final int index = seqs.size();
     cumulativeReturns.setName(name);
     seqs.add(cumulativeReturns);
-    nameToIndex.put(name, index);
-    assert seqs.get(nameToIndex.get(name)) == cumulativeReturns;
+    nameToIndex.put(name.toLowerCase(), index);
+    assert get(name) == cumulativeReturns;
     System.out.printf("Added: \"%s\"\n", name);
     return index;
   }
@@ -105,7 +106,12 @@ public class CumulativeReturnsStore implements Iterable<Sequence>
 
   public Sequence get(String name)
   {
-    return seqs.get(nameToIndex.get(name));
+    return seqs.get(nameToIndex.get(name.toLowerCase()));
+  }
+
+  public Set<String> getNames()
+  {
+    return nameToIndex.keySet();
   }
 
   @Override

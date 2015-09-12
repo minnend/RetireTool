@@ -657,4 +657,56 @@ public final class FinLib
 
     return leverage;
   }
+
+  /**
+   * Returns the same name with a {@literal <br/>} inserted before the last open paren.
+   * 
+   * Examples:
+   * <ul>
+   * <li>"foo" -> "foo"
+   * <li>"foo (bar)" -> "foo{@literal <br/>} (bar)"
+   * <li>"foo (bar) (buzz)" -> "foo (bar){@literal <br/>}(buzz)"
+   * </ul>
+   * 
+   * @param name the name to modify
+   * @return name with {@literal <br/>} inserted before last open paren
+   */
+  public static String getNameWithBreak(String name)
+  {
+    if (name == null) {
+      return "";
+    }
+    int i = name.lastIndexOf(" (");
+    if (i >= 0) {
+      return name.substring(0, i) + "<br/>" + name.substring(i + 1);
+    } else {
+      return name;
+    }
+  }
+
+  /**
+   * Returns all text before the last open paren.
+   * 
+   * Examples:
+   * <ul>
+   * <li>"foo" -> "foo"
+   * <li>"foo (bar)" -> "foo"
+   * <li>"foo (bar) (buzz)" -> "foo (bar)"
+   * </ul>
+   * 
+   * @param name the name to modify
+   * @return all text before last open paren
+   */
+  public static String getBaseName(String name)
+  {
+    if (name == null) {
+      return "";
+    }
+    int i = name.lastIndexOf(" (");
+    if (i >= 0) {
+      return name.substring(0, i);
+    } else {
+      return name;
+    }
+  }
 }
