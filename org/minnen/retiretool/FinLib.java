@@ -545,13 +545,16 @@ public final class FinLib
    * Calculates S&P ROI for the given range.
    * 
    * @param snp sequence of prices (d=0) and dividends (d=1)
-   * @param iStart first index in S&P to consider
+   * @param iStart first index in S&P to consider (negative => count back from end of sequence)
    * @param iEnd last index in S&P to consider (negative => count back from end of sequence)
    * @param divMethod how should we handle dividend reinvestment
    * @return sequence of ROIs
    */
   public static Sequence calcSnpReturns(Sequence snp, int iStart, int iEnd, DividendMethod divMethod)
   {
+    if (iStart < 0) {
+      iStart += snp.length();
+    }
     if (iEnd < 0) {
       iEnd += snp.length();
     }

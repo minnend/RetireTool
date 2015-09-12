@@ -181,12 +181,15 @@ public class Bond
    * 
    * @param factory buys a particular kind of bond
    * @param bondData interest rates for bonds
-   * @param iStart start simulation at this index in the data sequence
+   * @param iStart start simulation at this index in the data sequence (negative => count back from end of sequence)
    * @param iEnd end simulation at this index in the data sequence (negative => count back from end of sequence)
    * @return sequence of ROIs
    */
   public static Sequence calcReturnsRebuy(BondFactory factory, Sequence bondData, int iStart, int iEnd)
   {
+    if (iStart < 0) {
+      iStart += bondData.length();
+    }
     if (iEnd < 0) {
       iEnd += bondData.length();
     }
@@ -224,12 +227,15 @@ public class Bond
    * 
    * @param factory buys a particular kind of bond
    * @param bondData interest rates for bonds
-   * @param iStart start simulation at this index in the data sequence
+   * @param iStart start simulation at this index in the data sequence (negative => count back from end of sequence)
    * @param iEnd end simulation at this index in the data sequence (negative => count back from end of sequence)
    * @return sequence of ROIs
    */
   public static Sequence calcReturnsHold(BondFactory factory, Sequence bondData, int iStart, int iEnd)
   {
+    if (iStart < 0) {
+      iStart += bondData.length();
+    }
     if (iEnd < 0) {
       iEnd += bondData.length();
     }
