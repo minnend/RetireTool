@@ -412,14 +412,14 @@ public class Chart
   }
 
   public static void saveBoxPlots(File file, String title, int width, int height, double minorTickInterval,
-      List<ReturnStats> stats) throws IOException
+      List<DurationalStats> stats) throws IOException
   {
 
-    saveBoxPlots(file, title, width, height, minorTickInterval, stats.toArray(new ReturnStats[stats.size()]));
+    saveBoxPlots(file, title, width, height, minorTickInterval, stats.toArray(new DurationalStats[stats.size()]));
   }
 
   public static void saveBoxPlots(File file, String title, int width, int height, double minorTickInterval,
-      ReturnStats... returnStats) throws IOException
+      DurationalStats... returnStats) throws IOException
   {
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
       writer.write("<html><head>\n");
@@ -434,7 +434,7 @@ public class Chart
       writer.write("  chart: { type: 'boxplot' },\n");
       writer.write("  xAxis: { categories: [");
       for (int i = 0; i < returnStats.length; ++i) {
-        writer.write(String.format("'%s'", FinLib.getNameWithBreak(returnStats[i].sourceSeq.getName())));
+        writer.write(String.format("'%s'", FinLib.getNameWithBreak(returnStats[i].cumulativeReturns.getName())));
         if (i < returnStats.length - 1) {
           writer.write(",");
         }
@@ -463,7 +463,7 @@ public class Chart
       writer.write("  series: [{\n");
       writer.write("    data: [\n");
       for (int i = 0; i < returnStats.length; ++i) {
-        ReturnStats stats = returnStats[i];
+        DurationalStats stats = returnStats[i];
         writer.write(String.format("     [%.2f,%.2f,%.2f,%.2f,%.2f]%s\n", stats.min, stats.percentile10, stats.median,
             stats.percentile90, stats.max, i < returnStats.length - 1 ? "," : ""));
       }
@@ -487,10 +487,10 @@ public class Chart
    * @param stats List of strategies to include
    * @throws IOException if there is a problem writing to the file
    */
-  public static void saveStatsTable(File file, int width, boolean reduced, List<InvestmentStats> stats)
+  public static void saveStatsTable(File file, int width, boolean reduced, List<CumulativeStats> stats)
       throws IOException
   {
-    saveStatsTable(file, width, reduced, stats.toArray(new InvestmentStats[stats.size()]));
+    saveStatsTable(file, width, reduced, stats.toArray(new CumulativeStats[stats.size()]));
   }
 
   /**
@@ -503,7 +503,7 @@ public class Chart
    * @param strategyStats List of strategies to include
    * @throws IOException if there is a problem writing to the file
    */
-  public static void saveStatsTable(File file, int width, boolean reduced, InvestmentStats... strategyStats)
+  public static void saveStatsTable(File file, int width, boolean reduced, CumulativeStats... strategyStats)
       throws IOException
   {
     final boolean includeRiskAdjusted = false;
@@ -511,7 +511,7 @@ public class Chart
 
     // Figure out if leverage should be included.
     boolean includeLeverage = false;
-    for (InvestmentStats stats : strategyStats) {
+    for (CumulativeStats stats : strategyStats) {
       if (stats.leverage != 1.0) {
         includeLeverage = true;
         break;
@@ -568,7 +568,7 @@ public class Chart
       double baseReturn = 1.0;
       if (!reduced) {
         baseReturn = Double.POSITIVE_INFINITY;
-        for (InvestmentStats stats : strategyStats) {
+        for (CumulativeStats stats : strategyStats) {
           if (stats.cagr < baseReturn) {
             baseReturn = stats.cagr;
           }
@@ -578,7 +578,7 @@ public class Chart
         }
       }
 
-      for (InvestmentStats stats : strategyStats) {
+      for (CumulativeStats stats : strategyStats) {
         writer.write("<tr>\n");
         String name = stats.name();
         Pattern p = Pattern.compile("(.+)\\s+\\(\\d.*\\)$");
@@ -782,7 +782,7 @@ public class Chart
     for (int i = iStart; i + 120 < cumulativeReturns.length(); i += 120) {
       cal.setTimeInMillis(cumulativeReturns.getTimeMS(i));
       Sequence decade = cumulativeReturns.subseq(i, 121);
-      InvestmentStats stats = InvestmentStats.calcInvestmentStats(decade);
+      CumulativeStats stats = CumulativeStats.calcInvestmentStats(decade);
       System.out.printf(" <tr><td>%ds</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2fx</td></tr>\n",
           cal.get(Calendar.YEAR), stats.cagr, stats.devAnnualReturn, stats.maxDrawdown, stats.percentDown10,
           stats.totalReturn);
@@ -816,8 +816,8 @@ public class Chart
       cal.setTimeInMillis(returns1.getTimeMS(i));
       Sequence decade1 = returns1.subseq(i, 121);
       Sequence decade2 = returns2.subseq(i, 121);
-      InvestmentStats stats1 = InvestmentStats.calcInvestmentStats(decade1);
-      InvestmentStats stats2 = InvestmentStats.calcInvestmentStats(decade2);
+      CumulativeStats stats1 = CumulativeStats.calcInvestmentStats(decade1);
+      CumulativeStats stats2 = CumulativeStats.calcInvestmentStats(decade2);
       System.out.printf(" <tr><td>%ds</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>\n",
           cal.get(Calendar.YEAR), stats1.cagr, stats2.cagr, stats1.devAnnualReturn, stats2.devAnnualReturn);
     }

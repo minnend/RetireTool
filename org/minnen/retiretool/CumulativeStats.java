@@ -4,40 +4,39 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Holds statistics that characterize the results of an investment strategy.
+ * Holds statistics that characterize the results of an investment strategy over the full investment duration.
  * 
  * @author David Minnen
  */
-public class InvestmentStats
+public class CumulativeStats
 {
   public Sequence cumulativeReturns;
-  public double   cagr             = 1.0;
-  public double   meanAnnualReturn = 1.0;
-  public double   devAnnualReturn  = 0.0;
-  public double   totalReturn      = 1.0;
+  public double   cagr              = 1.0;
+  public double   meanAnnualReturn  = 1.0;
+  public double   devAnnualReturn;
+  public double   totalReturn       = 1.0;
   public double   maxDrawdown;
   public double   percentNewHigh;
   public double   percentDown10;
   public double   peakReturn;
   public double   percentUp;
   public double   percentDown;
-  public double[] annualPercentiles;
-  public double   leverage         = 1.0;
+  public double[] annualPercentiles = new double[5];
+  public double   leverage          = 1.0;
 
-  public static InvestmentStats calcInvestmentStats(Sequence cumulativeReturns)
+  public static CumulativeStats calcInvestmentStats(Sequence cumulativeReturns)
   {
-    InvestmentStats stats = new InvestmentStats();
+    CumulativeStats stats = new CumulativeStats();
 
     stats.cumulativeReturns = cumulativeReturns;
     if (cumulativeReturns != null && !cumulativeReturns.isEmpty()) {
       stats.totalReturn = cumulativeReturns.getLast(0) / cumulativeReturns.getFirst(0);
       stats.cagr = FinLib.getAnnualReturn(stats.totalReturn, cumulativeReturns.size() - 1);
 
-      ReturnStats rstats = new ReturnStats(cumulativeReturns, 12);
+      DurationalStats rstats = new DurationalStats(cumulativeReturns, 12);
       stats.meanAnnualReturn = rstats.mean;
       stats.devAnnualReturn = rstats.sdev;
 
-      stats.annualPercentiles = new double[5];
       stats.annualPercentiles[0] = rstats.min;
       stats.annualPercentiles[1] = rstats.percentile25;
       stats.annualPercentiles[2] = rstats.median;
@@ -147,12 +146,12 @@ public class InvestmentStats
    * @param cumulativeReturns array of cumulative returns.
    * @return array of InvestmentStats corresponding to each input sequence.
    */
-  public static InvestmentStats[] calc(Sequence... cumulativeReturns)
+  public static CumulativeStats[] calc(Sequence... cumulativeReturns)
   {
-    InvestmentStats[] stats = new InvestmentStats[cumulativeReturns.length];
+    CumulativeStats[] stats = new CumulativeStats[cumulativeReturns.length];
     for (int i = 0; i < cumulativeReturns.length; ++i) {
       assert cumulativeReturns[i].length() == cumulativeReturns[0].length();
-      stats[i] = InvestmentStats.calcInvestmentStats(cumulativeReturns[i]);
+      stats[i] = CumulativeStats.calcInvestmentStats(cumulativeReturns[i]);
       cumulativeReturns[i].setName(String.format("%s (%.2f%%)", cumulativeReturns[i].getName(), stats[i].cagr));
     }
     return stats;

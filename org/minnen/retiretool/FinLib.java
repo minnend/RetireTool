@@ -635,7 +635,7 @@ public final class FinLib
 
   public static double calcEqualizingLeverage(Sequence cumulativeReturns, double desiredCAGR)
   {
-    InvestmentStats stats = InvestmentStats.calcInvestmentStats(cumulativeReturns);
+    CumulativeStats stats = CumulativeStats.calcInvestmentStats(cumulativeReturns);
     double ratio = desiredCAGR / stats.cagr;
     double low = ratio / 2.0;
     double high = ratio * 2.0;
@@ -645,7 +645,7 @@ public final class FinLib
     while (iter < 100 && Math.abs(stats.cagr - desiredCAGR) > 1e-5) {
       leverage = (low + high) / 2.0;
       Sequence levSeq = calcLeveragedReturns(cumulativeReturns, leverage);
-      stats = InvestmentStats.calcInvestmentStats(levSeq);
+      stats = CumulativeStats.calcInvestmentStats(levSeq);
       // System.out.printf("%d: [%f, %f] -> %f (%f)\n", iter, low, high, stats.cagr, desiredCAGR);
       if (stats.cagr < desiredCAGR) {
         low = leverage;

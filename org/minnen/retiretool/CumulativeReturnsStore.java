@@ -18,9 +18,11 @@ import java.util.Set;
  */
 public class CumulativeReturnsStore implements Iterable<Sequence>
 {
-  public final double               startValue;
-  public final List<Sequence>       seqs        = new ArrayList<Sequence>();
-  public final Map<String, Integer> nameToIndex = new HashMap<String, Integer>();
+  public final double                startValue;
+  public final List<Sequence>        seqs            = new ArrayList<>();
+  public final List<CumulativeStats> cumulativeStats = new ArrayList<>();
+  public final List<DurationalStats>     durationStats   = new ArrayList<>();
+  public final Map<String, Integer>  nameToIndex     = new HashMap<>();
 
   public CumulativeReturnsStore()
   {
@@ -90,7 +92,7 @@ public class CumulativeReturnsStore implements Iterable<Sequence>
     seqs.add(cumulativeReturns);
     nameToIndex.put(name.toLowerCase(), index);
     assert get(name) == cumulativeReturns;
-    System.out.printf("Added: \"%s\"\n", name);
+    // System.out.printf("Added: \"%s\"\n", name);
     return index;
   }
 

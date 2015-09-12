@@ -2,10 +2,14 @@ package org.minnen.retiretool;
 
 import java.util.Arrays;
 
-public class ReturnStats
+/**
+ * Holds statistics that characterize the results of an investment strategy over a given duration.
+ * 
+ * @author David Minnen
+ */
+public class DurationalStats
 {
-  // TODO merge with InvestmentStats
-  public final Sequence sourceSeq;
+  public final Sequence cumulativeReturns;
   public final double   mean;
   public final double   sdev;
   public final double   min;
@@ -17,9 +21,9 @@ public class ReturnStats
   public final double   max;
   public final int      nMonthsPerPeriod;
 
-  public static ReturnStats calc(Sequence cumulativeReturns, int nMonthsPerPeriod)
+  public static DurationalStats calc(Sequence cumulativeReturns, int nMonthsPerPeriod)
   {
-    return new ReturnStats(cumulativeReturns, nMonthsPerPeriod);
+    return new DurationalStats(cumulativeReturns, nMonthsPerPeriod);
   }
 
   /**
@@ -28,9 +32,9 @@ public class ReturnStats
    * @param cumulativeReturns sequence containing total return over some duration.
    * @param nMonthsPerPeriod duration (in months)
    */
-  public ReturnStats(Sequence cumulativeReturns, int nMonthsPerPeriod)
+  public DurationalStats(Sequence cumulativeReturns, int nMonthsPerPeriod)
   {
-    this.sourceSeq = cumulativeReturns;
+    this.cumulativeReturns = cumulativeReturns;
     this.nMonthsPerPeriod = nMonthsPerPeriod;
 
     int nMonths = cumulativeReturns.size() - 1;
@@ -59,7 +63,7 @@ public class ReturnStats
     }
   }
 
-  private void printRow(String label)
+  private void printDurationTableRow(String label)
   {
     System.out.printf(" <tr><td>%s</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td>"
         + "<td>%.2f</td><td>%.2f</td></tr>\n", label, mean, sdev, min, percentile25, median, percentile75, max);
@@ -73,8 +77,8 @@ public class ReturnStats
     System.out.printf("</thead><tbody>\n");
     int[] dur = new int[] { 1, 2, 5, 10, 20, 30, 40 };
     for (int d = 0; d < dur.length; ++d) {
-      ReturnStats rstats = new ReturnStats(cumulativeReturns, 12 * dur[d]);
-      rstats.printRow(String.format("%d", dur[d]));
+      DurationalStats rstats = new DurationalStats(cumulativeReturns, 12 * dur[d]);
+      rstats.printDurationTableRow(String.format("%d", dur[d]));
     }
     System.out.printf("</tbody></table>\n");
   }
