@@ -10,6 +10,7 @@ import java.util.Arrays;
 public class DurationalStats
 {
   public final Sequence cumulativeReturns;
+  public final Sequence durationReturns;
   public final double   mean;
   public final double   sdev;
   public final double   min;
@@ -43,11 +44,12 @@ public class DurationalStats
       mean = FinLib.getAnnualReturn(cumulativeReturns.getLast(0) / cumulativeReturns.getFirst(0), nMonths);
       sdev = 0.0;
       min = percentile10 = percentile25 = median = percentile75 = percentile90 = max = mean;
+      durationReturns = null;
     } else {
       // Calculate returns for all periods of the requested duration.
-      Sequence returns = FinLib.calcReturnsForDuration(cumulativeReturns, nMonthsPerPeriod);
+      durationReturns = FinLib.calcReturnsForDuration(cumulativeReturns, nMonthsPerPeriod);
 
-      double[] r = returns.extractDim(0);
+      double[] r = durationReturns.extractDim(0);
       mean = Library.mean(r);
       sdev = Library.stdev(r);
 

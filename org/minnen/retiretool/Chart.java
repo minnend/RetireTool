@@ -690,8 +690,8 @@ public class Chart
       writer.write("<table id=\"comparisonTable\" class=\"tablesorter\">\n");
       writer.write("<thead><tr>\n");
       writer.write(" <th>Duration</th>\n");
-      writer.write(String.format(" <th>%s<br/>Win %%</th>\n", stats.returns1.getName()));
-      writer.write(String.format(" <th>%s<br/>Win %%</th>\n", stats.returns2.getName()));
+      writer.write(String.format(" <th>%s<br/>Win %%</th>\n", FinLib.getBaseName(stats.returns1.getName())));
+      writer.write(String.format(" <th>%s<br/>Win %%</th>\n", FinLib.getBaseName(stats.returns2.getName())));
       writer.write(" <th>Mean<br/>Excesss</th>\n");
       writer.write(" <th>Worst<br/>Excess</th>\n");
       writer.write(" <th>Median<br/>Excess</th>\n");
