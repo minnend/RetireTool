@@ -121,7 +121,9 @@ public class CumulativeReturnsStore implements Iterable<Sequence>
 
   public int getIndex(String name)
   {
-    return nameToIndex.get(name.toLowerCase());
+    name = name.toLowerCase();
+    assert nameToIndex.containsKey(name) : name;
+    return nameToIndex.get(name);
   }
 
   public Sequence get(String name)

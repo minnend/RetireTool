@@ -812,11 +812,13 @@ public class Chart
     }
 
     System.out.printf("<table id=\"decadeComparisonTable\" class=\"tablesorter\"><thead>\n");
-    System.out.printf("<tr><th>Decade</th><th>%s<br/>CAGR</th><th>%s<br/>CAGR</th>\n", returns1.getName(),
-        returns2.getName());
-    System.out.printf("<th>%s<br/>StdDev</th><th>%s<br/>StdDev</th></tr>\n", returns1.getName(), returns2.getName());
+    System.out.printf("<tr><th>Decade</th><th>%s<br/>CAGR</th><th>%s<br/>CAGR</th><th>Excess<br/>Returns</th>\n",
+        FinLib.getBaseName(returns1.getName()), FinLib.getBaseName(returns2.getName()));
+    System.out.printf("<th>%s<br/>StdDev</th><th>%s<br/>StdDev</th></tr>\n", FinLib.getBaseName(returns1.getName()),
+        FinLib.getBaseName(returns2.getName()));
     System.out.printf("</thead><tbody>\n");
 
+    final double eps = 0.01; // epsilon for larger cagr
     Calendar cal = Library.now();
     for (int i = iStart; i + 120 < returns1.length(); i += 120) {
       assert returns1.getTimeMS(i) == returns2.getTimeMS(i);
@@ -825,8 +827,15 @@ public class Chart
       Sequence decade2 = returns2.subseq(i, 121);
       CumulativeStats stats1 = CumulativeStats.calc(decade1);
       CumulativeStats stats2 = CumulativeStats.calc(decade2);
-      System.out.printf(" <tr><td>%ds</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>\n",
-          cal.get(Calendar.YEAR), stats1.cagr, stats2.cagr, stats1.devAnnualReturn, stats2.devAnnualReturn);
+
+      String excess = String.format("%.2f", stats1.cagr - stats2.cagr);
+      if (stats1.cagr > stats2.cagr + eps) {
+        excess = "<font color=\"#070\">" + excess + "</font>";
+      } else if (stats2.cagr > stats1.cagr + eps) {
+        excess = "<font color=\"#700\">" + excess + "</font>";
+      }
+      System.out.printf(" <tr><td>%ds</td><td>%.2f</td><td>%.2f</td><td>%s</td><td>%.2f</td><td>%.2f</td></tr>\n",
+          cal.get(Calendar.YEAR), stats1.cagr, stats2.cagr, excess, stats1.devAnnualReturn, stats2.devAnnualReturn);
     }
     System.out.printf("</tbody>\n</table>\n");
   }

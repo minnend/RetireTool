@@ -14,10 +14,11 @@ public class Strategy
    * 
    * @param nMonths calculate CAGR over last N months.
    * @param iStart index of month to start investing.
+   * @param prediction stats will be saved here (optional; can be null)
    * @param seqs cumulative returns for each asset.
    * @return sequence of returns using the momentum strategy
    */
-  public static Sequence calcMomentumReturns(int nMonths, int iStart, Sequence... seqs)
+  public static Sequence calcMomentumReturns(int nMonths, int iStart, WinStats winStats, Sequence... seqs)
   {
     assert seqs.length > 1;
     int N = seqs[0].length();
@@ -29,12 +30,17 @@ public class Strategy
     double balance = 1.0;
     Sequence momentum = new Sequence("Momentum-" + nMonths);
     momentum.addData(balance, seqs[0].getTimeMS(iStart));
-    int nCorrect = 0, nWrong = 0;
+    if (winStats == null) {
+      winStats = new WinStats();
+    }
+    winStats.nCorrect = new int[seqs.length];
     for (int i = iStart + 1; i < N; ++i) {
       // Select asset with best return over previous 12 months.
       Sequence bestSeq = null;
       double bestReturn = 0.0, correctReturn = 1.0;
-      for (Sequence seq : seqs) {
+      int iCorrect = -1;
+      for (int iSeq = 0; iSeq < seqs.length; ++iSeq) {
+        Sequence seq = seqs[iSeq];
         seq.lock(0, i - 1); // lock sequence so only historical data is accessible
         int iLast = seq.length() - 1;
         double r = FinLib.getReturn(seq, iLast - nMonths, iLast);
@@ -48,6 +54,7 @@ public class Strategy
         r = FinLib.getReturn(seq, i - 1, i);
         if (r > correctReturn) {
           correctReturn = r;
+          iCorrect = iSeq;
         }
       }
 
@@ -58,14 +65,15 @@ public class Strategy
       momentum.addData(balance, seqs[0].getTimeMS(i));
 
       if (realizedReturn > correctReturn - 1e-6) {
-        ++nCorrect;
+        ++winStats.nPredCorrect;
       } else {
-        ++nWrong;
+        ++winStats.nPredWrong;
+      }
+      if (iCorrect >= 0) {
+        ++winStats.nCorrect[iCorrect];
       }
     }
-    // TODO store correct % somewhere
-    // System.out.printf("Momentum-%d: %.2f%% Correct (%d vs. %d / %d)\n", nMonths,
-    // nCorrect * 100.0 / (nCorrect + nWrong), nCorrect, nWrong, nCorrect + nWrong);
+
     return momentum;
   }
 
@@ -102,6 +110,7 @@ public class Strategy
    */
   public static Sequence calcSMAReturns(int numMonths, int iStart, Sequence prices, Sequence risky, Sequence safe)
   {
+    // TODO update to use sequence locking for safety.
     assert risky.length() == safe.length();
 
     Sequence sma = new Sequence("SMA-" + numMonths);
