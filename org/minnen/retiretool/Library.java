@@ -523,4 +523,13 @@ public final class Library
 
     return sum / (a.length - 1);
   }
+
+  public static int sum(int[] a)
+  {
+    int sum = 0;
+    for (int i = 0; i < a.length; ++i) {
+      sum += a[i];
+    }
+    return sum;
+  }
 }

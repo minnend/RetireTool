@@ -6,7 +6,7 @@ import java.util.TreeMap;
 public class Strategy
 {
   public enum Disposition {
-    Safe, Cautious, Moderate, Risky
+    Safe, Cautious, Moderate, Risky, Daredevil
   }
 
   /**
@@ -34,11 +34,11 @@ public class Strategy
       winStats = new WinStats();
     }
     winStats.nCorrect = new int[seqs.length];
+    winStats.nSelected = new int[seqs.length];
     for (int i = iStart + 1; i < N; ++i) {
       // Select asset with best return over previous 12 months.
-      Sequence bestSeq = null;
       double bestReturn = 0.0, correctReturn = 1.0;
-      int iCorrect = -1;
+      int iSelected = -1, iCorrect = -1;
       for (int iSeq = 0; iSeq < seqs.length; ++iSeq) {
         Sequence seq = seqs[iSeq];
         seq.lock(0, i - 1); // lock sequence so only historical data is accessible
@@ -46,7 +46,7 @@ public class Strategy
         double r = FinLib.getReturn(seq, iLast - nMonths, iLast);
         seq.clearLock();
         if (r > bestReturn) {
-          bestSeq = seq;
+          iSelected = iSeq;
           bestReturn = r;
         }
 
@@ -60,7 +60,7 @@ public class Strategy
 
       // Invest everything in best asset for this month.
       // No bestSeq => hold everything in cash for no gain and no loss.
-      double realizedReturn = bestSeq != null ? FinLib.getReturn(bestSeq, i - 1, i) : 1.0;
+      double realizedReturn = iSelected < 0 ? 1.0 : FinLib.getReturn(seqs[iSelected], i - 1, i);
       balance *= realizedReturn;
       momentum.addData(balance, seqs[0].getTimeMS(i));
 
@@ -71,6 +71,9 @@ public class Strategy
       }
       if (iCorrect >= 0) {
         ++winStats.nCorrect[iCorrect];
+      }
+      if (iSelected >= 0) {
+        ++winStats.nSelected[iSelected];
       }
     }
 
@@ -407,6 +410,11 @@ public class Strategy
   public static Sequence selectAsset(int code, Disposition disposition, Sequence risky, Sequence safe)
   {
     assert code >= 0 && code <= 7;
+
+    // Daredevil only plays it safe with zero support.
+    if (disposition == Disposition.Daredevil) {
+      return code == 0 ? safe : risky;
+    }
 
     // Complete support.
     if (code == 7) {

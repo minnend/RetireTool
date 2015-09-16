@@ -21,8 +21,8 @@ public class RetireTool
   {
     assert tbills == null || shiller.length() == tbills.length();
 
-    final int iStartData = 0; // shiller.getIndexForDate(1923, 12);
-    final int iEndData = -1; // shiller.getIndexForDate(1934, 12);
+    final int iStartData = 0;// shiller.getIndexForDate(1998, 12);
+    final int iEndData = -1;// shiller.getIndexForDate(2009, 12);
 
     final int rebalanceMonths = 12;
     final double rebalanceBand = 0.0;
@@ -76,6 +76,7 @@ public class RetireTool
       Sequence mix = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock[i],
           percentBonds }, rebalanceMonths, rebalanceBand);
       mix.setName(String.format("Stock/Bonds [%d/%d]", percentStock[i], percentBonds));
+      store.alias(String.format("%d/%d", percentStock[i], percentBonds), mix.getName());
       store.add(mix);
     }
 
@@ -89,15 +90,15 @@ public class RetireTool
       WinStats winStats = new WinStats();
       Sequence mom = Strategy.calcMomentumReturns(momentumMonths[i], iStartSimulation, winStats, risky, safe);
       store.add(mom);
+      // if (i == 0) {
+      // System.out.printf("Correct: %.2f%% / %.2f%%  (%d / %d)\n", winStats.percentCorrect(0),
+      // winStats.percentCorrect(1), winStats.nCorrect[0], winStats.nCorrect[1]);
+      // }
       // System.out.printf("Momentum-%d: %.2f%% Correct (%d vs. %d / %d)\n", momentumMonths[i],
       // winStats.percentCorrect(),
       // winStats.nPredCorrect, winStats.nPredWrong, winStats.total());
-      // if (i == 0) {
-      // System.out.printf(" %s: %.2f%% (%d)\n", risky.getName(), 100.0 * winStats.nCorrect[0]
-      // / (winStats.nCorrect[0] + winStats.nCorrect[1]), winStats.nCorrect[0]);
-      // System.out.printf(" %s: %.2f%% (%d)\n", safe.getName(), 100.0 * winStats.nCorrect[1]
-      // / (winStats.nCorrect[0] + winStats.nCorrect[1]), winStats.nCorrect[1]);
-      // }
+      // System.out.printf(" %.2f%% / %.2f%%  (%d / %d)\n", winStats.percentSelected(0), winStats.percentSelected(1),
+      // winStats.nSelected[0], winStats.nSelected[1]);
     }
 
     // SMA sweep.
@@ -117,6 +118,8 @@ public class RetireTool
       store.add(Strategy.calcMultiMomentumReturns(iStartSimulation, risky, safe, disposition));
       store.add(Strategy.calcMultiSmaReturns(iStartSimulation, stockData, risky, safe, disposition));
     }
+
+    // Strategy.calcMultiMomentumStats(risky, safe);
 
     // DAA = 50/50 SMA-risky & Momentum-safe.
     Sequence daa = Strategy.calcMixedReturns(
@@ -236,9 +239,10 @@ public class RetireTool
   public static void genReturnChart(Sequence shiller, Sequence tbills, File dir) throws IOException
   {
     String[] names = new String[] { "stock", "momentum-1", "momentum-3", "momentum-12", "multimom-safe",
-        "multimom-cautious", "multimom-moderate", "multimom-risky", "multisma-safe", "multisma-cautious",
-        "multisma-moderate", "multisma-risky", "raa", "daa" };
-    // { stock, mom1, mom3, mom12, multiMomSafe, multiMomCautious, multiMomMod, multiMomRisky };
+        "multimom-cautious", "multimom-moderate", "multimom-risky", "multimom-daredevil" };
+    // , "multisma-safe",
+    // "multisma-cautious", "multisma-moderate", "multisma-risky", "multisma-daredevil", "raa", "daa" };
+    // { "stock", "bonds", "momentum-1", "momentum-3", "momentum-12", "multimom-risky" };
 
     List<Sequence> all = store.getSequences(names);
 
@@ -775,7 +779,6 @@ public class RetireTool
 
     // long commonStart = Library.calcCommonStart(shiller, tbills);
     // long commonEnd = Library.calcCommonEnd(shiller, tbills);
-    //
     // System.out.printf("Shiller: [%s] -> [%s]\n", Library.formatDate(shiller.getStartMS()),
     // Library.formatDate(shiller.getEndMS()));
     // System.out.printf("T-Bills: [%s] -> [%s]\n", Library.formatDate(tbills.getStartMS()),
@@ -793,7 +796,7 @@ public class RetireTool
     // genInterestRateGraph(shiller, tbills, new File(dir, "interest-rates.html"));
     // compareRebalancingMethods(shiller, dir);
     // genReturnViz(shiller, dir);
-    genReturnChart(shiller, tbills, dir);
+    // genReturnChart(shiller, tbills, dir);
     // genSMASweepChart(shiller, new File(dir, "sma-sweep.html"));
     // genMomentumSweepChart(shiller, dir);
     // genStockBondMixSweepChart(shiller, dir);

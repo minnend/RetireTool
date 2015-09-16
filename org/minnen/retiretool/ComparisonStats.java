@@ -28,12 +28,13 @@ public class ComparisonStats
 
   public static ComparisonStats calc(Sequence returns1, Sequence returns2)
   {
+    assert returns1.length() == returns2.length();
     ComparisonStats stats = new ComparisonStats();
     stats.returns1 = returns1;
     stats.returns2 = returns2;
 
-    for (int i = 0; i < durations.length; ++i) {
-      int duration = durations[i];
+    for (int i = 0; i < durations.length && durations[i] < returns1.length(); ++i) {
+      final int duration = durations[i];
       stats.durationToResults.put(duration, calcResults(returns1, returns2, duration));
     }
     return stats;
@@ -49,6 +50,7 @@ public class ComparisonStats
     returns2 = FinLib.calcReturnsForDuration(returns2, nMonths);
 
     final int N = returns1.length();
+    assert N > 0;
     int win1 = 0, win2 = 0;
     double excessSum = 0.0;
     double[] r = new double[N];
@@ -71,7 +73,7 @@ public class ComparisonStats
     results.winPercent1 = 100.0 * win1 / N;
     results.winPercent2 = 100.0 * win2 / N;
     results.worstExcess = r[0];
-    results.medianExcess = r[Math.round(N * 0.5f)];
+    results.medianExcess = r[Math.min(Math.round(N * 0.5f), N - 1)];
     results.bestExcess = r[N - 1];
 
     return results;

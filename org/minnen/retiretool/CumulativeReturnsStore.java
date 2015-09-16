@@ -24,6 +24,7 @@ public class CumulativeReturnsStore implements Iterable<Sequence>
   private final List<CumulativeStats> cumulativeStats              = new ArrayList<>();
   private final List<DurationalStats> durationalStats              = new ArrayList<>();
   private final Map<String, Integer>  nameToIndex                  = new HashMap<>();
+  private final Map<String, String>   aliasMap                     = new HashMap<>();
 
   public CumulativeReturnsStore()
   {
@@ -33,6 +34,11 @@ public class CumulativeReturnsStore implements Iterable<Sequence>
   public CumulativeReturnsStore(double startValue)
   {
     this.startValue = startValue;
+  }
+
+  public void alias(String from, String to)
+  {
+    aliasMap.put(from.toLowerCase(), to.toLowerCase());
   }
 
   /**
@@ -122,6 +128,7 @@ public class CumulativeReturnsStore implements Iterable<Sequence>
   public int getIndex(String name)
   {
     name = name.toLowerCase();
+    name = aliasMap.getOrDefault(name, name);
     assert nameToIndex.containsKey(name) : name;
     return nameToIndex.get(name);
   }
