@@ -1,16 +1,17 @@
 package org.minnen.retiretool.predictor;
 
 import org.minnen.retiretool.FinLib;
+import org.minnen.retiretool.SequenceStore;
 import org.minnen.retiretool.data.Sequence;
 
 public class MomentumPredictor extends AssetPredictor
 {
-  protected final int nLookback;
+  public final int nLookback;
 
-  public MomentumPredictor(int nLookback)
+  public MomentumPredictor(int nLookback, SequenceStore store)
   {
+    super("Momentum-" + nLookback, store);
     this.nLookback = nLookback;
-    this.name = "Momentum-" + nLookback;
   }
 
   @Override

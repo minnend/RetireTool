@@ -8,7 +8,6 @@ import org.minnen.retiretool.data.Sequence;
 
 public class TestFinLib
 {
-
   @Test
   public void testCalcLeveragedReturns()
   {

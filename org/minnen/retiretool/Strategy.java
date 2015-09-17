@@ -25,7 +25,7 @@ public class Strategy
 
     final double principal = 10000.0;
     double balance = principal;
-    Sequence returns = new Sequence(predictor.getName());
+    Sequence returns = new Sequence(predictor.name);
     returns.addData(balance, seqs[0].getTimeMS(iStart));
     if (winStats == null) {
       winStats = new WinStats();
@@ -33,15 +33,10 @@ public class Strategy
     winStats.nCorrect = new int[seqs.length];
     winStats.nSelected = new int[seqs.length];
     for (int i = iStart + 1; i < N; ++i) {
-      for (Sequence seq : seqs) {
-        seq.lock(0, i - 1); // lock sequence so only historical data is accessible
-      }
-
+      assert seqs[0].getTimeMS(i) == seqs[1].getTimeMS(i);
+      predictor.store.lock(seqs[0].getStartMS(), seqs[0].getTimeMS(i) - 1);
       int iSelected = predictor.selectAsset(seqs);
-
-      for (Sequence seq : seqs) {
-        seq.unlock();
-      }
+      predictor.store.unlock();
 
       // Find corret answer (sequence with highest return for current month)
       double correctReturn = 1.0;
@@ -176,13 +171,9 @@ public class Strategy
       double ma = prices.average(a, i - 1).get(0);
 
       // Test above / below moving average.
-      double lastMonthReturn;
       double price = prices.get(i - 1, 0);
-      if (price > ma) {
-        lastMonthReturn = risky.get(i, 0) / risky.get(i - 1, 0);
-      } else {
-        lastMonthReturn = safe.get(i, 0) / safe.get(i - 1, 0);
-      }
+
+      double lastMonthReturn = FinLib.getReturn(price > ma ? risky : safe, i - 1, i);
       balance *= lastMonthReturn;
       sma.addData(balance, risky.getTimeMS(i));
     }
@@ -322,21 +313,21 @@ public class Strategy
     } else {
       name = "MultiMom-" + disposition;
     }
-    Sequence momentum = new Sequence(name);
+    Sequence mom = new Sequence(name);
     double balance = 1.0;
-    for (int i = iStart; i < N; ++i) {
-      int code = calcMomentumCode(i, numMonths, risky, safe);
+    mom.addData(balance, risky.getTimeMS(iStart));
+    for (int i = iStart + 1; i < N; ++i) {
+      int code = calcMomentumCode(i - 1, numMonths, risky, safe);
 
       // Use votes to select asset.
       Sequence bestSeq = selectAsset(code, disposition, assetMap, risky, safe);
 
       // Invest everything in best asset for this month.
-      double lastMonthReturn = FinLib.getReturn(bestSeq, i - 1, i);
-      balance *= lastMonthReturn;
-      momentum.addData(balance, risky.getTimeMS(i));
+      balance *= FinLib.getReturn(bestSeq, i - 1, i);
+      mom.addData(balance, risky.getTimeMS(i));
     }
 
-    return momentum;
+    return mom;
   }
 
   static class SeqCount
@@ -379,17 +370,24 @@ public class Strategy
     printStats("Momentum Statistics:", map);
   }
 
+  /**
+   * Calculate multi-momentum code.
+   * 
+   * @param index last accessible index
+   * @param numMonths number of months of look-back for momentum
+   * @param seqs list of sequences to select bewteen
+   * @return multi-momentum code
+   */
   public static int calcMomentumCode(int index, int[] numMonths, Sequence... seqs)
   {
-    final int b = Math.max(0, index - 1);
     int code = 0;
     for (int j = 0; j < numMonths.length; ++j) {
       code <<= 1;
-      final int a = Math.max(0, index - numMonths[j] - 1);
+      final int a = Math.max(0, index - numMonths[j]);
       Sequence bestSeq = null;
       double bestReturn = 0.0;
       for (Sequence seq : seqs) {
-        double r = seq.get(b, 0) / seq.get(a, 0);
+        double r = FinLib.getReturn(seq, a, index);
         if (bestSeq == null || r > bestReturn) {
           bestSeq = seq;
           bestReturn = r;
@@ -402,15 +400,22 @@ public class Strategy
     return code;
   }
 
-  public static int calcSmaCode(int index, int[] numMonths, Sequence prices, Sequence risky, Sequence safe)
+  /**
+   * Calculate multi-sma code.
+   * 
+   * @param index last accessible index
+   * @param numMonths number of months to average
+   * @param prices sequences of prices
+   * @return multi-sma code.
+   */
+  public static int calcSmaCode(int index, int[] numMonths, Sequence prices)
   {
     int code = 0;
-    for (int j = 0; j < numMonths.length; ++j) {
+    for (int i = 0; i < numMonths.length; ++i) {
       code <<= 1;
-      final int a = Math.max(0, index - numMonths[j] - 1);
-      double sma = prices.average(a, index - 1).get(0);
-      double price = prices.get(Math.max(index - 1, 0), 0);
-
+      final int a = Math.max(0, index - numMonths[i]);
+      double sma = prices.average(a, index).get(0);
+      double price = prices.get(index, 0);
       if (price > sma) {
         ++code;
       }
@@ -427,7 +432,7 @@ public class Strategy
     Map<Integer, SeqCount> map = new TreeMap<Integer, SeqCount>();
 
     for (int i = numMonths[numMonths.length - 1] + 1; i < N; ++i) {
-      int code = calcSmaCode(i, numMonths, prices, risky, safe);
+      int code = calcSmaCode(i, numMonths, prices);
 
       // Record result.
       SeqCount sc;
@@ -454,22 +459,40 @@ public class Strategy
   public static Sequence calcMultiSmaReturns(int iStart, Sequence prices, Sequence risky, Sequence safe,
       Disposition disposition)
   {
+    return calcMultiSmaReturns(iStart, prices, risky, safe, disposition, -1);
+  }
+
+  public static Sequence calcMultiSmaReturns(int iStart, Sequence prices, Sequence risky, Sequence safe, int assetMap)
+  {
+    assert assetMap >= 0;
+    return calcMultiSmaReturns(iStart, prices, risky, safe, Disposition.Safe, assetMap);
+  }
+
+  public static Sequence calcMultiSmaReturns(int iStart, Sequence prices, Sequence risky, Sequence safe,
+      Disposition disposition, int assetMap)
+  {
     int N = risky.length();
     assert safe.length() == N;
 
     int[] numMonths = new int[] { 1, 5, 10 };
 
-    Sequence sma = new Sequence("MultiSMA-" + disposition);
+    String name;
+    if (assetMap >= 0) {
+      name = "MultiSMA-" + assetMap;
+    } else {
+      name = "MultiSMA-" + disposition;
+    }
+    Sequence sma = new Sequence(name);
     double balance = 1.0;
-    for (int i = iStart; i < N; ++i) {
-      int code = calcSmaCode(i, numMonths, prices, risky, safe);
+    sma.addData(balance, risky.getTimeMS(iStart));
+    for (int i = iStart + 1; i < N; ++i) {
+      int code = calcSmaCode(i - 1, numMonths, prices);
 
       // Use votes to select asset.
-      Sequence bestSeq = selectAsset(code, disposition, 0, risky, safe);
+      Sequence bestSeq = selectAsset(code, disposition, assetMap, risky, safe);
 
       // Invest everything in best asset for this month.
-      double lastMonthReturn = bestSeq.get(i, 0) / bestSeq.get(Math.max(0, i - 1), 0);
-      balance *= lastMonthReturn;
+      balance *= FinLib.getReturn(bestSeq, i - 1, i);
       sma.addData(balance, risky.getTimeMS(i));
     }
 

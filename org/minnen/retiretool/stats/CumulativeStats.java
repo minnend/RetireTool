@@ -135,12 +135,9 @@ public class CumulativeStats
   @Override
   public String toString()
   {
-    return String
-        .format(
-            "[%s: CAGR=%.2f  DEV=%.2f  MDD=%.1f  %%[%.1f|%.1f|%.1f|%.1f|%.1f]  %%Up/Down=(%.1f, %.1f)  NewHigh,Down10=(%.1f, %.1f)]",
-            FinLib.getBaseName(name()), cagr, devAnnualReturn, drawdown, annualPercentiles[0], annualPercentiles[1],
-            annualPercentiles[2], annualPercentiles[3], annualPercentiles[4], percentUp, percentDown, percentNewHigh,
-            percentDown10);
+    return String.format("[%s: CAGR=%.2f  DD=%.1f  DEV=%.2f  %%[%.1f|%.1f|%.1f|%.1f|%.1f]  Down10=%.1f]",
+        FinLib.getBaseName(name()), cagr, drawdown, devAnnualReturn, annualPercentiles[0], annualPercentiles[1],
+        annualPercentiles[2], annualPercentiles[3], annualPercentiles[4], percentDown10);
   }
 
   /**

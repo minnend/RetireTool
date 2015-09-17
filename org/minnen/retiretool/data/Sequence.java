@@ -100,8 +100,8 @@ public class Sequence implements Iterable<FeatureVec>
    * "look in to the future". When simulating a particular point in time, you can lock the sequence to points in the
    * past [0, t-1] and protect against accidental cheating.
    * 
-   * @param iStart first index that can be accessed
-   * @param iEnd last index that can be accessed
+   * @param iStart first index that can be accessed (inclusive)
+   * @param iEnd last index that can be accessed (inclusive)
    */
   public void lock(int iStart, int iEnd)
   {
@@ -289,7 +289,6 @@ public class Sequence implements Iterable<FeatureVec>
   public long getTimeMS(int i)
   {
     FeatureVec fv = get(i);
-    assert fv.hasTime();
     return fv.getTime();
   }
 

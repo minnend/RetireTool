@@ -13,6 +13,7 @@ import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.predictor.MomentumPredictor;
+import org.minnen.retiretool.predictor.SMAPredictor;
 import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.DurationalStats;
@@ -20,10 +21,10 @@ import org.minnen.retiretool.stats.WinStats;
 
 public class RetireTool
 {
-  public static final int                    GRAPH_WIDTH  = 710;
-  public static final int                    GRAPH_HEIGHT = 450;
+  public static final int           GRAPH_WIDTH  = 710;
+  public static final int           GRAPH_HEIGHT = 450;
 
-  public final static CumulativeReturnsStore store        = new CumulativeReturnsStore();
+  public final static SequenceStore store        = new SequenceStore();
 
   public static void buildCumulativeReturnsStore(Sequence shiller, Sequence tbills)
   {
@@ -42,15 +43,20 @@ public class RetireTool
     assert stockData.length() == bondData.length();
     System.out.printf("Build Store: [%s] -> [%s]\n", Library.formatMonth(stockData.getStartMS()),
         Library.formatMonth(stockData.getEndMS()));
+    store.addMisc(stockData, "StockData");
+    store.addMisc(bondData, "BondData");
 
     // Calculate cumulative returns for full stock, bond, and t-bill data.
     Sequence stockAll = FinLib.calcSnpReturns(stockData, 0, -1, FinLib.DividendMethod.MONTHLY);
     Sequence bondsAll = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, -1);
     assert stockAll.length() == bondsAll.length();
+    store.addMisc(stockAll, "Stock-All");
+    store.addMisc(bondsAll, "Bonds-All");
     Sequence billsAll = null;
     if (tbills != null) {
       billsAll = Bond.calcReturnsRebuy(BondFactory.bill3Month, tbills, iStartData, iEndData);
       assert billsAll.length() == stockAll.length();
+      store.addMisc(billsAll, "Bills-All");
     }
 
     // Extract requested subsequences from cumulative returns for stock, bonds, and t-bills.
@@ -97,16 +103,16 @@ public class RetireTool
     for (int i = 0; i < momentumMonths.length; ++i) {
       WinStats winStats = new WinStats();
       Sequence momOrig = Strategy.calcMomentumReturns(momentumMonths[i], iStartSimulation, winStats, risky, safe);
-      MomentumPredictor predictor = new MomentumPredictor(momentumMonths[i]);
+      MomentumPredictor predictor = new MomentumPredictor(momentumMonths[i], store);
       Sequence mom = Strategy.calcReturns(predictor, iStartSimulation, winStats, risky, safe);
-      
-      assert mom.length() == momOrig.length();
-      for (int ii=0; ii<mom.length(); ++ii) {
+
+      assert mom.length() == momOrig.length(); // TODO
+      for (int ii = 0; ii < mom.length(); ++ii) {
         double a = mom.get(ii, 0);
         double b = momOrig.get(ii, 0);
-        assert Math.abs(a-b) < 1e-6;
+        assert Math.abs(a - b) < 1e-6;
       }
-      
+
       store.add(mom);
       // if (i == 0) {
       // System.out.printf("Correct: %.2f%% / %.2f%%  (%d / %d)\n", winStats.percentCorrect(0),
@@ -120,9 +126,20 @@ public class RetireTool
     }
 
     // SMA sweep.
-    int[] smaMonths = new int[] { 1, 2, 3, 4, 5, 6, 9, 10, 12 };// , 15, 18 };
+    int[] smaMonths = new int[] { 1, 2, 3, 4, 5, 6, 9, 10, 12 };
     for (int i = 0; i < smaMonths.length; ++i) {
-      Sequence sma = Strategy.calcSMAReturns(smaMonths[i], iStartSimulation, stockData, risky, safe);
+      WinStats winStats = new WinStats();
+      Sequence smaOrig = Strategy.calcSMAReturns(smaMonths[i], iStartSimulation, stockData, risky, safe);
+      SMAPredictor predictor = new SMAPredictor(smaMonths[i], "StockData", store);
+      Sequence sma = Strategy.calcReturns(predictor, iStartSimulation, winStats, risky, safe);
+
+      assert sma.length() == smaOrig.length(); // TODO
+      for (int ii = 0; ii < sma.length(); ++ii) {
+        double a = sma.get(ii, 0);
+        double b = smaOrig.get(ii, 0);
+        assert Math.abs(a - b) < 1e-6;
+      }
+
       store.add(sma);
     }
 
@@ -134,22 +151,31 @@ public class RetireTool
     // Multi-scale Momentum and SMA methods.
     for (Disposition disposition : Disposition.values()) {
       Sequence mom = Strategy.calcMultiMomentumReturns(iStartSimulation, risky, safe, disposition);
+      Sequence sma = Strategy.calcMultiSmaReturns(iStartSimulation, stockData, risky, safe, disposition);
       store.add(mom);
-      store.add(Strategy.calcMultiSmaReturns(iStartSimulation, stockData, risky, safe, disposition));
+      store.add(sma);
 
-      CumulativeStats cstats = store.getCumulativeStats(mom.getName());
-      System.out.println(cstats);
+      System.out.println(store.getCumulativeStats(mom.getName()));
+      System.out.println(store.getCumulativeStats(sma.getName()));
     }
 
-    // Full multi-momentum sweep.
+    // Full multi-momentum/sma sweep.
     for (int assetMap = 255, i = 0; i < 8; ++i) {
       Sequence mom = Strategy.calcMultiMomentumReturns(iStartSimulation, risky, safe, assetMap);
+      Sequence sma = Strategy.calcMultiSmaReturns(iStartSimulation, stockData, risky, safe, assetMap);
+
+      System.out.println();
       String name = mom.getName();
       store.add(mom);
       CumulativeStats cstats = store.getCumulativeStats(name);
       // if (cstats.cagr >= 9.0 && cstats.drawdown < 20.0) {
       System.out.println(cstats);
       // }
+
+      name = sma.getName();
+      store.add(sma);
+      cstats = store.getCumulativeStats(name);
+      System.out.println(cstats);
 
       assetMap &= ~(1 << i);
     }
@@ -158,9 +184,10 @@ public class RetireTool
 
     // DAA = 50/50 SMA-risky & Momentum-safe.
     Sequence daa = Strategy.calcMixedReturns(
-        new Sequence[] { store.get("multisma-risky"), store.get("multimom-safe") }, new double[] { 50, 50 },
+        new Sequence[] { store.get("multisma-risky"), store.get("multimom-moderate") }, new double[] { 50, 50 },
         rebalanceMonths, rebalanceBand);
     store.add(daa, "DAA");
+    System.out.println(store.getCumulativeStats("DAA"));
 
     // Perfect = impossible strategy that always picks the best asset.
     Sequence perfect = Strategy.calcPerfectReturns(iStartSimulation, risky, safe);
@@ -279,7 +306,7 @@ public class RetireTool
     // "multisma-cautious", "multisma-moderate", "multisma-risky", "multisma-daredevil", "raa", "daa" };
     // { "stock", "bonds", "momentum-1", "momentum-3", "momentum-12", "multimom-risky" };
 
-    List<Sequence> all = store.getSequences(names);
+    List<Sequence> all = store.getReturns(names);
 
     List<CumulativeStats> cstats = store.getCumulativeStats(names);
     List<DurationalStats> rstats = store.getDurationalStats(names);
@@ -573,33 +600,25 @@ public class RetireTool
         GRAPH_WIDTH, GRAPH_HEIGHT, frontiers);
   }
 
-  public static void genSMASweepChart(Sequence shiller, File file) throws IOException
+  public static void genSMASweepChart(Sequence shiller, File dir) throws IOException
   {
-    int iStart = 0;
-    int iEnd = shiller.length() - 1;
+    final int[] months = new int[] { 1, 2, 3, 4, 5, 6, 9, 10, 12 };
+    final int duration = 10 * 12;
+    store.calcDurationalStats(duration);
 
-    // iStart = getIndexForDate(1900, 1);
-    // iEnd = getIndexForDate(2010, 1);
-    int N = iEnd - iStart + 1;
-
-    Sequence snpData = Shiller.getStockData(shiller, iStart, iEnd);
-    Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
-
-    Sequence stock = FinLib.calcSnpReturns(snpData, iStart, -1, FinLib.DividendMethod.MONTHLY);
-    Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStart, -1);
-
-    int[] months = new int[] { 1, 2, 3, 4, 5, 6, 9, 10, 12 }; // , 15, 18, 21, 24, 30, 36 };
-
-    Sequence[] seqs = new Sequence[months.length];
+    // Build list of names of assets/strategies.
+    List<String> nameList = new ArrayList<>();
+    nameList.add("stock");
     for (int i = 0; i < months.length; ++i) {
-      Sequence sma = Strategy.calcSMAReturns(months[i], months[months.length - 1], snpData, stock, bonds);
-      double cagr = FinLib.getAnnualReturn(sma.getLast(0), N);
-      sma.setName(String.format("SMA-%d (%.2f%%)", months[i], cagr));
-      seqs[i] = sma;
-      // System.out.println(InvestmentStats.calcInvestmentStats(sma));
+      nameList.add("sma-" + months[i]);
     }
+    String[] names = nameList.toArray(new String[nameList.size()]);
+    Chart.saveStatsTable(new File(dir, "sma-report.html"), GRAPH_WIDTH, true, store.getCumulativeStats(names));
+    Chart.printDecadeTable(store.get("sma-10"), store.get("stock"));
 
-    Chart.saveLineChart(file, "Cumulative Market Returns: SMA Strategy", GRAPH_WIDTH, GRAPH_HEIGHT, true, seqs);
+    Chart.saveBoxPlots(new File(dir, "sma-box-plots.html"),
+        String.format("Momentum Returns (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
+        store.getDurationalStats(names));
   }
 
   public static void genMomentumSweepChart(Sequence shiller, File dir) throws IOException
@@ -610,10 +629,10 @@ public class RetireTool
 
     // Build list of names of assets/strategies that we care about for scatter plot.
     List<String> nameList = new ArrayList<>();
+    nameList.add("stock");
     for (int i = 0; i < momentumMonths.length; ++i) {
       nameList.add("momentum-" + momentumMonths[i]);
     }
-    nameList.add(0, "stock");
     String[] names = nameList.toArray(new String[nameList.size()]);
     Chart.saveStatsTable(new File(dir, "momentum-report.html"), GRAPH_WIDTH, true, store.getCumulativeStats(names));
     // Chart.printDecadeTable(store.get("momentum-12"), store.get("stock"));
@@ -635,7 +654,7 @@ public class RetireTool
 
     names = new String[] { "stock", "bonds", "stock/bonds [60/40]", "momentum-12" };
     Chart.saveLineChart(new File(dir, "momentum-cumulative.html"), "Cumulative Market Returns: Momentum Strategy",
-        GRAPH_WIDTH, GRAPH_HEIGHT, true, store.getSequences(names));
+        GRAPH_WIDTH, GRAPH_HEIGHT, true, store.getReturns(names));
 
     Chart.saveBoxPlots(new File(dir, "momentum-box-plots.html"),
         String.format("Momentum Returns (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
@@ -792,8 +811,8 @@ public class RetireTool
     // compareRebalancingMethods(shiller, dir);
     // genReturnViz(shiller, dir);
     // genReturnChart(shiller, tbills, dir);
-    // genSMASweepChart(shiller, new File(dir, "sma-sweep.html"));
-    genMomentumSweepChart(shiller, dir);
+    // genSMASweepChart(shiller, dir);
+    // genMomentumSweepChart(shiller, dir);
     // genStockBondMixSweepChart(shiller, dir);
     // genDuelViz(shiller, tbills, dir);
     // genEfficientFrontier(shiller, dir);
