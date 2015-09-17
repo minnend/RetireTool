@@ -129,7 +129,14 @@ public class CumulativeReturnsStore implements Iterable<Sequence>
   {
     name = name.toLowerCase();
     name = aliasMap.getOrDefault(name, name);
-    assert nameToIndex.containsKey(name) : name;
+    if (!nameToIndex.containsKey(name)) {
+      String s = FinLib.getBaseName(name);
+      if (s.equals(name)) {
+        return -1;
+      } else {
+        return getIndex(s);
+      }
+    }
     return nameToIndex.get(name);
   }
 

@@ -6,7 +6,7 @@ import java.util.TreeMap;
 public class Strategy
 {
   public enum Disposition {
-    Safe, Cautious, Moderate, Risky, Daredevil
+    Safe, Cautious, Moderate, Risky
   }
 
   /**
@@ -248,18 +248,36 @@ public class Strategy
 
   public static Sequence calcMultiMomentumReturns(int iStart, Sequence risky, Sequence safe, Disposition disposition)
   {
+    return calcMultiMomentumReturns(iStart, risky, safe, disposition, -1);
+  }
+
+  public static Sequence calcMultiMomentumReturns(int iStart, Sequence risky, Sequence safe, int assetMap)
+  {
+    assert assetMap >= 0;
+    return calcMultiMomentumReturns(iStart, risky, safe, Disposition.Safe, assetMap);
+  }
+
+  private static Sequence calcMultiMomentumReturns(int iStart, Sequence risky, Sequence safe, Disposition disposition,
+      int assetMap)
+  {
     int N = risky.length();
     assert safe.length() == N;
 
     int[] numMonths = new int[] { 1, 3, 12 };
 
-    Sequence momentum = new Sequence("MultiMom-" + disposition);
+    String name;
+    if (assetMap >= 0) {
+      name = "MultiMom-" + assetMap;
+    } else {
+      name = "MultiMom-" + disposition;
+    }
+    Sequence momentum = new Sequence(name);
     double balance = 1.0;
     for (int i = iStart; i < N; ++i) {
       int code = calcMomentumCode(i, numMonths, risky, safe);
 
       // Use votes to select asset.
-      Sequence bestSeq = selectAsset(code, disposition, risky, safe);
+      Sequence bestSeq = selectAsset(code, disposition, assetMap, risky, safe);
 
       // Invest everything in best asset for this month.
       double lastMonthReturn = FinLib.getReturn(bestSeq, i - 1, i);
@@ -396,7 +414,7 @@ public class Strategy
       int code = calcSmaCode(i, numMonths, prices, risky, safe);
 
       // Use votes to select asset.
-      Sequence bestSeq = selectAsset(code, disposition, risky, safe);
+      Sequence bestSeq = selectAsset(code, disposition, 0, risky, safe);
 
       // Invest everything in best asset for this month.
       double lastMonthReturn = bestSeq.get(i, 0) / bestSeq.get(Math.max(0, i - 1), 0);
@@ -407,38 +425,38 @@ public class Strategy
     return sma;
   }
 
-  public static Sequence selectAsset(int code, Disposition disposition, Sequence risky, Sequence safe)
+  private static Sequence selectAsset(int code, Disposition disposition, int assetMap, Sequence risky, Sequence safe)
   {
     assert code >= 0 && code <= 7;
 
-    // Daredevil only plays it safe with zero support.
-    if (disposition == Disposition.Daredevil) {
-      return code == 0 ? safe : risky;
-    }
+    if (assetMap >= 0) {
+      int x = (assetMap >> code) & 1;
+      return (x == 1 ? risky : safe);
+    } else {
+      // Complete support or shortest + mid => always risky.
+      if (code >= 6) {
+        return risky;
+      }
 
-    // Complete support.
-    if (code == 7) {
-      return risky;
-    }
+      // Shortest + support => only Safe is safe.
+      if (code == 5) {
+        return disposition == Disposition.Safe ? safe : risky;
+      }
 
-    // Shortest + support => always risky.
-    if (code >= 5) {
-      return disposition == Disposition.Safe ? safe : risky;
-    }
+      // Not shortest and zero or one other => always safe.
+      if (code <= 2) {
+        return safe;
+      }
 
-    // Not shortest and zero or one other => always safe.
-    if (code <= 2) {
-      return safe;
-    }
+      // Not shortest but both others.
+      if (code == 3) {
+        return disposition == Disposition.Safe || disposition == Disposition.Cautious ? safe : risky;
+      }
 
-    // Not shortest but both others.
-    if (code == 3) {
-      return disposition == Disposition.Safe || disposition == Disposition.Cautious ? safe : risky;
+      // Only short-term support.
+      assert code == 4;
+      return disposition == Disposition.Risky ? risky : safe;
     }
-
-    // Only short-term support.
-    assert code == 4;
-    return disposition == Disposition.Risky ? risky : safe;
   }
 
   public static void printStats(String title, Map<Integer, SeqCount> map)

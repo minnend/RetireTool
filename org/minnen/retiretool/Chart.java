@@ -527,7 +527,7 @@ public class Chart
 
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
       writer.write("<html><head>\n");
-      writer.write("<title>Strategy Statistics</title>\n");
+      writer.write("<title>Strategy Report</title>\n");
       writer.write("<script src=\"http://code.jquery.com/jquery.min.js\"></script>\n");
       writer.write("<script type=\"text/javascript\" src=\"js/jquery.tablesorter.min.js\"></script>\n");
       writer.write("<script type=\"text/javascript\">\n");
@@ -603,7 +603,7 @@ public class Chart
           writer.write(String.format("<td>%.2f</td>\n", stats.cagr * strategyStats[0].devAnnualReturn
               / stats.devAnnualReturn));
         }
-        writer.write(String.format("<td>%.2f</td>\n", stats.maxDrawdown));
+        writer.write(String.format("<td>%.2f</td>\n", stats.drawdown));
         writer.write(String.format("<td>%.2f</td>\n", stats.percentDown10));
 
         if (!reduced) {
@@ -791,7 +791,7 @@ public class Chart
       Sequence decade = cumulativeReturns.subseq(i, 121);
       CumulativeStats stats = CumulativeStats.calc(decade);
       System.out.printf(" <tr><td>%ds</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2fx</td></tr>\n",
-          cal.get(Calendar.YEAR), stats.cagr, stats.devAnnualReturn, stats.maxDrawdown, stats.percentDown10,
+          cal.get(Calendar.YEAR), stats.cagr, stats.devAnnualReturn, stats.drawdown, stats.percentDown10,
           stats.totalReturn);
     }
     System.out.printf("</tbody>\n</table>\n");

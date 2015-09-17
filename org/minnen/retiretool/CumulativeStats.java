@@ -15,7 +15,7 @@ public class CumulativeStats
   public double   meanAnnualReturn  = 1.0;
   public double   devAnnualReturn;
   public double   totalReturn       = 1.0;
-  public double   maxDrawdown;
+  public double   drawdown;
   public double   percentNewHigh;
   public double   percentDown10;
   public double   peakReturn;
@@ -52,7 +52,7 @@ public class CumulativeStats
     final int N = cumulativeReturns.size();
     final double eps = 1e-5;
     peakReturn = 1.0;
-    maxDrawdown = 0.0;
+    drawdown = 0.0;
 
     if (N > 1) {
       final double firstValue = cumulativeReturns.getFirst(0);
@@ -71,11 +71,11 @@ public class CumulativeStats
           ++numDown;
         }
         if (value < peakReturn) {
-          double drawdown = 100.0 * (peakReturn - value) / peakReturn;
-          if (drawdown > maxDrawdown) {
-            maxDrawdown = drawdown;
+          double currentDrawdown = 100.0 * (peakReturn - value) / peakReturn;
+          if (currentDrawdown > drawdown) {
+            drawdown = currentDrawdown;
           }
-          if (drawdown >= 10.0) {
+          if (currentDrawdown >= 10.0) {
             ++nDown10;
           }
         } else if (value > peakReturn) {
@@ -108,7 +108,7 @@ public class CumulativeStats
     double multiYearReturn = FinLib.mul2ret(Math.pow(FinLib.ret2mul(cagr), 10));
     terms.add(new WeightedValue(multiYearReturn, 1000));
     terms.add(new WeightedValue(devAnnualReturn, -10));
-    terms.add(new WeightedValue(maxDrawdown + 10.0, -1000));
+    terms.add(new WeightedValue(drawdown + 10.0, -1000));
     terms.add(new WeightedValue(percentDown10, -10));
     terms.add(new WeightedValue(percentNewHigh, 5));
     terms.add(new WeightedValue(annualPercentiles[0], 5));
@@ -134,8 +134,8 @@ public class CumulativeStats
   {
     return String
         .format(
-            "[%s: CAGR=%.2f  DAR=%.2f  MDD=%.1f  %%[%.1f|%.1f|%.1f|%.1f|%.1f]  %%Up/Down=(%.1f, %.1f)  NewHigh,Down10=(%.1f, %.1f)]",
-            name(), cagr, devAnnualReturn, maxDrawdown, annualPercentiles[0], annualPercentiles[1],
+            "[%s: CAGR=%.2f  DEV=%.2f  MDD=%.1f  %%[%.1f|%.1f|%.1f|%.1f|%.1f]  %%Up/Down=(%.1f, %.1f)  NewHigh,Down10=(%.1f, %.1f)]",
+            FinLib.getBaseName(name()), cagr, devAnnualReturn, drawdown, annualPercentiles[0], annualPercentiles[1],
             annualPercentiles[2], annualPercentiles[3], annualPercentiles[4], percentUp, percentDown, percentNewHigh,
             percentDown10);
   }

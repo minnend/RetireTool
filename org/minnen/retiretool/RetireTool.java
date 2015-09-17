@@ -21,7 +21,7 @@ public class RetireTool
   {
     assert tbills == null || shiller.length() == tbills.length();
 
-    final int iStartData = 0;// shiller.getIndexForDate(1998, 12);
+    final int iStartData = 0;//shiller.getIndexForDate(1934, 12);
     final int iEndData = -1;// shiller.getIndexForDate(2009, 12);
 
     final int rebalanceMonths = 12;
@@ -115,8 +115,25 @@ public class RetireTool
 
     // Multi-scale Momentum and SMA methods.
     for (Disposition disposition : Disposition.values()) {
-      store.add(Strategy.calcMultiMomentumReturns(iStartSimulation, risky, safe, disposition));
+      Sequence mom = Strategy.calcMultiMomentumReturns(iStartSimulation, risky, safe, disposition);
+      store.add(mom);
       store.add(Strategy.calcMultiSmaReturns(iStartSimulation, stockData, risky, safe, disposition));
+
+      CumulativeStats cstats = store.getCumulativeStats(mom.getName());
+      System.out.println(cstats);
+    }
+
+    // Full multi-momentum sweep.
+    for (int assetMap = 255, i = 0; i < 8; ++i) {
+      Sequence mom = Strategy.calcMultiMomentumReturns(iStartSimulation, risky, safe, assetMap);
+      String name = mom.getName();
+      store.add(mom);
+      CumulativeStats cstats = store.getCumulativeStats(name);
+      // if (cstats.cagr >= 9.0 && cstats.drawdown < 20.0) {
+      System.out.println(cstats);
+      // }
+
+      assetMap &= ~(1 << i);
     }
 
     // Strategy.calcMultiMomentumStats(risky, safe);
@@ -239,7 +256,7 @@ public class RetireTool
   public static void genReturnChart(Sequence shiller, Sequence tbills, File dir) throws IOException
   {
     String[] names = new String[] { "stock", "momentum-1", "momentum-3", "momentum-12", "multimom-safe",
-        "multimom-cautious", "multimom-moderate", "multimom-risky", "multimom-daredevil" };
+        "multimom-cautious", "multimom-moderate", "multimom-risky" };
     // , "multisma-safe",
     // "multisma-cautious", "multisma-moderate", "multisma-risky", "multisma-daredevil", "raa", "daa" };
     // { "stock", "bonds", "momentum-1", "momentum-3", "momentum-12", "multimom-risky" };
@@ -285,53 +302,13 @@ public class RetireTool
 
   public static void genReturnViz(Sequence shiller, File dir) throws IOException
   {
-    int iStart = 0;
-    int iEnd = shiller.length() - 1;
+    final int nMonths = 10 * 12;
 
-    // iStart = shiller.getIndexForDate(1980, 1);
-    // iEnd = shiller.getIndexForDate(2010, 1);
+    Sequence stock = store.get("stock");
+    Sequence bonds = store.get("bonds");
 
-    int nMonths = 20 * 12;
-    int percentStock = 60;
-    int percentBonds = 40;
-    // int percentCash = 100 - (percentStock + percentBonds);
-
-    int nMonthsSMA = 10;
-    int nMonthsMomentum = 12;
-    int rebalanceMonths = 12;
-    double rebalanceBand = 0.0;
-    int iStartReturns = 0;
-
-    Sequence snpData = Shiller.getStockData(shiller, iStart, iEnd);
-    Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
-
-    Sequence stockAll = FinLib.calcSnpReturns(snpData, iStart, -1, FinLib.DividendMethod.MONTHLY);
-    Sequence bondsAll = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStart, -1);
-
-    // Chart.saveLineChart(new File(dir, "stock-prices.html"), "S&P 500 Prices", GRAPH_WIDTH, GRAPH_HEIGHT, false,
-    // snpData);
-
-    Sequence stock = stockAll.subseq(iStartReturns);
-    Sequence bonds = bondsAll.subseq(iStartReturns);
-
-    Sequence mixed = Strategy.calcMixedReturns(new Sequence[] { stock, bonds }, new double[] { percentStock,
-        percentBonds }, rebalanceMonths, rebalanceBand);
-    Sequence momentum = Strategy.calcMomentumReturns(nMonthsMomentum, iStartReturns, null, stockAll, bondsAll);
-    Sequence sma = Strategy.calcSMAReturns(nMonthsSMA, iStartReturns, snpData, stockAll, bondsAll);
-    Sequence raa = Strategy.calcMixedReturns(new Sequence[] { sma, momentum }, new double[] { 50, 50 },
-        rebalanceMonths, rebalanceBand);
-    raa.setName("RAA");
-
-    Sequence multiMomSafe = Strategy.calcMultiMomentumReturns(iStartReturns, stockAll, bondsAll, Disposition.Safe);
-    Sequence multiSmaRisky = Strategy
-        .calcMultiSmaReturns(iStartReturns, snpData, stockAll, bondsAll, Disposition.Risky);
-    Sequence daa = Strategy.calcMixedReturns(new Sequence[] { multiSmaRisky, multiMomSafe }, new double[] { 50, 50 },
-        rebalanceMonths, rebalanceBand);
-    daa.setName("DAA");
-
-    // System.out.printf("Stock Total Return: %f\n", getReturn(stock, 0, stock.length()-1));
     // Chart.printDecadeTable(stockAll);
-    Sequence returnLiks = FinLib.calcReturnLikelihoods(stockAll, true);
+    Sequence returnLiks = FinLib.calcReturnLikelihoods(stock, true);
     returnLiks = returnLiks.subseq(60, 180);
     Sequence[] liks = new Sequence[returnLiks.getNumDims() - 1];
     int[] years = new int[] { 1, 2, 5, 10, 20, 30, 40 };
@@ -392,11 +369,11 @@ public class RetireTool
   {
     assert dir.isDirectory();
 
-    int duration = 20 * 12;
+    int duration = 10 * 12;
     store.calcDurationalStats(duration);
 
-    String name1 = "daa";
-    String name2 = "Stock";
+    String name1 = "multimom-cautious";
+    String name2 = "stock";
 
     Sequence player1 = store.get(name1);
     Sequence player2 = store.get(name2);
@@ -800,7 +777,7 @@ public class RetireTool
     // genSMASweepChart(shiller, new File(dir, "sma-sweep.html"));
     // genMomentumSweepChart(shiller, dir);
     // genStockBondMixSweepChart(shiller, dir);
-    // genDuelViz(shiller, tbills, dir);
+    genDuelViz(shiller, tbills, dir);
     // genEfficientFrontier(shiller, dir);
     // genCorrelationGraph(shiller, dir);
     // genEndBalanceCharts(shiller, dir);
