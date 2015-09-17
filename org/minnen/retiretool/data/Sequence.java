@@ -1,8 +1,9 @@
-package org.minnen.retiretool;
+package org.minnen.retiretool.data;
 
 import java.util.*;
 
-import org.minnen.retiretool.FeatureVec;
+import org.minnen.retiretool.Library;
+import org.minnen.retiretool.data.FeatureVec;
 
 /**
  * A Sequence represents a list of multidimentional feature vectors.
@@ -111,7 +112,7 @@ public class Sequence implements Iterable<FeatureVec>
     lockEnd = iEnd;
   }
 
-  public void clearLock()
+  public void unlock()
   {
     lockStart = lockEnd = -1;
   }
@@ -155,10 +156,10 @@ public class Sequence implements Iterable<FeatureVec>
     }
   }
 
-  public static void clearLock(Sequence... seqs)
+  public static void unlock(Sequence... seqs)
   {
     for (Sequence seq : seqs) {
-      seq.clearLock();
+      seq.unlock();
     }
   }
 
@@ -586,7 +587,7 @@ public class Sequence implements Iterable<FeatureVec>
   }
 
   /** @return new sequence equal to this sequence divided by the given sequence (component-wise). */
-  public Sequence divide(Sequence divisor)
+  public Sequence div(Sequence divisor)
   {
     assert length() == divisor.length();
     Sequence seq = new Sequence(getName() + " / " + divisor.getName());
@@ -596,5 +597,24 @@ public class Sequence implements Iterable<FeatureVec>
       seq.addData(x.div(y), getTimeMS(i));
     }
     return seq;
+  }
+
+  /**
+   * Calculate the average in [iStart, iEnd] for the given sequence.
+   * 
+   * @param iStart first index (inclusive)
+   * @param iEnd last index (inclusive)
+   * @return vector of averages in [iStart, iEnd]
+   */
+  public FeatureVec average(int iStart, int iEnd)
+  {
+    final int N = iEnd - iStart + 1;
+    assert N > 0;
+
+    FeatureVec average = new FeatureVec(getNumDims());
+    for (int j = iStart; j <= iEnd; ++j) {
+      average._add(get(iStart));
+    }
+    return average._div(N);
   }
 }

@@ -4,6 +4,8 @@ import java.text.*;
 import java.util.regex.*;
 import java.util.*;
 
+import org.minnen.retiretool.data.Sequence;
+
 import static java.util.Calendar.*;
 
 public final class Library

@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.minnen.retiretool.data.Sequence;
+
 public class Bond
 {
   private final Sequence bondData;

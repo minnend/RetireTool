@@ -3,10 +3,82 @@ package org.minnen.retiretool;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.predictor.AssetPredictor;
+import org.minnen.retiretool.predictor.SMAPredictor;
+import org.minnen.retiretool.stats.WinStats;
+
 public class Strategy
 {
   public enum Disposition {
     Safe, Cautious, Moderate, Risky
+  }
+
+  public static Sequence calcReturns(AssetPredictor predictor, int iStart, WinStats winStats, Sequence... seqs)
+  {
+    assert seqs.length > 1;
+    int N = seqs[0].length();
+    for (int i = 1; i < seqs.length; ++i) {
+      assert seqs[i].length() == N;
+      assert seqs[i].getStartMS() == seqs[0].getStartMS();
+    }
+
+    final double principal = 10000.0;
+    double balance = principal;
+    Sequence returns = new Sequence(predictor.getName());
+    returns.addData(balance, seqs[0].getTimeMS(iStart));
+    if (winStats == null) {
+      winStats = new WinStats();
+    }
+    winStats.nCorrect = new int[seqs.length];
+    winStats.nSelected = new int[seqs.length];
+    for (int i = iStart + 1; i < N; ++i) {
+      for (Sequence seq : seqs) {
+        seq.lock(0, i - 1); // lock sequence so only historical data is accessible
+      }
+
+      int iSelected = predictor.selectAsset(seqs);
+
+      for (Sequence seq : seqs) {
+        seq.unlock();
+      }
+
+      // Find corret answer (sequence with highest return for current month)
+      double correctReturn = 1.0;
+      int iCorrect = -1;
+      for (int iSeq = 0; iSeq < seqs.length; ++iSeq) {
+        Sequence seq = seqs[iSeq];
+        double r = FinLib.getReturn(seq, i - 1, i);
+        if (r > correctReturn) {
+          correctReturn = r;
+          iCorrect = iSeq;
+        }
+      }
+
+      // Invest everything in best asset for this month.
+      // No bestSeq => hold everything in cash for no gain and no loss.
+      double realizedReturn = iSelected < 0 ? 1.0 : FinLib.getReturn(seqs[iSelected], i - 1, i);
+      balance *= realizedReturn;
+      returns.addData(balance, seqs[0].getTimeMS(i));
+
+      // Update win stats
+      if (realizedReturn > correctReturn - 1e-6) {
+        ++winStats.nPredCorrect;
+      } else {
+        ++winStats.nPredWrong;
+      }
+      if (iCorrect >= 0) {
+        ++winStats.nCorrect[iCorrect];
+      }
+      if (iSelected >= 0) {
+        ++winStats.nSelected[iSelected];
+      }
+    }
+
+    // Return cumulative returns normalized so that startingt value is 1.0.
+    returns._div(principal);
+    assert Math.abs(returns.getFirst(0) - 1.0) < 1e-6;
+    return returns;
   }
 
   /**
@@ -44,7 +116,7 @@ public class Strategy
         seq.lock(0, i - 1); // lock sequence so only historical data is accessible
         int iLast = seq.length() - 1;
         double r = FinLib.getReturn(seq, iLast - nMonths, iLast);
-        seq.clearLock();
+        seq.unlock();
         if (r > bestReturn) {
           iSelected = iSeq;
           bestReturn = r;
@@ -81,27 +153,6 @@ public class Strategy
   }
 
   /**
-   * Calculate the SMA in [iStart, iEnd) for the given sequence.
-   * 
-   * @param iStart first index (inclusive)
-   * @param iEnd last index (exclusive)
-   * @param prices sequence that holds price (assumed to be in dim=0)
-   * @return average of prices in [iStart, iEnd)
-   */
-  private static double calcSma(int iStart, int iEnd, Sequence prices)
-  {
-    if (iEnd <= iStart) {
-      return 0.0;
-    }
-    double sma = 0.0;
-    for (int j = iStart; j < iEnd; ++j) {
-      sma += prices.get(j, 0);
-    }
-    sma /= (iEnd - iStart);
-    return sma;
-  }
-
-  /**
    * Invest in risky asset when above SMA, otherwise safe asset.
    * 
    * @param numMonths calculate SMA over past N months
@@ -122,7 +173,7 @@ public class Strategy
     for (int i = iStart + 1; i < risky.length(); ++i) {
       // Calculate trailing moving average.
       int a = Math.max(0, i - numMonths - 1);
-      double ma = calcSma(a, i, prices);
+      double ma = prices.average(a, i - 1).get(0);
 
       // Test above / below moving average.
       double lastMonthReturn;
@@ -357,7 +408,7 @@ public class Strategy
     for (int j = 0; j < numMonths.length; ++j) {
       code <<= 1;
       final int a = Math.max(0, index - numMonths[j] - 1);
-      double sma = calcSma(a, index, prices);
+      double sma = prices.average(a, index - 1).get(0);
       double price = prices.get(Math.max(index - 1, 0), 0);
 
       if (price > sma) {

@@ -10,7 +10,12 @@ import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.minnen.retiretool.ComparisonStats.Results;
+import org.minnen.retiretool.data.FeatureVec;
+import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.stats.ComparisonStats;
+import org.minnen.retiretool.stats.CumulativeStats;
+import org.minnen.retiretool.stats.DurationalStats;
+import org.minnen.retiretool.stats.ComparisonStats.Results;
 
 public class Chart
 {

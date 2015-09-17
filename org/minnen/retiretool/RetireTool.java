@@ -9,6 +9,14 @@ import java.util.List;
 
 import org.minnen.retiretool.Chart.ChartType;
 import org.minnen.retiretool.Strategy.Disposition;
+import org.minnen.retiretool.data.DataIO;
+import org.minnen.retiretool.data.FeatureVec;
+import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.predictor.MomentumPredictor;
+import org.minnen.retiretool.stats.ComparisonStats;
+import org.minnen.retiretool.stats.CumulativeStats;
+import org.minnen.retiretool.stats.DurationalStats;
+import org.minnen.retiretool.stats.WinStats;
 
 public class RetireTool
 {
@@ -21,7 +29,7 @@ public class RetireTool
   {
     assert tbills == null || shiller.length() == tbills.length();
 
-    final int iStartData = 0;//shiller.getIndexForDate(1934, 12);
+    final int iStartData = 0;// shiller.getIndexForDate(1934, 12);
     final int iEndData = -1;// shiller.getIndexForDate(2009, 12);
 
     final int rebalanceMonths = 12;
@@ -85,10 +93,20 @@ public class RetireTool
     Sequence safe = bondsAll;
 
     // Momentum sweep.
-    final int[] momentumMonths = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12 }; // , 15, 18 };
+    final int[] momentumMonths = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12 };
     for (int i = 0; i < momentumMonths.length; ++i) {
       WinStats winStats = new WinStats();
-      Sequence mom = Strategy.calcMomentumReturns(momentumMonths[i], iStartSimulation, winStats, risky, safe);
+      Sequence momOrig = Strategy.calcMomentumReturns(momentumMonths[i], iStartSimulation, winStats, risky, safe);
+      MomentumPredictor predictor = new MomentumPredictor(momentumMonths[i]);
+      Sequence mom = Strategy.calcReturns(predictor, iStartSimulation, winStats, risky, safe);
+      
+      assert mom.length() == momOrig.length();
+      for (int ii=0; ii<mom.length(); ++ii) {
+        double a = mom.get(ii, 0);
+        double b = momOrig.get(ii, 0);
+        assert Math.abs(a-b) < 1e-6;
+      }
+      
       store.add(mom);
       // if (i == 0) {
       // System.out.printf("Correct: %.2f%% / %.2f%%  (%d / %d)\n", winStats.percentCorrect(0),
@@ -586,7 +604,7 @@ public class RetireTool
 
   public static void genMomentumSweepChart(Sequence shiller, File dir) throws IOException
   {
-    final int[] momentumMonths = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12 };// , 15, 18 };
+    final int[] momentumMonths = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12 };
     final int duration = 10 * 12;
     store.calcDurationalStats(duration);
 
@@ -775,9 +793,9 @@ public class RetireTool
     // genReturnViz(shiller, dir);
     // genReturnChart(shiller, tbills, dir);
     // genSMASweepChart(shiller, new File(dir, "sma-sweep.html"));
-    // genMomentumSweepChart(shiller, dir);
+    genMomentumSweepChart(shiller, dir);
     // genStockBondMixSweepChart(shiller, dir);
-    genDuelViz(shiller, tbills, dir);
+    // genDuelViz(shiller, tbills, dir);
     // genEfficientFrontier(shiller, dir);
     // genCorrelationGraph(shiller, dir);
     // genEndBalanceCharts(shiller, dir);

@@ -1,6 +1,10 @@
-package org.minnen.retiretool;
+package org.minnen.retiretool.stats;
 
 import java.util.Arrays;
+
+import org.minnen.retiretool.FinLib;
+import org.minnen.retiretool.Library;
+import org.minnen.retiretool.data.Sequence;
 
 /**
  * Holds statistics that characterize the results of an investment strategy over a given duration.

@@ -1,7 +1,7 @@
 package org.minnen.retiretool;
 
-import org.minnen.retiretool.FeatureVec;
-import org.minnen.retiretool.Sequence;
+import org.minnen.retiretool.data.FeatureVec;
+import org.minnen.retiretool.data.Sequence;
 
 /*
  * Functions that operate on Shiller's data (S&P price, dividends, CPI, GS10, CAPE).

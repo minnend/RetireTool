@@ -6,6 +6,10 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 
+import org.minnen.retiretool.data.FeatureVec;
+import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.stats.CumulativeStats;
+
 public final class FinLib
 {
   public static final double SOC_SEC_AT70 = 3480.00; // http://www.ssa.gov/oact/quickcalc/

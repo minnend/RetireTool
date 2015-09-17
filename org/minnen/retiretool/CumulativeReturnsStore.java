@@ -7,6 +7,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.stats.CumulativeStats;
+import org.minnen.retiretool.stats.DurationalStats;
+
 /**
  * This class stores sequences that hold cumulative returns for a particular asset / strategy. The store ensures that
  * all sequences have the same length and start / end times. It also ensures that the sequences are normalized to start
