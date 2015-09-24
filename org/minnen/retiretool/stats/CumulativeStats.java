@@ -1,7 +1,6 @@
 package org.minnen.retiretool.stats;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import org.minnen.retiretool.FinLib;
@@ -158,38 +157,9 @@ public class CumulativeStats implements Comparable<CumulativeStats>
     return stats;
   }
 
-  public boolean dominates(CumulativeStats cstats, int nMonthDomination)
+  public boolean dominates(CumulativeStats cstats)
   {
-    // return cagr > cstats.cagr && drawdown < cstats.drawdown;
-    if (cagr > cstats.cagr && drawdown < cstats.drawdown + 0.1) {
-      return true;
-    }
-
-    if (nMonthDomination > 0) {
-      ComparisonStats.Results comp = ComparisonStats.calcResults(cumulativeReturns, cstats.cumulativeReturns,
-          nMonthDomination);
-      if (comp.winPercent1 > 99.999) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  public static boolean updateWinners(CumulativeStats candidate, List<CumulativeStats> winners)
-  {
-    final int nMonthDomination = 10 * 12;
-    Iterator<CumulativeStats> it = winners.iterator();
-    while (it.hasNext()) {
-      CumulativeStats cstats = it.next();
-      if (cstats.dominates(candidate, nMonthDomination) || candidate.compareTo(cstats) == 0) {
-        return false;
-      } else if (candidate.dominates(cstats, nMonthDomination)) {
-        it.remove();
-      }
-    }
-    winners.add(candidate);
-    return true;
+    return cagr > cstats.cagr && drawdown < cstats.drawdown + 0.4;
   }
 
   @Override

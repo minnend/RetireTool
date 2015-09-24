@@ -35,6 +35,8 @@ public class SequenceStore implements Iterable<Sequence>
 
   private final List<List<Sequence>>  seqLists             = new ArrayList<List<Sequence>>();
 
+  private int                         lastStatsDuration;
+
   public SequenceStore()
   {
     this(1.0);
@@ -46,6 +48,11 @@ public class SequenceStore implements Iterable<Sequence>
 
     seqLists.add(returns);
     seqLists.add(miscSeqs);
+  }
+
+  public int getLastStatsDuration()
+  {
+    return lastStatsDuration;
   }
 
   public void alias(String from, String to)
@@ -123,6 +130,7 @@ public class SequenceStore implements Iterable<Sequence>
     DurationalStats dstats = DurationalStats.calc(cumulativeReturns, defaultStatsDuration);
     durationalStats.add(dstats);
     assert durationalStats.size() == returns.size();
+    lastStatsDuration = defaultStatsDuration;
 
     // System.out.printf("Added: \"%s\"\n", name);
     return index;
@@ -302,6 +310,7 @@ public class SequenceStore implements Iterable<Sequence>
    */
   public void recalcDurationalStats(int nMonths)
   {
+    lastStatsDuration = nMonths;
     for (int i = 0; i < returns.size(); ++i) {
       durationalStats.set(i, DurationalStats.calc(returns.get(i), nMonths));
     }

@@ -38,27 +38,34 @@ public class ComparisonStats
 
     for (int i = 0; i < durations.length && durations[i] < cumulativeReturns1.length(); ++i) {
       final int duration = durations[i];
-      stats.durationToResults.put(duration, calcResults(cumulativeReturns1, cumulativeReturns2, duration));
+      stats.durationToResults.put(duration, calcFromCumulative(cumulativeReturns1, cumulativeReturns2, duration));
     }
     return stats;
   }
 
-  public static Results calcResults(Sequence cumulativeReturns1, Sequence cumulativeReturns2, int nMonths)
+  public static Results calcFromCumulative(Sequence cumulativeReturns1, Sequence cumulativeReturns2, int nMonths)
   {
     assert cumulativeReturns1.length() == cumulativeReturns2.length();
+
+    Sequence returns1 = FinLib.calcReturnsForDuration(cumulativeReturns1, nMonths);
+    Sequence returns2 = FinLib.calcReturnsForDuration(cumulativeReturns2, nMonths);
+
+    return calcFromDurationReturns(returns1, returns2, nMonths);
+  }
+
+  public static Results calcFromDurationReturns(Sequence returnsForDuration1, Sequence returnsForDuration2, int nMonths)
+  {
+    assert returnsForDuration1.length() == returnsForDuration2.length();
     Results results = new Results();
     results.duration = nMonths;
 
-    cumulativeReturns1 = FinLib.calcReturnsForDuration(cumulativeReturns1, nMonths);
-    cumulativeReturns2 = FinLib.calcReturnsForDuration(cumulativeReturns2, nMonths);
-
-    final int N = cumulativeReturns1.length();
+    final int N = returnsForDuration1.length();
     assert N > 0;
     int win1 = 0, win2 = 0;
     double excessSum = 0.0;
     double[] r = new double[N];
     for (int i = 0; i < N; ++i) {
-      double diff = cumulativeReturns1.get(i, 0) - cumulativeReturns2.get(i, 0);
+      double diff = returnsForDuration1.get(i, 0) - returnsForDuration2.get(i, 0);
       r[i] = diff;
       excessSum += diff;
       if (Math.abs(diff) > 0.01) {

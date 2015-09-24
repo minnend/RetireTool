@@ -657,32 +657,28 @@ public class RetireTool
   public static void genMomentumMixChart(File dir) throws IOException
   {
     long startMS = Library.getTime();
-    List<CumulativeStats> winners = new ArrayList<CumulativeStats>();
-
-    // store.recalcDurationalStats(10 * 12);
+    List<String> candidates = new ArrayList<String>();
 
     // Add all-stock and all-bonds.
-    CumulativeStats.updateWinners(store.getCumulativeStats("stock"), winners);
-    CumulativeStats.updateWinners(store.getCumulativeStats("bonds"), winners);
+    candidates.add("stock");
+    candidates.add("bonds");
 
     // Add single-scale momentum strategies.
     for (int i = 1; i <= 12; ++i) {
       String name = "momentum-" + i;
       if (store.hasName(name)) {
-        CumulativeStats.updateWinners(store.getCumulativeStats(name), winners);
+        candidates.add(name);
       }
     }
 
     // Add multi-scale momentum strategies.
     for (Strategy.Disposition disposition : dispositions) {
-      String name = "multimom-" + disposition;
-      CumulativeStats.updateWinners(store.getCumulativeStats(name), winners);
+      candidates.add("multimom-" + disposition);
     }
 
     // Add map-based momentum strategies.
     for (int assetMap = 255, i = 0; i < 8; ++i) {
-      String name = "multimom-" + assetMap;
-      CumulativeStats.updateWinners(store.getCumulativeStats(name), winners);
+      candidates.add("multimom-" + assetMap);
       assetMap &= ~(1 << i);
     }
 
@@ -691,7 +687,7 @@ public class RetireTool
       for (int k = j + 1; k < dispositions.length; ++k) {
         for (int i = 10; i < 100; i += 10) {
           String name = String.format("Mom.%s-Mom.%s-%d/%d", dispositions[j], dispositions[k], i, 100 - i);
-          CumulativeStats.updateWinners(store.getCumulativeStats(name), winners);
+          candidates.add(name);
         }
       }
     }
@@ -712,17 +708,22 @@ public class RetireTool
           } else {
             name = String.format("Stock/Bonds/Mom.%s-%d/%d/%d", disposition, i, j, k);
           }
-          CumulativeStats.updateWinners(store.getCumulativeStats(name), winners);
+          candidates.add(name);
         }
       }
     }
 
+    // Filter candidates to find "dominating" strategies.
+    store.recalcDurationalStats(10 * 12);
+
+    FinLib.filterStrategies(candidates, store);
+
+    List<CumulativeStats> winners = new ArrayList<CumulativeStats>();
+    for (String name : candidates) {
+      winners.add(store.getCumulativeStats(name));
+    }
     Collections.sort(winners, Collections.reverseOrder());
     System.out.printf("Winners: %d\n", winners.size());
-    for (CumulativeStats cstats : winners) {
-      System.out.println(cstats);
-    }
-
     Chart.saveStatsTable(new File(dir, "momentum-winners.html"), GRAPH_WIDTH, true, winners);
 
     System.out.printf("Done (%s).\n", Library.formatDuration(Library.getTime() - startMS));
