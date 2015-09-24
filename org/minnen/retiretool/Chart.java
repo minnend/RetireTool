@@ -546,7 +546,7 @@ public class Chart
       writer.write("<thead><tr>\n");
       writer.write(" <th>Strategy</th>\n");
       writer.write(" <th>CAGR</th>\n");
-      writer.write(" <th>StdDev</th>\n");
+      writer.write(" <th>Dev</th>\n");
       if (includeLeverage) {
         writer.write(" <th>Leverage</th>\n");
       }
@@ -640,7 +640,7 @@ public class Chart
       writer.write("<div><ul>");
       writer.write(" <li><b>Strategy</b> - Name of the strategy or asset class</li>\n");
       writer.write(" <li><b>CAGR</b> - Compound Annual Growth Rate</li>\n");
-      writer.write(" <li><b>StdDev</b> - Standard deviation of annual returns</li>\n");
+      writer.write(" <li><b>Dev</b> - Standard deviation of annual returns</li>\n");
       if (includeLeverage) {
         writer.write(" <li><b>Leverage</b> - Multiplier for investments (via borrowing additional funds)</li>\n");
       }
@@ -695,6 +695,7 @@ public class Chart
       writer.write("<table id=\"comparisonTable\" class=\"tablesorter\">\n");
       writer.write("<thead><tr>\n");
       writer.write(" <th>Duration</th>\n");
+      writer.write(" <th>Win Visualization</th>\n");
       writer.write(String.format(" <th>%s<br/>Win %%</th>\n", FinLib.getBaseName(stats.returns1.getName())));
       writer.write(String.format(" <th>%s<br/>Win %%</th>\n", FinLib.getBaseName(stats.returns2.getName())));
       writer.write(" <th>Mean<br/>Excesss</th>\n");
@@ -715,6 +716,33 @@ public class Chart
           int years = duration / 12;
           writer.write(String.format("<td>%d Year%s</td>\n", years, years > 1 ? "s" : ""));
         }
+
+        writer.write("<td>\n");
+        int w1 = (int) Math.round(results.winPercent1);
+        int w3 = (int) Math.round(results.winPercent2);
+        if (w1 + w3 > 100) {
+          assert w1 + w3 == 101;
+          if (w1 > w3) {
+            --w1;
+          } else {
+            --w3;
+          }
+        }
+        int w2 = 100 - (w1 + w3);
+        if (w1 > 0) {
+          writer.write(String.format("<span style=\"float: left; width: %dpx; background: #53df53;\">&nbsp;</span>\n",
+              w1));
+        }
+        if (w2 > 0) {
+          writer.write(String.format("<span style=\"float: left; width: %dpx; background: #dfdf53;\">&nbsp;</span>\n",
+              w2));
+        }
+        if (w3 > 0) {
+          writer.write(String.format("<span style=\"float: left; width: %dpx; background: #df5353;\">&nbsp;</span>\n",
+              w3));
+        }
+        writer.write("</td>\n");
+
         writer.write(String.format("<td>%.1f</td>\n", results.winPercent1));
         writer.write(String.format("<td>%.1f</td>\n", results.winPercent2));
         writer.write(String.format("<td>%.2f</td>\n", results.meanExcess));
@@ -769,7 +797,8 @@ public class Chart
 
         for (ComparisonStats stats : allStats) {
           Results results = stats.durationToResults.get(duration);
-          writer.write(String.format("<td>%.1f (%.1f)</td>\n", results.winPercent1, results.winPercent2));
+          writer.write(String.format("<td>%.1f</td>\n", 100.0 - results.winPercent2));
+          // writer.write(String.format("<td>%.1f (%.1f)</td>\n", results.winPercent1, results.winPercent2));
         }
         writer.write("</tr>\n");
       }
@@ -787,7 +816,7 @@ public class Chart
 
     System.out.printf("<table id=\"decadeTable\" class=\"tablesorter\"><thead>\n");
     System.out
-        .printf("<tr><th>Decade</th><th>CAGR</th><th>StdDev</th><th>Drawdown</th><th>Down 10%%</th><th>Total<br/>Return</th></tr>\n");
+        .printf("<tr><th>Decade</th><th>CAGR</th><th>Dev</th><th>Drawdown</th><th>Down 10%%</th><th>Total<br/>Return</th></tr>\n");
     System.out.printf("</thead><tbody>\n");
 
     Calendar cal = Library.now();
@@ -819,7 +848,7 @@ public class Chart
     System.out.printf("<table id=\"decadeComparisonTable\" class=\"tablesorter\"><thead>\n");
     System.out.printf("<tr><th>Decade</th><th>%s<br/>CAGR</th><th>%s<br/>CAGR</th><th>Excess<br/>Returns</th>\n",
         FinLib.getBaseName(returns1.getName()), FinLib.getBaseName(returns2.getName()));
-    System.out.printf("<th>%s<br/>StdDev</th><th>%s<br/>StdDev</th></tr>\n", FinLib.getBaseName(returns1.getName()),
+    System.out.printf("<th>%s<br/>Dev</th><th>%s<br/>Dev</th></tr>\n", FinLib.getBaseName(returns1.getName()),
         FinLib.getBaseName(returns2.getName()));
     System.out.printf("</thead><tbody>\n");
 

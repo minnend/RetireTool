@@ -1,6 +1,7 @@
 package org.minnen.retiretool.stats;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.minnen.retiretool.FinLib;
@@ -11,7 +12,7 @@ import org.minnen.retiretool.data.Sequence;
  * 
  * @author David Minnen
  */
-public class CumulativeStats
+public class CumulativeStats implements Comparable<CumulativeStats>
 {
   public Sequence cumulativeReturns;
   public double   cagr              = 1.0;
@@ -36,7 +37,7 @@ public class CumulativeStats
       stats.totalReturn = cumulativeReturns.getLast(0) / cumulativeReturns.getFirst(0);
       stats.cagr = FinLib.getAnnualReturn(stats.totalReturn, cumulativeReturns.size() - 1);
 
-      DurationalStats rstats = new DurationalStats(cumulativeReturns, 12);
+      DurationalStats rstats = DurationalStats.calc(cumulativeReturns, 12);
       stats.meanAnnualReturn = rstats.mean;
       stats.devAnnualReturn = rstats.sdev;
 
@@ -155,5 +156,69 @@ public class CumulativeStats
       cumulativeReturns[i].setName(String.format("%s (%.2f%%)", cumulativeReturns[i].getName(), stats[i].cagr));
     }
     return stats;
+  }
+
+  public boolean dominates(CumulativeStats cstats, int nMonthDomination)
+  {
+    // return cagr > cstats.cagr && drawdown < cstats.drawdown;
+    if (cagr > cstats.cagr && drawdown < cstats.drawdown + 0.1) {
+      return true;
+    }
+
+    if (nMonthDomination > 0) {
+      ComparisonStats.Results comp = ComparisonStats.calcResults(cumulativeReturns, cstats.cumulativeReturns,
+          nMonthDomination);
+      if (comp.winPercent1 > 99.999) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  public static boolean updateWinners(CumulativeStats candidate, List<CumulativeStats> winners)
+  {
+    final int nMonthDomination = 10 * 12;
+    Iterator<CumulativeStats> it = winners.iterator();
+    while (it.hasNext()) {
+      CumulativeStats cstats = it.next();
+      if (cstats.dominates(candidate, nMonthDomination) || candidate.compareTo(cstats) == 0) {
+        return false;
+      } else if (candidate.dominates(cstats, nMonthDomination)) {
+        it.remove();
+      }
+    }
+    winners.add(candidate);
+    return true;
+  }
+
+  @Override
+  public int compareTo(CumulativeStats other)
+  {
+    assert other != null && other instanceof CumulativeStats;
+    if (this == other)
+      return 0;
+
+    if (cagr > other.cagr)
+      return 1;
+    if (other.cagr > cagr)
+      return -1;
+
+    if (drawdown > other.drawdown)
+      return -1;
+    if (other.drawdown > drawdown)
+      return 1;
+
+    if (annualPercentiles[2] > other.annualPercentiles[2])
+      return 1;
+    if (other.annualPercentiles[2] > annualPercentiles[2])
+      return -1;
+
+    if (percentDown10 > other.percentDown10)
+      return -1;
+    if (other.percentDown10 > percentDown10)
+      return 1;
+
+    return 0;
   }
 }

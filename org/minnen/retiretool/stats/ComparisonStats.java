@@ -29,36 +29,36 @@ public class ComparisonStats
     durationToResults = new TreeMap<Integer, ComparisonStats.Results>();
   }
 
-  public static ComparisonStats calc(Sequence returns1, Sequence returns2)
+  public static ComparisonStats calc(Sequence cumulativeReturns1, Sequence cumulativeReturns2)
   {
-    assert returns1.length() == returns2.length();
+    assert cumulativeReturns1.length() == cumulativeReturns2.length();
     ComparisonStats stats = new ComparisonStats();
-    stats.returns1 = returns1;
-    stats.returns2 = returns2;
+    stats.returns1 = cumulativeReturns1;
+    stats.returns2 = cumulativeReturns2;
 
-    for (int i = 0; i < durations.length && durations[i] < returns1.length(); ++i) {
+    for (int i = 0; i < durations.length && durations[i] < cumulativeReturns1.length(); ++i) {
       final int duration = durations[i];
-      stats.durationToResults.put(duration, calcResults(returns1, returns2, duration));
+      stats.durationToResults.put(duration, calcResults(cumulativeReturns1, cumulativeReturns2, duration));
     }
     return stats;
   }
 
-  private static Results calcResults(Sequence returns1, Sequence returns2, int nMonths)
+  public static Results calcResults(Sequence cumulativeReturns1, Sequence cumulativeReturns2, int nMonths)
   {
-    assert returns1.length() == returns2.length();
+    assert cumulativeReturns1.length() == cumulativeReturns2.length();
     Results results = new Results();
     results.duration = nMonths;
 
-    returns1 = FinLib.calcReturnsForDuration(returns1, nMonths);
-    returns2 = FinLib.calcReturnsForDuration(returns2, nMonths);
+    cumulativeReturns1 = FinLib.calcReturnsForDuration(cumulativeReturns1, nMonths);
+    cumulativeReturns2 = FinLib.calcReturnsForDuration(cumulativeReturns2, nMonths);
 
-    final int N = returns1.length();
+    final int N = cumulativeReturns1.length();
     assert N > 0;
     int win1 = 0, win2 = 0;
     double excessSum = 0.0;
     double[] r = new double[N];
     for (int i = 0; i < N; ++i) {
-      double diff = returns1.get(i, 0) - returns2.get(i, 0);
+      double diff = cumulativeReturns1.get(i, 0) - cumulativeReturns2.get(i, 0);
       r[i] = diff;
       excessSum += diff;
       if (Math.abs(diff) > 0.01) {

@@ -5,13 +5,13 @@ import java.util.TreeMap;
 
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.predictor.AssetPredictor;
-import org.minnen.retiretool.predictor.SMAPredictor;
 import org.minnen.retiretool.stats.WinStats;
 
 public class Strategy
 {
+  /** Investment disposition from riskiest to safest. */
   public enum Disposition {
-    Safe, Cautious, Moderate, Risky
+    Risky, Moderate, Cautious, Safe
   }
 
   public static Sequence calcReturns(AssetPredictor predictor, int iStart, WinStats winStats, Sequence... seqs)

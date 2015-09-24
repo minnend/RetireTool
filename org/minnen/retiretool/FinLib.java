@@ -326,7 +326,8 @@ public final class FinLib
   public static Sequence calcReturnsForDuration(Sequence cumulativeReturns, int nMonths)
   {
     final int N = cumulativeReturns.size();
-    Sequence rois = new Sequence("ROIs: " + Library.formatDurationMonths(nMonths));
+    String name = String.format("%s (%s)", cumulativeReturns.getName(), Library.formatDurationMonths(nMonths));
+    Sequence rois = new Sequence(name);
     for (int i = 0; i + nMonths < N; i++) {
       double roi = getReturn(cumulativeReturns, i, i + nMonths);
       if (nMonths >= 12) {

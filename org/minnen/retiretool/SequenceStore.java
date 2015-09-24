@@ -189,6 +189,11 @@ public class SequenceStore implements Iterable<Sequence>
     return returns.get(i);
   }
 
+  public boolean hasName(String name)
+  {
+    return getIndex(name) >= 0;
+  }
+
   public int getIndex(String name)
   {
     name = name.toLowerCase();
@@ -206,7 +211,9 @@ public class SequenceStore implements Iterable<Sequence>
 
   public Sequence get(String name)
   {
-    return returns.get(getIndex(name));
+    int index = getIndex(name);
+    assert index >= 0 : "Can't find sequence: " + name;
+    return returns.get(index);
   }
 
   public Sequence getMisc(int i)
@@ -241,7 +248,9 @@ public class SequenceStore implements Iterable<Sequence>
 
   public CumulativeStats getCumulativeStats(String name)
   {
-    return cumulativeStats.get(getIndex(name));
+    int index = getIndex(name);
+    assert index >= 0 : "Can't find sequence: " + name;
+    return cumulativeStats.get(index);
   }
 
   public List<CumulativeStats> getCumulativeStats(String... names)
@@ -260,7 +269,9 @@ public class SequenceStore implements Iterable<Sequence>
 
   public DurationalStats getDurationalStats(String name)
   {
-    return durationalStats.get(getIndex(name));
+    int index = getIndex(name);
+    assert index >= 0 : "Can't find sequence: " + name;
+    return durationalStats.get(index);
   }
 
   public List<DurationalStats> getDurationalStats(String... names)
@@ -289,7 +300,7 @@ public class SequenceStore implements Iterable<Sequence>
   /**
    * Calculate durational states for each stored sequence using the given duration.
    */
-  public void calcDurationalStats(int nMonths)
+  public void recalcDurationalStats(int nMonths)
   {
     for (int i = 0; i < returns.size(); ++i) {
       durationalStats.set(i, DurationalStats.calc(returns.get(i), nMonths));
