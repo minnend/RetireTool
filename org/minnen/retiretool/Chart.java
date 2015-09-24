@@ -718,29 +718,7 @@ public class Chart
         }
 
         writer.write("<td>\n");
-        int w1 = (int) Math.round(results.winPercent1);
-        int w3 = (int) Math.round(results.winPercent2);
-        if (w1 + w3 > 100) {
-          assert w1 + w3 == 101;
-          if (w1 > w3) {
-            --w1;
-          } else {
-            --w3;
-          }
-        }
-        int w2 = 100 - (w1 + w3);
-        if (w1 > 0) {
-          writer.write(String.format("<span style=\"float: left; width: %dpx; background: #53df53;\">&nbsp;</span>\n",
-              w1));
-        }
-        if (w2 > 0) {
-          writer.write(String.format("<span style=\"float: left; width: %dpx; background: #dfdf53;\">&nbsp;</span>\n",
-              w2));
-        }
-        if (w3 > 0) {
-          writer.write(String.format("<span style=\"float: left; width: %dpx; background: #df5353;\">&nbsp;</span>\n",
-              w3));
-        }
+        writer.write(genWinBar(results.winPercent1, results.winPercent2));
         writer.write("</td>\n");
 
         writer.write(String.format("<td>%.1f</td>\n", results.winPercent1));
@@ -774,12 +752,15 @@ public class Chart
       writer
           .write("<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
       writer.write(String.format("</head><body style=\"width:%dpx\">\n", width));
-      writer.write("<h2>Strategy Comparison</h2>\n");
+      writer.write(String.format("<h2>Win Rate vs. %s</h2>\n", FinLib.getBaseName(allStats[0].returns2.getName())));
       writer.write("<table id=\"comparisonTable\" class=\"tablesorter\">\n");
       writer.write("<thead><tr>\n");
-      writer.write(" <th>Duration</th>\n");
+
+      double widthPercent = 100.0 / (allStats.length + 1);
+      String th = String.format("<th style=\"width: %.2f%%\">", widthPercent); 
+      writer.write(th + "Duration</th>\n");
       for (ComparisonStats stats : allStats) {
-        writer.write(String.format(" <th>%s</th>\n", FinLib.getBaseName(stats.returns1.getName())));
+        writer.write(String.format("%s%s</th>\n", th, FinLib.getBaseName(stats.returns1.getName())));
       }
       writer.write("</tr></thead>\n");
       writer.write("<tbody>\n");
@@ -797,7 +778,10 @@ public class Chart
 
         for (ComparisonStats stats : allStats) {
           Results results = stats.durationToResults.get(duration);
-          writer.write(String.format("<td>%.1f</td>\n", 100.0 - results.winPercent2));
+          writer.write(String.format("<td title=\"%.1f | %.1f\">\n", results.winPercent1, results.winPercent2));
+          // writer.write(String.format("%.1f\n", 100.0 - results.winPercent2));
+          writer.write(genWinBar(results.winPercent1, results.winPercent2));
+          writer.write("</td>\n");
           // writer.write(String.format("<td>%.1f (%.1f)</td>\n", results.winPercent1, results.winPercent2));
         }
         writer.write("</tr>\n");
@@ -872,5 +856,29 @@ public class Chart
           cal.get(Calendar.YEAR), stats1.cagr, stats2.cagr, excess, stats1.devAnnualReturn, stats2.devAnnualReturn);
     }
     System.out.printf("</tbody>\n</table>\n");
+  }
+
+  /**
+   * Generate HTML for a win bar that shows the win percents (and any ties) as green/yellow/red bars.
+   * 
+   * @param winPercent1 percentage of time first strategy wins
+   * @param winPercent2 percentage of time second strategy wins
+   * @return HTML that represents a win bar
+   */
+  private static String genWinBar(double winPercent1, double winPercent2)
+  {
+    StringBuilder sb = new StringBuilder();
+    double tiePercent = 100.0 - (winPercent1 + winPercent2);
+    assert tiePercent >= 0.0;
+    if (winPercent1 > 0) {
+      sb.append(String.format("<span style=\"float: left; width: %.2f%%; background: #53df53;\">&nbsp;</span>\n", winPercent1));
+    }
+    if (tiePercent > 0) {
+      sb.append(String.format("<span style=\"float: left; width: %.2f%%; background: #dfdf53;\">&nbsp;</span>\n", tiePercent));
+    }
+    if (winPercent2 > 0) {
+      sb.append(String.format("<span style=\"float: left; width: %.2f%%; background: #df5353;\">&nbsp;</span>\n", winPercent2));
+    }
+    return sb.toString();
   }
 }
