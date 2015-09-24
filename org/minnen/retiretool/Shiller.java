@@ -15,6 +15,28 @@ public class Shiller
   public static int GS10  = 3;
   public static int CAPE  = 4;
 
+  /** @return Sequence containing all inflation (CPI) data. */
+  public static Sequence getInflationData(Sequence shiller)
+  {
+    return getInflationData(shiller, 0, shiller.size() - 1);
+  }
+
+  /** @return Sequence containing inflation (CPI) data in the given range (inclusive). */
+  public static Sequence getInflationData(Sequence shiller, int iStart, int iEnd)
+  {
+    if (iStart < 0) {
+      iStart += shiller.length();
+    }
+    if (iEnd < 0) {
+      iEnd += shiller.length();
+    }
+    Sequence cpi = new Sequence("CPI");
+    for (int i = iStart; i <= iEnd; ++i) {
+      cpi.addData(shiller.get(i, CPI), shiller.getTimeMS(i));
+    }
+    return cpi;
+  }
+
   /** @return Sequence containing all CAPE data. */
   public static Sequence getCapeData(Sequence shiller)
   {
@@ -24,6 +46,12 @@ public class Shiller
   /** @return Sequence containing CAPE data in the given range (inclusive). */
   public static Sequence getCapeData(Sequence shiller, int iStart, int iEnd)
   {
+    if (iStart < 0) {
+      iStart += shiller.length();
+    }
+    if (iEnd < 0) {
+      iEnd += shiller.length();
+    }
     Sequence cape = new Sequence("CAPE");
     for (int i = iStart; i <= iEnd; ++i) {
       cape.addData(shiller.get(i, CAPE), shiller.getTimeMS(i));

@@ -37,7 +37,7 @@ public class DurationalStats
    * @param cumulativeReturns sequence containing total return over some duration.
    * @param nMonthsPerPeriod duration (in months)
    */
-  public DurationalStats(Sequence cumulativeReturns, int nMonthsPerPeriod)
+  private DurationalStats(Sequence cumulativeReturns, int nMonthsPerPeriod)
   {
     this.cumulativeReturns = cumulativeReturns;
     this.nMonthsPerPeriod = nMonthsPerPeriod;
@@ -45,7 +45,8 @@ public class DurationalStats
     int nMonths = cumulativeReturns.size() - 1;
     assert nMonths >= 2;
     if (nMonths < nMonthsPerPeriod) {
-      mean = FinLib.getAnnualReturn(cumulativeReturns.getLast(0) / cumulativeReturns.getFirst(0), nMonths);
+      double growth = cumulativeReturns.getLast(0) / cumulativeReturns.getFirst(0);
+      mean = FinLib.getAnnualReturn(growth, nMonths);
       sdev = 0.0;
       min = percentile10 = percentile25 = median = percentile75 = percentile90 = max = mean;
       durationReturns = null;
@@ -83,7 +84,7 @@ public class DurationalStats
     System.out.printf("</thead><tbody>\n");
     int[] dur = new int[] { 1, 2, 5, 10, 20, 30, 40 };
     for (int d = 0; d < dur.length; ++d) {
-      DurationalStats rstats = new DurationalStats(cumulativeReturns, 12 * dur[d]);
+      DurationalStats rstats = DurationalStats.calc(cumulativeReturns, 12 * dur[d]);
       rstats.printDurationTableRow(String.format("%d", dur[d]));
     }
     System.out.printf("</tbody></table>\n");

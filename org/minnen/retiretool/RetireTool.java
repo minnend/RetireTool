@@ -52,6 +52,10 @@ public class RetireTool
     store.addMisc(stockData, "StockData");
     store.addMisc(bondData, "BondData");
 
+    // Add inflation (CPI) data.
+    store.addMisc(Shiller.getInflationData(shiller), "cpi");
+    store.alias("inflation", "cpi");
+
     // Calculate cumulative returns for full stock, bond, and t-bill data.
     Sequence stockAll = FinLib.calcSnpReturns(stockData, 0, -1, FinLib.DividendMethod.MONTHLY);
     Sequence bondsAll = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, -1);
@@ -333,7 +337,7 @@ public class RetireTool
     int duration = 10 * 12;
     DurationalStats[] stats = new DurationalStats[all.length];
     for (int i = 0; i < all.length; ++i) {
-      stats[i] = new DurationalStats(all[i], duration);
+      stats[i] = DurationalStats.calc(all[i], duration);
     }
     Chart.saveBoxPlots(new File(dir, "rebalance-box.html"),
         String.format("Return Stats (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
@@ -565,7 +569,7 @@ public class RetireTool
     int duration = 1 * 12;
     DurationalStats[] stats = new DurationalStats[all.length];
     for (int i = 0; i < all.length; ++i) {
-      stats[i] = new DurationalStats(all[i], duration);
+      stats[i] = DurationalStats.calc(all[i], duration);
       all[i].setName(String.format("%d/%d (%.2f%%)", percentStock[i], 100 - percentStock[i], stats[i].mean));
     }
     Chart.saveBoxPlots(new File(dir, "stock-bond-sweep-box.html"),
@@ -626,7 +630,7 @@ public class RetireTool
         int pctBonds = 100 - percentStock[j];
         Sequence mixed = Strategy.calcMixedReturns(new Sequence[] { stock, bonds },
             new double[] { pctStock, pctBonds }, rebalanceMonths, rebalanceBand);
-        DurationalStats stats = new DurationalStats(mixed, duration);
+        DurationalStats stats = DurationalStats.calc(mixed, duration);
         String name = null;// String.format("%d", pctStock);
         // if (pctStock == 100) {
         // name = "100% Stock";

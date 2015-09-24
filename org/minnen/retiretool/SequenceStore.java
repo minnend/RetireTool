@@ -25,7 +25,8 @@ public class SequenceStore implements Iterable<Sequence>
   public final double                 startValue;
   public final int                    defaultStatsDuration = 10 * 12;
 
-  private final List<Sequence>        returns              = new ArrayList<>();
+  private final List<Sequence>        nominalReturns       = new ArrayList<>();
+  private final List<Sequence>        realReturns          = new ArrayList<>();
   private final List<Sequence>        miscSeqs             = new ArrayList<>();
   private final List<CumulativeStats> cumulativeStats      = new ArrayList<>();
   private final List<DurationalStats> durationalStats      = new ArrayList<>();
@@ -46,7 +47,8 @@ public class SequenceStore implements Iterable<Sequence>
   {
     this.startValue = startValue;
 
-    seqLists.add(returns);
+    seqLists.add(nominalReturns);
+    seqLists.add(realReturns);
     seqLists.add(miscSeqs);
   }
 
@@ -94,10 +96,18 @@ public class SequenceStore implements Iterable<Sequence>
   public int add(Sequence cumulativeReturns, String name, boolean normalizeStartValue)
   {
     assert !nameToIndex.containsKey(name) : name;
+    assert realReturns.size() == nominalReturns.size();
+
+    // Get inflation data to calculate real returns.
+    Sequence inflation = getMisc("inflation");
+    assert !inflation.isLocked();
+    inflation.lock(inflation.getClosestIndex(cumulativeReturns.getStartMS()),
+        inflation.getClosestIndex(cumulativeReturns.getEndMS()));
+    assert cumulativeReturns.length() == inflation.length();
 
     // Make sure new sequence matches existing sequences.
-    if (!returns.isEmpty()) {
-      Sequence seq = returns.get(0);
+    if (!nominalReturns.isEmpty()) {
+      Sequence seq = nominalReturns.get(0);
       assert cumulativeReturns.length() == seq.length();
       assert cumulativeReturns.getStartMS() == seq.getStartMS();
       assert cumulativeReturns.getEndMS() == seq.getEndMS();
@@ -114,25 +124,32 @@ public class SequenceStore implements Iterable<Sequence>
     assert Math.abs(cumulativeReturns.getFirst(0) - startValue) < 1e-8;
 
     // Add the new sequence to the store.
-    final int index = returns.size();
+    final int index = nominalReturns.size();
     cumulativeReturns.setName(name);
-    returns.add(cumulativeReturns);
+    nominalReturns.add(cumulativeReturns);
     nameToIndex.put(name.toLowerCase(), index);
     assert get(name) == cumulativeReturns;
+
+    // Calculate and add real returns (inflation-adjusted) to the store.
+    Sequence real = FinLib.calcRealReturns(cumulativeReturns, inflation);
+    assert real.length() == cumulativeReturns.length();
+    realReturns.add(real);
+    assert getReal(name) == real;
 
     // Calculate cumulative stats for this strategy.
     CumulativeStats cstats = CumulativeStats.calc(cumulativeReturns);
     cumulativeReturns.setName(String.format("%s (%.2f%%)", cumulativeReturns.getName(), cstats.cagr));
     cumulativeStats.add(cstats);
-    assert cumulativeStats.size() == returns.size();
+    assert cumulativeStats.size() == nominalReturns.size();
 
     // Calculate durational stats for this strategy.
     DurationalStats dstats = DurationalStats.calc(cumulativeReturns, defaultStatsDuration);
     durationalStats.add(dstats);
-    assert durationalStats.size() == returns.size();
+    assert durationalStats.size() == nominalReturns.size();
     lastStatsDuration = defaultStatsDuration;
 
     // System.out.printf("Added: \"%s\"\n", name);
+    inflation.unlock();
     return index;
   }
 
@@ -179,12 +196,13 @@ public class SequenceStore implements Iterable<Sequence>
 
   public int size()
   {
-    return returns.size();
+    assert nominalReturns.size() == realReturns.size();
+    return nominalReturns.size();
   }
 
   public int getNumReturns()
   {
-    return returns.size();
+    return size();
   }
 
   public int getNumMisc()
@@ -194,7 +212,12 @@ public class SequenceStore implements Iterable<Sequence>
 
   public Sequence get(int i)
   {
-    return returns.get(i);
+    return nominalReturns.get(i);
+  }
+
+  public Sequence getReal(int i)
+  {
+    return realReturns.get(i);
   }
 
   public boolean hasName(String name)
@@ -221,7 +244,14 @@ public class SequenceStore implements Iterable<Sequence>
   {
     int index = getIndex(name);
     assert index >= 0 : "Can't find sequence: " + name;
-    return returns.get(index);
+    return nominalReturns.get(index);
+  }
+
+  public Sequence getReal(String name)
+  {
+    int index = getIndex(name);
+    assert index >= 0 : "Can't find sequence: " + name;
+    return realReturns.get(index);
   }
 
   public Sequence getMisc(int i)
@@ -246,7 +276,9 @@ public class SequenceStore implements Iterable<Sequence>
 
   public Sequence getMisc(String name)
   {
-    return miscSeqs.get(getMiscIndex(name));
+    int index = getMiscIndex(name);
+    assert index >= 0 : "Can't find misc sequence: " + name;
+    return miscSeqs.get(index);
   }
 
   public CumulativeStats getCumulativeStats(int i)
@@ -311,8 +343,8 @@ public class SequenceStore implements Iterable<Sequence>
   public void recalcDurationalStats(int nMonths)
   {
     lastStatsDuration = nMonths;
-    for (int i = 0; i < returns.size(); ++i) {
-      durationalStats.set(i, DurationalStats.calc(returns.get(i), nMonths));
+    for (int i = 0; i < nominalReturns.size(); ++i) {
+      durationalStats.set(i, DurationalStats.calc(nominalReturns.get(i), nMonths));
     }
   }
 
@@ -346,6 +378,12 @@ public class SequenceStore implements Iterable<Sequence>
   @Override
   public Iterator<Sequence> iterator()
   {
-    return returns.iterator();
+    return nominalReturns.iterator();
+  }
+
+  /** @return iterator over real (inflation-adjusted) return sequences. */
+  public Iterator<Sequence> iteratorReal()
+  {
+    return realReturns.iterator();
   }
 }

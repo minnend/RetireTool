@@ -66,10 +66,48 @@ public final class FinLib
    */
   public static double adjustValue(Sequence cpi, double value, int iFrom, int iTo, Inflation inflationAccounting)
   {
+    if (iFrom < 0) {
+      iFrom += cpi.length();
+    }
+    if (iTo < 0) {
+      iTo += cpi.length();
+    }
     if (inflationAccounting == Inflation.Include) {
       value *= cpi.get(iTo, 0) / cpi.get(iFrom, 0);
     }
     return value;
+  }
+
+  /**
+   * Generates a sequence of real returns (inflation-adjusted) from nominal returns.
+   * 
+   * @param cumulativeReturns nominal returns
+   * @param cpi cumulative inflation
+   * @return Sequence corresponding to real returns (inflation-adjusted)
+   */
+  public static Sequence calcRealReturns(Sequence cumulativeReturns, Sequence cpi)
+  {
+    // Check pre-conditions.
+    assert cumulativeReturns.length() == cpi.length();
+    assert cumulativeReturns.getStartMS() == cpi.getStartMS();
+    assert cumulativeReturns.getEndMS() == cpi.getEndMS();
+
+    // Build sequence of real returns from nominal.
+    Sequence seq = new Sequence(cumulativeReturns.getName() + "(real)");
+    seq.addData(1.0, cumulativeReturns.getStartMS());
+    for (int i = 1; i < cumulativeReturns.length(); ++i) {
+      double growth = getReturn(cumulativeReturns, i - 1, i);
+      double inflation = getReturn(cpi, i - 1, i);
+      double real = seq.getLast(0) * growth / inflation;
+      seq.addData(real, cumulativeReturns.getTimeMS(i));
+    }
+
+    // Check post-conditions.
+    assert cumulativeReturns.length() == seq.length();
+    assert cumulativeReturns.getStartMS() == seq.getStartMS();
+    assert cumulativeReturns.getEndMS() == seq.getEndMS();
+
+    return seq;
   }
 
   /**
