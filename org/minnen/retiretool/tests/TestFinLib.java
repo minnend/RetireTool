@@ -84,4 +84,48 @@ public class TestFinLib
     assertEquals("foo", FinLib.getBaseName("foo (bar)"));
     assertEquals("foo (bar)", FinLib.getBaseName("foo (bar) (buzz)"));
   }
+
+  @Test
+  public void testCalcRealReturns_InflationCancelsGains()
+  {
+    Sequence nominal = new Sequence(new double[] { 1.0, 2.0, 3.0, 4.0, 5.0 });
+    Sequence cpi = new Sequence(new double[] { 1.0, 2.0, 3.0, 4.0, 5.0 });
+    Sequence real = FinLib.calcRealReturns(nominal, cpi);
+
+    double[] expected = new double[] { 1.0, 1.0, 1.0, 1.0, 1.0 };
+    assertArrayEquals(expected, real.extractDim(0), 1e-8);
+  }
+
+  @Test
+  public void testCalcRealReturns_NoInflation()
+  {
+    Sequence nominal = new Sequence(new double[] { 1.0, 2.0, 3.0, 4.0, 5.0 });
+    Sequence cpi = new Sequence(new double[] { 1.0, 1.0, 1.0, 1.0, 1.0 });
+    Sequence real = FinLib.calcRealReturns(nominal, cpi);
+
+    double[] expected = new double[] { 1.0, 2.0, 3.0, 4.0, 5.0 };
+    assertArrayEquals(expected, real.extractDim(0), 1e-8);
+  }
+
+  @Test
+  public void testCalcRealReturns_Deflation()
+  {
+    Sequence nominal = new Sequence(new double[] { 1.0, 1.0, 1.0, 1.0, 1.0 });
+    Sequence cpi = new Sequence(new double[] { 5.0, 4.0, 3.0, 2.0, 1.0 });
+    Sequence real = FinLib.calcRealReturns(nominal, cpi);
+
+    double[] expected = new double[] { 1.0, 1.25, 5.0 / 3.0, 2.5, 5.0 };
+    assertArrayEquals(expected, real.extractDim(0), 1e-8);
+  }
+
+  @Test
+  public void testCalcRealReturns_DeflationPlusGains()
+  {
+    Sequence nominal = new Sequence(new double[] { 1.0, 2.0, 4.0, 8.0, 16.0 });
+    Sequence cpi = new Sequence(new double[] { 5.0, 4.0, 3.0, 2.0, 1.0 });
+    Sequence real = FinLib.calcRealReturns(nominal, cpi);
+
+    double[] expected = new double[] { 1.0, 2.5, 20.0 / 3.0, 20.0, 80.0 };
+    assertArrayEquals(expected, real.extractDim(0), 1e-8);
+  }
 }
