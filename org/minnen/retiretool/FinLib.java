@@ -41,7 +41,7 @@ public final class FinLib
       return 1.0;
     }
     // x^n = y -> x = y ^ (1/n)
-    return (Math.pow(totalReturn, 12.0 / nMonths) - 1) * 100;
+    return mul2ret(Math.pow(totalReturn, 12.0 / nMonths));
   }
 
   public static double getFutureValue(double presentValue, double interestRate, int nMonths)

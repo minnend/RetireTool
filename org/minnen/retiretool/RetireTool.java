@@ -346,11 +346,10 @@ public class RetireTool
 
   public static void genReturnChart(File dir) throws IOException
   {
-    // String[] names = new String[] { "stock", "momentum-1", "momentum-3", "momentum-12",
-    // "multimom-safe", "multimom-cautious", "multimom-moderate", "multimom-risky" };
+    String[] names = new String[] { "stock", "momentum-1", "momentum-3", "momentum-12", "multimom-safe", "multimom-cautious", "multimom-moderate", "multimom-risky" };
 
-    String[] names = new String[] { "stock", "momentum-1", "multimom-risky", "Mom.Risky-Mom.Moderate-30/70",
-        "Mom.Risky-Mom.Cautious-20/80", "Mom.Risky-Mom.Safe-10/90", "Bonds/Mom.Safe-10/90" };
+//    String[] names = new String[] { "stock", "momentum-1", "multimom-risky", "Mom.Risky-Mom.Moderate-30/70",
+//        "Mom.Risky-Mom.Cautious-20/80", "Mom.Risky-Mom.Safe-10/90", "Bonds/Mom.Safe-10/90" };
 
     final int duration = 5 * 12;
 
@@ -797,10 +796,10 @@ public class RetireTool
 
   public static void genBeatInflationChart(File dir) throws IOException
   {
-    String[] names = new String[] { "stock", "80/20", "momentum-1", "multimom-risky", "Mom.Risky-Mom.Moderate-30/70",
-        "Mom.Risky-Mom.Cautious-20/80", "Mom.Risky-Mom.Safe-10/90", "Bonds/Mom.Safe-10/90" };
+    String[] names = new String[] { "stock", "60/40", "momentum-1", "multimom-risky",
+        "Mom.Risky-Mom.Moderate-30/70", "Mom.Risky-Mom.Cautious-20/80", "Mom.Risky-Mom.Safe-10/90" };
 
-    final double targetReturn = 3.0;
+    final double targetReturn = 0.0; // Annual return over inflation
 
     List<ComparisonStats> comparisons = new ArrayList<ComparisonStats>();
     for (int i = 0; i < names.length; ++i) {
@@ -955,10 +954,10 @@ public class RetireTool
     // genInterestRateGraph(shiller, tbills, new File(dir, "interest-rates.html"));
     // compareRebalancingMethods(shiller, dir);
     // genReturnViz(dir);
-    // genReturnChart(dir);
+    genReturnChart(dir);
     // genSMASweepChart(shiller, dir);
     // genMomentumSweepChart(dir);
-    // genMomentumMixChart(dir);
+    genMomentumMixChart(dir);
     // genStockBondMixSweepChart(shiller, dir);
     // genDuelViz(shiller, tbills, dir);
     // genEfficientFrontier(shiller, dir);

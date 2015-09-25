@@ -115,6 +115,12 @@ public class ComparisonStats
     Results results = new Results();
     results.duration = nMonths;
 
+    // Target return is annual so adjust for durations less than one year.
+    if (nMonths < 12) {
+      double multiplier = FinLib.ret2mul(targetReturn);
+      targetReturn = Math.pow(multiplier, nMonths / 12.0);
+    }
+
     final int N = returnsForDuration.length();
     assert N > 0;
     int win1 = 0, win2 = 0;

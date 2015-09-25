@@ -64,6 +64,24 @@ public class TestFinLib
   }
 
   @Test
+  public void testGetAnnualReturn()
+  {
+    assertEquals(0.0, FinLib.getAnnualReturn(1.0, 1), 1e-6);
+    assertEquals(0.0, FinLib.getAnnualReturn(1.0, 6), 1e-6);
+    assertEquals(0.0, FinLib.getAnnualReturn(1.0, 12), 1e-6);
+    assertEquals(0.0, FinLib.getAnnualReturn(1.0, 24), 1e-6);
+
+    assertEquals(30.0, FinLib.getAnnualReturn(1.3, 12), 1e-6);
+    assertEquals(110.0, FinLib.getAnnualReturn(2.1, 12), 1e-6);
+    assertEquals(-10.0, FinLib.getAnnualReturn(0.9, 12), 1e-6);
+    assertEquals(-50.0, FinLib.getAnnualReturn(0.5, 12), 1e-6);
+
+    assertEquals(100.0, FinLib.getAnnualReturn(4.0, 24), 1e-6);
+    assertEquals(25.992105, FinLib.getAnnualReturn(2.0, 36), 1e-6);
+    assertEquals(-2.599625357, FinLib.getAnnualReturn(0.9, 48), 1e-6);
+  }
+
+  @Test
   public void testGetNameWithBreak()
   {
     assertEquals("", FinLib.getNameWithBreak(null));
