@@ -25,9 +25,6 @@ public class TestSequenceStore
     assertEquals(2, store.size());
     assertEquals(2, store.getNumReturns());
 
-    assertEquals(0, store.getIndex("r1"));
-    assertEquals(1, store.getIndex("r2"));
-
     assertEquals(r1, store.get("r1"));
     assertEquals(r2, store.get("r2"));
 
@@ -46,14 +43,8 @@ public class TestSequenceStore
     assertEquals(2, store.size());
     assertEquals(2, store.getNumReturns());
 
-    assertEquals(0, store.getIndex("r1"));
-    assertEquals(1, store.getIndex("r2"));
-
     store.alias("test1", "r1");
     store.alias("test2", "r2");
-
-    assertEquals(0, store.getIndex("test1"));
-    assertEquals(1, store.getIndex("test2"));
 
     assertEquals(r1, store.get("test1"));
     assertEquals(r2, store.get("test2"));
@@ -77,15 +68,9 @@ public class TestSequenceStore
     assertEquals(1, store.getNumReturns());
     assertEquals(2, store.getNumMisc());
 
-    assertEquals(0, store.getMiscIndex("r1"));
-    assertEquals(1, store.getMiscIndex("r2"));
-
     store.alias("test1", "r1");
     store.alias("test2", "r2");
     store.alias("test3", "r3");
-
-    assertEquals(0, store.getMiscIndex("test1"));
-    assertEquals(1, store.getMiscIndex("test2"));
 
     assertEquals(r1, store.getMisc("test1"));
     assertEquals(r2, store.getMisc("test2"));

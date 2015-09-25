@@ -27,6 +27,7 @@ public final class FinLib
   };
 
   public static DecimalFormat currencyFormatter = new DecimalFormat("#,##0.00");
+  public static DecimalFormat dollarFormatter = new DecimalFormat("#,##0");
 
   /**
    * Compute compound annual growth rate (CAGR) based on total multiplier.
@@ -554,9 +555,14 @@ public final class FinLib
     List<Integer> failures = new ArrayList<Integer>();
     double minSavings = 0.0;
     double maxSavings = salary * 1000.0; // assume needed savings is less than 1000x salary
-    while (maxSavings - minSavings > 1.0) {
-      failures.clear();
+    boolean done = false;
+    while (!done) {
+      if (maxSavings - minSavings < 1.0) {
+        minSavings = maxSavings = Math.ceil(maxSavings / 1000) * 1000;
+        done = true;
+      }
       double principal = (maxSavings + minSavings) / 2.0;
+      failures.clear();
       int n = 0;
       int nOK = 0;
       for (int i = 0; i < nData; i++) {
@@ -577,14 +583,13 @@ public final class FinLib
         ++n;
       }
       double successRate = (double) nOK / n;
-      System.out.printf("$%s  %d/%d = %.2f%%\n", currencyFormatter.format(principal), nOK, n, 100.0 * successRate);
+      // System.out.printf("$%s  %d/%d = %.2f%%\n", currencyFormatter.format(principal), nOK, n, 100.0 * successRate);
       if (successRate >= minLikelihood)
         maxSavings = principal;
       else
         minSavings = principal;
     }
-    double principal = Math.ceil(maxSavings / 1000) * 1000;
-    System.out.printf("$%s\n", currencyFormatter.format(principal));
+    System.out.printf("$%s\n", dollarFormatter.format(maxSavings));
     return failures;
   }
 

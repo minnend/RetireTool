@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 import org.minnen.retiretool.Chart.ChartType;
@@ -346,10 +345,11 @@ public class RetireTool
 
   public static void genReturnChart(File dir) throws IOException
   {
-    String[] names = new String[] { "stock", "momentum-1", "momentum-3", "momentum-12", "multimom-safe", "multimom-cautious", "multimom-moderate", "multimom-risky" };
+    String[] names = new String[] { "stock", "momentum-1", "momentum-3", "momentum-12", "multimom-safe",
+        "multimom-cautious", "multimom-moderate", "multimom-risky" };
 
-//    String[] names = new String[] { "stock", "momentum-1", "multimom-risky", "Mom.Risky-Mom.Moderate-30/70",
-//        "Mom.Risky-Mom.Cautious-20/80", "Mom.Risky-Mom.Safe-10/90", "Bonds/Mom.Safe-10/90" };
+    // String[] names = new String[] { "stock", "momentum-1", "multimom-risky", "Mom.Risky-Mom.Moderate-30/70",
+    // "Mom.Risky-Mom.Cautious-20/80", "Mom.Risky-Mom.Safe-10/90", "Bonds/Mom.Safe-10/90" };
 
     final int duration = 5 * 12;
 
@@ -796,8 +796,8 @@ public class RetireTool
 
   public static void genBeatInflationChart(File dir) throws IOException
   {
-    String[] names = new String[] { "stock", "60/40", "momentum-1", "multimom-risky",
-        "Mom.Risky-Mom.Moderate-30/70", "Mom.Risky-Mom.Cautious-20/80", "Mom.Risky-Mom.Safe-10/90" };
+    String[] names = new String[] { "stock", "60/40", "momentum-1", "multimom-risky", "Mom.Risky-Mom.Moderate-30/70",
+        "Mom.Risky-Mom.Cautious-20/80", "Mom.Risky-Mom.Safe-10/90" };
 
     final double targetReturn = 0.0; // Annual return over inflation
 
@@ -954,40 +954,44 @@ public class RetireTool
     // genInterestRateGraph(shiller, tbills, new File(dir, "interest-rates.html"));
     // compareRebalancingMethods(shiller, dir);
     // genReturnViz(dir);
-    genReturnChart(dir);
+    // genReturnChart(dir);
     // genSMASweepChart(shiller, dir);
     // genMomentumSweepChart(dir);
-    genMomentumMixChart(dir);
+    // genMomentumMixChart(dir);
     // genStockBondMixSweepChart(shiller, dir);
     // genDuelViz(shiller, tbills, dir);
     // genEfficientFrontier(shiller, dir);
     // genCorrelationGraph(shiller, dir);
     // genEndBalanceCharts(shiller, dir);
-    genBeatInflationChart(dir);
+    // genBeatInflationChart(dir);
 
-    System.exit(0);
+    // System.exit(0);
 
-    // int retireAge = 65;
-    // int ssAge = 70;
-    // double expectedSocSecFraction = 0.7; // assume we'll only get a fraction of current SS estimate
-    // double expectedMonthlySS = SOC_SEC_AT70 * expectedSocSecFraction;
-    // int nYears = 105 - retireAge;
-    // double expenseRatio = 0.1;
-    // double likelihood = 0.99;
-    // double taxRate = 0.30;
-    // double desiredMonthlyCash = 6000.00;
-    // double desiredRunwayYears = 1.0;
-    // double salary = Shiller.calcAnnualSalary(desiredMonthlyCash, taxRate);
-    // System.out.printf("Salary: %s\n", Shiller.FinLib.currencyFormatter.format(salary));
-    // List<Integer> failures = shiller.calcSavingsTarget(salary, likelihood, nYears, expenseRatio, retireAge, ssAge,
-    // expectedMonthlySS, desiredRunwayYears);
-    // if (!failures.isEmpty()) {
-    // System.out.println("Failures:");
-    // for (int i : failures) {
-    // System.out.printf(" [%s] -> [%s]\n", Library.formatDate(shiller.data.getTimeMS(i)),
-    // Library.formatDate(shiller.data.getTimeMS(i + nYears * 12)));
-    // }
-    // }
+    int retireAge = 65;
+    int ssAge = 70;
+    double expectedSocSecFraction = 0.7; // assume we'll only get a fraction of current SS estimate
+    double expectedMonthlySS = FinLib.SOC_SEC_AT70 * expectedSocSecFraction;
+    int nYears = 100 - retireAge;
+    double expenseRatio = 0.1;
+    double likelihood = 0.99;
+    double taxRate = 0.3;
+    double desiredMonthlyCash = 8000.00;
+    double desiredRunwayYears = 2.0;
+    double salary = FinLib.calcAnnualSalary(desiredMonthlyCash, taxRate);
+    System.out.printf("Salary: $%s\n", FinLib.currencyFormatter.format(salary));
+
+    Sequence cumulativeReturns = store.get("Mom.Risky-Mom.Cautious-20/80");
+    Sequence cpi = store.getMisc("cpi").lockToMatch(cumulativeReturns);
+    List<Integer> failures = FinLib.calcSavingsTarget(cumulativeReturns, cpi, salary, likelihood, nYears, expenseRatio,
+        retireAge, ssAge, expectedMonthlySS, desiredRunwayYears);
+    cpi.unlock();
+//    if (!failures.isEmpty()) {
+//      System.out.println("Failures:");
+//      for (int i : failures) {
+//        System.out.printf(" [%s] -> [%s]\n", Library.formatDate(cumulativeReturns.getTimeMS(i)),
+//            Library.formatDate(cumulativeReturns.getTimeMS(i + nYears * 12)));
+//      }
+//    }
 
     System.exit(0);
   }

@@ -219,16 +219,6 @@ public class SequenceStore implements Iterable<Sequence>
     return miscSeqs.size();
   }
 
-  public Sequence get(int i)
-  {
-    return nominalReturns.get(i);
-  }
-
-  public Sequence getReal(int i)
-  {
-    return realReturns.get(i);
-  }
-
   public boolean hasName(String name)
   {
     return getIndex(name) >= 0;
@@ -239,7 +229,7 @@ public class SequenceStore implements Iterable<Sequence>
     return getMiscIndex(name) >= 0;
   }
 
-  public int getIndex(String name)
+  private int getIndex(String name)
   {
     name = name.toLowerCase();
     name = aliasMap.getOrDefault(name, name);
@@ -268,12 +258,7 @@ public class SequenceStore implements Iterable<Sequence>
     return realReturns.get(index);
   }
 
-  public Sequence getMisc(int i)
-  {
-    return miscSeqs.get(i);
-  }
-
-  public int getMiscIndex(String name)
+  private int getMiscIndex(String name)
   {
     name = name.toLowerCase();
     name = aliasMap.getOrDefault(name, name);
@@ -370,7 +355,7 @@ public class SequenceStore implements Iterable<Sequence>
 
     realReturns.clear();
     for (Sequence nominal : nominalReturns) {
-      inflation.lock(inflation.getClosestIndex(nominal.getStartMS()), inflation.getClosestIndex(nominal.getEndMS()));
+      inflation.lockToMatch(nominal);
       Sequence real = FinLib.calcRealReturns(nominal, inflation);
       assert real.length() == nominal.length();
       realReturns.add(real);

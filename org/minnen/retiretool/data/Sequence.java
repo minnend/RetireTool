@@ -103,18 +103,28 @@ public class Sequence implements Iterable<FeatureVec>
    * @param iStart first index that can be accessed (inclusive)
    * @param iEnd last index that can be accessed (inclusive)
    */
-  public void lock(int iStart, int iEnd)
+  public Sequence lock(int iStart, int iEnd)
   {
     assert (iStart >= -1 && iStart <= length() - 1);
     assert (iEnd >= -1 && iEnd <= length() - 1);
     assert (iStart <= iEnd);
     lockStart = iStart;
     lockEnd = iEnd;
+    return this;
   }
 
-  public void unlock()
+  public Sequence lockToMatch(Sequence seq)
+  {
+    int iStart = getClosestIndex(seq.getStartMS());
+    int iEnd = getClosestIndex(seq.getEndMS());
+    assert iEnd - iStart + 1 == seq.length();
+    return lock(iStart, iEnd);
+  }
+
+  public Sequence unlock()
   {
     lockStart = lockEnd = -1;
+    return this;
   }
 
   public boolean isLocked()
@@ -138,7 +148,11 @@ public class Sequence implements Iterable<FeatureVec>
     }
   }
 
-  /** @return index adjusted to respect current lock boundaries. */
+  /**
+   * Convert locked index to real index.
+   * 
+   * @return index adjusted to respect current lock boundaries.
+   */
   private int adjustIndex(int i)
   {
     int iStart = getFirstIndex();
@@ -382,24 +396,24 @@ public class Sequence implements Iterable<FeatureVec>
   }
 
   /**
-   * @return index of the data point closest to the given time
+   * @return index of the data point closest to the given time without respecting lock boundaries.
    */
-  public int getClosestIndex(long ms)
+  private int getClosestRealIndex(long ms)
   {
-    int n = length();
+    int n = data.size();
     if (n == 0)
       return -1;
     int a = 0;
-    long ta = getTimeMS(a);
+    long ta = data.get(a).getTime();
     int b = n - 1;
-    long tb = getTimeMS(b);
+    long tb = data.get(b).getTime();
     if (ms <= ta)
       return a;
     if (ms >= tb)
       return b;
     while (a + 1 < b) {
       int m = (a + b) / 2;
-      long tm = getTimeMS(m);
+      long tm = data.get(m).getTime();
       if (tm == ms)
         return m;
       if (ms < tm)
@@ -408,12 +422,23 @@ public class Sequence implements Iterable<FeatureVec>
         a = m;
     }
 
-    long da = Math.abs(ms - getTimeMS(a));
-    long dap1 = (a + 1 < n ? Math.abs(ms - getTimeMS(a + 1)) : Long.MAX_VALUE);
+    long da = Math.abs(ms - data.get(a).getTime());
+    long dap1 = (a + 1 < n ? Math.abs(ms - data.get(a + 1).getTime()) : Long.MAX_VALUE);
     if (da <= dap1)
       return a;
     else
       return a + 1;
+  }
+
+  /**
+   * @return index of the data point closest to the given time considering lock boundaries.
+   */
+  public int getClosestIndex(long ms)
+  {
+    int index = getClosestRealIndex(ms);
+    index = Math.max(index, getFirstIndex());
+    index = Math.min(index, getLastIndex());
+    return index - getFirstIndex();
   }
 
   /**
