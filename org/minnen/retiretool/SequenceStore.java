@@ -96,14 +96,17 @@ public class SequenceStore implements Iterable<Sequence>
   public int add(Sequence cumulativeReturns, String name, boolean normalizeStartValue)
   {
     assert !nameToIndex.containsKey(name) : name;
-    assert realReturns.size() == nominalReturns.size();
+    assert realReturns.isEmpty() || realReturns.size() == nominalReturns.size();
 
     // Get inflation data to calculate real returns.
-    Sequence inflation = getMisc("inflation");
-    assert !inflation.isLocked();
-    inflation.lock(inflation.getClosestIndex(cumulativeReturns.getStartMS()),
-        inflation.getClosestIndex(cumulativeReturns.getEndMS()));
-    assert cumulativeReturns.length() == inflation.length();
+    Sequence inflation = null;
+    if (hasMisc("inflation")) {
+      inflation = getMisc("inflation");
+      assert !inflation.isLocked();
+      inflation.lock(inflation.getClosestIndex(cumulativeReturns.getStartMS()),
+          inflation.getClosestIndex(cumulativeReturns.getEndMS()));
+      assert cumulativeReturns.length() == inflation.length();
+    }
 
     // Make sure new sequence matches existing sequences.
     if (!nominalReturns.isEmpty()) {
@@ -131,10 +134,13 @@ public class SequenceStore implements Iterable<Sequence>
     assert get(name) == cumulativeReturns;
 
     // Calculate and add real returns (inflation-adjusted) to the store.
-    Sequence real = FinLib.calcRealReturns(cumulativeReturns, inflation);
-    assert real.length() == cumulativeReturns.length();
-    realReturns.add(real);
-    assert getReal(name) == real;
+    if (inflation != null) {
+      Sequence real = FinLib.calcRealReturns(cumulativeReturns, inflation);
+      assert real.length() == cumulativeReturns.length();
+      realReturns.add(real);
+      assert getReal(name) == real;
+      inflation.unlock();
+    }
 
     // Calculate cumulative stats for this strategy.
     CumulativeStats cstats = CumulativeStats.calc(cumulativeReturns);
@@ -149,7 +155,6 @@ public class SequenceStore implements Iterable<Sequence>
     lastStatsDuration = defaultStatsDuration;
 
     // System.out.printf("Added: \"%s\"\n", name);
-    inflation.unlock();
     return index;
   }
 
@@ -190,13 +195,17 @@ public class SequenceStore implements Iterable<Sequence>
     miscNameToIndex.put(name.toLowerCase(), index);
     assert getMisc(name) == misc;
 
+    if (name.toLowerCase().equals("inflation")) {
+      recalcNominalReturns();
+    }
+
     // System.out.printf("Added Misc Seq: \"%s\"\n", name);
     return index;
   }
 
   public int size()
   {
-    assert nominalReturns.size() == realReturns.size();
+    assert realReturns.isEmpty() || nominalReturns.size() == realReturns.size();
     return nominalReturns.size();
   }
 
@@ -223,6 +232,11 @@ public class SequenceStore implements Iterable<Sequence>
   public boolean hasName(String name)
   {
     return getIndex(name) >= 0;
+  }
+
+  public boolean hasMisc(String name)
+  {
+    return getMiscIndex(name) >= 0;
   }
 
   public int getIndex(String name)
@@ -340,11 +354,28 @@ public class SequenceStore implements Iterable<Sequence>
   /**
    * Calculate durational states for each stored sequence using the given duration.
    */
-  public void recalcDurationalStats(int nMonths)
+  public void recalcDurationalStats(int nMonths, FinLib.Inflation inflation)
   {
     lastStatsDuration = nMonths;
     for (int i = 0; i < nominalReturns.size(); ++i) {
-      durationalStats.set(i, DurationalStats.calc(nominalReturns.get(i), nMonths));
+      Sequence returns = (inflation == FinLib.Inflation.Ignore ? nominalReturns.get(i) : realReturns.get(i));
+      durationalStats.set(i, DurationalStats.calc(returns, nMonths));
+    }
+  }
+
+  public void recalcNominalReturns()
+  {
+    Sequence inflation = getMisc("inflation");
+    assert !inflation.isLocked();
+
+    realReturns.clear();
+    for (Sequence nominal : nominalReturns) {
+      inflation.lock(inflation.getClosestIndex(nominal.getStartMS()), inflation.getClosestIndex(nominal.getEndMS()));
+      Sequence real = FinLib.calcRealReturns(nominal, inflation);
+      assert real.length() == nominal.length();
+      realReturns.add(real);
+      assert getReal(real.getName()) == real;
+      inflation.unlock();
     }
   }
 

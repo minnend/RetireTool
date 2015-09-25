@@ -757,7 +757,64 @@ public class Chart
       writer.write("<thead><tr>\n");
 
       double widthPercent = 100.0 / (allStats.length + 1);
-      String th = String.format("<th style=\"width: %.2f%%\">", widthPercent); 
+      String th = String.format("<th style=\"width: %.2f%%\">", widthPercent);
+      writer.write(th + "Duration</th>\n");
+      for (ComparisonStats stats : allStats) {
+        writer.write(String.format("%s%s</th>\n", th, FinLib.getBaseName(stats.returns1.getName())));
+      }
+      writer.write("</tr></thead>\n");
+      writer.write("<tbody>\n");
+
+      for (Entry<Integer, Results> entry : allStats[0].durationToResults.entrySet()) {
+        int duration = entry.getKey();
+        writer.write("<tr>\n");
+
+        if (duration < 12) {
+          writer.write(String.format("<td>%d Month%s</td>\n", duration, duration > 1 ? "s" : ""));
+        } else {
+          int years = duration / 12;
+          writer.write(String.format("<td>%d Year%s</td>\n", years, years > 1 ? "s" : ""));
+        }
+
+        for (ComparisonStats stats : allStats) {
+          Results results = stats.durationToResults.get(duration);
+          writer.write(String.format("<td title=\"%.1f | %.1f\">\n", results.winPercent1, results.winPercent2));
+          // writer.write(String.format("%.1f\n", 100.0 - results.winPercent2));
+          writer.write(genWinBar(results.winPercent1, results.winPercent2));
+          writer.write("</td>\n");
+          // writer.write(String.format("<td>%.1f (%.1f)</td>\n", results.winPercent1, results.winPercent2));
+        }
+        writer.write("</tr>\n");
+      }
+      writer.write("</tbody>\n</table>\n");
+      writer.write("</body></html>\n");
+    }
+  }
+
+  public static void saveBeatInflationTable(File file, int width, List<ComparisonStats> stats) throws IOException
+  {
+    saveBeatInflationTable(file, width, stats.toArray(new ComparisonStats[stats.size()]));
+  }
+
+  public static void saveBeatInflationTable(File file, int width, ComparisonStats... allStats) throws IOException
+  {
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+      writer.write("<html><head>\n");
+      writer.write("<title>Comparison Statistics</title>\n");
+      writer.write("<script src=\"http://code.jquery.com/jquery.min.js\"></script>\n");
+      writer.write("<script type=\"text/javascript\" src=\"js/jquery.tablesorter.min.js\"></script>\n");
+      writer.write("<script type=\"text/javascript\">\n");
+      writer.write(" $(document).ready(function() { $(\"#myTable\").tablesorter( {widgets: ['zebra']} ); } );\n");
+      writer.write("</script>\n");
+      writer
+          .write("<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
+      writer.write(String.format("</head><body style=\"width:%dpx\">\n", width));
+      writer.write("<h2>Beat Inflation</h2>\n");
+      writer.write("<table id=\"comparisonTable\" class=\"tablesorter\">\n");
+      writer.write("<thead><tr>\n");
+
+      double widthPercent = 100.0 / (allStats.length + 1);
+      String th = String.format("<th style=\"width: %.2f%%\">", widthPercent);
       writer.write(th + "Duration</th>\n");
       for (ComparisonStats stats : allStats) {
         writer.write(String.format("%s%s</th>\n", th, FinLib.getBaseName(stats.returns1.getName())));
@@ -871,13 +928,16 @@ public class Chart
     double tiePercent = 100.0 - (winPercent1 + winPercent2);
     assert tiePercent >= 0.0;
     if (winPercent1 > 0) {
-      sb.append(String.format("<span style=\"float: left; width: %.2f%%; background: #53df53;\">&nbsp;</span>\n", winPercent1));
+      sb.append(String.format("<span style=\"float: left; width: %.2f%%; background: #53df53;\">&nbsp;</span>\n",
+          winPercent1));
     }
     if (tiePercent > 0) {
-      sb.append(String.format("<span style=\"float: left; width: %.2f%%; background: #dfdf53;\">&nbsp;</span>\n", tiePercent));
+      sb.append(String.format("<span style=\"float: left; width: %.2f%%; background: #dfdf53;\">&nbsp;</span>\n",
+          tiePercent));
     }
     if (winPercent2 > 0) {
-      sb.append(String.format("<span style=\"float: left; width: %.2f%%; background: #df5353;\">&nbsp;</span>\n", winPercent2));
+      sb.append(String.format("<span style=\"float: left; width: %.2f%%; background: #df5353;\">&nbsp;</span>\n",
+          winPercent2));
     }
     return sb.toString();
   }

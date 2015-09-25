@@ -93,7 +93,7 @@ public final class FinLib
     assert cumulativeReturns.getEndMS() == cpi.getEndMS();
 
     // Build sequence of real returns from nominal.
-    Sequence seq = new Sequence(cumulativeReturns.getName() + "(real)");
+    Sequence seq = new Sequence(cumulativeReturns.getName() + " (real)");
     seq.addData(1.0, cumulativeReturns.getStartMS());
     for (int i = 1; i < cumulativeReturns.length(); ++i) {
       double growth = getReturn(cumulativeReturns, i - 1, i);
@@ -375,7 +375,7 @@ public final class FinLib
       if (nMonths >= 12) {
         roi = getAnnualReturn(roi, nMonths);
       } else {
-        roi *= 100.0;
+        roi = mul2ret(roi);
       }
       rois.addData(roi, cumulativeReturns.getTimeMS(i));
     }

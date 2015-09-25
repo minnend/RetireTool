@@ -354,7 +354,7 @@ public class RetireTool
 
     final int duration = 5 * 12;
 
-    store.recalcDurationalStats(duration);
+    store.recalcDurationalStats(duration, FinLib.Inflation.Ignore);
     List<Sequence> all = store.getReturns(names);
 
     List<CumulativeStats> cstats = store.getCumulativeStats(names);
@@ -463,7 +463,7 @@ public class RetireTool
     assert dir.isDirectory();
 
     int duration = 10 * 12;
-    store.recalcDurationalStats(duration);
+    store.recalcDurationalStats(duration, FinLib.Inflation.Ignore);
 
     String name1 = "Mom.Risky-Mom.Moderate-30/70";// "Mom.Risky-Mom.Cautious-20/80";//"MultiMom-Risky";
     String name2 = "Bonds/Mom.Cautious-30/70";
@@ -652,7 +652,7 @@ public class RetireTool
   {
     final int[] months = new int[] { 1, 2, 3, 4, 5, 6, 9, 10, 12 };
     final int duration = 10 * 12;
-    store.recalcDurationalStats(duration);
+    store.recalcDurationalStats(duration, FinLib.Inflation.Ignore);
 
     // Build list of names of assets/strategies.
     List<String> nameList = new ArrayList<>();
@@ -737,7 +737,7 @@ public class RetireTool
     }
 
     // Filter candidates to find "dominating" strategies.
-    store.recalcDurationalStats(10 * 12);
+    store.recalcDurationalStats(10 * 12, FinLib.Inflation.Ignore);
 
     FinLib.filterStrategies(candidates, store);
 
@@ -756,7 +756,7 @@ public class RetireTool
   {
     final int[] momentumMonths = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12 };
     final int duration = 10 * 12;
-    store.recalcDurationalStats(duration);
+    store.recalcDurationalStats(duration, FinLib.Inflation.Ignore);
 
     // Build list of names of assets/strategies that we care about for scatter plot.
     List<String> nameList = new ArrayList<>();
@@ -793,6 +793,20 @@ public class RetireTool
 
     List<CumulativeStats> cstats = store.getCumulativeStats(names);
     Chart.saveStatsTable(new File(dir, "momentum-chart.html"), GRAPH_WIDTH, true, cstats);
+  }
+
+  public static void genBeatInflationChart(File dir) throws IOException
+  {
+    String[] names = new String[] { "stock", "80/20", "momentum-1", "multimom-risky", "Mom.Risky-Mom.Moderate-30/70",
+        "Mom.Risky-Mom.Cautious-20/80", "Mom.Risky-Mom.Safe-10/90", "Bonds/Mom.Safe-10/90" };
+
+    final double targetReturn = 3.0;
+
+    List<ComparisonStats> comparisons = new ArrayList<ComparisonStats>();
+    for (int i = 0; i < names.length; ++i) {
+      comparisons.add(ComparisonStats.calc(store.getReal(names[i]), targetReturn));
+    }
+    Chart.saveBeatInflationTable(new File(dir, "strategy-beat-inflation.html"), GRAPH_WIDTH, comparisons);
   }
 
   public static void genReturnComparison(Sequence shiller, int numMonths, File file) throws IOException
@@ -941,15 +955,16 @@ public class RetireTool
     // genInterestRateGraph(shiller, tbills, new File(dir, "interest-rates.html"));
     // compareRebalancingMethods(shiller, dir);
     // genReturnViz(dir);
-    genReturnChart(dir);
+    // genReturnChart(dir);
     // genSMASweepChart(shiller, dir);
     // genMomentumSweepChart(dir);
-    genMomentumMixChart(dir);
+    // genMomentumMixChart(dir);
     // genStockBondMixSweepChart(shiller, dir);
     // genDuelViz(shiller, tbills, dir);
     // genEfficientFrontier(shiller, dir);
     // genCorrelationGraph(shiller, dir);
     // genEndBalanceCharts(shiller, dir);
+    genBeatInflationChart(dir);
 
     System.exit(0);
 
