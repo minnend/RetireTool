@@ -346,7 +346,7 @@ public class Strategy
     Map<Integer, SeqCount> map = new TreeMap<Integer, SeqCount>();
 
     for (int i = numMonths[numMonths.length - 1] + 1; i < N; ++i) {
-      int code = calcMomentumCode(i, numMonths, seqs);
+      int code = calcMomentumCode(i - 1, numMonths, seqs);
 
       // Record result.
       SeqCount sc;
@@ -356,8 +356,8 @@ public class Strategy
         sc = new SeqCount();
         map.put(code, sc);
       }
-      double r1 = s1.get(i, 0) / s1.get(i - 1, 0);
-      double r2 = s2.get(i, 0) / s2.get(i - 1, 0);
+      double r1 = FinLib.getReturn(s1, i - 1, i);
+      double r2 = FinLib.getReturn(s2, i - 1, i);
       if (r1 >= r2) {
         ++sc.n1;
       } else {
@@ -535,12 +535,21 @@ public class Strategy
 
   public static void printStats(String title, Map<Integer, SeqCount> map)
   {
+    // Calculate total number of occurrences.
+    int N = 0;
+    for (Map.Entry<Integer, SeqCount> entry : map.entrySet()) {
+      SeqCount sc = entry.getValue();
+      N += sc.n1 + sc.n2;
+    }
+
     System.out.println(title);
     for (Map.Entry<Integer, SeqCount> entry : map.entrySet()) {
       SeqCount sc = entry.getValue();
       int n = sc.n1 + sc.n2;
       double p = (n == 0 ? 0.0 : 100.0 * (sc.n1) / n);
-      System.out.printf("%d: %.1f%%  %.3fx  %3d  [%d, %d]\n", entry.getKey(), p, sc.r1 / sc.r2, n, sc.n1, sc.n2);
+      // System.out.printf("%d: %.1f%%  %.3fx  %3d  [%d, %d]\n", entry.getKey(), p, sc.r1 / sc.r2, n, sc.n1, sc.n2);
+      System.out.printf("<tr><td>%d</td><td>%.1f</td><td>%.3fx</td><td>%.2f%% (%d)</td><td>%d</td><td>%d</td></tr>\n",
+          entry.getKey(), p, sc.r1 / sc.r2, 100.0 * n / N, n, sc.n1, sc.n2);
     }
   }
 }

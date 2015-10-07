@@ -6,7 +6,7 @@ import org.minnen.retiretool.Library;
 import org.minnen.retiretool.data.FeatureVec;
 
 /**
- * A Sequence represents a list of multidimentional feature vectors.
+ * A Sequence represents a list of multidimensional feature vectors.
  * 
  * Each sequence has a specific frequency and the absolute time of every data point can be computed.
  */
@@ -619,6 +619,18 @@ public class Sequence implements Iterable<FeatureVec>
       FeatureVec x = get(i);
       FeatureVec y = divisor.get(i);
       seq.addData(x.div(y), getTimeMS(i));
+    }
+    return seq;
+  }
+
+  /** @return this sequence after replacing all values with max between this and other sequence (component-wise). */
+  public Sequence _max(Sequence seq)
+  {
+    assert length() == seq.length();
+    for (int i = 0; i < length(); ++i) {
+      FeatureVec x = get(i);
+      FeatureVec y = seq.get(i);
+      x._max(y);
     }
     return seq;
   }

@@ -682,7 +682,7 @@ public class FeatureVec
   public FeatureVec _min(FeatureVec fv)
   {
     int d = getNumDims();
-    assert (fv.getNumDims() == d) : String.format("dimensionality: local=%d  param=%d", d, fv.getNumDims());
+    assert fv.getNumDims() == d : String.format("dimensionality: local=%d  param=%d", d, fv.getNumDims());
     for (int i = 0; i < d; i++)
       vec[i] = Math.min(vec[i], fv.get(i));
     return this;
@@ -787,7 +787,7 @@ public class FeatureVec
   public FeatureVec _max(FeatureVec fv)
   {
     int d = getNumDims();
-    assert (fv.getNumDims() == d);
+    assert fv.getNumDims() == d;
     for (int i = 0; i < d; i++)
       vec[i] = Math.max(vec[i], fv.get(i));
     return this;

@@ -13,6 +13,7 @@ import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.DurationalStats;
+import org.minnen.retiretool.stats.RetirementStats;
 
 public final class FinLib
 {
@@ -27,7 +28,7 @@ public final class FinLib
   };
 
   public static DecimalFormat currencyFormatter = new DecimalFormat("#,##0.00");
-  public static DecimalFormat dollarFormatter = new DecimalFormat("#,##0");
+  public static DecimalFormat dollarFormatter   = new DecimalFormat("#,##0");
 
   /**
    * Compute compound annual growth rate (CAGR) based on total multiplier.
@@ -371,14 +372,21 @@ public final class FinLib
     final int N = cumulativeReturns.size();
     String name = String.format("%s (%s)", cumulativeReturns.getName(), Library.formatDurationMonths(nMonths));
     Sequence rois = new Sequence(name);
-    for (int i = 0; i + nMonths < N; i++) {
-      double roi = getReturn(cumulativeReturns, i, i + nMonths);
-      if (nMonths >= 12) {
-        roi = getAnnualReturn(roi, nMonths);
-      } else {
-        roi = mul2ret(roi);
+    if (N <= nMonths) {
+      double growth = FinLib.getReturn(cumulativeReturns, 0, N - 1);
+      double roi = FinLib.getAnnualReturn(growth, nMonths);
+      rois.addData(roi, cumulativeReturns.getStartMS());
+    } else {
+      for (int i = 0; i + nMonths < N; i++) {
+        double roi = getReturn(cumulativeReturns, i, i + nMonths);
+        if (nMonths >= 12) {
+          roi = getAnnualReturn(roi, nMonths);
+        } else {
+          roi = mul2ret(roi);
+        }
+        rois.addData(roi, cumulativeReturns.getTimeMS(i));
       }
-      rois.addData(roi, cumulativeReturns.getTimeMS(i));
+      assert rois.size() > 0;
     }
     return rois;
   }
@@ -543,9 +551,9 @@ public final class FinLib
    * @param ssMonthly expected monthly SS benefit in today's dollar
    * @param desiredRunwayYears desired value at end of retirement in terms of final salary
    * 
-   * @return list of starting indices where we run out of money.
+   * @return retirement statistics based on principal required to retire safely
    */
-  public static List<Integer> calcSavingsTarget(Sequence cumulativeReturns, Sequence cpi, double salary,
+  public static RetirementStats calcSavingsTarget(Sequence cumulativeReturns, Sequence cpi, double salary,
       double minLikelihood, int nYears, double expenseRatio, int retireAge, int ssAge, double ssMonthly,
       double desiredRunwayYears)
   {
@@ -555,6 +563,8 @@ public final class FinLib
     List<Integer> failures = new ArrayList<Integer>();
     double minSavings = 0.0;
     double maxSavings = salary * 1000.0; // assume needed savings is less than 1000x salary
+    double[] endBalances = new double[nData - nMonths];
+    int nAllowedFailures = (int) Math.floor((1.0 - minLikelihood) * endBalances.length);
     boolean done = false;
     while (!done) {
       if (maxSavings - minSavings < 1.0) {
@@ -563,34 +573,48 @@ public final class FinLib
       }
       double principal = (maxSavings + minSavings) / 2.0;
       failures.clear();
-      int n = 0;
       int nOK = 0;
       for (int i = 0; i < nData; i++) {
-        if (i + nMonths >= nData)
+        if (i + nMonths >= nData) {
+          assert i == endBalances.length;
           break; // not enough data
+        }
         double adjSalary = adjustForInflation(cpi, salary, nData - 1, i);
         double adjPrincipal = adjustForInflation(cpi, principal, nData - 1, i);
-        double finalSalary = adjustForInflation(cpi, salary, nData - 1, i + nMonths);
-        // System.out.printf("%.2f -> %d (%s): %.2f\n", salary, i, Library.formatDate(snp.getTimeMS(i)),
-        // adjustedSalary);
         double endBalance = calcEndBalance(cumulativeReturns, cpi, adjPrincipal, adjSalary, expenseRatio, true,
             retireAge, ssAge, ssMonthly, i, nMonths);
-        if (endBalance > finalSalary * (1 + desiredRunwayYears * 12)) {
+        double finalSalary = adjustForInflation(cpi, salary, nData - 1, i + nMonths);
+        if (endBalance > finalSalary * desiredRunwayYears) {
           ++nOK;
+          // Save end balance after adjusting back to today's dollars.
+          if (done) {
+            endBalances[i] = adjustForInflation(cpi, endBalance, i + nMonths, nData - 1);
+            // System.out.printf("[%s] -> [%s]: %.0f -> %.0f  (%.0f, %.3f)  %s\n",
+            // Library.formatMonth(cpi.getTimeMS(i)),
+            // Library.formatMonth(cpi.getTimeMS(i + nMonths)),
+            // endBalance, endBalances[i], finalSalary, endBalance / finalSalary,
+            // endBalance / finalSalary < 5.0 ? "************************" : "");
+          }
         } else {
           failures.add(i);
+          endBalances[i] = 0.0;
+          if (failures.size() > nAllowedFailures) {
+            break;
+          }
         }
-        ++n;
       }
-      double successRate = (double) nOK / n;
+      double successRate = (double) nOK / endBalances.length;
       // System.out.printf("$%s  %d/%d = %.2f%%\n", currencyFormatter.format(principal), nOK, n, 100.0 * successRate);
-      if (successRate >= minLikelihood)
+      if (successRate >= minLikelihood) {
         maxSavings = principal;
-      else
+      } else {
         minSavings = principal;
+      }
     }
-    System.out.printf("$%s\n", dollarFormatter.format(maxSavings));
-    return failures;
+
+    RetirementStats stats = new RetirementStats(cumulativeReturns.getName(), maxSavings, endBalances);
+
+    return stats;
   }
 
   /**
@@ -743,6 +767,32 @@ public final class FinLib
   }
 
   /**
+   * Returns the same name with base name bolded.
+   * 
+   * Examples:
+   * <ul>
+   * <li>"foo" -> "<b>foo</b>"
+   * <li>"foo (bar)" -> "<b>foo</b> (bar)"
+   * <li>"foo (bar) (buzz)" -> "<b>foo (bar)</b> (buzz)"
+   * </ul>
+   * 
+   * @param name the name to modify
+   * @return name with {@literal <br/>} inserted before last open paren
+   */
+  public static String getBoldedName(String name)
+  {
+    String base = getBaseName(name);
+    if (base.length() > 0) {
+      base = String.format("<b>%s</b>", base);
+    }
+    String suffix = getNameSuffix(name);
+    if (suffix.length() > 0) {
+      suffix = " " + suffix;
+    }
+    return base + suffix;
+  }
+
+  /**
    * Returns all text before the last open paren.
    * 
    * Examples:
@@ -768,9 +818,60 @@ public final class FinLib
     }
   }
 
+  /**
+   * Returns everything after (and including) last paren.
+   * 
+   * Examples:
+   * <ul>
+   * <li>"foo" -> ""
+   * <li>"foo (bar)" -> "(bar)"
+   * <li>"foo (bar) (buzz)" -> "(buzz)"
+   * </ul>
+   * 
+   * @param name the name to modify
+   * @return all text in last parenthetical
+   */
+  public static String getNameSuffix(String name)
+  {
+    if (name == null) {
+      return "";
+    }
+    int i = name.lastIndexOf(" (");
+    if (i >= 0) {
+      return name.substring(i + 1);
+    } else {
+      return "";
+    }
+  }
+
+  public static Sequence calcDrawdown(Sequence cumulativeReturns)
+  {
+    Sequence seq = new Sequence(cumulativeReturns.getName() + " - Drawdown");
+    final int N = cumulativeReturns.size();
+    double peakReturn = 1.0;
+    double drawdown = 0.0;
+
+    final double firstValue = cumulativeReturns.getFirst(0);
+    seq.addData(0.0, cumulativeReturns.getStartMS());
+    for (int i = 1; i < N; ++i) {
+      double value = cumulativeReturns.get(i, 0) / firstValue;
+      if (value < peakReturn) {
+        drawdown = 100.0 * (peakReturn - value) / peakReturn;
+      } else if (value > peakReturn) {
+        peakReturn = value;
+        drawdown = 0.0;
+      }
+      seq.addData(-drawdown, cumulativeReturns.getTimeMS(i));
+    }
+
+    assert seq.length() == cumulativeReturns.length();
+    return seq;
+  }
+
   /** Filter a list of strategies so that only "dominating" ones remain. */
   public static void filterStrategies(List<String> candidates, SequenceStore store)
   {
+    final double diffMargin = 0.01;
     final int N = candidates.size();
     for (int i = 0; i < N; ++i) {
       String name1 = candidates.get(i);
@@ -799,7 +900,7 @@ public final class FinLib
         final double eps = 1e-6;
         DurationalStats dstats2 = store.getDurationalStats(name2);
         ComparisonStats.Results comp = ComparisonStats.calcFromDurationReturns(dstats1.durationReturns,
-            dstats2.durationReturns, store.getLastStatsDuration());
+            dstats2.durationReturns, store.getLastStatsDuration(), diffMargin);
         if (comp.winPercent1 > 100.0 - eps) {
           candidates.set(j, null);
           continue;

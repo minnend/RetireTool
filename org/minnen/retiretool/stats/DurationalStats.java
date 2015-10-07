@@ -11,63 +11,52 @@ import org.minnen.retiretool.data.Sequence;
  * 
  * @author David Minnen
  */
-public class DurationalStats
+public class DurationalStats extends ReturnStats
 {
   public final Sequence cumulativeReturns;
   public final Sequence durationReturns;
-  public final double   mean;
-  public final double   sdev;
-  public final double   min;
-  public final double   percentile10;
-  public final double   percentile25;
-  public final double   median;
-  public final double   percentile75;
-  public final double   percentile90;
-  public final double   max;
   public final int      nMonthsPerPeriod;
 
   public static DurationalStats calc(Sequence cumulativeReturns, int nMonthsPerPeriod)
   {
-    return new DurationalStats(cumulativeReturns, nMonthsPerPeriod);
+    int nMonths = cumulativeReturns.size() - 1;
+    assert nMonths >= 2;
+    Sequence durationReturns = FinLib.calcReturnsForDuration(cumulativeReturns, nMonthsPerPeriod);
+    return new DurationalStats(cumulativeReturns, durationReturns, nMonthsPerPeriod);
+  }
+
+  public static DurationalStats calc(double[] returns, int nMonthsPerPeriod)
+  {
+    return new DurationalStats(returns, nMonthsPerPeriod);
   }
 
   /**
    * Create return statistics object from the given return sequence and duration.
    * 
    * @param cumulativeReturns sequence containing total return over some duration.
+   * @param durationReturns sequence of returns over successive periods of length nMonthsPerPeriod
    * @param nMonthsPerPeriod duration (in months)
    */
-  private DurationalStats(Sequence cumulativeReturns, int nMonthsPerPeriod)
+  private DurationalStats(Sequence cumulativeReturns, Sequence durationReturns, int nMonthsPerPeriod)
   {
+    super(durationReturns.extractDim(0));
     this.cumulativeReturns = cumulativeReturns;
+    this.durationReturns = durationReturns;
     this.nMonthsPerPeriod = nMonthsPerPeriod;
+  }
 
-    int nMonths = cumulativeReturns.size() - 1;
-    assert nMonths >= 2;
-    if (nMonths < nMonthsPerPeriod) {
-      double growth = cumulativeReturns.getLast(0) / cumulativeReturns.getFirst(0);
-      mean = FinLib.getAnnualReturn(growth, nMonths);
-      sdev = 0.0;
-      min = percentile10 = percentile25 = median = percentile75 = percentile90 = max = mean;
-      durationReturns = null;
-    } else {
-      // Calculate returns for all periods of the requested duration.
-      durationReturns = FinLib.calcReturnsForDuration(cumulativeReturns, nMonthsPerPeriod);
-
-      double[] r = durationReturns.extractDim(0);
-      mean = Library.mean(r);
-      sdev = Library.stdev(r);
-
-      // Calculate percentiles.
-      Arrays.sort(r);
-      min = r[0];
-      percentile10 = r[Math.min(Math.round(r.length * 0.1f), r.length - 1)];
-      percentile25 = r[Math.min(Math.round(r.length * 0.25f), r.length - 1)];
-      median = r[Math.min(Math.round(r.length * 0.5f), r.length - 1)];
-      percentile75 = r[Math.min(Math.round(r.length * 0.75f), r.length - 1)];
-      percentile90 = r[Math.min(Math.round(r.length * 0.9f), r.length - 1)];
-      max = r[r.length - 1];
-    }
+  /**
+   * Create return statistics object from the given return sequence and duration.
+   * 
+   * @param returns array of returns over successive periods of length nMonthsPerPeriod
+   * @param nMonthsPerPeriod duration (in months)
+   */
+  private DurationalStats(double[] returns, int nMonthsPerPeriod)
+  {
+    super(returns);
+    this.cumulativeReturns = null;
+    this.durationReturns = null;
+    this.nMonthsPerPeriod = nMonthsPerPeriod;
   }
 
   private void printDurationTableRow(String label)

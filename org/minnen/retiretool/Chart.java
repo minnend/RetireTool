@@ -39,7 +39,7 @@ public class Chart
   public static void saveLineChart(File file, String title, int width, int height, boolean logarithmic,
       Sequence... seqs) throws IOException
   {
-    saveHighChart(file, ChartType.Line, title, null, null, width, height, 0.5, Double.NaN, logarithmic ? 0.5
+    saveHighChart(file, ChartType.Line, title, null, null, width, height, Double.NaN, 0.0, logarithmic ? 0.5
         : Double.NaN, logarithmic, 0, seqs);
   }
 
@@ -752,7 +752,9 @@ public class Chart
       writer
           .write("<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
       writer.write(String.format("</head><body style=\"width:%dpx\">\n", width));
-      writer.write(String.format("<h2>Win Rate vs. %s</h2>\n", FinLib.getBaseName(allStats[0].returns2.getName())));
+      String defender = allStats[0].returns2 != null ? FinLib.getBaseName(allStats[0].returns2.getName()) : String
+          .format("%d Defenders", allStats[0].defenders.length);
+      writer.write(String.format("<h2>Win Rate vs. %s</h2>\n", defender));
       writer.write("<table id=\"comparisonTable\" class=\"tablesorter\">\n");
       writer.write("<thead><tr>\n");
 
@@ -778,7 +780,8 @@ public class Chart
 
         for (ComparisonStats stats : allStats) {
           Results results = stats.durationToResults.get(duration);
-          writer.write(String.format("<td title=\"%.1f | %.1f\" style=\"color: #3B3\">\n", results.winPercent1, results.winPercent2));
+          writer.write(String.format("<td title=\"%.1f | %.1f\" style=\"color: #3B3\">\n", results.winPercent1,
+              results.winPercent2));
           // writer.write(String.format("%.1f\n", 100.0 - results.winPercent2));
           writer.write(genWinBar(results.winPercent1, results.winPercent2));
           writer.write("</td>\n");
@@ -929,8 +932,9 @@ public class Chart
     double tiePercent = 100.0 - (winPercent1 + winPercent2);
     assert tiePercent >= 0.0;
     if (winPercent1 > 0) {
-      sb.append(String.format("<span style=\"float: left; width: %.2f%%; background: #53df53; white-space: nowrap;\">%.1f</span>\n",
-          winPercent1, winPercent1));
+      sb.append(String.format(
+          "<span style=\"float: left; width: %.2f%%; background: #53df53; white-space: nowrap;\">%.1f</span>\n",
+          winPercent1, winPercent1 + tiePercent));
     }
     if (tiePercent > 0) {
       sb.append(String.format("<span style=\"float: left; width: %.2f%%; background: #dfdf53;\">&nbsp;</span>\n",

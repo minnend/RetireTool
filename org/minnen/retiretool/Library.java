@@ -483,6 +483,10 @@ public final class Library
 
   public static double variance(double[] a)
   {
+    if (a.length < 2) {
+      return 0.0;
+    }
+
     double mean = mean(a);
     double s1 = 0.0, s2 = 0.0;
     for (int i = 0; i < a.length; ++i) {

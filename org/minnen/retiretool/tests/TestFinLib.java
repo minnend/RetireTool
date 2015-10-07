@@ -104,6 +104,28 @@ public class TestFinLib
   }
 
   @Test
+  public void testGetNameSuffix()
+  {
+    assertEquals("", FinLib.getNameSuffix(null));
+    assertEquals("", FinLib.getNameSuffix(""));
+    assertEquals("", FinLib.getNameSuffix(" "));
+    assertEquals("", FinLib.getNameSuffix("foo"));
+    assertEquals("(bar)", FinLib.getNameSuffix("foo (bar)"));
+    assertEquals("(buzz)", FinLib.getNameSuffix("foo (bar) (buzz)"));
+  }
+  
+  @Test
+  public void testGetBoldedName()
+  {
+    assertEquals("", FinLib.getBoldedName(null));
+    assertEquals("", FinLib.getBoldedName(""));
+    assertEquals("<b> </b>", FinLib.getBoldedName(" "));
+    assertEquals("<b>foo</b>", FinLib.getBoldedName("foo"));
+    assertEquals("<b>foo</b> (bar)", FinLib.getBoldedName("foo (bar)"));
+    assertEquals("<b>foo (bar)</b> (buzz)", FinLib.getBoldedName("foo (bar) (buzz)"));
+  }
+
+  @Test
   public void testCalcRealReturns_InflationCancelsGains()
   {
     Sequence nominal = new Sequence(new double[] { 1.0, 2.0, 3.0, 4.0, 5.0 });
