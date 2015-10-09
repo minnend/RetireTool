@@ -653,4 +653,33 @@ public class Sequence implements Iterable<FeatureVec>
     }
     return average._div(N);
   }
+
+  public void reverse()
+  {
+    final int N = length();
+    for (int i = 0;; ++i) {
+      int j = N - i - 1;
+      if (i >= j) {
+        break;
+      }
+      FeatureVec tmp = data.get(i);
+      data.set(i, data.get(j));
+      data.set(j, tmp);
+    }
+  }
+
+  /**
+   * Duplicate this sequence.
+   * 
+   * @return a deep copy of this sequence.
+   */
+  public Sequence dup()
+  {
+    Sequence seq = new Sequence(getName());
+    for (FeatureVec v : data) {
+      seq.addData(new FeatureVec(v));
+    }
+    seq.lock(lockStart, lockEnd);
+    return seq;
+  }
 }

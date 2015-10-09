@@ -27,8 +27,28 @@ public final class FinLib
     Ignore, Include
   };
 
-  public static DecimalFormat currencyFormatter = new DecimalFormat("#,##0.00");
-  public static DecimalFormat dollarFormatter   = new DecimalFormat("#,##0");
+  public static final int      MonthlyClose            = 0;
+  public static final int      MonthlyAverage          = 1;
+  public static final int      MonthlyLow              = 2;
+  public static final int      MonthlyHigh             = 3;
+
+  public static DecimalFormat  currencyFormatter       = new DecimalFormat("#,##0.00");
+  public static DecimalFormat  dollarFormatter         = new DecimalFormat("#,##0");
+
+  // VFIAX = S&P 500
+  // VEXAX = Extended Market (completion fund)
+  // VTSAX = Total Stock Market
+  // VBTLX = Total Bond Market (US)
+  // VGSLX = REITs
+  // VTIAX = International Stock
+  public static final String[] VANGUARD_ADMIRAL_FUNDS  = new String[] { "VFIAX", "VEXAX", "VTSAX", "VBTLX", "VGSLX",
+      "VTIAX"                                         };
+
+  // VTSMX = Total Stock Market (~3800 stocks)
+  // VBMFX = Total Bond Market (~7650 bonds)
+  // VGSIX = REITs
+  // VGTSX = International Stock
+  public static final String[] VANGUARD_INVESTOR_FUNDS = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX" };
 
   /**
    * Compute compound annual growth rate (CAGR) based on total multiplier.
@@ -922,5 +942,54 @@ public final class FinLib
         return name == null;
       }
     });
+  }
+
+  public static Sequence daily2monthly(Sequence daily)
+  {
+    // TODO verify that we don't miss/skip any months.
+    final int minDaysData = 12;
+    final int N = daily.length();
+    Calendar cal = Library.now();
+
+    Sequence monthly = new Sequence(daily.getName());
+    int i = 0;
+    while (i < N) {
+      FeatureVec v = daily.get(i);
+      cal.setTimeInMillis(v.getTime());
+      int month = cal.get(Calendar.MONTH);
+      FeatureVec m = new FeatureVec(4);
+      m.fill(v.get(0));
+      int j = i + 1;
+      for (; j < N; ++j) {
+        FeatureVec w = daily.get(j);
+        cal.setTimeInMillis(w.getTime());
+        if (cal.get(Calendar.MONTH) == month) {
+          double x = w.get(0);
+          m.set(MonthlyClose, x);
+          m.set(MonthlyAverage, m.get(MonthlyAverage) + x);
+          if (x < m.get(MonthlyLow)) {
+            m.set(MonthlyLow, x);
+          }
+          if (x > m.get(MonthlyHigh)) {
+            m.set(MonthlyHigh, x);
+          }
+        } else {
+          break;
+        }
+      }
+
+      int n = j - i;
+      if (n >= minDaysData) {
+        m.set(MonthlyAverage, m.get(MonthlyAverage) / n);
+        cal.setTimeInMillis(v.getTime());
+        cal.set(Calendar.DATE, 1); // Monthly data is always first of month
+        cal.set(Calendar.MILLISECOND, 0);
+        monthly.addData(m, cal.getTimeInMillis());
+      }
+
+      i = j;
+    }
+
+    return monthly;
   }
 }

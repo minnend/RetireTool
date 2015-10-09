@@ -38,7 +38,7 @@ public class Strategy
       int iSelected = predictor.selectAsset(seqs);
       predictor.store.unlock();
 
-      // Find corret answer (sequence with highest return for current month)
+      // Find correct answer (sequence with highest return for current month)
       double correctReturn = 1.0;
       int iCorrect = -1;
       for (int iSeq = 0; iSeq < seqs.length; ++iSeq) {
@@ -548,7 +548,8 @@ public class Strategy
       int n = sc.n1 + sc.n2;
       double p = (n == 0 ? 0.0 : 100.0 * (sc.n1) / n);
       // System.out.printf("%d: %.1f%%  %.3fx  %3d  [%d, %d]\n", entry.getKey(), p, sc.r1 / sc.r2, n, sc.n1, sc.n2);
-      System.out.printf("<tr><td>%d</td><td>%.1f</td><td>%.3fx</td><td>%.2f%% (%d)</td><td>%d</td><td>%d</td></tr>\n",
+      System.out.printf(
+          "<tr><td>%d</td><td>%.1f%%</td><td>%.3fx</td><td>%.2f%%</td><td>%d</td><td>%d</td><td>%d</td></tr>\n",
           entry.getKey(), p, sc.r1 / sc.r2, 100.0 * n / N, n, sc.n1, sc.n2);
     }
   }

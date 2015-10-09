@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 import org.minnen.retiretool.Chart.ChartType;
@@ -32,9 +31,72 @@ public class RetireTool
   public static final int[]                  percentRisky = new int[] { 90, 80, 70, 60, 50, 40, 30, 20, 10 };
   public static final Strategy.Disposition[] dispositions = Strategy.Disposition.values();
 
+  public static void setupVanguardData(File dataDir, File dir) throws IOException
+  {
+    final int iStartSimulation = 12;
+
+    Sequence stockDaily = DataIO.loadYahooData(new File(dataDir, "VTSMX.csv"));
+    Sequence stock = FinLib.daily2monthly(stockDaily);
+    System.out.printf("Stock: [%s] -> [%s]\n", Library.formatMonth(stock.getStartMS()),
+        Library.formatMonth(stock.getEndMS()));
+
+    Sequence bondDaily = DataIO.loadYahooData(new File(dataDir, "VBMFX.csv"));
+    Sequence bonds = FinLib.daily2monthly(bondDaily);
+    System.out.printf("Bond: [%s] -> [%s]\n", Library.formatMonth(bonds.getStartMS()),
+        Library.formatMonth(bonds.getEndMS()));
+
+    Sequence reitsDaily = DataIO.loadYahooData(new File(dataDir, "VGSIX.csv"));
+    Sequence reits = FinLib.daily2monthly(reitsDaily);
+    System.out.printf("REIT: [%s] -> [%s]\n", Library.formatMonth(reits.getStartMS()),
+        Library.formatMonth(reits.getEndMS()));
+
+    Sequence istockDaily = DataIO.loadYahooData(new File(dataDir, "VGTSX.csv"));
+    Sequence istock = FinLib.daily2monthly(istockDaily);
+    System.out.printf("Int Stock: [%s] -> [%s]\n", Library.formatMonth(istock.getStartMS()),
+        Library.formatMonth(istock.getEndMS()));
+
+    Sequence shiller = DataIO.loadShillerData(new File(dataDir, "shiller.csv"));
+
+    long commonStart = Library.calcCommonStart(stock, bonds, reits, istock, shiller);
+    long commonEnd = Library.calcCommonEnd(stock, bonds, reits, istock, shiller);
+    System.out.printf("Common: [%s] -> [%s]\n", Library.formatMonth(commonStart), Library.formatMonth(commonEnd));
+
+    stock = stock.subseq(commonStart, commonEnd);
+    bonds = bonds.subseq(commonStart, commonEnd);
+    reits = reits.subseq(commonStart, commonEnd);
+    istock = istock.subseq(commonStart, commonEnd);
+    shiller = shiller.subseq(commonStart, commonEnd);
+
+    store.addMisc(stock, "Stock-All");
+    store.addMisc(bonds, "Bonds-All");
+    store.addMisc(reits, "REITs-All");
+    store.addMisc(istock, "IntStock-All");
+
+    // Add inflation (CPI) data.
+    Sequence cpi = Shiller.getInflationData(shiller);
+    store.addMisc(cpi, "cpi");
+    store.alias("inflation", "cpi");
+
+    store.add(stock.dup().subseq(iStartSimulation), "Stock");
+    store.add(bonds.dup().subseq(iStartSimulation), "Bonds");
+    store.add(reits.dup().subseq(iStartSimulation), "REITs");
+    store.add(istock.dup().subseq(iStartSimulation), "IntStock");
+
+    addStrategiesToStore(stock, bonds, stock, iStartSimulation);
+
+    Chart.saveLineChart(new File(dir, "vanguard-funds.html"), "Vanguard Funds", GRAPH_WIDTH, GRAPH_HEIGHT, true,
+        store.getReturns("Stock", "Bonds", "REITs", "IntStock"));
+
+    Chart.saveLineChart(new File(dir, "vanguard-strategies.html"), "Vanguard Strategies", GRAPH_WIDTH, GRAPH_HEIGHT,
+        true, store.getReturns("stock", "bonds", "Momentum-1", "MultiMom-Safe", "MultiMom-Cautious",
+            "MultiMom-Moderate", "MultiMom-Risky"));
+  }
+
   public static void buildCumulativeReturnsStore(Sequence shiller, Sequence tbills)
   {
     assert tbills == null || shiller.length() == tbills.length();
+
+    final long startMS = System.currentTimeMillis();
 
     final int iStartData = 0;// shiller.getIndexForDate(1998, 12);
     final int iEndData = -1;// shiller.getIndexForDate(2009, 12);
@@ -49,7 +111,6 @@ public class RetireTool
     assert stockData.length() == bondData.length();
     System.out.printf("Build Store: [%s] -> [%s]\n", Library.formatMonth(stockData.getStartMS()),
         Library.formatMonth(stockData.getEndMS()));
-    long startMS = Library.getTime();
     store.addMisc(stockData, "StockData");
     store.addMisc(bondData, "BondData");
 
@@ -106,8 +167,15 @@ public class RetireTool
     }
 
     // Setup risky and safe assets for use with dynamic asset allocation strategies.
-    Sequence risky = stockAll;
-    Sequence safe = bondsAll;
+    addStrategiesToStore(stockAll, bondsAll, stockData, iStartSimulation);
+
+    System.out.printf("Finished Building Store (%s).\n", Library.formatDuration(Library.getTime() - startMS));
+  }
+
+  public static void addStrategiesToStore(Sequence risky, Sequence safe, Sequence prices, int iStartSimulation)
+  {
+    final int rebalanceMonths = 12;
+    final double rebalanceBand = 0.0;
 
     // Momentum sweep.
     final int[] momentumMonths = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12 };
@@ -121,7 +189,7 @@ public class RetireTool
       for (int ii = 0; ii < mom.length(); ++ii) {
         double a = mom.get(ii, 0);
         double b = momOrig.get(ii, 0);
-        assert Math.abs(a - b) < 1e-6;
+        assert Math.abs(a - b) < 1e-6 : String.format("%f vs. %f", a, b);
       }
 
       store.add(mom);
@@ -140,8 +208,8 @@ public class RetireTool
     int[] smaMonths = new int[] { 1, 2, 3, 4, 5, 6, 9, 10, 12 };
     for (int i = 0; i < smaMonths.length; ++i) {
       WinStats winStats = new WinStats();
-      Sequence smaOrig = Strategy.calcSMAReturns(smaMonths[i], iStartSimulation, stockData, risky, safe);
-      SMAPredictor predictor = new SMAPredictor(smaMonths[i], "StockData", store);
+      Sequence smaOrig = Strategy.calcSMAReturns(smaMonths[i], iStartSimulation, prices, risky, safe);
+      SMAPredictor predictor = new SMAPredictor(smaMonths[i], prices.getName(), store);
       Sequence sma = Strategy.calcReturns(predictor, iStartSimulation, winStats, risky, safe);
 
       assert sma.length() == smaOrig.length(); // TODO
@@ -162,7 +230,7 @@ public class RetireTool
     // Multi-scale Momentum and SMA methods.
     for (Disposition disposition : Disposition.values()) {
       Sequence mom = Strategy.calcMultiMomentumReturns(iStartSimulation, risky, safe, disposition);
-      Sequence sma = Strategy.calcMultiSmaReturns(iStartSimulation, stockData, risky, safe, disposition);
+      Sequence sma = Strategy.calcMultiSmaReturns(iStartSimulation, prices, risky, safe, disposition);
       store.add(mom);
       store.add(sma);
 
@@ -173,7 +241,7 @@ public class RetireTool
     // Full multi-momentum/sma sweep.
     for (int assetMap = 255, i = 0; i < 8; ++i) {
       Sequence mom = Strategy.calcMultiMomentumReturns(iStartSimulation, risky, safe, assetMap);
-      Sequence sma = Strategy.calcMultiSmaReturns(iStartSimulation, stockData, risky, safe, assetMap);
+      Sequence sma = Strategy.calcMultiSmaReturns(iStartSimulation, prices, risky, safe, assetMap);
       store.add(mom);
       store.add(sma);
       assetMap &= ~(1 << i);
@@ -226,7 +294,7 @@ public class RetireTool
       }
     }
 
-    Strategy.calcMultiMomentumStats(risky, safe);
+    // Strategy.calcMultiMomentumStats(risky, safe);
 
     // DAA = 50/50 SMA-risky & Momentum-safe.
     Sequence daa = Strategy.calcMixedReturns(
@@ -237,8 +305,6 @@ public class RetireTool
     // Perfect = impossible strategy that always picks the best asset.
     Sequence perfect = Strategy.calcPerfectReturns(iStartSimulation, risky, safe);
     store.add(perfect);
-
-    System.out.printf("Finished Building Store (%s).\n", Library.formatDuration(Library.getTime() - startMS));
   }
 
   public static void printReturnLikelihoods(Sequence cumulativeReturns, boolean bInvert)
@@ -825,7 +891,7 @@ public class RetireTool
   public static void genBeatInflationChart(File dir) throws IOException
   {
     String[] names = new String[] { "stock", "bonds", "60/40", "momentum-1", "multimom-risky",
-        "Mom.Risky/Mom.Cautious-20/80", "Bonds/Mom.Safe-10/90" };
+        "Mom.Risky/Mom.Moderate-30/70", "Mom.Risky/Mom.Cautious-20/80", "Bonds/Mom.Safe-10/90" };
 
     final double diffMargin = 0.01;
     final double targetReturn = 3.0; // Annual return over inflation
@@ -991,30 +1057,29 @@ public class RetireTool
     Arrays.sort(results);
     for (int i = 0; i < names.length; ++i) {
       // System.out.printf("%40s: $%s\n", names[ii[i]], FinLib.dollarFormatter.format(targets[i]));
-//      System.out.printf("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n", results[i].name,
-//          FinLib.dollarFormatter.format(results[i].principal),
-//          FinLib.dollarFormatter.format(results[i].percentile10),
-//          FinLib.dollarFormatter.format(results[i].median),
-//          FinLib.dollarFormatter.format(results[i].percentile90));
+      // System.out.printf("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n", results[i].name,
+      // FinLib.dollarFormatter.format(results[i].principal),
+      // FinLib.dollarFormatter.format(results[i].percentile10),
+      // FinLib.dollarFormatter.format(results[i].median),
+      // FinLib.dollarFormatter.format(results[i].percentile90));
       System.out.printf("<tr><td>%s</td><td>%s</td><td>%.1f</td><td>%.1f</td><td>%.1f</td></tr>\n",
-          FinLib.getBoldedName(results[i].name),
-          FinLib.dollarFormatter.format(results[i].principal),
-          results[i].percentile10 / 1e6,
-          results[i].median / 1e6,
-          results[i].percentile90 / 1e6);
+          FinLib.getBoldedName(results[i].name), FinLib.dollarFormatter.format(results[i].principal),
+          results[i].percentile10 / 1e6, results[i].median / 1e6, results[i].percentile90 / 1e6);
     }
   }
 
   public static void main(String[] args) throws IOException
   {
-    if (args.length != 2) {
-      System.err.println("Usage: java ~.ShillerSnp <shiller-data-file> <t-bill-file>");
-      System.exit(1);
-    }
+    File dataDir = new File("g:/research/finance");
+    File dir = new File("g:/web/");
+    assert dataDir.isDirectory();
+    assert dir.isDirectory();
 
-    Sequence shiller = DataIO.loadShillerData(args[0]);
-    Sequence tbills = DataIO.loadDateValueCSV(args[1]);
-    tbills.setName("3-Month Treasury Bills");
+    setupVanguardData(dataDir, dir);
+
+    // Sequence shiller = DataIO.loadShillerData(new File(dataDir, "shiller.csv"));
+    // Sequence tbills = DataIO.loadDateValueCSV(new File(dataDir, "treasury-bills-3-month.csv"));
+    // tbills.setName("3-Month Treasury Bills");
 
     // long commonStart = Library.calcCommonStart(shiller, tbills);
     // long commonEnd = Library.calcCommonEnd(shiller, tbills);
@@ -1025,12 +1090,11 @@ public class RetireTool
     // System.out.printf("Common: [%s] -> [%s]\n", Library.formatDate(commonStart), Library.formatDate(commonEnd));
 
     // shiller = shiller.subseq(commonStart, commonEnd);
-    tbills = null; // tbills.subseq(commonStart, commonEnd);
+    // tbills = null; // tbills.subseq(commonStart, commonEnd);
 
-    File dir = new File("g:/web/");
-    assert dir.isDirectory();
+    // DataIO.downloadDailyDataFromYahoo(dataDir, FinLib.VANGUARD_INVESTOR_FUNDS);
 
-    buildCumulativeReturnsStore(shiller, tbills);
+    // buildCumulativeReturnsStore(shiller, tbills);
 
     // Chart.printDecadeTable(store.get("MultiMom-risky"), store.get("stock"));
     // Chart.printDecadeTable(store.get("Mom.Risky/Mom.Cautious-20/80"), store.get("stock"));
