@@ -31,6 +31,26 @@ public class RetireTool
   public static final int[]                  percentRisky = new int[] { 90, 80, 70, 60, 50, 40, 30, 20, 10 };
   public static final Strategy.Disposition[] dispositions = Strategy.Disposition.values();
 
+  public static void setupShillerData(File dataDir, File dir) throws IOException
+  {
+    Sequence shiller = DataIO.loadShillerData(new File(dataDir, "shiller.csv"));
+    Sequence tbills = DataIO.loadDateValueCSV(new File(dataDir, "treasury-bills-3-month.csv"));
+    tbills.setName("3-Month Treasury Bills");
+
+    // long commonStart = Library.calcCommonStart(shiller, tbills);
+    // long commonEnd = Library.calcCommonEnd(shiller, tbills);
+    // System.out.printf("Shiller: [%s] -> [%s]\n", Library.formatDate(shiller.getStartMS()),
+    // Library.formatDate(shiller.getEndMS()));
+    // System.out.printf("T-Bills: [%s] -> [%s]\n", Library.formatDate(tbills.getStartMS()),
+    // Library.formatDate(tbills.getEndMS()));
+    // System.out.printf("Common: [%s] -> [%s]\n", Library.formatDate(commonStart), Library.formatDate(commonEnd));
+
+    // shiller = shiller.subseq(commonStart, commonEnd);
+    tbills = null; // tbills.subseq(commonStart, commonEnd);
+
+    buildCumulativeReturnsStore(shiller, tbills);
+  }
+
   public static void setupVanguardData(File dataDir, File dir) throws IOException
   {
     final int iStartSimulation = 12;
@@ -82,14 +102,21 @@ public class RetireTool
     store.add(reits.dup().subseq(iStartSimulation), "REITs");
     store.add(istock.dup().subseq(iStartSimulation), "IntStock");
 
-    addStrategiesToStore(stock, bonds, stock, iStartSimulation);
+    Sequence risky = reits;
+    Sequence safe = bonds;
+
+    addStrategiesToStore(risky, safe, risky, iStartSimulation);
 
     Chart.saveLineChart(new File(dir, "vanguard-funds.html"), "Vanguard Funds", GRAPH_WIDTH, GRAPH_HEIGHT, true,
-        store.getReturns("Stock", "Bonds", "REITs", "IntStock"));
+        store.getReturns("Stock", "Bonds", "REITs", "IntStock", "daa"));
 
-    Chart.saveLineChart(new File(dir, "vanguard-strategies.html"), "Vanguard Strategies", GRAPH_WIDTH, GRAPH_HEIGHT,
-        true, store.getReturns("stock", "bonds", "Momentum-1", "MultiMom-Safe", "MultiMom-Cautious",
+    Chart.saveLineChart(new File(dir, "vanguard-momentum.html"), "Vanguard Strategies", GRAPH_WIDTH, GRAPH_HEIGHT,
+        true, store.getReturns("reits", "bonds", "Momentum-1", "MultiMom-Safe", "MultiMom-Cautious",
             "MultiMom-Moderate", "MultiMom-Risky"));
+
+    Chart.saveLineChart(new File(dir, "vanguard-sma.html"), "Vanguard Strategies", GRAPH_WIDTH, GRAPH_HEIGHT, true,
+        store.getReturns("reits", "bonds", "sma-1", "sma-3", "sma-5", "sma-10", "MultiSMA-Safe", "MultiSMA-Cautious",
+            "MultiSMA-Moderate", "MultiSMA-Risky"));
   }
 
   public static void buildCumulativeReturnsStore(Sequence shiller, Sequence tbills)
@@ -176,14 +203,16 @@ public class RetireTool
   {
     final int rebalanceMonths = 12;
     final double rebalanceBand = 0.0;
+    final Slippage slippage = Slippage.None; // new Slippage(0.01, 0.1);
 
     // Momentum sweep.
     final int[] momentumMonths = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12 };
     for (int i = 0; i < momentumMonths.length; ++i) {
       WinStats winStats = new WinStats();
-      Sequence momOrig = Strategy.calcMomentumReturns(momentumMonths[i], iStartSimulation, winStats, risky, safe);
+      Sequence momOrig = Strategy.calcMomentumReturns(momentumMonths[i], iStartSimulation, slippage, winStats, risky,
+          safe);
       MomentumPredictor predictor = new MomentumPredictor(momentumMonths[i], store);
-      Sequence mom = Strategy.calcReturns(predictor, iStartSimulation, winStats, risky, safe);
+      Sequence mom = Strategy.calcReturns(predictor, iStartSimulation, slippage, winStats, risky, safe);
 
       assert mom.length() == momOrig.length(); // TODO
       for (int ii = 0; ii < mom.length(); ++ii) {
@@ -208,9 +237,9 @@ public class RetireTool
     int[] smaMonths = new int[] { 1, 2, 3, 4, 5, 6, 9, 10, 12 };
     for (int i = 0; i < smaMonths.length; ++i) {
       WinStats winStats = new WinStats();
-      Sequence smaOrig = Strategy.calcSMAReturns(smaMonths[i], iStartSimulation, prices, risky, safe);
+      Sequence smaOrig = Strategy.calcSMAReturns(smaMonths[i], iStartSimulation, slippage, prices, risky, safe);
       SMAPredictor predictor = new SMAPredictor(smaMonths[i], prices.getName(), store);
-      Sequence sma = Strategy.calcReturns(predictor, iStartSimulation, winStats, risky, safe);
+      Sequence sma = Strategy.calcReturns(predictor, iStartSimulation, slippage, winStats, risky, safe);
 
       assert sma.length() == smaOrig.length(); // TODO
       for (int ii = 0; ii < sma.length(); ++ii) {
@@ -229,8 +258,8 @@ public class RetireTool
 
     // Multi-scale Momentum and SMA methods.
     for (Disposition disposition : Disposition.values()) {
-      Sequence mom = Strategy.calcMultiMomentumReturns(iStartSimulation, risky, safe, disposition);
-      Sequence sma = Strategy.calcMultiSmaReturns(iStartSimulation, prices, risky, safe, disposition);
+      Sequence mom = Strategy.calcMultiMomentumReturns(iStartSimulation, slippage, risky, safe, disposition);
+      Sequence sma = Strategy.calcMultiSmaReturns(iStartSimulation, slippage, prices, risky, safe, disposition);
       store.add(mom);
       store.add(sma);
 
@@ -240,8 +269,8 @@ public class RetireTool
 
     // Full multi-momentum/sma sweep.
     for (int assetMap = 255, i = 0; i < 8; ++i) {
-      Sequence mom = Strategy.calcMultiMomentumReturns(iStartSimulation, risky, safe, assetMap);
-      Sequence sma = Strategy.calcMultiSmaReturns(iStartSimulation, prices, risky, safe, assetMap);
+      Sequence mom = Strategy.calcMultiMomentumReturns(iStartSimulation, slippage, risky, safe, assetMap);
+      Sequence sma = Strategy.calcMultiSmaReturns(iStartSimulation, slippage, prices, risky, safe, assetMap);
       store.add(mom);
       store.add(sma);
       assetMap &= ~(1 << i);
@@ -298,7 +327,7 @@ public class RetireTool
 
     // DAA = 50/50 SMA-risky & Momentum-safe.
     Sequence daa = Strategy.calcMixedReturns(
-        new Sequence[] { store.get("multisma-risky"), store.get("multimom-moderate") }, new double[] { 30, 70 },
+        new Sequence[] { store.get("multisma-risky"), store.get("multimom-moderate") }, new double[] { 50, 50 },
         rebalanceMonths, rebalanceBand);
     store.add(daa, "DAA");
 
@@ -1075,26 +1104,10 @@ public class RetireTool
     assert dataDir.isDirectory();
     assert dir.isDirectory();
 
-    setupVanguardData(dataDir, dir);
-
-    // Sequence shiller = DataIO.loadShillerData(new File(dataDir, "shiller.csv"));
-    // Sequence tbills = DataIO.loadDateValueCSV(new File(dataDir, "treasury-bills-3-month.csv"));
-    // tbills.setName("3-Month Treasury Bills");
-
-    // long commonStart = Library.calcCommonStart(shiller, tbills);
-    // long commonEnd = Library.calcCommonEnd(shiller, tbills);
-    // System.out.printf("Shiller: [%s] -> [%s]\n", Library.formatDate(shiller.getStartMS()),
-    // Library.formatDate(shiller.getEndMS()));
-    // System.out.printf("T-Bills: [%s] -> [%s]\n", Library.formatDate(tbills.getStartMS()),
-    // Library.formatDate(tbills.getEndMS()));
-    // System.out.printf("Common: [%s] -> [%s]\n", Library.formatDate(commonStart), Library.formatDate(commonEnd));
-
-    // shiller = shiller.subseq(commonStart, commonEnd);
-    // tbills = null; // tbills.subseq(commonStart, commonEnd);
+    // setupVanguardData(dataDir, dir);
+    setupShillerData(dataDir, dir);
 
     // DataIO.downloadDailyDataFromYahoo(dataDir, FinLib.VANGUARD_INVESTOR_FUNDS);
-
-    // buildCumulativeReturnsStore(shiller, tbills);
 
     // Chart.printDecadeTable(store.get("MultiMom-risky"), store.get("stock"));
     // Chart.printDecadeTable(store.get("Mom.Risky/Mom.Cautious-20/80"), store.get("stock"));
@@ -1103,7 +1116,7 @@ public class RetireTool
     // genInterestRateGraph(shiller, tbills, new File(dir, "interest-rates.html"));
     // compareRebalancingMethods(shiller, dir);
     // genReturnViz(dir);
-    // genReturnChart(dir);
+    genReturnChart(dir);
     // genSMASweepChart(shiller, dir);
     // genMomentumSweepChart(dir);
     // genMomentumMixChart(dir);

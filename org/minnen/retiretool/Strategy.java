@@ -14,7 +14,8 @@ public class Strategy
     Risky, Moderate, Cautious, Safe
   }
 
-  public static Sequence calcReturns(AssetPredictor predictor, int iStart, WinStats winStats, Sequence... seqs)
+  public static Sequence calcReturns(AssetPredictor predictor, int iStart, Slippage slippage, WinStats winStats,
+      Sequence... seqs)
   {
     assert seqs.length > 1;
     int N = seqs[0].length();
@@ -25,6 +26,7 @@ public class Strategy
 
     final double principal = 10000.0;
     double balance = principal;
+    Sequence currentAsset = null;
     Sequence returns = new Sequence(predictor.name);
     returns.addData(balance, seqs[0].getTimeMS(iStart));
     if (winStats == null) {
@@ -37,6 +39,10 @@ public class Strategy
       predictor.store.lock(seqs[0].getStartMS(), seqs[0].getTimeMS(i) - 1);
       int iSelected = predictor.selectAsset(seqs);
       predictor.store.unlock();
+
+      Sequence nextAsset = (iSelected >= 0 ? seqs[iSelected] : null);
+      balance = slippage.adjustForAssetChange(balance, i - 1, currentAsset, nextAsset);
+      currentAsset = nextAsset;
 
       // Find correct answer (sequence with highest return for current month)
       double correctReturn = 1.0;
@@ -52,8 +58,11 @@ public class Strategy
 
       // Invest everything in best asset for this month.
       // No bestSeq => hold everything in cash for no gain and no loss.
-      double realizedReturn = iSelected < 0 ? 1.0 : FinLib.getReturn(seqs[iSelected], i - 1, i);
-      balance *= realizedReturn;
+      double realizedReturn = 1.0;
+      if (iSelected >= 0) {
+        realizedReturn = FinLib.getReturn(seqs[iSelected], i - 1, i);
+        balance *= realizedReturn;
+      }
       returns.addData(balance, seqs[0].getTimeMS(i));
 
       // Update win stats
@@ -81,11 +90,13 @@ public class Strategy
    * 
    * @param nMonths calculate CAGR over last N months.
    * @param iStart index of month to start investing.
+   * @param slippage slippage model to use for each trade.
    * @param prediction stats will be saved here (optional; can be null)
    * @param seqs cumulative returns for each asset.
    * @return sequence of returns using the momentum strategy
    */
-  public static Sequence calcMomentumReturns(int nMonths, int iStart, WinStats winStats, Sequence... seqs)
+  public static Sequence calcMomentumReturns(int nMonths, int iStart, Slippage slippage, WinStats winStats,
+      Sequence... seqs)
   {
     assert seqs.length > 1;
     int N = seqs[0].length();
@@ -94,6 +105,7 @@ public class Strategy
       assert seqs[i].getStartMS() == seqs[0].getStartMS();
     }
 
+    Sequence currentAsset = null;
     double balance = 1.0;
     Sequence momentum = new Sequence("Momentum-" + nMonths);
     momentum.addData(balance, seqs[0].getTimeMS(iStart));
@@ -125,6 +137,10 @@ public class Strategy
         }
       }
 
+      Sequence nextAsset = (iSelected >= 0 ? seqs[iSelected] : null);
+      balance = slippage.adjustForAssetChange(balance, i - 1, currentAsset, nextAsset);
+      currentAsset = nextAsset;
+
       // Invest everything in best asset for this month.
       // No bestSeq => hold everything in cash for no gain and no loss.
       double realizedReturn = iSelected < 0 ? 1.0 : FinLib.getReturn(seqs[iSelected], i - 1, i);
@@ -152,18 +168,21 @@ public class Strategy
    * 
    * @param numMonths calculate SMA over past N months
    * @param iStart index of month to start investing.
+   * @param slippage slippage model to use for each trade.
    * @param prices monthly price used for SMA and signal
    * @param risky cumulative returns for risky asset
    * @param safe cumulative returns for safe asset
    * @return sequence of returns using the above/below-SMA strategy
    */
-  public static Sequence calcSMAReturns(int numMonths, int iStart, Sequence prices, Sequence risky, Sequence safe)
+  public static Sequence calcSMAReturns(int numMonths, int iStart, Slippage slippage, Sequence prices, Sequence risky,
+      Sequence safe)
   {
     // TODO update to use sequence locking for safety.
     assert risky.length() == safe.length();
 
     Sequence sma = new Sequence("SMA-" + numMonths);
     double balance = 1.0;
+    Sequence currentAsset = null;
     sma.addData(balance, risky.getTimeMS(iStart));
     for (int i = iStart + 1; i < risky.length(); ++i) {
       // Calculate trailing moving average.
@@ -173,7 +192,12 @@ public class Strategy
       // Test above / below moving average.
       double price = prices.get(i - 1, 0);
 
-      double lastMonthReturn = FinLib.getReturn(price > ma ? risky : safe, i - 1, i);
+      // Select asset based on price relative to moving average.
+      Sequence nextAsset = (price > ma ? risky : safe);
+      balance = slippage.adjustForAssetChange(balance, i - 1, currentAsset, nextAsset);
+      currentAsset = nextAsset;
+
+      double lastMonthReturn = FinLib.getReturn(nextAsset, i - 1, i);
       balance *= lastMonthReturn;
       sma.addData(balance, risky.getTimeMS(i));
     }
@@ -288,19 +312,21 @@ public class Strategy
     return returns;
   }
 
-  public static Sequence calcMultiMomentumReturns(int iStart, Sequence risky, Sequence safe, Disposition disposition)
+  public static Sequence calcMultiMomentumReturns(int iStart, Slippage slippage, Sequence risky, Sequence safe,
+      Disposition disposition)
   {
-    return calcMultiMomentumReturns(iStart, risky, safe, disposition, -1);
+    return calcMultiMomentumReturns(iStart, slippage, risky, safe, disposition, -1);
   }
 
-  public static Sequence calcMultiMomentumReturns(int iStart, Sequence risky, Sequence safe, int assetMap)
+  public static Sequence calcMultiMomentumReturns(int iStart, Slippage slippage, Sequence risky, Sequence safe,
+      int assetMap)
   {
     assert assetMap >= 0;
-    return calcMultiMomentumReturns(iStart, risky, safe, Disposition.Safe, assetMap);
+    return calcMultiMomentumReturns(iStart, slippage, risky, safe, Disposition.Safe, assetMap);
   }
 
-  private static Sequence calcMultiMomentumReturns(int iStart, Sequence risky, Sequence safe, Disposition disposition,
-      int assetMap)
+  private static Sequence calcMultiMomentumReturns(int iStart, Slippage slippage, Sequence risky, Sequence safe,
+      Disposition disposition, int assetMap)
   {
     int N = risky.length();
     assert safe.length() == N;
@@ -314,16 +340,19 @@ public class Strategy
       name = "MultiMom-" + disposition;
     }
     Sequence mom = new Sequence(name);
+    Sequence currentAsset = null;
     double balance = 1.0;
     mom.addData(balance, risky.getTimeMS(iStart));
     for (int i = iStart + 1; i < N; ++i) {
       int code = calcMomentumCode(i - 1, numMonths, risky, safe);
 
       // Use votes to select asset.
-      Sequence bestSeq = selectAsset(code, disposition, assetMap, risky, safe);
+      Sequence nextAsset = selectAsset(code, disposition, assetMap, risky, safe);
+      balance = slippage.adjustForAssetChange(balance, i - 1, currentAsset, nextAsset);
+      currentAsset = nextAsset;
 
       // Invest everything in best asset for this month.
-      balance *= FinLib.getReturn(bestSeq, i - 1, i);
+      balance *= FinLib.getReturn(nextAsset, i - 1, i);
       mom.addData(balance, risky.getTimeMS(i));
     }
 
@@ -456,20 +485,21 @@ public class Strategy
     printStats("SMA Statistics:", map);
   }
 
-  public static Sequence calcMultiSmaReturns(int iStart, Sequence prices, Sequence risky, Sequence safe,
-      Disposition disposition)
+  public static Sequence calcMultiSmaReturns(int iStart, Slippage slippage, Sequence prices, Sequence risky,
+      Sequence safe, Disposition disposition)
   {
-    return calcMultiSmaReturns(iStart, prices, risky, safe, disposition, -1);
+    return calcMultiSmaReturns(iStart, slippage, prices, risky, safe, disposition, -1);
   }
 
-  public static Sequence calcMultiSmaReturns(int iStart, Sequence prices, Sequence risky, Sequence safe, int assetMap)
+  public static Sequence calcMultiSmaReturns(int iStart, Slippage slippage, Sequence prices, Sequence risky,
+      Sequence safe, int assetMap)
   {
     assert assetMap >= 0;
-    return calcMultiSmaReturns(iStart, prices, risky, safe, Disposition.Safe, assetMap);
+    return calcMultiSmaReturns(iStart, slippage, prices, risky, safe, Disposition.Safe, assetMap);
   }
 
-  public static Sequence calcMultiSmaReturns(int iStart, Sequence prices, Sequence risky, Sequence safe,
-      Disposition disposition, int assetMap)
+  public static Sequence calcMultiSmaReturns(int iStart, Slippage slippage, Sequence prices, Sequence risky,
+      Sequence safe, Disposition disposition, int assetMap)
   {
     int N = risky.length();
     assert safe.length() == N;
@@ -485,14 +515,17 @@ public class Strategy
     Sequence sma = new Sequence(name);
     double balance = 1.0;
     sma.addData(balance, risky.getTimeMS(iStart));
+    Sequence currentAsset = null;
     for (int i = iStart + 1; i < N; ++i) {
       int code = calcSmaCode(i - 1, numMonths, prices);
 
       // Use votes to select asset.
-      Sequence bestSeq = selectAsset(code, disposition, assetMap, risky, safe);
+      Sequence nextAsset = selectAsset(code, disposition, assetMap, risky, safe);
+      balance = slippage.adjustForAssetChange(balance, i - 1, currentAsset, nextAsset);
+      currentAsset = nextAsset;
 
       // Invest everything in best asset for this month.
-      balance *= FinLib.getReturn(bestSeq, i - 1, i);
+      balance *= FinLib.getReturn(nextAsset, i - 1, i);
       sma.addData(balance, risky.getTimeMS(i));
     }
 

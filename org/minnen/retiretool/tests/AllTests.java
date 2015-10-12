@@ -6,7 +6,7 @@ import org.junit.runners.Suite.SuiteClasses;
 
 @RunWith(Suite.class)
 @SuiteClasses({ TestBond.class, TestInvestmentStats.class, TestLibrary.class, TestFinLib.class, TestSequence.class,
-    TestSequenceStore.class })
+    TestSequenceStore.class, TestSlippage.class })
 public class AllTests
 {
 
