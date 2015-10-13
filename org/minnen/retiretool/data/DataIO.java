@@ -15,7 +15,7 @@ import org.minnen.retiretool.Library;
 public class DataIO
 {
   /**
-   * Load data from CSV file of <data>,<value>.
+   * Load data from CSV file of <date>,<value>.
    * 
    * @param file file to load
    * @return Sequence with data loaded from the given file.
@@ -33,12 +33,17 @@ public class DataIO
     String line;
     while ((line = in.readLine()) != null) {
       line = line.trim();
-      if (line.isEmpty() || line.startsWith("\"")) {
+      if (line.isEmpty() || line.startsWith("\"") || line.toLowerCase().startsWith("date")) {
         continue;
       }
       String[] toks = line.trim().split("[,\\s]+");
       if (toks == null || toks.length != 2) {
         System.err.printf("Error parsing CSV data: [%s]\n", line);
+        continue;
+      }
+
+      // Skip missing data.
+      if (toks[1].equals(".")) {
         continue;
       }
 

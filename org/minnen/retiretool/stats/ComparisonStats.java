@@ -24,7 +24,7 @@ public class ComparisonStats
   public double                targetReturn;
   public Sequence[]            defenders;
   public Map<Integer, Results> durationToResults;
-  public final static int[]    durations = new int[] { 1, 12, 5 * 12, 10 * 12, 20 * 12, 30 * 12 };
+  public final static int[]    durations = new int[] { 1, 12, 5 * 12, 10 * 12, 15*12, 20 * 12, 30 * 12 };
 
   private ComparisonStats()
   {

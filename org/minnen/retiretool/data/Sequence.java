@@ -552,6 +552,13 @@ public class Sequence implements Iterable<FeatureVec>
   /** @return subsequence with numElements starting at index iStart. */
   public Sequence subseq(int iStart, int numElements)
   {
+    final int N = length();
+    if (iStart < 0) {
+      iStart += N;
+    }
+    if (numElements < 0) {
+      numElements = N - iStart;
+    }
     assert iStart >= 0 && numElements > 0;
     Sequence seq = new Sequence(name);
     for (int i = 0; i < numElements; ++i) {

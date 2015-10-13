@@ -46,7 +46,7 @@ public class Chart
   public static void saveLineChart(File file, String title, int width, int height, boolean logarithmic,
       List<Sequence> seqs) throws IOException
   {
-    saveHighChart(file, ChartType.Line, title, null, null, width, height, 0.5, Double.NaN, logarithmic ? 0.5
+    saveHighChart(file, ChartType.Line, title, null, null, width, height, Double.NaN, Double.NaN, logarithmic ? 0.5
         : Double.NaN, logarithmic, 0, seqs.toArray(new Sequence[seqs.size()]));
   }
 
