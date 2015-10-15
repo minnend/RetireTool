@@ -158,7 +158,7 @@ public class Bond
     double nf = years * annualFreq; // number of payments left
     double effIR = (interestRate / 100.0) / annualFreq; // effective interest rate per payment
     double x = Math.pow(1.0 + effIR, -nf);
-    double couponPrice = couponPayment * (1.0 - x) / effIR;
+    double couponPrice = (effIR > 0 ? couponPayment * (1.0 - x) / effIR : 0.0);
     double maturityPrice = parValue * x;
 
     double accruedInterest = 0.0;
@@ -168,7 +168,7 @@ public class Bond
           + couponPayment;
       double priceRatio = futurePrice / curPrice;
       accruedInterest = curPrice * (Math.pow(priceRatio, fractionalInterest) - 1.0);
-      // System.out.printf("Previous Price: %.2f  Next Price: %.2f  ratio=%f\n", prevPrice, nextPrice, priceRatio);
+      // System.out.printf("Current Price: %.2f  Future Price: %.2f  ratio=%f\n", curPrice, futurePrice, priceRatio);
     }
 
     // System.out.printf("[%.2f + %.2f + %.2f]\n", couponPrice, maturityPrice, accruedInterest);

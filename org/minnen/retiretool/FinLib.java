@@ -415,7 +415,7 @@ public final class FinLib
    * Calculates annual salary needed to generate the given monthly take-home cash.
    * 
    * @param monthlyCash desired monthly take-home cash
-   * @param effectiveTaxRate effective (total) tax rate
+   * @param effectiveTaxRate effective (total) tax rate (0.3 = 30%)
    * @return required annual salary to generate monthly cash
    */
   public static double calcAnnualSalary(double monthlyCash, double effectiveTaxRate)
@@ -611,9 +611,8 @@ public final class FinLib
             endBalances[i] = adjustForInflation(cpi, endBalance, i + nMonths, nData - 1);
             // System.out.printf("[%s] -> [%s]: %.0f -> %.0f  (%.0f, %.3f)  %s\n",
             // Library.formatMonth(cpi.getTimeMS(i)),
-            // Library.formatMonth(cpi.getTimeMS(i + nMonths)),
-            // endBalance, endBalances[i], finalSalary, endBalance / finalSalary,
-            // endBalance / finalSalary < 5.0 ? "************************" : "");
+            // Library.formatMonth(cpi.getTimeMS(i + nMonths)), endBalance, endBalances[i], finalSalary, endBalance
+            // / finalSalary, endBalance / finalSalary < 23.0 ? "************************" : "");
           }
         } else {
           failures.add(i);
@@ -991,5 +990,62 @@ public final class FinLib
     }
 
     return monthly;
+  }
+
+  public static Sequence pad(Sequence seq, Sequence ref, double value)
+  {
+    Sequence padded = new Sequence(seq.getName());
+
+    // Pad front of sequence.
+    if (seq.getStartMS() > ref.getStartMS()) {
+      int offset = ref.getClosestIndex(seq.getStartMS());
+      assert seq.getStartMS() == ref.getTimeMS(offset);
+      Sequence prefix = new Sequence();
+      for (int i = 0; i < offset; ++i) {
+        prefix.addData(value, ref.getTimeMS(i));
+      }
+      padded.append(prefix);
+    }
+
+    // Copy sequence.
+    padded.append(seq);
+
+    // Pad back of sequence.
+    if (seq.getEndMS() < ref.getEndMS()) {
+      int offset = ref.getClosestIndex(seq.getEndMS());
+      assert seq.getEndMS() == ref.getTimeMS(offset);
+      Sequence suffix = new Sequence();
+      for (int i = offset + 1; i < ref.length(); ++i) {
+        suffix.addData(value, ref.getTimeMS(i));
+      }
+      padded.append(suffix);
+    }
+
+    assert padded.length() >= ref.length();
+    assert padded.getStartMS() <= ref.getStartMS();
+    assert padded.getEndMS() >= ref.getEndMS();
+
+    return padded;
+  }
+
+  /**
+   * Calculate growth of cash given interest rates
+   * 
+   * @param interestRates interest rates (annualized, 4.3=4.3%)
+   * @return cumulative returns
+   */
+  public static Sequence calcInterestReturns(Sequence interestRates)
+  {
+    Sequence seq = new Sequence("cash");
+    double balance = 1.0;
+    seq.addData(balance, interestRates.getStartMS());
+    for (int i = 1; i < interestRates.length(); ++i) {
+      double annualRate = interestRates.get(i, 0);
+      double annualMul = FinLib.ret2mul(annualRate);
+      double monthlyRate = Math.pow(annualMul, Library.ONE_TWELFTH);
+      balance *= monthlyRate;
+      seq.addData(balance, interestRates.getTimeMS(i));
+    }
+    return seq;
   }
 }

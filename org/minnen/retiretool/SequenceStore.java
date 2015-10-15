@@ -110,10 +110,7 @@ public class SequenceStore implements Iterable<Sequence>
 
     // Make sure new sequence matches existing sequences.
     if (!nominalReturns.isEmpty()) {
-      Sequence seq = nominalReturns.get(0);
-      assert cumulativeReturns.length() == seq.length();
-      assert cumulativeReturns.getStartMS() == seq.getStartMS();
-      assert cumulativeReturns.getEndMS() == seq.getEndMS();
+      assert cumulativeReturns.matches(nominalReturns.get(0));
     }
 
     // Normalize cumulative returns if requested.
@@ -182,10 +179,7 @@ public class SequenceStore implements Iterable<Sequence>
 
     // Make sure new sequence matches existing sequences.
     if (!miscSeqs.isEmpty()) {
-      Sequence seq = miscSeqs.get(0);
-      assert misc.length() == seq.length();
-      assert misc.getStartMS() == seq.getStartMS();
-      assert misc.getEndMS() == seq.getEndMS();
+      assert misc.matches(miscSeqs.get(0));
     }
 
     // Add the new sequence to the store.

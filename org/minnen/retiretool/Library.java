@@ -36,6 +36,7 @@ public final class Library
   public final static SimpleDateFormat sdfTime      = getSDF("yyyy MMM d HH:mm:ss");
   public final static SimpleDateFormat sdfDate      = getSDF("d MMM yyyy");
   public final static SimpleDateFormat sdfMonth     = getSDF("MMM yyyy");
+  public final static SimpleDateFormat sdfYMD       = getSDF("yyyy-MM-dd");
   public final static DecimalFormat    df           = new DecimalFormat();
   public final static long             AppStartTime = getTime();
   public static final String           os           = System.getProperty("os.name");
@@ -162,6 +163,14 @@ public final class Library
     if (ms == TIME_ERROR || ms == Long.MAX_VALUE)
       return null;
     return sdfMonth.format(new Date(ms));
+  }
+
+  /** @return string representation of the given time as year-month-day */
+  public static String formatYMD(long ms)
+  {
+    if (ms == TIME_ERROR || ms == Long.MAX_VALUE)
+      return null;
+    return sdfYMD.format(new Date(ms));
   }
 
   /** @return date at midnight that starts the given day */

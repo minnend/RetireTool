@@ -395,6 +395,11 @@ public class Sequence implements Iterable<FeatureVec>
     return this;
   }
 
+  public Sequence div(double x)
+  {
+    return dup()._div(x);
+  }
+
   /**
    * @return index of the data point closest to the given time without respecting lock boundaries.
    */
@@ -467,10 +472,16 @@ public class Sequence implements Iterable<FeatureVec>
     return i;
   }
 
-  /** add all data from the given sequence to this sequence */
+  /** Add all data from the given sequence to the end of this sequence. */
   public void append(Sequence seq)
   {
     data.addAll(seq.data);
+  }
+
+  /** Add all data from the given sequence to the beginning of this sequence. */
+  public void prepend(Sequence seq)
+  {
+    data.addAll(0, seq.data);
   }
 
   /**
@@ -688,5 +699,39 @@ public class Sequence implements Iterable<FeatureVec>
     }
     seq.lock(lockStart, lockEnd);
     return seq;
+  }
+
+  /**
+   * @return true if the length and time bounds match.
+   */
+  public boolean matches(Sequence other)
+  {
+    return (other != null && other.length() == length() && other.getStartMS() == getStartMS() && other.getEndMS() == getEndMS());
+  }
+
+  public Sequence derivative()
+  {
+    Sequence deriv = new Sequence(getName() + "- Derivative");
+    FeatureVec prev = get(0);
+    for (int i = 1; i < length(); ++i) {
+      FeatureVec cur = get(i);
+      FeatureVec diff = cur.sub(prev);
+      deriv.addData(diff, prev.getTime());
+      prev = cur;
+    }
+    return deriv;
+  }
+  
+  public Sequence derivativeMul()
+  {
+    Sequence deriv = new Sequence(getName() + "- Multiplicative-Derivative");
+    FeatureVec prev = get(0);
+    for (int i = 1; i < length(); ++i) {
+      FeatureVec cur = get(i);
+      FeatureVec diff = cur.div(prev);
+      deriv.addData(diff, prev.getTime());
+      prev = cur;
+    }
+    return deriv;
   }
 }

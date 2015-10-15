@@ -103,7 +103,7 @@ public class Chart
 
       if (chartType == ChartType.Line) {
         writer.write("  chart: {\n");
-        writer.write("   zoomType: 'x'\n");
+        writer.write("   zoomType: 'xy'\n");
         writer.write("  },\n");
       }
 

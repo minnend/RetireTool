@@ -1,12 +1,15 @@
 package org.minnen.retiretool;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 import org.minnen.retiretool.Chart.ChartType;
 import org.minnen.retiretool.Strategy.Disposition;
@@ -23,25 +26,28 @@ import org.minnen.retiretool.stats.WinStats;
 
 public class RetireTool
 {
-  public static final int                    GRAPH_WIDTH  = 710;
-  public static final int                    GRAPH_HEIGHT = 450;
+  public static final int                    GRAPH_WIDTH              = 710;
+  public static final int                    GRAPH_HEIGHT             = 450;
 
-  public final static SequenceStore          store        = new SequenceStore();
+  public final static SequenceStore          store                    = new SequenceStore();
 
-  public static final int[]                  percentRisky = new int[] { 90, 80, 70, 60, 50, 40, 30, 20, 10 };
-  public static final Strategy.Disposition[] dispositions = Strategy.Disposition.values();
+  public static final int[]                  percentRisky             = new int[] { 90, 80, 70, 60, 50, 40, 30, 20, 10 };
+  public static final Strategy.Disposition[] dispositions             = Strategy.Disposition.values();
+
+  public static final boolean                BUILD_COMPLEX_STRATEGIES = false;
 
   public static void setupShillerData(File dataDir, File dir) throws IOException
   {
     Sequence shiller = DataIO.loadShillerData(new File(dataDir, "shiller.csv"));
-    // Sequence tbills = DataIO.loadDateValueCSV(new File(dataDir, "treasury-bills-3-month.csv"));
-    // tbills.setName("3-Month Treasury Bills");
+    Sequence tbillData = DataIO.loadDateValueCSV(new File(dataDir, "treasury-bills-3-month.csv"));
+    tbillData.setName("3-Month Treasury Bills");
+    tbillData = FinLib.pad(tbillData, shiller, 0.0);
 
     // Sequence nikkeiDaily = DataIO.loadDateValueCSV(new File(dataDir, "nikkei225-daily.csv"));
     // Sequence nikkei = FinLib.daily2monthly(nikkeiDaily);
 
-    // long commonStart = Library.calcCommonStart(shiller, nikkei, tbills);
-    // long commonEnd = Library.calcCommonEnd(shiller, nikkei, tbills);
+    // long commonStart = Library.calcCommonStart(shiller, tbillData);
+    // long commonEnd = Library.calcCommonEnd(shiller, tbillData);
     // System.out.printf("Shiller: [%s] -> [%s]\n", Library.formatDate(shiller.getStartMS()),
     // Library.formatDate(shiller.getEndMS()));
     // System.out.printf("Stock: [%s] -> [%s]\n", Library.formatMonth(nikkei.getStartMS()),
@@ -51,10 +57,10 @@ public class RetireTool
     // System.out.printf("Common: [%s] -> [%s]\n", Library.formatDate(commonStart), Library.formatDate(commonEnd));
 
     // shiller = shiller.subseq(commonStart, commonEnd);
+    // tbillData = tbillData.subseq(commonStart, commonEnd);
     // nikkei = nikkei.subseq(commonStart, commonEnd);
-    // tbills = tbills.subseq(commonStart, commonEnd);
 
-    buildCumulativeReturnsStore(shiller, null, null);// tbills, nikkei);
+    buildCumulativeReturnsStore(shiller, tbillData, null, BUILD_COMPLEX_STRATEGIES);
   }
 
   public static void setupVanguardData(File dataDir, File dir) throws IOException
@@ -98,10 +104,9 @@ public class RetireTool
     store.addMisc(reits, "REITs-All");
     store.addMisc(istock, "IntStock-All");
 
-    // Add inflation (CPI) data.
+    // Add CPI data.
     Sequence cpi = Shiller.getInflationData(shiller);
     store.addMisc(cpi, "cpi");
-    store.alias("inflation", "cpi");
 
     store.add(stock.dup().subseq(iStartSimulation), "Stock");
     store.add(bonds.dup().subseq(iStartSimulation), "Bonds");
@@ -127,42 +132,47 @@ public class RetireTool
             "MultiSMA-Moderate", "MultiSMA-Risky"));
   }
 
-  public static void buildCumulativeReturnsStore(Sequence shiller, Sequence tbillData, Sequence nikkeiAll)
+  public static void buildCumulativeReturnsStore(Sequence shiller, Sequence tbillData, Sequence nikkeiAll,
+      boolean buildComplexStrategies)
   {
-    assert tbillData == null || tbillData.length() == shiller.length();
-    assert nikkeiAll == null || nikkeiAll.length() == shiller.length();
+    assert tbillData == null || tbillData.matches(shiller);
+    assert nikkeiAll == null || nikkeiAll.matches(shiller);
 
     final long startMS = System.currentTimeMillis();
 
-    final int iStartData = shiller.getIndexForDate(1987, 12);
-    final int iEndData = -1;// shiller.getIndexForDate(2009, 12);
+    final int iStartData = 0; // shiller.getIndexForDate(1987, 12);
+    final int iEndData = -1; // shiller.getIndexForDate(2009, 12);
 
     final int iStartSimulation = 12;
 
     // Extract stock and bond data from shiller sequence.
     Sequence stockData = Shiller.getStockData(shiller, iStartData, iEndData);
     Sequence bondData = Shiller.getBondData(shiller, iStartData, iEndData);
-    assert stockData.length() == bondData.length();
+    assert stockData.matches(bondData);
     System.out.printf("Build Store: [%s] -> [%s]\n", Library.formatMonth(stockData.getStartMS()),
         Library.formatMonth(stockData.getEndMS()));
     store.addMisc(stockData, "StockData");
     store.addMisc(bondData, "BondData");
 
-    // Add inflation (CPI) data.
+    // Add CPI data.
     store.addMisc(Shiller.getInflationData(shiller, iStartData, iEndData), "cpi");
-    store.alias("inflation", "cpi");
 
     // Calculate cumulative returns for full stock, bond, and t-bill data.
     Sequence stockAll = FinLib.calcSnpReturns(stockData, 0, -1, FinLib.DividendMethod.MONTHLY);
     Sequence bondsAll = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, -1);
-    assert stockAll.length() == bondsAll.length();
+    assert stockAll.matches(bondsAll);
     store.addMisc(stockAll, "Stock-All");
     store.addMisc(bondsAll, "Bonds-All");
     Sequence tbillsAll = null;
     if (tbillData != null) {
+      store.addMisc(tbillData, "TBillData");
       tbillsAll = Bond.calcReturnsRebuy(BondFactory.bill3Month, tbillData, iStartData, iEndData);
-      assert tbillsAll.length() == stockAll.length();
-      store.addMisc(tbillsAll, "Bills-All");
+      assert stockAll.matches(tbillsAll);
+      store.addMisc(tbillsAll, "TBills-All");
+
+      Sequence cash = FinLib.calcInterestReturns(tbillData);
+      assert tbillData.matches(cash);
+      store.addMisc(cash, "cash");
     }
 
     // Extract requested subsequences from cumulative returns for stock, bonds, and t-bills.
@@ -170,14 +180,14 @@ public class RetireTool
     Sequence bonds = bondsAll.subseq(iStartSimulation);
     stock._div(stock.getFirst(0));
     bonds._div(bonds.getFirst(0));
-    assert stock.length() == bonds.length();
+    assert stock.matches(bonds);
     store.add(stock, "Stock");
     store.add(bonds, "Bonds");
 
     if (tbillsAll != null) {
       Sequence tbills = tbillsAll.subseq(iStartSimulation);
       tbills._div(tbills.getFirst(0));
-      store.add(tbills, "Bills");
+      store.add(tbills, "TBills");
     }
 
     if (nikkeiAll != null) {
@@ -197,9 +207,11 @@ public class RetireTool
     store.add(bondsHold, "Bonds [Hold]");
 
     // Setup risky and safe assets for use with dynamic asset allocation strategies.
-    Sequence risky = stockAll;
-    Sequence safe = bondsAll;
-    addStrategiesToStore(risky, safe, risky, iStartSimulation);
+    if (buildComplexStrategies) {
+      Sequence risky = stockAll;
+      Sequence safe = bondsAll;
+      addStrategiesToStore(risky, safe, risky, iStartSimulation);
+    }
 
     System.out.printf("Finished Building Store (%s).\n", Library.formatDuration(Library.getTime() - startMS));
   }
@@ -250,7 +262,7 @@ public class RetireTool
     }
 
     // SMA sweep.
-    int[] smaMonths = new int[] { 1, 2, 3, 4, 5, 6, 9, 10, 12 };
+    int[] smaMonths = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
     for (int i = 0; i < smaMonths.length; ++i) {
       WinStats winStats = new WinStats();
       Sequence smaOrig = Strategy.calcSMAReturns(smaMonths[i], iStartSimulation, slippage, prices, risky, safe);
@@ -296,11 +308,25 @@ public class RetireTool
     for (int j = 0; j < dispositions.length; ++j) {
       String name1 = "MultiMom-" + dispositions[j];
       for (int k = j + 1; k < dispositions.length; ++k) {
-        String name2 = "multimom-" + dispositions[k];
+        String name2 = "MultiMom-" + dispositions[k];
         for (int i = 0; i < percentRisky.length; ++i) {
           Sequence seq = Strategy.calcMixedReturns(new Sequence[] { store.get(name1), store.get(name2) }, new double[] {
               percentRisky[i], 100 - percentRisky[i] }, 12, 0.0);
           store.add(seq, String.format("Mom.%s/Mom.%s-%d/%d", dispositions[j], dispositions[k], percentRisky[i],
+              100 - percentRisky[i]));
+        }
+      }
+    }
+
+    // Mixed multiscale sma strategies.
+    for (int j = 0; j < dispositions.length; ++j) {
+      String name1 = "MultiSMA-" + dispositions[j];
+      for (int k = j + 1; k < dispositions.length; ++k) {
+        String name2 = "MultiSMA-" + dispositions[k];
+        for (int i = 0; i < percentRisky.length; ++i) {
+          Sequence seq = Strategy.calcMixedReturns(new Sequence[] { store.get(name1), store.get(name2) }, new double[] {
+              percentRisky[i], 100 - percentRisky[i] }, 12, 0.0);
+          store.add(seq, String.format("SMA.%s/SMA.%s-%d/%d", dispositions[j], dispositions[k], percentRisky[i],
               100 - percentRisky[i]));
         }
       }
@@ -322,6 +348,7 @@ public class RetireTool
       for (int j = 0; j <= 90 && i + j < 100; j += 10) {
         int k = 100 - (i + j);
         for (Strategy.Disposition disposition : dispositions) {
+          // Mix in momentum.
           Sequence seq = Strategy.calcMixedReturns(
               new Sequence[] { store.get("stock"), store.get("bonds"), store.get("multimom-" + disposition) },
               new double[] { i, j, k }, 12, 0.0);
@@ -335,6 +362,34 @@ public class RetireTool
             name = String.format("Stock/Bonds/Mom.%s-%d/%d/%d", disposition, i, j, k);
           }
           store.add(seq, name);
+
+          // Mix in SMA.
+          seq = Strategy.calcMixedReturns(
+              new Sequence[] { store.get("stock"), store.get("bonds"), store.get("multisma-" + disposition) },
+              new double[] { i, j, k }, 12, 0.0);
+
+          if (i == 0) {
+            name = String.format("Bonds/SMA.%s-%d/%d", disposition, j, k);
+          } else if (j == 0) {
+            name = String.format("Stock/SMA.%s-%d/%d", disposition, i, k);
+          } else {
+            name = String.format("Stock/Bonds/SMA.%s-%d/%d/%d", disposition, i, j, k);
+          }
+          store.add(seq, name);
+        }
+      }
+    }
+
+    // Mixed multiscale mom and sma strategies.
+    for (int j = 0; j < dispositions.length; ++j) {
+      String name1 = "MultiMom-" + dispositions[j];
+      for (int k = 0; k < dispositions.length; ++k) {
+        String name2 = "MultiSMA-" + dispositions[k];
+        for (int i = 0; i < percentRisky.length; ++i) {
+          Sequence seq = Strategy.calcMixedReturns(new Sequence[] { store.get(name1), store.get(name2) }, new double[] {
+              percentRisky[i], 100 - percentRisky[i] }, 12, 0.0);
+          store.add(seq, String.format("Mom.%s/SMA.%s-%d/%d", dispositions[j], dispositions[k], percentRisky[i],
+              100 - percentRisky[i]));
         }
       }
     }
@@ -458,16 +513,19 @@ public class RetireTool
 
   public static void genReturnChart(File dir) throws IOException
   {
-    String[] names = new String[] { "stock", "bonds", "momentum-1", "momentum-3", "momentum-12", "multimom-safe",
-        "multimom-cautious", "multimom-moderate", "multimom-risky" };
+    // String[] names = new String[] { "stock", "bonds", "momentum-1", "momentum-3", "momentum-12", "multimom-safe",
+    // "multimom-cautious", "multimom-moderate", "multimom-risky" };
 
     // String[] names = new String[] { "stock", "bonds", "60/40", "momentum-1", "multimom-risky",
     // "Mom.Risky/Mom.Cautious-20/80", "Bonds/Mom.Safe-10/90" };
 
     // String[] names = new String[] { "stock", "momentum-1", "multimom-risky", "Mom.Risky/Mom.Moderate-30/70",
-    // "Mom.Risky/Mom.Cautious-20/80", "Mom.Risky/Mom.Safe-10/90", "Bonds/Mom.Safe-10/90" };
+    // "Mom.Risky/Mom.Cautious-20/80", "Mom.Risky/Mom.Safe-10/90", "Bonds/Mom.Safe-10/90",
+    // "Mom.Moderate/SMA.Safe-60/40" };
 
-    final int duration = 5 * 12;
+    String[] names = new String[] { "stock", "bonds", "tbills" };
+
+    final int duration = 10 * 12;
 
     store.recalcDurationalStats(duration, FinLib.Inflation.Ignore);
     List<Sequence> all = store.getReturns(names);
@@ -775,52 +833,71 @@ public class RetireTool
         GRAPH_WIDTH, GRAPH_HEIGHT, frontiers);
   }
 
-  public static void genSMASweepChart(Sequence shiller, File dir) throws IOException
+  public static void genSMASweepChart(File dir) throws IOException
   {
-    final int[] months = new int[] { 1, 2, 3, 4, 5, 6, 9, 10, 12 };
+    final int[] months = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
     final int duration = 10 * 12;
     store.recalcDurationalStats(duration, FinLib.Inflation.Ignore);
 
-    // Build list of names of assets/strategies.
+    // Build list of names of assets/strategies that we care about for scatter plot.
     List<String> nameList = new ArrayList<>();
     nameList.add("stock");
     for (int i = 0; i < months.length; ++i) {
       nameList.add("sma-" + months[i]);
     }
     String[] names = nameList.toArray(new String[nameList.size()]);
-    Chart.saveStatsTable(new File(dir, "sma-report.html"), GRAPH_WIDTH, true, store.getCumulativeStats(names));
-    Chart.printDecadeTable(store.get("sma-10"), store.get("stock"));
+    Chart.saveStatsTable(new File(dir, "sma-sweep.html"), GRAPH_WIDTH, true, store.getCumulativeStats(names));
+    // Chart.printDecadeTable(store.get("sma-12"), store.get("stock"));
+
+    // Create scatterplot of returns vs. volatility.
+    List<DurationalStats> dstats = store.getDurationalStats(names);
+    Sequence scatter = new Sequence("SMA Results");
+    for (int i = 0; i < dstats.size(); ++i) {
+      DurationalStats stats = dstats.get(i);
+      String label = "Stock";
+      if (i < months.length) {
+        label = "" + months[i];
+      }
+      scatter.addData(new FeatureVec(label, 2, stats.mean, stats.sdev));
+    }
+
+    names = new String[] { "stock", "bonds", "60/40", "sma-1", "sma-3", "sma-12", "multisma-safe", "multisma-cautious",
+        "multisma-moderate", "multisma-risky" };
+    Chart.saveLineChart(new File(dir, "sma-cumulative.html"), "Cumulative Market Returns: sma Strategy", GRAPH_WIDTH,
+        GRAPH_HEIGHT, true, store.getReturns(names));
 
     Chart.saveBoxPlots(new File(dir, "sma-box-plots.html"),
-        String.format("Momentum Returns (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
+        String.format("SMA Returns (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
         store.getDurationalStats(names));
+
+    List<CumulativeStats> cstats = store.getCumulativeStats(names);
+    Chart.saveStatsTable(new File(dir, "sma-chart.html"), GRAPH_WIDTH, true, cstats);
   }
 
-  public static void genMomentumMixChart(File dir) throws IOException
+  public static List<String> collectMomentumNames()
   {
-    long startMS = Library.getTime();
-    List<String> candidates = new ArrayList<String>();
+    List<String> names = new ArrayList<String>();
 
     // Add all-stock and all-bonds.
-    candidates.add("stock");
-    candidates.add("bonds");
+    names.add("stock");
+    names.add("bonds");
 
     // Add single-scale momentum strategies.
     for (int i = 1; i <= 12; ++i) {
       String name = "momentum-" + i;
       if (store.hasName(name)) {
-        candidates.add(name);
+        names.add(name);
       }
     }
 
     // Add multi-scale momentum strategies.
     for (Strategy.Disposition disposition : dispositions) {
-      candidates.add("multimom-" + disposition);
+      names.add("multimom-" + disposition);
     }
 
     // Add map-based momentum strategies.
     for (int assetMap = 255, i = 0; i < 8; ++i) {
-      candidates.add("multimom-" + assetMap);
+      names.add("multimom-" + assetMap);
       assetMap &= ~(1 << i);
     }
 
@@ -829,7 +906,7 @@ public class RetireTool
       for (int k = j + 1; k < dispositions.length; ++k) {
         for (int i = 10; i < 100; i += 10) {
           String name = String.format("Mom.%s/Mom.%s-%d/%d", dispositions[j], dispositions[k], i, 100 - i);
-          candidates.add(name);
+          names.add(name);
         }
       }
     }
@@ -838,7 +915,7 @@ public class RetireTool
     for (int j = 0; j < dispositions.length; ++j) {
       for (int i = 10; i < 100; i += 10) {
         String name = String.format("Momentum-1/Mom.%s-%d/%d", dispositions[j], i, 100 - i);
-        candidates.add(name);
+        names.add(name);
       }
     }
 
@@ -858,6 +935,88 @@ public class RetireTool
           } else {
             name = String.format("Stock/Bonds/Mom.%s-%d/%d/%d", disposition, i, j, k);
           }
+          names.add(name);
+        }
+      }
+    }
+
+    return names;
+  }
+
+  public static List<String> collectSMANames()
+  {
+    List<String> names = new ArrayList<String>();
+
+    // Add all-stock and all-bonds.
+    names.add("stock");
+    names.add("bonds");
+
+    // Add single-scale sma strategies.
+    for (int i = 1; i <= 12; ++i) {
+      String name = "sma-" + i;
+      if (store.hasName(name)) {
+        names.add(name);
+      }
+    }
+
+    // Add multi-scale sma strategies.
+    for (Strategy.Disposition disposition : dispositions) {
+      names.add("multisma-" + disposition);
+    }
+
+    // Add map-based sma strategies.
+    for (int assetMap = 255, i = 0; i < 8; ++i) {
+      names.add("multisma-" + assetMap);
+      assetMap &= ~(1 << i);
+    }
+
+    // Add multi-scale and mixed sma strategies.
+    for (int j = 0; j < dispositions.length; ++j) {
+      for (int k = j + 1; k < dispositions.length; ++k) {
+        for (int i = 10; i < 100; i += 10) {
+          String name = String.format("SMA.%s/SMA.%s-%d/%d", dispositions[j], dispositions[k], i, 100 - i);
+          names.add(name);
+        }
+      }
+    }
+
+    // Add strategies with fixed stock / bond positions.
+    for (int i = 0; i <= 90; i += 10) {
+      for (int j = 0; j <= 90 && i + j < 100; j += 10) {
+        if (i == 0 && j == 0) {
+          continue;
+        }
+        int k = 100 - (i + j);
+        for (Strategy.Disposition disposition : dispositions) {
+          String name;
+          if (i == 0) {
+            name = String.format("Bonds/SMA.%s-%d/%d", disposition, j, k);
+          } else if (j == 0) {
+            name = String.format("Stock/SMA.%s-%d/%d", disposition, i, k);
+          } else {
+            name = String.format("Stock/Bonds/SMA.%s-%d/%d/%d", disposition, i, j, k);
+          }
+          names.add(name);
+        }
+      }
+    }
+
+    return names;
+  }
+
+  public static void genDominationChart(File dir) throws IOException
+  {
+    long startMS = Library.getTime();
+
+    List<String> candidates = collectMomentumNames();
+    candidates.addAll(collectSMANames());
+
+    // Mixed multiscale mom and sma strategies.
+    for (int j = 0; j < dispositions.length; ++j) {
+      for (int k = 0; k < dispositions.length; ++k) {
+        for (int i = 0; i < percentRisky.length; ++i) {
+          String name = String.format("Mom.%s/SMA.%s-%d/%d", dispositions[j], dispositions[k], percentRisky[i],
+              100 - percentRisky[i]);
           candidates.add(name);
         }
       }
@@ -874,7 +1033,7 @@ public class RetireTool
     }
     Collections.sort(winners, Collections.reverseOrder());
     System.out.printf("Winners: %d\n", winners.size());
-    Chart.saveStatsTable(new File(dir, "momentum-winners.html"), GRAPH_WIDTH, true, winners);
+    Chart.saveStatsTable(new File(dir, "domination-chart.html"), GRAPH_WIDTH, true, winners);
 
     System.out.printf("Done (%s).\n", Library.formatDuration(Library.getTime() - startMS));
   }
@@ -1069,23 +1228,25 @@ public class RetireTool
   {
     int retireAge = 65;
     int ssAge = 70;
-    int deathAge = 100;
-    double expectedSocSecFraction = 0.7; // assume we'll only get a fraction of current SS estimate
+    int deathAge = 95;
+    double expectedSocSecFraction = 0.6; // assume we'll only get a fraction of current SS estimate
     int nSocSecEarners = 0;
     double expectedMonthlySS = FinLib.SOC_SEC_AT70 * expectedSocSecFraction * nSocSecEarners;
     int nYears = deathAge - retireAge;
     double expenseRatio = 0.1;
     double likelihood = 1.0;
-    double taxRate = 0.3;
-    double desiredMonthlyCash = 5000.00;
-    double desiredRunwayYears = 0.0;
+    double taxRate = 0.0;
+    double desiredMonthlyCash = 6000.00;
+    double desiredRunwayYears = 22.0;
     double salary = FinLib.calcAnnualSalary(desiredMonthlyCash, taxRate);
     System.out.printf("Salary: $%s\n", FinLib.currencyFormatter.format(salary));
 
-    String[] names = new String[] { "stock", "bonds", "60/40", "80/20", "momentum-1", "momentum-3", "momentum-12",
-        "multimom-risky", "multimom-moderate", "multimom-cautious", "multimom-safe", "Mom.Risky/Mom.Moderate-30/70",
-        "Mom.Risky/Mom.Cautious-20/80", "Mom.Risky/Mom.Safe-10/90", "Bonds/Mom.Safe-10/90" };
-    // String[] names = new String[] { "momentum-1" };
+    // String[] names = new String[] { "stock", "bonds", "60/40", "80/20", "momentum-1", "momentum-3", "momentum-12",
+    // "multimom-risky", "multimom-moderate", "multimom-cautious", "multimom-safe", "Mom.Risky/Mom.Moderate-30/70",
+    // "Mom.Risky/Mom.Cautious-20/80", "Mom.Risky/Mom.Safe-10/90", "Bonds/Mom.Safe-10/90",
+    // "Mom.Moderate/SMA.Safe-60/40", "Mom.Moderate/SMA.Risky-70/30", "Mom.Risky/SMA.Risky-70/30",
+    // "Mom.Cautious/SMA.Safe-70/30", "MultiSMA-128" };
+    String[] names = new String[] { "Mom.Moderate/SMA.Safe-60/40" };
     // String[] names = store.getNames().toArray(new String[0]);
     RetirementStats[] results = new RetirementStats[names.length];
 
@@ -1096,22 +1257,97 @@ public class RetireTool
       results[i] = FinLib.calcSavingsTarget(cumulativeReturns, cpi, salary, likelihood, nYears, expenseRatio,
           retireAge, ssAge, expectedMonthlySS, desiredRunwayYears);
       cpi.unlock();
-      System.out.printf("%40s: $%s\n", names[i], FinLib.dollarFormatter.format(results[i].principal));
+      // System.out.printf("%40s: $%s\n", names[i], FinLib.dollarFormatter.format(results[i].principal));
     }
 
     System.out.println();
     Arrays.sort(results);
     for (int i = 0; i < names.length; ++i) {
-      // System.out.printf("%40s: $%s\n", names[ii[i]], FinLib.dollarFormatter.format(targets[i]));
-      // System.out.printf("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n", results[i].name,
-      // FinLib.dollarFormatter.format(results[i].principal),
-      // FinLib.dollarFormatter.format(results[i].percentile10),
-      // FinLib.dollarFormatter.format(results[i].median),
-      // FinLib.dollarFormatter.format(results[i].percentile90));
-      System.out.printf("<tr><td>%s</td><td>%s</td><td>%.1f</td><td>%.1f</td><td>%.1f</td></tr>\n",
-          FinLib.getBoldedName(results[i].name), FinLib.dollarFormatter.format(results[i].principal),
-          results[i].percentile10 / 1e6, results[i].median / 1e6, results[i].percentile90 / 1e6);
+      System.out.printf("%40s: $%s  ($%s, $%.2fm)\n", results[i].name,
+          FinLib.dollarFormatter.format(results[i].principal), FinLib.dollarFormatter.format(results[i].min),
+          results[i].percentile10 / 1e6);
+
+      // System.out.printf("<tr><td>%s</td><td>%s</td><td>%.1f</td><td>%.1f</td><td>%.1f</td></tr>\n",
+      // FinLib.getBoldedName(results[i].name), FinLib.dollarFormatter.format(results[i].principal),
+      // results[i].percentile10 / 1e6, results[i].median / 1e6, results[i].percentile90 / 1e6);
     }
+  }
+
+  public static Sequence synthesizeData(File dir) throws IOException
+  {
+    Sequence stock = store.getMisc("stock-all");
+    Sequence bonds = store.getMisc("bonds-all");
+    Sequence tbills = store.getMisc("tbills-all");
+    Sequence cpi = store.getMisc("cpi");
+
+    // Normalize CPI to start at 1.0.
+    cpi = cpi.div(cpi.get(0, 0));
+
+    assert stock.matches(bonds);
+    assert stock.matches(tbills);
+    assert stock.matches(cpi);
+
+    final int N = stock.length();
+    final int duration = 500 * 12;
+    final int minSampleDur = 3;
+    final int maxSampleDur = 8;
+    final float chanceAlignedAssets = 0.3f;
+    final Random rng = new Random();
+
+    Sequence dStock = stock.derivativeMul();
+    Sequence dBonds = bonds.derivativeMul();
+    Sequence dBills = tbills.derivativeMul();
+    Sequence dCPI = cpi.derivativeMul();
+    Sequence[] derivs = new Sequence[] { dStock, dBonds, dBills, dCPI };
+
+    // Initialize synthetic data with real data.
+    Sequence synth = new Sequence("Synthetic");
+    for (int i = 0; i < N; ++i) {
+      synth.addData(new FeatureVec(4, stock.get(i, 0), bonds.get(i, 0), tbills.get(i, 0), cpi.get(i, 0)),
+          stock.getTimeMS(i));
+    }
+
+    Calendar cal = Library.now();
+    double[] dValues = new double[derivs.length];
+    int[] offsets = new int[derivs.length];
+    while (synth.length() < duration) {
+      int sampleDur = Math.min(rng.nextInt(maxSampleDur - minSampleDur) + minSampleDur, duration - synth.length());
+
+      Arrays.fill(offsets, rng.nextInt(N - sampleDur));
+      if (rng.nextFloat() > chanceAlignedAssets) {
+        for (int i = 1; i < offsets.length; ++i) {
+          offsets[i] = rng.nextInt(N - sampleDur);
+        }
+      }
+
+      for (int i = 0; i < sampleDur; ++i) {
+        for (int d = 0; d < derivs.length; ++d) {
+          dValues[d] = derivs[d].get(i + offsets[d], 0);
+        }
+
+        FeatureVec m = new FeatureVec(dValues);
+        FeatureVec v = synth.getLast();
+        cal.setTimeInMillis(v.getTime());
+        cal.add(Calendar.MONTH, 1);
+        synth.addData(v.mul(m), cal.getTimeInMillis());
+      }
+    }
+
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter(new File(dir, "synth.csv")))) {
+      writer.write("Date,Stock,Bonds,TBills,CPI\n");
+      for (FeatureVec v : synth) {
+        writer.write(String.format("%s,%.2f,%.2f,%.2f,%.2f\n", Library.formatYMD(v.getTime()), v.get(0), v.get(1),
+            v.get(2), v.get(3)));
+      }
+    }
+
+    System.out.printf("Synthetic Data (%d): [%s] -> [%s]\n", synth.length(), Library.formatMonth(synth.getStartMS()),
+        Library.formatMonth(synth.getEndMS()));
+
+    Chart.saveLineChart(new File(dir, "synth.html"), "Synthetic Data", 1600, 800, true, synth.extractDims(0),
+        synth.extractDims(1), synth.extractDims(2), synth.extractDims(3));
+
+    return synth;
   }
 
   public static void main(String[] args) throws IOException
@@ -1124,6 +1360,8 @@ public class RetireTool
     // setupVanguardData(dataDir, dir);
     setupShillerData(dataDir, dir);
 
+    synthesizeData(dir);
+
     // DataIO.downloadDailyDataFromYahoo(dataDir, FinLib.VANGUARD_INVESTOR_FUNDS);
 
     // Chart.printDecadeTable(store.get("MultiMom-risky"), store.get("stock"));
@@ -1133,10 +1371,10 @@ public class RetireTool
     // genInterestRateGraph(shiller, tbills, new File(dir, "interest-rates.html"));
     // compareRebalancingMethods(shiller, dir);
     // genReturnViz(dir);
-    genReturnChart(dir);
-    // genSMASweepChart(shiller, dir);
-    genMomentumSweepChart(dir);
-    genMomentumMixChart(dir);
+    // genReturnChart(dir);
+    // genDominationChart(dir);
+    // genSMASweepChart(dir);
+    // genMomentumSweepChart(dir);
     // genStockBondMixSweepChart(shiller, dir);
     // genDuelViz(shiller, tbills, dir);
     // genEfficientFrontier(shiller, dir);
