@@ -2,13 +2,11 @@ package org.minnen.retiretool.stats;
 
 public class RetirementStats extends ReturnStats
 {
-  public final String name;
   public final double principal;
 
   public RetirementStats(String name, double principal, double[] returns)
   {
-    super(returns);
-    this.name = name;
+    super(name, returns);
     this.principal = principal;
   }
 

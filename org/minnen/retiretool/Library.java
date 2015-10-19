@@ -547,4 +547,14 @@ public final class Library
     }
     return sum;
   }
+
+  public static String prefix(String s, String marker)
+  {
+    int n = s.indexOf(marker);
+    if (n < 0) {
+      return s;
+    } else {
+      return s.substring(0, n);
+    }
+  }
 }

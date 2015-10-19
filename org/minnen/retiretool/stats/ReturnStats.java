@@ -5,6 +5,7 @@ import org.minnen.retiretool.Library;
 
 public class ReturnStats implements Comparable<ReturnStats>
 {
+  public final String name;
   public final double mean;
   public final double sdev;
   public final double min;
@@ -15,8 +16,14 @@ public class ReturnStats implements Comparable<ReturnStats>
   public final double percentile90;
   public final double max;
 
-  public ReturnStats(double[] r)
+  public static ReturnStats calc(String name, double[] r)
   {
+    return new ReturnStats(name, r);
+  }
+
+  public ReturnStats(String name, double[] r)
+  {
+    this.name = name;
     mean = Library.mean(r);
     sdev = Library.stdev(r);
 
@@ -29,6 +36,12 @@ public class ReturnStats implements Comparable<ReturnStats>
     percentile75 = r[Math.min(Math.round(r.length * 0.75f), r.length - 1)];
     percentile90 = r[Math.min(Math.round(r.length * 0.9f), r.length - 1)];
     max = r[r.length - 1];
+  }
+
+  @Override
+  public String toString()
+  {
+    return String.format("%.2f [%.2f, %.2f, %.2f, %.2f, %.2f]", mean, min, percentile25, median, percentile75, max);
   }
 
   @Override

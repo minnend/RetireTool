@@ -25,9 +25,9 @@ public class DurationalStats extends ReturnStats
     return new DurationalStats(cumulativeReturns, durationReturns, nMonthsPerPeriod);
   }
 
-  public static DurationalStats calc(double[] returns, int nMonthsPerPeriod)
+  public static DurationalStats calc(String name, double[] returns, int nMonthsPerPeriod)
   {
-    return new DurationalStats(returns, nMonthsPerPeriod);
+    return new DurationalStats(name, returns, nMonthsPerPeriod);
   }
 
   /**
@@ -39,7 +39,7 @@ public class DurationalStats extends ReturnStats
    */
   private DurationalStats(Sequence cumulativeReturns, Sequence durationReturns, int nMonthsPerPeriod)
   {
-    super(durationReturns.extractDim(0));
+    super(cumulativeReturns.getName(), durationReturns.extractDim(0));
     this.cumulativeReturns = cumulativeReturns;
     this.durationReturns = durationReturns;
     this.nMonthsPerPeriod = nMonthsPerPeriod;
@@ -51,9 +51,9 @@ public class DurationalStats extends ReturnStats
    * @param returns array of returns over successive periods of length nMonthsPerPeriod
    * @param nMonthsPerPeriod duration (in months)
    */
-  private DurationalStats(double[] returns, int nMonthsPerPeriod)
+  private DurationalStats(String name, double[] returns, int nMonthsPerPeriod)
   {
-    super(returns);
+    super(name, returns);
     this.cumulativeReturns = null;
     this.durationReturns = null;
     this.nMonthsPerPeriod = nMonthsPerPeriod;

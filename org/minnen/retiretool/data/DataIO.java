@@ -53,14 +53,7 @@ public class DataIO
         int month = Integer.parseInt(dateFields[1]);
         double rate = Double.parseDouble(toks[1]);
 
-        Calendar cal = Library.now();
-        cal.set(Calendar.YEAR, year);
-        cal.set(Calendar.MONTH, month - 1);
-        cal.set(Calendar.DAY_OF_MONTH, 1);
-        cal.set(Calendar.HOUR_OF_DAY, 8);
-        cal.set(Calendar.MINUTE, 0);
-        cal.set(Calendar.SECOND, 0);
-        cal.set(Calendar.MILLISECOND, 0);
+        Calendar cal = buildDate(year, month, 1);
         data.addData(rate, cal.getTimeInMillis());
       } catch (NumberFormatException e) {
         System.err.printf("Error parsing CSV data: [%s]\n", line);
@@ -114,14 +107,7 @@ public class DataIO
           // CAPE
           double cape = Library.tryParse(toks[10], 0.0);
 
-          Calendar cal = Library.now();
-          cal.set(Calendar.YEAR, year);
-          cal.set(Calendar.MONTH, month - 1);
-          cal.set(Calendar.DAY_OF_MONTH, 1);
-          cal.set(Calendar.HOUR_OF_DAY, 8);
-          cal.set(Calendar.MINUTE, 0);
-          cal.set(Calendar.SECOND, 0);
-          cal.set(Calendar.MILLISECOND, 0);
+          Calendar cal = buildDate(year, month, 1);
           seq.addData(new FeatureVec(5, price, div, cpi, gs10, cape), cal.getTimeInMillis());
 
           // System.out.printf("%d/%d:  $%.2f  $%.2f  $%.2f\n", year,
@@ -174,22 +160,60 @@ public class DataIO
         continue;
       }
 
-      String[] dateFields = toks[0].split("-");
       try {
-        int year = Integer.parseInt(dateFields[0]);
-        int month = Integer.parseInt(dateFields[1]);
-        int day = Integer.parseInt(dateFields[2]);
+        long time = parseDate(toks[0]);
         double adjClose = Double.parseDouble(toks[6]);
+        data.addData(adjClose, time);
+      } catch (NumberFormatException e) {
+        System.err.printf("Error parsing CSV data: [%s]\n", line);
+        continue;
+      }
+    }
+    in.close();
+    if (data.getStartMS() > data.getEndMS()) {
+      data.reverse();
+    }
+    return data;
+  }
 
-        Calendar cal = Library.now();
-        cal.set(Calendar.YEAR, year);
-        cal.set(Calendar.MONTH, month - 1);
-        cal.set(Calendar.DAY_OF_MONTH, day);
-        cal.set(Calendar.HOUR_OF_DAY, 8);
-        cal.set(Calendar.MINUTE, 0);
-        cal.set(Calendar.SECOND, 0);
-        cal.set(Calendar.MILLISECOND, 0);
-        data.addData(adjClose, cal.getTimeInMillis());
+  /**
+   * Load data from a CSV file.
+   * 
+   * @param file file to load
+   * @param dims dimensions (columns) to load, not counting the data in column 0 (zero-based indices)
+   * @return Sequence with data loaded from the given file.
+   */
+  public static Sequence loadCSV(File file, int[] dims) throws IOException
+  {
+    if (!file.canRead()) {
+      throw new IOException(String.format("Can't read CSV file (%s)", file.getPath()));
+    }
+    System.out.printf("Loading CSV file: [%s]\n", file.getPath());
+
+    BufferedReader in = new BufferedReader(new FileReader(file));
+    String name = file.getName().replaceFirst("[\\.][^\\\\/\\.]+$", "");
+    Sequence data = new Sequence(name);
+    String line;
+    while ((line = in.readLine()) != null) {
+      line = line.trim();
+      if (line.isEmpty()) {
+        continue;
+      }
+      String[] toks = line.trim().split(",");
+      for (int i = 0; i < toks.length; ++i) {
+        toks[i] = toks[i].trim();
+      }
+      if (toks[0].toLowerCase().startsWith("date")) {
+        continue;
+      }
+
+      try {
+        long time = parseDate(toks[0]);
+        FeatureVec v = new FeatureVec(dims.length);
+        for (int d = 0; d < dims.length; ++d) {
+          v.set(d, Double.parseDouble(toks[dims[d]]));
+        }
+        data.addData(v, time);
       } catch (NumberFormatException e) {
         System.err.printf("Error parsing CSV data: [%s]\n", line);
         continue;
@@ -226,5 +250,38 @@ public class DataIO
       return false;
     }
     return true;
+  }
+
+  private static long parseDate(String date) throws NumberFormatException
+  {
+    String[] dateFields = date.split("-");
+
+    int year = Integer.parseInt(dateFields[0]);
+    int month = Integer.parseInt(dateFields[1]);
+    int day = Integer.parseInt(dateFields[2]);
+
+    Calendar cal = buildDate(year, month, day);
+    return cal.getTimeInMillis();
+  }
+
+  /**
+   * Create a calendar for using with daily price data.
+   * 
+   * @param year year (e.g. 2015)
+   * @param month month (January = 1, December = 12)
+   * @param day day of month (1-31)
+   * @return corresponding calendar object for the given day
+   */
+  private static Calendar buildDate(int year, int month, int day)
+  {
+    Calendar cal = Library.now();
+    cal.set(Calendar.YEAR, year);
+    cal.set(Calendar.MONTH, month - 1);
+    cal.set(Calendar.DAY_OF_MONTH, day);
+    cal.set(Calendar.HOUR_OF_DAY, 8);
+    cal.set(Calendar.MINUTE, 0);
+    cal.set(Calendar.SECOND, 0);
+    cal.set(Calendar.MILLISECOND, 0);
+    return cal;
   }
 }

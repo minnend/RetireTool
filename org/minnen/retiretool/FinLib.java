@@ -497,6 +497,32 @@ public final class FinLib
     return balance;
   }
 
+  public static double calcEndBalance(Sequence inflationAdjustedReturns, double principal, double annualWithdrawal,
+      double expenseRatio, int iStart, int nMonths)
+  {
+    int nData = inflationAdjustedReturns.size();
+    assert (iStart >= 0 && nMonths >= 1 && iStart + nMonths < nData);
+
+    double monthlyWithdrawal = annualWithdrawal / 12.0;
+    double monthlyExpenseRatio = (expenseRatio / 100.0) / 12.0;
+    double balance = principal;
+    for (int i = iStart; i < iStart + nMonths; ++i) {
+      // Withdraw money at beginning of month.
+      balance -= monthlyWithdrawal;
+      if (balance < 0.0) {
+        return 0.0; // ran out of money!
+      }
+
+      // Update balance based on investment returns.
+      balance *= getReturn(inflationAdjustedReturns, i, i + 1);
+
+      // Broker gets their cut.
+      balance *= (1.0 - monthlyExpenseRatio);
+    }
+
+    return balance;
+  }
+
   /**
    * Compute ending balance; not inflation-adjusted, assuming we re-invest dividends
    * 
@@ -518,11 +544,13 @@ public final class FinLib
     Calendar cal = Library.now();
     final double monthlyExpenseRatio = (expenseRatio / 100.0) / 12.0;
     double balance = principal;
+    double totalDeposit = principal;
     for (int i = iStart; i < iStart + nMonths; ++i) {
       // Make deposit at start of year.
       cal.setTimeInMillis(cumulativeReturns.getTimeMS(i));
       if (cal.get(Calendar.MONTH) == 0) {
         balance += depStartOfYear;
+        totalDeposit += depStartOfYear;
       }
 
       // Update balance based on investment returns.
@@ -533,6 +561,7 @@ public final class FinLib
 
       // Deposit at end of the month.
       balance += depEndOfMonth;
+      totalDeposit += depEndOfMonth;
     }
 
     return balance;
@@ -632,6 +661,49 @@ public final class FinLib
     }
 
     RetirementStats stats = new RetirementStats(cumulativeReturns.getName(), maxSavings, endBalances);
+
+    return stats;
+  }
+
+  public static RetirementStats calcSavingsTarget(Sequence inflationAdjustedReturns, double salary, int nYears,
+      double expenseRatio, double desiredRunwayYears)
+  {
+    final int nMonths = nYears * 12;
+    final int nData = inflationAdjustedReturns.length();
+
+    boolean bRequireReplacement = (desiredRunwayYears < 0.0);
+    double[] endBalances = new double[nData - nMonths];
+    double minSavings = 0.0;
+    double maxSavings = salary * 1000.0; // assume needed savings is less than 1000x salary
+    boolean done = false;
+    boolean bFailed = false;
+    while (!done) {
+      if (maxSavings - minSavings < 1.0) {
+        minSavings = maxSavings = Math.ceil(maxSavings / 1000) * 1000;
+        done = true;
+      }
+      bFailed = false;
+      double principal = (maxSavings + minSavings) / 2.0;
+      for (int i = 0; i < nData; i++) {
+        if (i + nMonths >= nData) {
+          assert i == endBalances.length;
+          break; // not enough data
+        }
+        endBalances[i] = calcEndBalance(inflationAdjustedReturns, principal, salary, expenseRatio, i, nMonths);
+        if ((bRequireReplacement && endBalances[i] < principal) || (endBalances[i] < salary * desiredRunwayYears)) {
+          bFailed = true;
+          break;
+        }
+      }
+      if (bFailed) {
+        minSavings = principal;
+      } else {
+        maxSavings = principal;
+      }
+    }
+
+    assert !bFailed;
+    RetirementStats stats = new RetirementStats(inflationAdjustedReturns.getName(), maxSavings, endBalances);
 
     return stats;
   }
@@ -1047,5 +1119,18 @@ public final class FinLib
       seq.addData(balance, interestRates.getTimeMS(i));
     }
     return seq;
+  }
+
+  public static String formatDollars(double x)
+  {
+    if (x < 1500.0) {
+      return dollarFormatter.format(x);
+    } else if (x < 100000.0) {
+      return String.format("%.1fk", x / 1000.0);
+    } else if (x < 1000000.0) {
+      return String.format("%.0fk", x / 1000.0);
+    } else {
+      return String.format("%.1fm", x / 1000000.0);
+    }
   }
 }
