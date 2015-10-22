@@ -11,7 +11,7 @@ public class Strategy
 {
   /** Investment disposition from riskiest to safest. */
   public enum Disposition {
-    Risky, Moderate, Cautious, Safe
+    Defensive, Cautious, Moderate, Aggressive 
   }
 
   public static Sequence calcReturns(AssetPredictor predictor, int iStart, Slippage slippage, WinStats winStats,
@@ -322,7 +322,7 @@ public class Strategy
       int assetMap)
   {
     assert assetMap >= 0;
-    return calcMultiMomentumReturns(iStart, slippage, risky, safe, Disposition.Safe, assetMap);
+    return calcMultiMomentumReturns(iStart, slippage, risky, safe, Disposition.Defensive, assetMap);
   }
 
   private static Sequence calcMultiMomentumReturns(int iStart, Slippage slippage, Sequence risky, Sequence safe,
@@ -495,7 +495,7 @@ public class Strategy
       Sequence safe, int assetMap)
   {
     assert assetMap >= 0;
-    return calcMultiSmaReturns(iStart, slippage, prices, risky, safe, Disposition.Safe, assetMap);
+    return calcMultiSmaReturns(iStart, slippage, prices, risky, safe, Disposition.Defensive, assetMap);
   }
 
   public static Sequence calcMultiSmaReturns(int iStart, Slippage slippage, Sequence prices, Sequence risky,
@@ -545,9 +545,9 @@ public class Strategy
         return risky;
       }
 
-      // Shortest + support => only Safe is safe.
+      // Shortest + support => only Defensive is safe.
       if (code == 5) {
-        return disposition == Disposition.Safe ? safe : risky;
+        return disposition == Disposition.Defensive ? safe : risky;
       }
 
       // Not shortest and zero or one other => always safe.
@@ -557,12 +557,12 @@ public class Strategy
 
       // Not shortest but both others.
       if (code == 3) {
-        return disposition == Disposition.Safe || disposition == Disposition.Cautious ? safe : risky;
+        return disposition == Disposition.Defensive || disposition == Disposition.Cautious ? safe : risky;
       }
 
       // Only short-term support.
       assert code == 4;
-      return disposition == Disposition.Risky ? risky : safe;
+      return disposition == Disposition.Aggressive ? risky : safe;
     }
   }
 
