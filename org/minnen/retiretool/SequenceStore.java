@@ -224,6 +224,12 @@ public class SequenceStore implements Iterable<Sequence>
     return getMiscIndex(name) >= 0;
   }
 
+  /** Is the name in this store (regular or misc)? */
+  public boolean has(String name)
+  {
+    return hasName(name) || hasMisc(name);
+  }
+
   private int getIndex(String name)
   {
     name = name.toLowerCase();

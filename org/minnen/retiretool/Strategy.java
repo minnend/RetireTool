@@ -11,7 +11,7 @@ public class Strategy
 {
   /** Investment disposition from riskiest to safest. */
   public enum Disposition {
-    Defensive, Cautious, Moderate, Aggressive 
+    Defensive, Cautious, Moderate, Aggressive
   }
 
   public static Sequence calcReturns(AssetPredictor predictor, int iStart, Slippage slippage, WinStats winStats,
@@ -19,12 +19,13 @@ public class Strategy
   {
     assert seqs.length > 1;
     int N = seqs[0].length();
-    for (int i = 1; i < seqs.length; ++i) {
+    for (int i = 0; i < seqs.length; ++i) {
       assert seqs[i].length() == N;
       assert seqs[i].getStartMS() == seqs[0].getStartMS();
+      assert predictor.store.has(seqs[0].getName());
     }
 
-    final double principal = 10000.0;
+    final double principal = 1.0; // TODO principal might matter due to slippage or min purchase reqs
     double balance = principal;
     Sequence currentAsset = null;
     Sequence returns = new Sequence(predictor.name);

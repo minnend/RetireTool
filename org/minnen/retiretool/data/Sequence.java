@@ -156,8 +156,8 @@ public class Sequence implements Iterable<FeatureVec>
   private int adjustIndex(int i)
   {
     int iStart = getFirstIndex();
-    int iEnd = getLastIndex();
     if (i < 0 || i >= length()) {
+      int iEnd = getLastIndex();
       throw new IndexOutOfBoundsException(String.format("%d vs. [%d, %d]", i, iStart, iEnd));
     }
     return iStart + i;
@@ -452,10 +452,10 @@ public class Sequence implements Iterable<FeatureVec>
   public int getIndexAtOrBefore(long ms)
   {
     int i = getClosestIndex(ms);
-    if (i > 0 && ms < get(i).getTime()) {
+    if (i >= 0 && get(i).getTime() > ms) {
       --i;
     }
-    assert getTimeMS(i) <= ms || i == 0;
+    assert i < 0 || getTimeMS(i) <= ms;
     return i;
   }
 
@@ -465,10 +465,13 @@ public class Sequence implements Iterable<FeatureVec>
   public int getIndexAtOrAfter(long ms)
   {
     int i = getClosestIndex(ms);
-    if (i < length() - 1 && ms > get(i).getTime()) {
+    if (i < length() && get(i).getTime() < ms) {
       ++i;
     }
-    assert getTimeMS(i) >= ms || i == length() - 1;
+    if (i >= length()) {
+      i = -1;
+    }
+    assert i < 0 || getTimeMS(i) >= ms;
     return i;
   }
 
@@ -721,7 +724,7 @@ public class Sequence implements Iterable<FeatureVec>
     }
     return deriv;
   }
-  
+
   public Sequence derivativeMul()
   {
     Sequence deriv = new Sequence(getName() + "- Multiplicative-Derivative");
