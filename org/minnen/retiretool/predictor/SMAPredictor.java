@@ -3,7 +3,7 @@ package org.minnen.retiretool.predictor;
 import org.minnen.retiretool.SequenceStore;
 import org.minnen.retiretool.data.Sequence;
 
-/** Single-scale Simple Moving Average predictor */
+/** Single-scale Simple Moving Average (SMA) predictor */
 public class SMAPredictor extends AssetPredictor
 {
   protected final String priceSeqName;

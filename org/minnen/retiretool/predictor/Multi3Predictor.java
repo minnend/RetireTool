@@ -3,6 +3,7 @@ package org.minnen.retiretool.predictor;
 import org.minnen.retiretool.SequenceStore;
 import org.minnen.retiretool.data.Sequence;
 
+/** Meta-Predictor that combines three base predictors. */
 public class Multi3Predictor extends AssetPredictor
 {
   public enum Disposition {

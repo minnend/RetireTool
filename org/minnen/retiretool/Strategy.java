@@ -54,6 +54,7 @@ public class Strategy
           iCorrect = iSeq;
         }
       }
+      predictor.feedback(iCorrect, correctReturn);
 
       // Invest everything in best asset for this month.
       // No bestSeq => hold everything in cash for no gain and no loss.
