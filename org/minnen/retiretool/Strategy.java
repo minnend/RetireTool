@@ -594,9 +594,4 @@ public class Strategy
           entry.getKey(), p, sc.r1 / sc.r2, 100.0 * n / N, n, sc.n1, sc.n2);
     }
   }
-
-  public static WMAPredictor buildMultiMomWMAPredictor(SequenceStore store)
-  {
-
-  }
 }

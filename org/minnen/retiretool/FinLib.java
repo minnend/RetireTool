@@ -736,9 +736,11 @@ public final class FinLib
     double baseValue = 1.0;
     double shares = baseValue / snp.get(iStart, 0);
     seq.addData(baseValue, snp.getTimeMS(iStart));
-    for (int i = iStart; i < iEnd; ++i) {
+    for (int i = iStart + 1; i <= iEnd; ++i) {
+      long timeMS = snp.getTimeMS(i);
       double div = 0.0;
       if (divMethod == DividendMethod.NO_REINVEST)
+        // No dividend reinvestment so all dividends go to cash.
         divCash += shares * snp.get(i, 1);
       else if (divMethod == DividendMethod.MONTHLY) {
         // Dividends at the end of every month.
@@ -746,7 +748,7 @@ public final class FinLib
       } else if (divMethod == DividendMethod.QUARTERLY) {
         // Dividends at the end of every quarter (march, june, september, december).
         Calendar cal = Library.now();
-        cal.setTimeInMillis(snp.getTimeMS(i));
+        cal.setTimeInMillis(timeMS);
         int month = cal.get(Calendar.MONTH);
         if (month % 3 == 2) { // time for a dividend!
           for (int j = 0; j < 3; j++) {
@@ -758,12 +760,12 @@ public final class FinLib
       }
 
       // Apply the dividends (if any).
-      double price = snp.get(i + 1, 0);
+      double price = snp.get(i, 0);
       shares += shares * div / price;
 
       // Add data point for current value.
       double value = divCash + shares * price;
-      seq.addData(value, snp.getTimeMS(i + 1));
+      seq.addData(value, timeMS);
     }
     return seq;
   }
