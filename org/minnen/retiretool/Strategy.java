@@ -5,15 +5,11 @@ import java.util.TreeMap;
 
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.predictor.AssetPredictor;
+import org.minnen.retiretool.predictor.Multi3Predictor.Disposition;
 import org.minnen.retiretool.stats.WinStats;
 
 public class Strategy
 {
-  /** Investment disposition from riskiest to safest. */
-  public enum Disposition {
-    Defensive, Cautious, Moderate, Aggressive
-  }
-
   public static Sequence calcReturns(AssetPredictor predictor, int iStart, Slippage slippage, WinStats winStats,
       Sequence... seqs)
   {
@@ -41,9 +37,11 @@ public class Strategy
       int iSelected = predictor.selectAsset(seqs);
       predictor.store.unlock();
 
-      Sequence nextAsset = (iSelected >= 0 ? seqs[iSelected] : null);
-      balance = slippage.adjustForAssetChange(balance, i - 1, currentAsset, nextAsset);
-      currentAsset = nextAsset;
+      if (slippage != null) {
+        Sequence nextAsset = (iSelected >= 0 ? seqs[iSelected] : null);
+        balance = slippage.adjustForAssetChange(balance, i - 1, currentAsset, nextAsset);
+        currentAsset = nextAsset;
+      }
 
       // Find correct answer (sequence with highest return for current month)
       double correctReturn = 1.0;
@@ -80,7 +78,7 @@ public class Strategy
       }
     }
 
-    // Return cumulative returns normalized so that startingt value is 1.0.
+    // Return cumulative returns normalized so that starting value is 1.0.
     returns._div(principal);
     assert Math.abs(returns.getFirst(0) - 1.0) < 1e-6;
     return returns;
@@ -138,9 +136,11 @@ public class Strategy
         }
       }
 
-      Sequence nextAsset = (iSelected >= 0 ? seqs[iSelected] : null);
-      balance = slippage.adjustForAssetChange(balance, i - 1, currentAsset, nextAsset);
-      currentAsset = nextAsset;
+      if (slippage != null) {
+        Sequence nextAsset = (iSelected >= 0 ? seqs[iSelected] : null);
+        balance = slippage.adjustForAssetChange(balance, i - 1, currentAsset, nextAsset);
+        currentAsset = nextAsset;
+      }
 
       // Invest everything in best asset for this month.
       // No bestSeq => hold everything in cash for no gain and no loss.
@@ -195,7 +195,9 @@ public class Strategy
 
       // Select asset based on price relative to moving average.
       Sequence nextAsset = (price > ma ? risky : safe);
-      balance = slippage.adjustForAssetChange(balance, i - 1, currentAsset, nextAsset);
+      if (slippage != null) {
+        balance = slippage.adjustForAssetChange(balance, i - 1, currentAsset, nextAsset);
+      }
       currentAsset = nextAsset;
 
       double lastMonthReturn = FinLib.getReturn(nextAsset, i - 1, i);
@@ -336,9 +338,9 @@ public class Strategy
 
     String name;
     if (assetMap >= 0) {
-      name = "MultiMom-" + assetMap;
+      name = "Mom." + assetMap;
     } else {
-      name = "MultiMom-" + disposition;
+      name = "Mom." + disposition;
     }
     Sequence mom = new Sequence(name);
     Sequence currentAsset = null;
@@ -349,7 +351,9 @@ public class Strategy
 
       // Use votes to select asset.
       Sequence nextAsset = selectAsset(code, disposition, assetMap, risky, safe);
-      balance = slippage.adjustForAssetChange(balance, i - 1, currentAsset, nextAsset);
+      if (slippage != null) {
+        balance = slippage.adjustForAssetChange(balance, i - 1, currentAsset, nextAsset);
+      }
       currentAsset = nextAsset;
 
       // Invest everything in best asset for this month.
@@ -509,9 +513,9 @@ public class Strategy
 
     String name;
     if (assetMap >= 0) {
-      name = "MultiSMA-" + assetMap;
+      name = "SMA." + assetMap;
     } else {
-      name = "MultiSMA-" + disposition;
+      name = "SMA." + disposition;
     }
     Sequence sma = new Sequence(name);
     double balance = 1.0;
@@ -522,7 +526,9 @@ public class Strategy
 
       // Use votes to select asset.
       Sequence nextAsset = selectAsset(code, disposition, assetMap, risky, safe);
-      balance = slippage.adjustForAssetChange(balance, i - 1, currentAsset, nextAsset);
+      if (slippage != null) {
+        balance = slippage.adjustForAssetChange(balance, i - 1, currentAsset, nextAsset);
+      }
       currentAsset = nextAsset;
 
       // Invest everything in best asset for this month.
