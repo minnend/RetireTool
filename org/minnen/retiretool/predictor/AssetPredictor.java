@@ -8,6 +8,7 @@ public abstract class AssetPredictor
 {
   public final String        name;
   public final SequenceStore store;
+  private long               lastFeedbackMS = Long.MIN_VALUE;
 
   public AssetPredictor(String name, SequenceStore store)
   {
@@ -17,8 +18,10 @@ public abstract class AssetPredictor
 
   public abstract int selectAsset(Sequence... seqs);
 
-  public void feedback(int iCorrect, double r)
+  public void feedback(long timeMS, int iCorrect, double r)
   {
+    assert timeMS > lastFeedbackMS;
+    lastFeedbackMS = timeMS;
     // Default behavior is to ignore feedback.
   }
 }

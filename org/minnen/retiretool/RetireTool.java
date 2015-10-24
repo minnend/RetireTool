@@ -21,6 +21,7 @@ import org.minnen.retiretool.predictor.MomentumPredictor;
 import org.minnen.retiretool.predictor.Multi3Predictor;
 import org.minnen.retiretool.predictor.SMAPredictor;
 import org.minnen.retiretool.predictor.WMAPredictor;
+import org.minnen.retiretool.predictor.WTAPredictor;
 import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.DurationalStats;
@@ -290,6 +291,8 @@ public class RetireTool
     store.add(raa, "RAA");
 
     // Multi-scale Momentum and SMA methods.
+    AssetPredictor[] multiMomPredictors = new AssetPredictor[4];
+    AssetPredictor[] multiSMAPredictors = new AssetPredictor[4];
     for (Disposition disposition : Disposition.values()) {
       Sequence momOrig = Strategy.calcMultiMomentumReturns(iStartSimulation, slippage, risky, safe, disposition);
       Sequence smaOrig = Strategy.calcMultiSmaReturns(iStartSimulation, slippage, prices, risky, safe, disposition);
@@ -297,6 +300,7 @@ public class RetireTool
       AssetPredictor momPredictor = new Multi3Predictor("Mom." + disposition, new AssetPredictor[] {
           new MomentumPredictor(1, store), new MomentumPredictor(3, store), new MomentumPredictor(12, store) },
           disposition, store);
+      multiMomPredictors[disposition.ordinal()] = momPredictor;
       Sequence mom = Strategy.calcReturns(momPredictor, iStartSimulation, slippage, null, risky, safe);
 
       assert mom.length() == momOrig.length(); // TODO
@@ -309,6 +313,7 @@ public class RetireTool
       AssetPredictor smaPredictor = new Multi3Predictor("SMA." + disposition, new AssetPredictor[] {
           new SMAPredictor(1, risky.getName(), store), new SMAPredictor(5, risky.getName(), store),
           new SMAPredictor(10, risky.getName(), store) }, disposition, store);
+      multiSMAPredictors[disposition.ordinal()] = smaPredictor;
       Sequence sma = Strategy.calcReturns(smaPredictor, iStartSimulation, slippage, null, risky, safe);
 
       assert sma.length() == smaOrig.length(); // TODO
@@ -329,6 +334,21 @@ public class RetireTool
     AssetPredictor wmaMomPredictor = new WMAPredictor("MomentumWMA", momPredictors, store);
     Sequence wmaMomentum = Strategy.calcReturns(wmaMomPredictor, iStartSimulation, slippage, null, risky, safe);
     store.add(wmaMomentum);
+
+    // WTA Momentum strategy.
+    AssetPredictor wtaMomPredictor = new WTAPredictor("MomentumWTA", momPredictors, store);
+    Sequence wtaMomentum = Strategy.calcReturns(wtaMomPredictor, iStartSimulation, slippage, null, risky, safe);
+    store.add(wtaMomentum);
+
+    // Multi-Momentum WMA strategy.
+    AssetPredictor multiMomWMAPredictor = new WMAPredictor("MultiMomWMA", multiMomPredictors, 0.25, 0.1, store);
+    Sequence multiMomWMA = Strategy.calcReturns(multiMomWMAPredictor, iStartSimulation, slippage, null, risky, safe);
+    store.add(multiMomWMA);
+
+    // Multi-Momentum WTA strategy.
+    AssetPredictor multiMomWTAPredictor = new WTAPredictor("MultiMomWTA", multiMomPredictors, 0.25, 0.1, store);
+    Sequence multiMomWTA = Strategy.calcReturns(multiMomWTAPredictor, iStartSimulation, slippage, null, risky, safe);
+    store.add(multiMomWTA);
 
     // Full multi-momentum/sma sweep.
     for (int assetMap = 255, i = 0; i < 8; ++i) {
@@ -543,7 +563,7 @@ public class RetireTool
   public static void genReturnChart(File dir) throws IOException
   {
     String[] names = new String[] { "stock", "bonds", "momentum-1", "momentum-3", "momentum-12", "Mom.Defensive",
-        "Mom.cautious", "Mom.moderate", "Mom.Aggressive", "MomentumWMA" };
+        "Mom.cautious", "Mom.moderate", "Mom.Aggressive", "MomentumWMA", "MomentumWTA", "MultiMomWMA", "MultiMomWTA" };
 
     // String[] names = new String[] { "stock", "bonds", "60/40", "momentum-1", "Mom.Aggressive",
     // "Mom.Aggressive/Mom.Cautious-20/80", "Bonds/Mom.Defensive-10/90" };

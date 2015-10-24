@@ -54,7 +54,7 @@ public class Strategy
           iCorrect = iSeq;
         }
       }
-      predictor.feedback(iCorrect, correctReturn);
+      predictor.feedback(seqs[0].getTimeMS(i), iCorrect, correctReturn);
 
       // Invest everything in best asset for this month.
       // No bestSeq => hold everything in cash for no gain and no loss.
@@ -593,5 +593,10 @@ public class Strategy
           "<tr><td>%d</td><td>%.1f%%</td><td>%.3fx</td><td>%.2f%%</td><td>%d</td><td>%d</td><td>%d</td></tr>\n",
           entry.getKey(), p, sc.r1 / sc.r2, 100.0 * n / N, n, sc.n1, sc.n2);
     }
+  }
+
+  public static WMAPredictor buildMultiMomWMAPredictor(SequenceStore store)
+  {
+
   }
 }
