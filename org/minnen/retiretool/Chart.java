@@ -546,6 +546,7 @@ public class Chart
       writer.write("<thead><tr>\n");
       writer.write(" <th>Strategy</th>\n");
       writer.write(" <th>CAGR</th>\n");
+      writer.write(" <th>Drawdown</th>\n");
       writer.write(" <th>Dev</th>\n");
       if (includeLeverage) {
         writer.write(" <th>Leverage</th>\n");
@@ -553,7 +554,6 @@ public class Chart
       if (!reduced && includeRiskAdjusted) {
         writer.write(" <th>Risk-Adjusted<br/>Return</th>\n");
       }
-      writer.write(" <th>Drawdown</th>\n");
       writer.write(" <th>Down 10%</th>\n");
 
       if (!reduced) {
@@ -600,6 +600,7 @@ public class Chart
         }
         writer.write(String.format("<td><b>%s</b></td>\n", name));
         writer.write(String.format("<td>%.2f</td>\n", stats.cagr));
+        writer.write(String.format("<td>%.2f</td>\n", stats.drawdown));
         writer.write(String.format("<td>%.2f</td>\n", stats.devAnnualReturn));
         if (includeLeverage) {
           writer.write(String.format("<td>%.2f</td>\n", stats.leverage));
@@ -608,7 +609,6 @@ public class Chart
           writer.write(String.format("<td>%.2f</td>\n", stats.cagr * strategyStats[0].devAnnualReturn
               / stats.devAnnualReturn));
         }
-        writer.write(String.format("<td>%.2f</td>\n", stats.drawdown));
         writer.write(String.format("<td>%.2f</td>\n", stats.percentDown10));
 
         if (!reduced) {
@@ -692,12 +692,15 @@ public class Chart
           .write("<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
       writer.write(String.format("</head><body style=\"width:%dpx\">\n", width));
       writer.write("<h2>Strategy Comparison</h2>\n");
+      writer.write(String.format("<h3>%s</h3>\n", FinLib.getBaseName(stats.returns1.getName())));
+      writer.write(String.format("<h3>%s</h3>\n", FinLib.getBaseName(stats.returns2.getName())));
       writer.write("<table id=\"comparisonTable\" class=\"tablesorter\">\n");
       writer.write("<thead><tr>\n");
       writer.write(" <th>Duration</th>\n");
       writer.write(" <th>Win Visualization</th>\n");
-      writer.write(String.format(" <th>%s<br/>Win %%</th>\n", FinLib.getBaseName(stats.returns1.getName())));
-      writer.write(String.format(" <th>%s<br/>Win %%</th>\n", FinLib.getBaseName(stats.returns2.getName())));
+      writer.write(" <th>Win/Tie %</th>\n");
+      writer.write(" <th>Win %</th>\n");
+      writer.write(" <th>Lose %</th>\n");
       writer.write(" <th>Mean<br/>Excesss</th>\n");
       writer.write(" <th>Worst<br/>Excess</th>\n");
       writer.write(" <th>Median<br/>Excess</th>\n");
@@ -721,6 +724,7 @@ public class Chart
         writer.write(genWinBar(results.winPercent1, results.winPercent2));
         writer.write("</td>\n");
 
+        writer.write(String.format("<td>%.1f</td>\n", 100.0 - results.winPercent2));
         writer.write(String.format("<td>%.1f</td>\n", results.winPercent1));
         writer.write(String.format("<td>%.1f</td>\n", results.winPercent2));
         writer.write(String.format("<td>%.2f</td>\n", results.meanExcess));

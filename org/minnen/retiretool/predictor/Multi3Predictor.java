@@ -7,7 +7,7 @@ import org.minnen.retiretool.data.Sequence;
 public class Multi3Predictor extends AssetPredictor
 {
   public enum Disposition {
-    Defensive, Cautious, Moderate, Aggressive
+    Aggressive, Moderate, Cautious, Defensive
   }
 
   private final AssetPredictor[] predictors;

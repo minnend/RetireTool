@@ -159,7 +159,10 @@ public class CumulativeStats implements Comparable<CumulativeStats>
 
   public boolean dominates(CumulativeStats cstats)
   {
-    return cagr > cstats.cagr && drawdown < cstats.drawdown + 0.4;
+    final double epsCAGR = 0.008;
+    final double epsDrawdown = 0.4;
+
+    return (cagr > cstats.cagr - epsCAGR) && (drawdown < cstats.drawdown + epsDrawdown);
   }
 
   @Override

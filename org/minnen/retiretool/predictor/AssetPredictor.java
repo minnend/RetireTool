@@ -3,7 +3,7 @@ package org.minnen.retiretool.predictor;
 import org.minnen.retiretool.SequenceStore;
 import org.minnen.retiretool.data.Sequence;
 
-/** Abtract base class for asset predictors. */
+/** Abstract base class for asset predictors. */
 public abstract class AssetPredictor
 {
   public final String        name;
@@ -18,10 +18,22 @@ public abstract class AssetPredictor
 
   public abstract int selectAsset(Sequence... seqs);
 
+  public double[] selectDistribution(Sequence... seqs)
+  {
+    double[] d = new double[seqs.length];
+    d[selectAsset(seqs)] = 1.0;
+    return d;
+  }
+
   public void feedback(long timeMS, int iCorrect, double r)
   {
     assert timeMS > lastFeedbackMS;
     lastFeedbackMS = timeMS;
     // Default behavior is to ignore feedback.
+  }
+
+  public void reset()
+  {
+    lastFeedbackMS = Long.MIN_VALUE;
   }
 }

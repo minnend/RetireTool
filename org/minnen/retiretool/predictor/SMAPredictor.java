@@ -3,7 +3,7 @@ package org.minnen.retiretool.predictor;
 import org.minnen.retiretool.SequenceStore;
 import org.minnen.retiretool.data.Sequence;
 
-/** Single-scale Simple Moving Average (SMA) predictor */
+/** Single-scale Simple Moving Average (SMA) predictor. */
 public class SMAPredictor extends AssetPredictor
 {
   protected final String priceSeqName;
@@ -16,10 +16,15 @@ public class SMAPredictor extends AssetPredictor
     this.priceSeqName = priceSeqName;
   }
 
+  public int getNumMonths()
+  {
+    return nMonths;
+  }
+
   @Override
   public int selectAsset(Sequence... seqs)
   {
-    assert seqs.length >= 2; // only seqs[0] and seqs[1] will be selected
+    assert seqs.length == 2;
     assert seqs[0].getEndMS() == seqs[1].getEndMS();
 
     Sequence prices = store.getMisc(priceSeqName);

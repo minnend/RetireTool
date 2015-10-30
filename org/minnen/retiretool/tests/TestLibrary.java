@@ -7,6 +7,19 @@ import org.minnen.retiretool.Library;
 
 public class TestLibrary
 {
+  @Test
+  public void testSum()
+  {
+    int[] a = new int[] { 1, 2, 3, 4, 5 };
+
+    assertEquals(15, Library.sum(a));
+    assertEquals(14, Library.sum(a, 1, -1));
+    assertEquals(7, Library.sum(a, 2, -2));
+    assertEquals(9, Library.sum(a, 3, 4));
+    assertEquals(4, Library.sum(a, 3, 3));
+    assertEquals(0, Library.sum(a, 5, 1));
+    assertEquals(5, Library.sum(a, -1, -1));
+  }
 
   @Test
   public void testCopy()

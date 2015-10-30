@@ -6,6 +6,7 @@ import org.minnen.retiretool.Library;
 public class ReturnStats implements Comparable<ReturnStats>
 {
   public final String name;
+  public final int    count;
   public final double mean;
   public final double sdev;
   public final double min;
@@ -24,6 +25,7 @@ public class ReturnStats implements Comparable<ReturnStats>
   public ReturnStats(String name, double[] r)
   {
     this.name = name;
+    count = r.length;
     mean = Library.mean(r);
     sdev = Library.stdev(r);
 

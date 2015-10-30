@@ -541,8 +541,19 @@ public final class Library
 
   public static int sum(int[] a)
   {
+    return sum(a, 0, -1);
+  }
+
+  public static int sum(int[] a, int iStart, int iEnd)
+  {
+    if (iStart < 0) {
+      iStart += a.length;
+    }
+    if (iEnd < 0) {
+      iEnd += a.length;
+    }
     int sum = 0;
-    for (int i = 0; i < a.length; ++i) {
+    for (int i = iStart; i <= iEnd; ++i) {
       sum += a[i];
     }
     return sum;

@@ -4,6 +4,7 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Predicate;
@@ -612,6 +613,7 @@ public final class FinLib
     List<Integer> failures = new ArrayList<Integer>();
     double minSavings = 0.0;
     double maxSavings = salary * 1000.0; // assume needed savings is less than 1000x salary
+    boolean bRequireReplacement = (desiredRunwayYears < 0.0);
     double[] endBalances = new double[nData - nMonths];
     int nAllowedFailures = (int) Math.floor((1.0 - minLikelihood) * endBalances.length);
     boolean done = false;
@@ -633,7 +635,9 @@ public final class FinLib
         double endBalance = calcEndBalance(cumulativeReturns, cpi, adjPrincipal, adjSalary, expenseRatio, true,
             retireAge, ssAge, ssMonthly, i, nMonths);
         double finalSalary = adjustForInflation(cpi, salary, nData - 1, i + nMonths);
-        if (endBalance > finalSalary * desiredRunwayYears) {
+        double replacementPrincipal = adjustForInflation(cpi, principal, nData - 1, i + nMonths);
+        double goal = (bRequireReplacement ? replacementPrincipal : finalSalary * desiredRunwayYears);
+        if (endBalance > goal) {
           ++nOK;
           // Save end balance after adjusting back to today's dollars.
           if (done) {
@@ -702,7 +706,7 @@ public final class FinLib
       }
     }
 
-    assert !bFailed;
+    // assert !bFailed;
     RetirementStats stats = new RetirementStats(inflationAdjustedReturns.getName(), maxSavings, endBalances);
 
     return stats;
@@ -961,6 +965,48 @@ public final class FinLib
     return seq;
   }
 
+  public static RetirementStats[] filter(RetirementStats[] results)
+  {
+    Arrays.sort(results, new Comparator<RetirementStats>()
+    {
+      @Override
+      public int compare(RetirementStats a, RetirementStats b)
+      {
+        if (a.principal < b.principal)
+          return -1;
+        if (a.principal > b.principal)
+          return 1;
+
+        if (a.percentile10 > b.percentile10)
+          return -1;
+        if (a.percentile10 > b.percentile10)
+          return 1;
+
+        if (a.percentile25 > b.percentile25)
+          return -1;
+        if (a.percentile25 > b.percentile25)
+          return 1;
+
+        return a.name.compareTo(b.name);
+      }
+    });
+    List<RetirementStats> winners = new ArrayList<>();
+    for (int i = 0; i < results.length;) {
+      double maxPrincipal = Math.ceil(results[i].principal / 5000.0) * 5000.0;
+      int iBest = i;
+      int j = i + 1;
+      while (j < results.length && results[j].principal <= maxPrincipal) {
+        if (results[j].percentile10 > results[iBest].percentile10) {
+          iBest = j;
+        }
+        ++j;
+      }
+      winners.add(results[iBest]);
+      i = j;
+    }
+    return winners.toArray(new RetirementStats[winners.size()]);
+  }
+
   /** Filter a list of strategies so that only "dominating" ones remain. */
   public static void filterStrategies(List<String> candidates, SequenceStore store)
   {
@@ -992,16 +1038,18 @@ public final class FinLib
 
         final double eps = 1e-6;
         DurationalStats dstats2 = store.getDurationalStats(name2);
-        ComparisonStats.Results comp = ComparisonStats.calcFromDurationReturns(dstats1.durationReturns,
-            dstats2.durationReturns, store.getLastStatsDuration(), diffMargin);
-        if (comp.winPercent1 > 100.0 - eps) {
-          candidates.set(j, null);
-          continue;
-        }
+        if (dstats1 != null && dstats2 != null) {
+          ComparisonStats.Results comp = ComparisonStats.calcFromDurationReturns(dstats1.durationReturns,
+              dstats2.durationReturns, store.getLastStatsDuration(), diffMargin);
+          if (comp.winPercent1 > 100.0 - eps) {
+            candidates.set(j, null);
+            continue;
+          }
 
-        if (comp.winPercent2 > 100.0 - eps) {
-          candidates.set(i, null);
-          break;
+          if (comp.winPercent2 > 100.0 - eps) {
+            candidates.set(i, null);
+            break;
+          }
         }
       }
     }

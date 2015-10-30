@@ -1,6 +1,7 @@
 package org.minnen.retiretool;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -23,20 +24,20 @@ import org.minnen.retiretool.stats.DurationalStats;
 public class SequenceStore implements Iterable<Sequence>
 {
   public final double                 startValue;
-  public final int                    defaultStatsDuration = 10 * 12;
 
-  private final List<Sequence>        nominalReturns       = new ArrayList<>();
-  private final List<Sequence>        realReturns          = new ArrayList<>();
-  private final List<Sequence>        miscSeqs             = new ArrayList<>();
-  private final List<CumulativeStats> cumulativeStats      = new ArrayList<>();
-  private final List<DurationalStats> durationalStats      = new ArrayList<>();
-  private final Map<String, Integer>  nameToIndex          = new HashMap<>();
-  private final Map<String, Integer>  miscNameToIndex      = new HashMap<>();
-  private final Map<String, String>   aliasMap             = new HashMap<>();
+  private final List<Sequence>        nominalReturns    = new ArrayList<>();
+  private final List<Sequence>        realReturns       = new ArrayList<>();
+  private final List<Sequence>        miscSeqs          = new ArrayList<>();
+  private final List<CumulativeStats> cumulativeStats   = new ArrayList<>();
+  private final List<DurationalStats> durationalStats   = new ArrayList<>();
+  private final Map<String, Integer>  nameToIndex       = new HashMap<>();
+  private final Map<String, Integer>  miscNameToIndex   = new HashMap<>();
+  private final Map<String, String>   aliasMap          = new HashMap<>();
+  private final Map<String, String>   nameToOrig        = new HashMap<>();
 
-  private final List<List<Sequence>>  seqLists             = new ArrayList<List<Sequence>>();
+  private final List<List<Sequence>>  seqLists          = new ArrayList<List<Sequence>>();
 
-  private int                         lastStatsDuration;
+  private int                         lastStatsDuration = 10 * 12;
 
   public SequenceStore()
   {
@@ -128,6 +129,8 @@ public class SequenceStore implements Iterable<Sequence>
     cumulativeReturns.setName(name);
     nominalReturns.add(cumulativeReturns);
     nameToIndex.put(name.toLowerCase(), index);
+    nameToOrig.put(name.toLowerCase(), name);
+    assert nameToIndex.size() == nameToOrig.size();
     assert get(name) == cumulativeReturns;
 
     // Calculate and add real returns (inflation-adjusted) to the store.
@@ -144,12 +147,6 @@ public class SequenceStore implements Iterable<Sequence>
     cumulativeReturns.setName(String.format("%s (%.2f%%)", cumulativeReturns.getName(), cstats.cagr));
     cumulativeStats.add(cstats);
     assert cumulativeStats.size() == nominalReturns.size();
-
-    // Calculate durational stats for this strategy.
-    DurationalStats dstats = DurationalStats.calc(cumulativeReturns, defaultStatsDuration);
-    durationalStats.add(dstats);
-    assert durationalStats.size() == nominalReturns.size();
-    lastStatsDuration = defaultStatsDuration;
 
     // System.out.printf("Added: \"%s\"\n", name);
     return index;
@@ -311,7 +308,11 @@ public class SequenceStore implements Iterable<Sequence>
   {
     int index = getIndex(name);
     assert index >= 0 : "Can't find sequence: " + name;
-    return durationalStats.get(index);
+    if (index < durationalStats.size()) {
+      return durationalStats.get(index);
+    } else {
+      return null;
+    }
   }
 
   public List<DurationalStats> getDurationalStats(String... names)
@@ -332,9 +333,10 @@ public class SequenceStore implements Iterable<Sequence>
     return seqs;
   }
 
-  public Set<String> getNames()
+  public Collection<String> getNames()
   {
-    return nameToIndex.keySet();
+    assert nameToIndex.size() == nameToOrig.size();
+    return nameToOrig.values();
   }
 
   /**
@@ -345,8 +347,14 @@ public class SequenceStore implements Iterable<Sequence>
     lastStatsDuration = nMonths;
     for (int i = 0; i < nominalReturns.size(); ++i) {
       Sequence returns = (inflation == FinLib.Inflation.Ignore ? nominalReturns.get(i) : realReturns.get(i));
-      durationalStats.set(i, DurationalStats.calc(returns, nMonths));
+      DurationalStats stats = DurationalStats.calc(returns, nMonths);
+      if (i < durationalStats.size()) {
+        durationalStats.set(i, stats);
+      } else {
+        durationalStats.add(stats);
+      }
     }
+    assert durationalStats.size() == nominalReturns.size();
   }
 
   public void recalcNominalReturns()

@@ -1,10 +1,14 @@
 package org.minnen.retiretool;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.predictor.AssetPredictor;
+import org.minnen.retiretool.predictor.SMAPredictor;
 import org.minnen.retiretool.predictor.Multi3Predictor.Disposition;
 import org.minnen.retiretool.stats.WinStats;
 
@@ -21,6 +25,7 @@ public class Strategy
       assert predictor.store.has(seqs[0].getName());
     }
 
+    predictor.reset();
     final double principal = 1.0; // TODO principal might matter due to slippage or min purchase reqs
     double balance = principal;
     Sequence currentAsset = null;
@@ -365,17 +370,64 @@ public class Strategy
     return mom;
   }
 
-  static class SeqCount
+  static class SeqCount implements Comparable<SeqCount>
   {
-    public int n1 = 0, n2 = 0;
+    public String name;
+    public int    n1 = 0, n2 = 0;
     public double r1 = 1.0, r2 = 1.0;
+
+    public SeqCount(String name)
+    {
+      this.name = name;
+    }
+
+    public void update(double r1, double r2)
+    {
+      if (r1 > 1.0) { // TODO: compare to 1.0 or r2?
+        ++n1;
+      } else {
+        ++n2;
+      }
+      this.r1 *= r1;
+      this.r2 *= r2;
+    }
+
+    public double expectedReturn()
+    {
+      return FinLib.mul2ret(Math.pow(r1, 12.0 / n1));
+    }
+
+    public double winRate()
+    {
+      return (n1 == 0 ? 0.0 : 100.0 * n1 / (n1 + n2));
+    }
+
+    @Override
+    public String toString()
+    {
+      return String.format("%s: %.1f%%  %.3f%%  %3d  [%d, %d]", name, winRate(), expectedReturn(), n1 + n2, n1, n2);
+    }
+
+    @Override
+    public int compareTo(SeqCount other)
+    {
+      double ea = this.expectedReturn();
+      double eb = other.expectedReturn();
+      // double ea = this.winRate();
+      // double eb = other.winRate();
+      if (ea > eb)
+        return 1;
+      if (ea < eb)
+        return -1;
+      return 0;
+    }
   };
 
-  public static void calcMultiMomentumStats(Sequence s1, Sequence s2)
+  public static void calcMultiMomentumStats(Sequence risky, Sequence safe)
   {
-    int N = s1.length();
-    assert s2.length() == N;
-    Sequence[] seqs = new Sequence[] { s1, s2 };
+    int N = risky.length();
+    assert safe.length() == N;
+    Sequence[] seqs = new Sequence[] { risky, safe };
 
     int[] numMonths = new int[] { 1, 3, 12 };
     Map<Integer, SeqCount> map = new TreeMap<Integer, SeqCount>();
@@ -388,18 +440,12 @@ public class Strategy
       if (map.containsKey(code)) {
         sc = map.get(code);
       } else {
-        sc = new SeqCount();
+        sc = new SeqCount(String.format("Code=%d", code));
         map.put(code, sc);
       }
-      double r1 = FinLib.getReturn(s1, i - 1, i);
-      double r2 = FinLib.getReturn(s2, i - 1, i);
-      if (r1 >= r2) {
-        ++sc.n1;
-      } else {
-        ++sc.n2;
-      }
-      sc.r1 *= r1;
-      sc.r2 *= r2;
+      double r1 = FinLib.getReturn(risky, i - 1, i);
+      double r2 = FinLib.getReturn(safe, i - 1, i);
+      sc.update(r1, r2);
     }
 
     printStats("Momentum Statistics:", map);
@@ -458,7 +504,7 @@ public class Strategy
     return code;
   }
 
-  public static void calcSmaStats(Sequence prices, Sequence risky, Sequence safe)
+  public static void calcMultiSmaStats(int iStart, Sequence prices, Sequence risky, Sequence safe)
   {
     int N = risky.length();
     assert safe.length() == N;
@@ -474,21 +520,95 @@ public class Strategy
       if (map.containsKey(code)) {
         sc = map.get(code);
       } else {
-        sc = new SeqCount();
+        sc = new SeqCount(String.format("Code=%d", code));
         map.put(code, sc);
       }
-      double r1 = risky.get(i, 0) / risky.get(i - 1, 0);
-      double r2 = safe.get(i, 0) / safe.get(i - 1, 0);
-      if (r1 >= r2) {
-        ++sc.n1;
-      } else {
-        ++sc.n2;
-      }
-      sc.r1 *= r1;
-      sc.r2 *= r2;
+      double r1 = FinLib.getReturn(risky, i - 1, i);
+      double r2 = FinLib.getReturn(safe, i - 1, i);
+      sc.update(r1, r2);
     }
 
     printStats("SMA Statistics:", map);
+  }
+
+  public static void calcSmaStats(Sequence prices, Sequence risky, Sequence safe, SequenceStore store)
+  {
+    int N = risky.length();
+    assert safe.matches(risky);
+    assert prices.matches(risky);
+
+    final int M = 12;
+    AssetPredictor[] smaPredictors = new SMAPredictor[M];
+    SeqCount[][][][] r = new SeqCount[M][M][M][M];
+    SeqCount rAll = new SeqCount("All-12");
+    List<SeqCount> all = new ArrayList<>();
+    all.add(rAll);
+    for (int i = 0; i < M; ++i) {
+      smaPredictors[i] = new SMAPredictor(i + 1, prices.getName(), store);
+      r[i][0][0][0] = new SeqCount(String.format("SMA[%d]", i + 1));
+      all.add(r[i][0][0][0]);
+      for (int j = i + 1; j < M; ++j) {
+        r[i][j][0][0] = new SeqCount(String.format("SMA[%d,%d]", i + 1, j + 1));
+        all.add(r[i][j][0][0]);
+        for (int k = j + 1; k < M; ++k) {
+          r[i][j][k][0] = new SeqCount(String.format("SMA[%d,%d,%d]", i + 1, j + 1, k + 1));
+          all.add(r[i][j][k][0]);
+          for (int a = k + 1; a < M; ++a) {
+            r[i][j][k][a] = new SeqCount(String.format("SMA[%d,%d,%d,%d]", i + 1, j + 1, k + 1, a + 1));
+            // all.add(r[i][j][k][a]);
+          }
+        }
+      }
+    }
+
+    for (int t = M + 1; t < N; ++t) {
+      double r1 = risky.get(t, 0) / risky.get(t - 1, 0);
+      double r2 = safe.get(t, 0) / safe.get(t - 1, 0);
+
+      store.lock(prices.getStartMS(), prices.getTimeMS(t) - 1);
+
+      boolean bAll = true;
+      for (int i = 0; i < M; ++i) {
+        if (smaPredictors[i].selectAsset(risky, safe) != 0) {
+          bAll = false;
+          break;
+        }
+      }
+      if (bAll) {
+        rAll.update(r1, r2);
+      }
+
+      for (int i = 0; i < M; ++i) {
+        int pred = smaPredictors[i].selectAsset(risky, safe);
+        if (pred == 0) {
+          r[i][0][0][0].update(r1, r2);
+          for (int j = i + 1; j < M; ++j) {
+            pred = smaPredictors[j].selectAsset(risky, safe);
+            if (pred == 0) {
+              r[i][j][0][0].update(r1, r2);
+              for (int k = j + 1; k < M; ++k) {
+                pred = smaPredictors[k].selectAsset(risky, safe);
+                if (pred == 0) {
+                  r[i][j][k][0].update(r1, r2);
+                  for (int a = k + 1; a < M; ++a) {
+                    pred = smaPredictors[a].selectAsset(risky, safe);
+                    if (pred == 0) {
+                      r[i][j][k][a].update(r1, r2);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      store.unlock();
+    }
+
+    Collections.sort(all);
+    for (int i = 0; i < all.size(); ++i) {
+      System.out.println(all.get(i));
+    }
   }
 
   public static Sequence calcMultiSmaReturns(int iStart, Slippage slippage, Sequence prices, Sequence risky,
