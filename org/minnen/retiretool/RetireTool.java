@@ -1659,7 +1659,7 @@ public class RetireTool
         CumulativeStats cstats = CumulativeStats.calc(returns);
         System.out.printf(" %s\n", cstats);
 
-        returns = Strategy.calcReturnsUsingDistributions(predictor, iStart, slippage, null, seqs);
+        returns = Strategy.calcReturnsUsingDistributions(predictor, iStart, seqs);
         cstats = CumulativeStats.calc(returns);
         System.out.printf(" %s\n", cstats);
 

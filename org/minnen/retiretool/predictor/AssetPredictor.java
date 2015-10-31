@@ -37,13 +37,7 @@ public abstract class AssetPredictor
       return calcSinglePrediction(seqs);
     } else {
       selectDistribution(seqs);
-      int iBest = 0;
-      for (int i = 1; i < distribution.length; ++i) {
-        if (distribution[i] > distribution[iBest]) {
-          iBest = i;
-        }
-      }
-      return iBest;
+      return Library.argmax(distribution);
     }
   }
 
@@ -60,9 +54,9 @@ public abstract class AssetPredictor
       distribution[index] = 1.0;
     } else {
       calcDistribution(distribution, seqs);
-      assert Math.abs(Library.sum(distribution) - 1.0) < 1e-6;
     }
 
+    assert Math.abs(Library.sum(distribution) - 1.0) < 1e-6;
     return distribution;
   }
 

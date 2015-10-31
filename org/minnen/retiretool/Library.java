@@ -581,6 +581,17 @@ public final class Library
     return sum;
   }
 
+  public static int argmax(double[] a)
+  {
+    int iMax = 0;
+    for (int i = 1; i < a.length; ++i) {
+      if (a[i] > a[iMax]) {
+        iMax = i;
+      }
+    }
+    return iMax;
+  }
+
   public static String prefix(String s, String marker)
   {
     int n = s.indexOf(marker);
