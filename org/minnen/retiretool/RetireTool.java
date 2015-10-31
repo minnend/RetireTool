@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 import java.util.regex.Pattern;
@@ -234,15 +233,14 @@ public class RetireTool
     final Slippage slippage = Slippage.None; // new Slippage(0.01, 0.1);
 
     // Stock / Bond mixes.
-    // for (int i = 0; i < percentRisky.length; ++i) {
-    // int percentBonds = 100 - percentRisky[i];
-    // Sequence mix = Strategy.calcMixedReturns(new Sequence[] { store.get("Stock"), store.get("bonds") }, new double[]
-    // {
-    // percentRisky[i], percentBonds }, rebalanceMonths, rebalanceBand);
-    // mix.setName(String.format("Stock/Bonds-[%d/%d]", percentRisky[i], percentBonds));
-    // store.alias(String.format("%d/%d", percentRisky[i], percentBonds), mix.getName());
-    // store.add(mix);
-    // }
+    for (int i = 0; i < percentRisky.length; ++i) {
+      int percentBonds = 100 - percentRisky[i];
+      Sequence mix = Strategy.calcMixedReturns(new Sequence[] { store.get("Stock"), store.get("bonds") }, new double[] {
+          percentRisky[i], percentBonds }, rebalanceMonths, rebalanceBand);
+      mix.setName(String.format("Stock/Bonds-[%d/%d]", percentRisky[i], percentBonds));
+      store.alias(String.format("%d/%d", percentRisky[i], percentBonds), mix.getName());
+      store.add(mix);
+    }
 
     // Build Momentum and SMA predictors.
     // AssetPredictor[] momPredictors = new AssetPredictor[12];
@@ -254,8 +252,7 @@ public class RetireTool
 
     // Momentum sweep.
     // for (int i = 0; i < momPredictors.length; ++i) {
-    // WinStats winStats = new WinStats();
-    // Sequence momOrig = Strategy.calcMomentumReturns(i + 1, iStartSimulation, slippage, winStats, risky, safe);
+    // Sequence momOrig = Strategy.calcMomentumReturns(i + 1, iStartSimulation, slippage, null, risky, safe);
     // Sequence mom = Strategy.calcReturns(momPredictors[i], iStartSimulation, slippage, null, risky, safe);
     //
     // assert mom.length() == momOrig.length(); // TODO
@@ -264,7 +261,8 @@ public class RetireTool
     // double b = momOrig.get(ii, 0);
     // assert Math.abs(a - b) < 1e-6 : String.format("%f vs. %f", a, b);
     // }
-    //
+    // }
+
     // store.add(mom);
     // // if (i == 0) {
     // // System.out.printf("Correct: %.2f%% / %.2f%%  (%d / %d)\n", winStats.percentCorrect(0),
@@ -300,49 +298,49 @@ public class RetireTool
     }
 
     // Multi-scale Momentum and SMA methods.
-    // AssetPredictor[] multiMomPredictors = new AssetPredictor[4];
-    // AssetPredictor[] multiSMAPredictors = new AssetPredictor[4];
-    // for (Disposition disposition : Disposition.values()) {
-    // // mom[1,3,11].moderate/mom[1,4,10].defensive-40/60
-    // // mom[1,3,11].cautious/mom[1,4,11].defensive-40/60
-    // // mom[1,3,11].moderate/sma[1,3,11].aggressive-60/40
-    // // SMA[1,3,11].Aggressive
-    //
-    // Sequence momOrig = Strategy.calcMultiMomentumReturns(iStartSimulation, slippage, risky, safe, disposition);
-    // Sequence smaOrig = Strategy.calcMultiSmaReturns(iStartSimulation, slippage, prices, risky, safe, disposition);
-    //
-    // AssetPredictor momPredictor = new Multi3Predictor("Mom[1,3,12]." + disposition, new AssetPredictor[] {
-    // new MomentumPredictor(1, store), new MomentumPredictor(3, store), new MomentumPredictor(12, store) },
-    // disposition, store);
-    // multiMomPredictors[disposition.ordinal()] = momPredictor;
-    // Sequence mom = Strategy.calcReturns(momPredictor, iStartSimulation, slippage, null, risky, safe);
-    //
-    // assert mom.length() == momOrig.length(); // TODO
-    // for (int ii = 0; ii < mom.length(); ++ii) {
-    // double a = mom.get(ii, 0);
-    // double b = momOrig.get(ii, 0);
-    // assert Math.abs(a - b) < 1e-6;
-    // }
-    //
-    // AssetPredictor smaPredictor = new Multi3Predictor("SMA[1,5,10]." + disposition, new AssetPredictor[] {
-    // new SMAPredictor(1, risky.getName(), store), new SMAPredictor(5, risky.getName(), store),
-    // new SMAPredictor(10, risky.getName(), store) }, disposition, store);
-    // multiSMAPredictors[disposition.ordinal()] = smaPredictor;
-    // Sequence sma = Strategy.calcReturns(smaPredictor, iStartSimulation, slippage, null, risky, safe);
-    //
-    // assert sma.length() == smaOrig.length(); // TODO
-    // for (int ii = 0; ii < sma.length(); ++ii) {
-    // double a = sma.get(ii, 0);
-    // double b = smaOrig.get(ii, 0);
-    // assert Math.abs(a - b) < 1e-6;
-    // }
-    //
-    // store.add(mom);
-    // store.add(sma);
-    //
-    // // System.out.println(store.getCumulativeStats(mom.getName()));
-    // // System.out.println(store.getCumulativeStats(sma.getName()));
-    // }
+    AssetPredictor[] multiMomPredictors = new AssetPredictor[4];
+    AssetPredictor[] multiSMAPredictors = new AssetPredictor[4];
+    for (Disposition disposition : Disposition.values()) {
+      // mom[1,3,11].moderate/mom[1,4,10].defensive-40/60
+      // mom[1,3,11].cautious/mom[1,4,11].defensive-40/60
+      // mom[1,3,11].moderate/sma[1,3,11].aggressive-60/40
+      // SMA[1,3,11].Aggressive
+
+      Sequence momOrig = Strategy.calcMultiMomentumReturns(iStartSimulation, slippage, risky, safe, disposition);
+      Sequence smaOrig = Strategy.calcMultiSmaReturns(iStartSimulation, slippage, prices, risky, safe, disposition);
+
+      AssetPredictor momPredictor = new Multi3Predictor("Mom[1,3,12]." + disposition, new AssetPredictor[] {
+          new MomentumPredictor(1, store), new MomentumPredictor(3, store), new MomentumPredictor(12, store) },
+          disposition, store);
+      multiMomPredictors[disposition.ordinal()] = momPredictor;
+      Sequence mom = Strategy.calcReturns(momPredictor, iStartSimulation, slippage, null, risky, safe);
+
+      assert mom.length() == momOrig.length(); // TODO
+      for (int ii = 0; ii < mom.length(); ++ii) {
+        double a = mom.get(ii, 0);
+        double b = momOrig.get(ii, 0);
+        assert Math.abs(a - b) < 1e-6;
+      }
+
+      AssetPredictor smaPredictor = new Multi3Predictor("SMA[1,5,10]." + disposition, new AssetPredictor[] {
+          new SMAPredictor(1, prices.getName(), store), new SMAPredictor(5, prices.getName(), store),
+          new SMAPredictor(10, prices.getName(), store) }, disposition, store);
+      multiSMAPredictors[disposition.ordinal()] = smaPredictor;
+      Sequence sma = Strategy.calcReturns(smaPredictor, iStartSimulation, slippage, null, risky, safe);
+
+      assert sma.length() == smaOrig.length(); // TODO
+      for (int ii = 0; ii < sma.length(); ++ii) {
+        double a = sma.get(ii, 0);
+        double b = smaOrig.get(ii, 0);
+        assert Math.abs(a - b) < 1e-6;
+      }
+
+      store.add(mom);
+      store.add(sma);
+
+      // System.out.println(store.getCumulativeStats(mom.getName()));
+      // System.out.println(store.getCumulativeStats(sma.getName()));
+    }
 
     // Full multi-momentum/sma sweep.
     // for (int assetMap = 255, i = 0; i < 8; ++i) {
@@ -371,15 +369,15 @@ public class RetireTool
     // buildMixes("sma[1,4,10].aggressive", "sma[1,4,11].moderate");
     // buildMixes("sma[1,3].defensive", "sma[1,4,11].moderate");
     // buildMixes("sma[1,3,10].cautious", "sma[1,4,11].aggressive");
-    int pctInc = 20;
+    int pctInc = 10;
     buildMixes("SMA[1,2,9].Cautious", "SMA[1,3,10].Moderate", pctInc);
     buildMixes("SMA[1,2,9].Moderate", "SMA[1,3,10].Moderate", pctInc);
     buildMixes("SMA[1,2,9].Moderate", "SMA[1,3,10].Aggressive", pctInc);
 
-    pctInc = 10;
+    // pctInc = 10;
     buildMixes(pctInc, "SMA[1,2,9].Cautious", "SMA[1,3,10].Moderate", "NewHigh[10]");
-    buildMixes(pctInc, "SMA[1,2,9].Moderate", "SMA[1,3,10].Moderate", "NewHigh[10]");
-    buildMixes(pctInc, "SMA[1,2,9].Moderate", "SMA[1,3,10].Aggressive", "NewHigh[10]");
+    // buildMixes(pctInc, "SMA[1,2,9].Moderate", "SMA[1,3,10].Moderate", "NewHigh[10]");
+    // buildMixes(pctInc, "SMA[1,2,9].Moderate", "SMA[1,3,10].Aggressive", "NewHigh[10]");
 
     // WMA Momentum strategy.
     // AssetPredictor wmaMomPredictor = new WMAPredictor("MomentumWMA", momPredictors, store);
@@ -913,10 +911,10 @@ public class RetireTool
     int duration = 10 * 12;
     store.recalcDurationalStats(duration, FinLib.Inflation.Ignore);
 
-    String name1 = "sma[1,2,9].cautious/sma[1,3,10].moderate-60/40";
+    String name1 = "sma[1,2,9].cautious/sma[1,3,10].moderate-50/50";
     // String name1 = "SMA[1,2,9].Moderate/SMA[1,3,10].Aggressive-60/40";
     // String name1 = "SMA[1,3,10].Aggressive";
-    String name2 = "stock";
+    String name2 = "mom[1,3,12].aggressive";
 
     Sequence player1 = store.get(name1);
     Sequence player2 = store.get(name2);
@@ -1509,7 +1507,7 @@ public class RetireTool
     double expenseRatio = 0.1;
     double likelihood = 1.0;
     double taxRate = 0.0;
-    double desiredMonthlyCash = 6000.00;
+    double desiredMonthlyCash = 8000.00;
     double desiredRunwayYears = -2.0;
     double salary = FinLib.calcAnnualSalary(desiredMonthlyCash, taxRate);
     System.out.printf("Salary: $%s\n", FinLib.currencyFormatter.format(salary));
@@ -1579,6 +1577,38 @@ public class RetireTool
       // results[i].percentile10 / 1e6, results[i].median / 1e6, results[i].percentile90 / 1e6);
     }
     System.out.println();
+  }
+
+  public static void genChartsForDifficultTimePeriods(File dir) throws IOException
+  {
+    final long[][] timePeriods = new long[][] { { Library.getTime(31, 12, 1924), Library.getTime(31, 12, 1934) },
+        { Library.getTime(31, 12, 1994), Library.getTime(31, 12, 2004) },
+        { Library.getTime(31, 12, 2004), Library.getTime(31, 12, 2014) },
+        { Library.getTime(31, 12, 1999), Library.getTime(31, 12, 2009) },
+        { Library.getTime(31, 12, 1999), Library.getTime(30, 8, 2015) } };
+
+    String[] names = new String[] { "stock", "bonds", "60/40", "80/20",
+        "sma[1,2,9].cautious/sma[1,3,10].moderate-50/50", "SMA[1,2,9].Moderate/SMA[1,3,10].Aggressive-50/50",
+        "NewHigh[10]/SMA[1,2,9].Cautious/SMA[1,3,10].Moderate-30/30/40", "mom[1,3,12].aggressive" };
+
+    Sequence[] returns = new Sequence[names.length];
+    for (int iTimePeriod = 0; iTimePeriod < timePeriods.length; ++iTimePeriod) {
+      long[] timePeriod = timePeriods[iTimePeriod];
+      // System.out.printf("%d: %d -> %d\n", iTimePeriod + 1, timePeriod[0], timePeriod[1]);
+      // System.out.printf("   [%s] -> [%s]\n", Library.formatMonth(timePeriod[0]), Library.formatMonth(timePeriod[1]));
+      for (int i = 0; i < names.length; ++i) {
+        Sequence seq = store.get(names[i]).subseq(timePeriod[0], timePeriod[1]);
+        // System.out.printf("%d: [%s] -> [%s]\n", i + 1, Library.formatMonth(seq.getStartMS()),
+        // Library.formatMonth(seq.getEndMS()));
+        returns[i] = seq.div(seq.getFirst(0));
+        double cagr = FinLib.getAnnualReturn(returns[i].getLast(0) / returns[i].getFirst(0), returns[i].length() - 1);
+        returns[i].setName(String.format("%s (%.2f%%)", FinLib.getBaseName(seq.getName()), cagr));
+      }
+      String title = String.format("[%s] - [%s]", Library.formatMonth(timePeriod[0]),
+          Library.formatMonth(timePeriod[1]));
+      Chart.saveHighChart(new File(dir, String.format("time-period-%02d.html", iTimePeriod + 1)), ChartType.Line,
+          title, null, null, GRAPH_WIDTH, GRAPH_HEIGHT, Double.NaN, Double.NaN, 1.0, true, 0, returns);
+    }
   }
 
   public static Sequence synthesizeData(File dataDir, File dir) throws IOException
@@ -1920,19 +1950,20 @@ public class RetireTool
     // genReturnChart(dir);
 
     // List<String> candidates = collectStrategyNames(true, true);
-    List<String> candidates = new ArrayList<String>(store.getNames());
-    genDominationChart(candidates, dir);
+    // List<String> candidates = new ArrayList<String>(store.getNames());
+    // genDominationChart(candidates, dir);
 
     // genSMASweepChart(dir);
     // genMomentumSweepChart(dir);
     // genNewHighSweepChart(dir);
     // genStockBondMixSweepChart(shiller, dir);
-    // genDuelViz(dir);
+    genDuelViz(dir);
     // genEfficientFrontier(shiller, dir);
     // genCorrelationGraph(shiller, dir);
     // genEndBalanceCharts(shiller, dir);
     // genBeatInflationChart(dir);
     // genDrawdownChart(dir);
-    genSavingsTargetChart(dir);
+    // genSavingsTargetChart(dir);
+    genChartsForDifficultTimePeriods(dir);
   }
 }

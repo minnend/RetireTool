@@ -109,6 +109,8 @@ public final class Library
    */
   public static long getTime(int day, int month, int year)
   {
+    assert day >= 1 && day <= 31;
+    assert month >= 1 && month <= 12;
     Calendar cal = now();
     cal.setLenient(true);
     cal.setTimeInMillis(0);

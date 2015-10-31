@@ -372,7 +372,7 @@ public class Sequence implements Iterable<FeatureVec>
   /**
    * Multiply each element of each frame by the given value.
    * 
-   * @param x value to divide by
+   * @param x value to multiply by
    * @return this data set
    */
   public Sequence _mul(double x)
