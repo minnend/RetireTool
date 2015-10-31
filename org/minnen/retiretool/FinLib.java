@@ -1183,4 +1183,22 @@ public final class FinLib
       return String.format("%.1fm", x / 1000000.0);
     }
   }
+
+  public static String buildMixedName(String[] names, int[] percents)
+  {
+    assert names.length == percents.length;
+
+    StringBuilder sb = new StringBuilder(names[0]);
+    for (int i = 1; i < names.length; ++i) {
+      sb.append("/");
+      sb.append(names[i]);
+    }
+    sb.append("-");
+    sb.append(percents[0]);
+    for (int i = 1; i < percents.length; ++i) {
+      sb.append("/");
+      sb.append(percents[i]);
+    }
+    return sb.toString();
+  }
 }

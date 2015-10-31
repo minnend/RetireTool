@@ -20,6 +20,7 @@ import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.predictor.AssetPredictor;
 import org.minnen.retiretool.predictor.ConstantPredictor;
+import org.minnen.retiretool.predictor.MixedPredictor;
 import org.minnen.retiretool.predictor.MomentumPredictor;
 import org.minnen.retiretool.predictor.Multi3Predictor;
 import org.minnen.retiretool.predictor.NewHighPredictor;
@@ -686,20 +687,7 @@ public class RetireTool
       }
       Sequence[] seqs = store.getReturns(names).toArray(new Sequence[names.length]);
       Sequence seq = Strategy.calcMixedReturns(seqs, pcts, 12, 0.0);
-
-      StringBuilder sb = new StringBuilder(names[0]);
-      for (int i = 1; i < names.length; ++i) {
-        sb.append("/");
-        sb.append(names[i]);
-      }
-      sb.append("-");
-      sb.append(percents[0]);
-      for (int i = 1; i < percents.length; ++i) {
-        sb.append("/");
-        sb.append(percents[i]);
-      }
-      // System.out.println(sb.toString());
-      store.add(seq, sb.toString());
+      store.add(seq, FinLib.buildMixedName(names, percents));
     } else {
       for (int pct = pctInc; pct <= remainder; pct += pctInc) {
         percents[index] = pct;
@@ -1637,6 +1625,10 @@ public class RetireTool
         new SMAPredictor(1, prices.getName(), store), new SMAPredictor(2, prices.getName(), store),
         new SMAPredictor(9, prices.getName(), store) }, Disposition.Cautious, store);
 
+    AssetPredictor sma129Moderate = new Multi3Predictor("SMA[1,2,9].Moderate", new AssetPredictor[] {
+        new SMAPredictor(1, prices.getName(), store), new SMAPredictor(2, prices.getName(), store),
+        new SMAPredictor(9, prices.getName(), store) }, Disposition.Moderate, store);
+
     AssetPredictor sma1310Moderate = new Multi3Predictor("SMA[1,3,10].Moderate", new AssetPredictor[] {
         new SMAPredictor(1, prices.getName(), store), new SMAPredictor(3, prices.getName(), store),
         new SMAPredictor(10, prices.getName(), store) }, Disposition.Moderate, store);
@@ -1645,28 +1637,33 @@ public class RetireTool
         new SMAPredictor(1, prices.getName(), store), new SMAPredictor(3, prices.getName(), store),
         new SMAPredictor(10, prices.getName(), store) }, Disposition.Aggressive, store);
 
-    AssetPredictor[] predictors = new AssetPredictor[] { new ConstantPredictor("Stock", 0, store),
-        new ConstantPredictor("Bonds", 1, store), mom1312Aggressive, sma129Cautious, sma1310Moderate, sma1310Aggressive };
+    AssetPredictor mix1 = new MixedPredictor(null, new AssetPredictor[] { sma129Cautious, sma1310Moderate }, new int[] {
+        50, 50 }, store);
+    AssetPredictor mix2 = new MixedPredictor(null, new AssetPredictor[] { sma129Moderate, sma1310Aggressive },
+        new int[] { 50, 50 }, store);
 
-    // "sma[1,2,9].cautious/sma[1,3,10].moderate-50/50"
-    // "SMA[1,2,9].Moderate/SMA[1,3,10].Aggressive-50/50",
+    AssetPredictor[] predictors = new AssetPredictor[] { new ConstantPredictor("Stock", 0, store),
+        new ConstantPredictor("Bonds", 1, store), mom1312Aggressive, sma129Cautious, sma1310Moderate,
+        sma1310Aggressive, mix1, mix2 };
 
     for (int iTest = 0; iTest < testSeqs.size(); ++iTest) {
       System.out.printf("Test Sequences %d\n", iTest + 1);
       Sequence[] seqs = testSeqs.get(iTest);
       for (AssetPredictor predictor : predictors) {
-        Sequence returns = Strategy.calcReturns(predictor, iStart, slippage, null, seqs);
+        Sequence returns = Strategy.calcReturnsUsingDistributions(predictor, iStart, seqs);
         CumulativeStats cstats = CumulativeStats.calc(returns);
         System.out.printf(" %s\n", cstats);
 
-        returns = Strategy.calcReturnsUsingDistributions(predictor, iStart, seqs);
-        cstats = CumulativeStats.calc(returns);
-        System.out.printf(" %s\n", cstats);
-
-        // returns = Strategy.calcMixedReturns(new Sequence[] { returns }, new double[] { 1.0 }, 12, 0.0);
+        // if (predictor instanceof MixedPredictor) {
+        // Sequence[] baseReturns = new Sequence[predictor.predictors.length];
+        // for (int i = 0; i < baseReturns.length; ++i) {
+        // baseReturns[i] = Strategy.calcReturns(predictor.predictors[i], iStart, slippage, null, seqs);
+        // }
+        // returns = Strategy.calcMixedReturns(baseReturns, new double[] { 0.5, 0.5 }, 12, 0);
         // returns.setName(predictor.name);
         // cstats = CumulativeStats.calc(returns);
-        // System.out.printf(" %s\n", cstats);
+        // System.out.printf(" %s <- Rebalanced\n", cstats);
+        // }
       }
     }
   }

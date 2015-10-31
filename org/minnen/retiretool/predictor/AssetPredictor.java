@@ -12,7 +12,7 @@ public abstract class AssetPredictor
   public final String        name;
   public final SequenceStore store;
 
-  protected AssetPredictor[] predictors;
+  public AssetPredictor[]    predictors;
 
   protected long             lastFeedbackMS = Long.MIN_VALUE;
 
