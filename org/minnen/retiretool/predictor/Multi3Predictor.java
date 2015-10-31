@@ -10,9 +10,8 @@ public class Multi3Predictor extends AssetPredictor
     Aggressive, Moderate, Cautious, Defensive
   }
 
-  private final AssetPredictor[] predictors;
-  private final Disposition      disposition;
-  private final int              assetMap;
+  private final Disposition disposition;
+  private final int         assetMap;
 
   private Multi3Predictor(String name, AssetPredictor[] basePredictors, Disposition disposition, int assetMap,
       SequenceStore store)

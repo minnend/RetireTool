@@ -1659,10 +1659,14 @@ public class RetireTool
         CumulativeStats cstats = CumulativeStats.calc(returns);
         System.out.printf(" %s\n", cstats);
 
-        returns = Strategy.calcMixedReturns(new Sequence[] { returns }, new double[] { 1.0 }, 12, 0.0);
-        returns.setName(predictor.name);
+        returns = Strategy.calcReturnsUsingDistributions(predictor, iStart, slippage, null, seqs);
         cstats = CumulativeStats.calc(returns);
         System.out.printf(" %s\n", cstats);
+
+        // returns = Strategy.calcMixedReturns(new Sequence[] { returns }, new double[] { 1.0 }, 12, 0.0);
+        // returns.setName(predictor.name);
+        // cstats = CumulativeStats.calc(returns);
+        // System.out.printf(" %s\n", cstats);
       }
     }
   }

@@ -8,11 +8,10 @@ import org.minnen.retiretool.data.Sequence;
 /** Weighted Majority Algorithm Predictor */
 public class WMAPredictor extends AssetPredictor
 {
-  private final AssetPredictor[] predictors;
-  private final double[]         weights;
-  private final int[]            predictions;
-  private final double           alpha;
-  private final double           beta;
+  private final double[] weights;
+  private final int[]    predictions;
+  private final double   alpha;
+  private final double   beta;
 
   public WMAPredictor(String name, AssetPredictor[] predictors, SequenceStore store)
   {

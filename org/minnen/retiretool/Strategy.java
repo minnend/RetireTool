@@ -90,6 +90,82 @@ public class Strategy
     return returns;
   }
 
+  public static Sequence calcReturnsUsingDistributions(AssetPredictor predictor, int iStart, Slippage slippage,
+      WinStats winStats, Sequence... seqs)
+  {
+    assert seqs.length > 1;
+    int N = seqs[0].length();
+    for (int i = 0; i < seqs.length; ++i) {
+      assert seqs[i].length() == N;
+      assert seqs[i].getStartMS() == seqs[0].getStartMS();
+      assert predictor.store.has(seqs[0].getName());
+    }
+
+    predictor.reset();
+    final double principal = 1.0; // TODO principal might matter due to slippage or min purchase reqs
+    double balance = principal;
+    Sequence currentAsset = null;
+    Sequence returns = new Sequence(predictor.name);
+    returns.addData(balance, seqs[0].getTimeMS(iStart));
+    if (winStats == null) {
+      winStats = new WinStats();
+    }
+    winStats.nCorrect = new int[seqs.length];
+    winStats.nSelected = new int[seqs.length];
+    for (int i = iStart + 1; i < N; ++i) {
+      assert seqs[0].getTimeMS(i) == seqs[1].getTimeMS(i);
+      predictor.store.lock(seqs[0].getStartMS(), seqs[0].getTimeMS(i) - 1);
+      int iSelected = predictor.selectAsset(seqs);
+      predictor.store.unlock();
+
+      if (slippage != null) {
+        Sequence nextAsset = (iSelected >= 0 ? seqs[iSelected] : null);
+        balance = slippage.adjustForAssetChange(balance, i - 1, currentAsset, nextAsset);
+        currentAsset = nextAsset;
+      }
+
+      // Find correct answer (sequence with highest return for current month)
+      double correctReturn = 1.0;
+      int iCorrect = -1;
+      for (int iSeq = 0; iSeq < seqs.length; ++iSeq) {
+        Sequence seq = seqs[iSeq];
+        double r = FinLib.getReturn(seq, i - 1, i);
+        if (r > correctReturn) {
+          correctReturn = r;
+          iCorrect = iSeq;
+        }
+      }
+      predictor.feedback(seqs[0].getTimeMS(i), iCorrect, correctReturn);
+
+      // Invest everything in best asset for this month.
+      // No bestSeq => hold everything in cash for no gain and no loss.
+      double realizedReturn = 1.0;
+      if (iSelected >= 0) {
+        realizedReturn = FinLib.getReturn(seqs[iSelected], i - 1, i);
+        balance *= realizedReturn;
+      }
+      returns.addData(balance, seqs[0].getTimeMS(i));
+
+      // Update win stats
+      if (realizedReturn > correctReturn - 1e-6) {
+        ++winStats.nPredCorrect;
+      } else {
+        ++winStats.nPredWrong;
+      }
+      if (iCorrect >= 0) {
+        ++winStats.nCorrect[iCorrect];
+      }
+      if (iSelected >= 0) {
+        ++winStats.nSelected[iSelected];
+      }
+    }
+
+    // Return cumulative returns normalized so that starting value is 1.0.
+    returns._div(principal);
+    assert Math.abs(returns.getFirst(0) - 1.0) < 1e-6;
+    return returns;
+  }
+
   /**
    * Invest 100% in asset with highest CAGR over last N months.
    * 

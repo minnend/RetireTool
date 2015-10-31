@@ -8,11 +8,10 @@ import org.minnen.retiretool.data.Sequence;
 /** Winner Take All Predictor */
 public class WTAPredictor extends AssetPredictor
 {
-  private final AssetPredictor[] predictors;
-  private final double[]         weights;
-  private final int[]            predictions;
-  private final double           alpha;
-  private final double           beta;
+  private final double[] weights;
+  private final int[]    predictions;
+  private final double   alpha;
+  private final double   beta;
 
   public WTAPredictor(String name, AssetPredictor[] predictors, SequenceStore store)
   {

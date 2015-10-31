@@ -12,6 +12,8 @@ public abstract class AssetPredictor
   public final String        name;
   public final SequenceStore store;
 
+  protected AssetPredictor[] predictors;
+
   protected long             lastFeedbackMS = Long.MIN_VALUE;
 
   /** True for predictors with no state or memory. */
@@ -84,5 +86,10 @@ public abstract class AssetPredictor
   public void reset()
   {
     lastFeedbackMS = Long.MIN_VALUE;
+    if (predictors != null) {
+      for (AssetPredictor predictor : predictors) {
+        predictor.reset();
+      }
+    }
   }
 }
