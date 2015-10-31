@@ -6,18 +6,19 @@ import org.minnen.retiretool.data.Sequence;
 /** Asset predictor that always predicts the same index. */
 public class ConstantPredictor extends AssetPredictor
 {
-  public final int constantPrediction;
+  public final int iConstantPrediction;
 
   public ConstantPredictor(String name, int constantPrediction, SequenceStore store)
   {
     super(name, store);
     this.bAllowReuse = true;
-    this.constantPrediction = constantPrediction;
+    this.bPredictOne = true;
+    this.iConstantPrediction = constantPrediction;
   }
 
   @Override
-  public int selectAsset(Sequence... seqs)
+  protected int calcSinglePrediction(Sequence... seqs)
   {
-    return constantPrediction;
+    return iConstantPrediction;
   }
 }

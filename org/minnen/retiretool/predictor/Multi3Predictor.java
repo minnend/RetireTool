@@ -23,6 +23,7 @@ public class Multi3Predictor extends AssetPredictor
     this.disposition = disposition;
     this.assetMap = assetMap;
     this.bAllowReuse = true;
+    this.bPredictOne = true;
   }
 
   public Multi3Predictor(String name, AssetPredictor[] basePredictors, Disposition disposition, SequenceStore store)
@@ -36,7 +37,7 @@ public class Multi3Predictor extends AssetPredictor
   }
 
   @Override
-  public int selectAsset(Sequence... seqs)
+  protected int calcSinglePrediction(Sequence... seqs)
   {
     assert seqs.length >= 2;
 

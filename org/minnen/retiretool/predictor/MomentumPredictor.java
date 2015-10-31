@@ -17,6 +17,7 @@ public class MomentumPredictor extends AssetPredictor
     this.nLookback = nLookback;
     this.nSkipRecent = nSkipRecent;
     this.bAllowReuse = true;
+    this.bPredictOne = true;
   }
 
   public MomentumPredictor(int nLookback, SequenceStore store)
@@ -34,7 +35,7 @@ public class MomentumPredictor extends AssetPredictor
   }
 
   @Override
-  public int selectAsset(Sequence... seqs)
+  protected int calcSinglePrediction(Sequence... seqs)
   {
     double bestReturn = 0.0;
     int iSelected = -1;

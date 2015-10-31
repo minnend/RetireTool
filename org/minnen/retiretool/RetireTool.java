@@ -2020,7 +2020,7 @@ public class RetireTool
     // genBeatInflationChart(dir);
     // genDrawdownChart(dir);
     // genSavingsTargetChart(dir);
-    genChartsForDifficultTimePeriods(dir);
-    // genCrossValidatedResults(dir);
+    // genChartsForDifficultTimePeriods(dir);
+    genCrossValidatedResults(dir);
   }
 }

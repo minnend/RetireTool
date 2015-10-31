@@ -13,10 +13,11 @@ public class NewHighPredictor extends AssetPredictor
     assert nMonths >= 1;
     this.nMonths = nMonths;
     this.bAllowReuse = true;
+    this.bPredictOne = true;
   }
 
   @Override
-  public int selectAsset(Sequence... seqs)
+  protected int calcSinglePrediction(Sequence... seqs)
   {
     assert seqs.length == 2;
     assert seqs[0].getEndMS() == seqs[1].getEndMS();

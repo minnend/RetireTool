@@ -15,6 +15,7 @@ public class SMAPredictor extends AssetPredictor
     this.nMonths = nMonths;
     this.priceSeqName = priceSeqName;
     this.bAllowReuse = true;
+    this.bPredictOne = true;
   }
 
   public int getNumMonths()
@@ -23,7 +24,7 @@ public class SMAPredictor extends AssetPredictor
   }
 
   @Override
-  public int selectAsset(Sequence... seqs)
+  protected int calcSinglePrediction(Sequence... seqs)
   {
     assert seqs.length == 2;
     assert seqs[0].getEndMS() == seqs[1].getEndMS();

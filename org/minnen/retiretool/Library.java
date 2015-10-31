@@ -561,6 +561,26 @@ public final class Library
     return sum;
   }
 
+  public static double sum(double[] a)
+  {
+    return sum(a, 0, -1);
+  }
+
+  public static double sum(double[] a, int iStart, int iEnd)
+  {
+    if (iStart < 0) {
+      iStart += a.length;
+    }
+    if (iEnd < 0) {
+      iEnd += a.length;
+    }
+    double sum = 0;
+    for (int i = iStart; i <= iEnd; ++i) {
+      sum += a[i];
+    }
+    return sum;
+  }
+
   public static String prefix(String s, String marker)
   {
     int n = s.indexOf(marker);

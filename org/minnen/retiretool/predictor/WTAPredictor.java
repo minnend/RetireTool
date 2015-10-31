@@ -29,10 +29,11 @@ public class WTAPredictor extends AssetPredictor
     this.alpha = alpha;
     this.beta = beta;
     this.bAllowReuse = false;
+    this.bPredictOne = true;
   }
 
   @Override
-  public int selectAsset(Sequence... seqs)
+  protected int calcSinglePrediction(Sequence... seqs)
   {
     int iWinner = 0;
     for (int i = 0; i < predictors.length; ++i) {
