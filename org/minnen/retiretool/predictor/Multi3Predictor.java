@@ -22,6 +22,7 @@ public class Multi3Predictor extends AssetPredictor
     this.predictors = basePredictors;
     this.disposition = disposition;
     this.assetMap = assetMap;
+    this.bAllowReuse = true;
   }
 
   public Multi3Predictor(String name, AssetPredictor[] basePredictors, Disposition disposition, SequenceStore store)

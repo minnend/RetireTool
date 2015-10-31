@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.minnen.retiretool.FinLib;
 import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.data.WeightedValue;
 
 /**
  * Holds statistics that characterize the results of an investment strategy over the full investment duration.
@@ -30,8 +31,8 @@ public class CumulativeStats implements Comparable<CumulativeStats>
   public static CumulativeStats calc(Sequence cumulativeReturns)
   {
     CumulativeStats stats = new CumulativeStats();
-
     stats.cumulativeReturns = cumulativeReturns;
+
     if (cumulativeReturns != null && !cumulativeReturns.isEmpty()) {
       stats.totalReturn = cumulativeReturns.getLast(0) / cumulativeReturns.getFirst(0);
       stats.cagr = FinLib.getAnnualReturn(stats.totalReturn, cumulativeReturns.size() - 1);
@@ -45,8 +46,10 @@ public class CumulativeStats implements Comparable<CumulativeStats>
       stats.annualPercentiles[2] = rstats.median;
       stats.annualPercentiles[3] = rstats.percentile75;
       stats.annualPercentiles[4] = rstats.max;
+
+      stats.calcDrawdownStats();
     }
-    stats.calcDrawdownStats();
+
     return stats;
   }
 
@@ -59,7 +62,7 @@ public class CumulativeStats implements Comparable<CumulativeStats>
 
     if (N > 1) {
       final double firstValue = cumulativeReturns.getFirst(0);
-      double prevValue = firstValue;
+      double prevValue = 1.0; // normalized first value
       int nNewHigh = 0;
       int nDown10 = 0;
       int numUp = 0;
@@ -91,17 +94,6 @@ public class CumulativeStats implements Comparable<CumulativeStats>
       percentDown10 = 100.0 * nDown10 / (N - 1);
       percentUp = 100.0 * numUp / (N - 1);
       percentDown = 100.0 * numDown / (N - 1);
-    }
-  }
-
-  public static class WeightedValue
-  {
-    public double value, weight;
-
-    public WeightedValue(double value, double weight)
-    {
-      this.value = value;
-      this.weight = weight;
     }
   }
 

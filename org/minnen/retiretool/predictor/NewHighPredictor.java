@@ -12,6 +12,7 @@ public class NewHighPredictor extends AssetPredictor
     super(String.format("NewHigh[%d]", nMonths), store);
     assert nMonths >= 1;
     this.nMonths = nMonths;
+    this.bAllowReuse = true;
   }
 
   @Override

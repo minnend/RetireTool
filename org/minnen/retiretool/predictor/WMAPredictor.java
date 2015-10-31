@@ -28,6 +28,7 @@ public class WMAPredictor extends AssetPredictor
     predictions = new int[predictors.length];
     this.alpha = alpha;
     this.beta = beta;
+    this.bAllowReuse = false;
   }
 
   @Override

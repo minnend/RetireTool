@@ -19,6 +19,7 @@ import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.predictor.AssetPredictor;
+import org.minnen.retiretool.predictor.ConstantPredictor;
 import org.minnen.retiretool.predictor.MomentumPredictor;
 import org.minnen.retiretool.predictor.Multi3Predictor;
 import org.minnen.retiretool.predictor.NewHighPredictor;
@@ -1585,11 +1586,15 @@ public class RetireTool
         { Library.getTime(31, 12, 1994), Library.getTime(31, 12, 2004) },
         { Library.getTime(31, 12, 2004), Library.getTime(31, 12, 2014) },
         { Library.getTime(31, 12, 1999), Library.getTime(31, 12, 2009) },
-        { Library.getTime(31, 12, 1999), Library.getTime(30, 8, 2015) } };
+        { Library.getTime(31, 12, 1999), Library.getTime(30, 8, 2015) },
+        { Library.getTime(1, 1, 1994), Library.getTime(31, 12, 2013) } };
+
+    // String[] names = new String[] { "stock", "bonds", "60/40", "80/20",
+    // "sma[1,2,9].cautious/sma[1,3,10].moderate-50/50", "SMA[1,2,9].Moderate/SMA[1,3,10].Aggressive-50/50",
+    // "NewHigh[10]/SMA[1,2,9].Cautious/SMA[1,3,10].Moderate-30/30/40", "mom[1,3,12].aggressive" };
 
     String[] names = new String[] { "stock", "bonds", "60/40", "80/20",
-        "sma[1,2,9].cautious/sma[1,3,10].moderate-50/50", "SMA[1,2,9].Moderate/SMA[1,3,10].Aggressive-50/50",
-        "NewHigh[10]/SMA[1,2,9].Cautious/SMA[1,3,10].Moderate-30/30/40", "mom[1,3,12].aggressive" };
+        "sma[1,2,9].cautious/sma[1,3,10].moderate-50/50", "mom[1,3,12].aggressive" };
 
     Sequence[] returns = new Sequence[names.length];
     for (int iTimePeriod = 0; iTimePeriod < timePeriods.length; ++iTimePeriod) {
@@ -1608,6 +1613,57 @@ public class RetireTool
           Library.formatMonth(timePeriod[1]));
       Chart.saveHighChart(new File(dir, String.format("time-period-%02d.html", iTimePeriod + 1)), ChartType.Line,
           title, null, null, GRAPH_WIDTH, GRAPH_HEIGHT, Double.NaN, Double.NaN, 1.0, true, 0, returns);
+    }
+  }
+
+  public static void genCrossValidatedResults(File dir)
+  {
+    List<Sequence[]> testSeqs = new ArrayList<>();
+
+    Sequence stock = store.get("Stock");
+    Sequence bonds = store.get("Bonds");
+    Sequence prices = store.getMisc("StockData");
+
+    final Slippage slippage = Slippage.None;
+    final int iStart = 12;
+
+    testSeqs.add(new Sequence[] { stock, bonds });
+
+    AssetPredictor mom1312Aggressive = new Multi3Predictor("Mom[1,3,12].Aggressive", new AssetPredictor[] {
+        new MomentumPredictor(1, store), new MomentumPredictor(3, store), new MomentumPredictor(12, store) },
+        Disposition.Aggressive, store);
+
+    AssetPredictor sma129Cautious = new Multi3Predictor("SMA[1,2,9].Cautious", new AssetPredictor[] {
+        new SMAPredictor(1, prices.getName(), store), new SMAPredictor(2, prices.getName(), store),
+        new SMAPredictor(9, prices.getName(), store) }, Disposition.Cautious, store);
+
+    AssetPredictor sma1310Moderate = new Multi3Predictor("SMA[1,3,10].Moderate", new AssetPredictor[] {
+        new SMAPredictor(1, prices.getName(), store), new SMAPredictor(3, prices.getName(), store),
+        new SMAPredictor(10, prices.getName(), store) }, Disposition.Moderate, store);
+
+    AssetPredictor sma1310Aggressive = new Multi3Predictor("SMA[1,3,10].Aggressive", new AssetPredictor[] {
+        new SMAPredictor(1, prices.getName(), store), new SMAPredictor(3, prices.getName(), store),
+        new SMAPredictor(10, prices.getName(), store) }, Disposition.Aggressive, store);
+
+    AssetPredictor[] predictors = new AssetPredictor[] { new ConstantPredictor("Stock", 0, store),
+        new ConstantPredictor("Bonds", 1, store), mom1312Aggressive, sma129Cautious, sma1310Moderate, sma1310Aggressive };
+
+    // "sma[1,2,9].cautious/sma[1,3,10].moderate-50/50"
+    // "SMA[1,2,9].Moderate/SMA[1,3,10].Aggressive-50/50",
+
+    for (int iTest = 0; iTest < testSeqs.size(); ++iTest) {
+      System.out.printf("Test Sequences %d\n", iTest + 1);
+      Sequence[] seqs = testSeqs.get(iTest);
+      for (AssetPredictor predictor : predictors) {
+        Sequence returns = Strategy.calcReturns(predictor, iStart, slippage, null, seqs);
+        CumulativeStats cstats = CumulativeStats.calc(returns);
+        System.out.printf(" %s\n", cstats);
+
+        returns = Strategy.calcMixedReturns(new Sequence[] { returns }, new double[] { 1.0 }, 12, 0.0);
+        returns.setName(predictor.name);
+        cstats = CumulativeStats.calc(returns);
+        System.out.printf(" %s\n", cstats);
+      }
     }
   }
 
@@ -1799,8 +1855,8 @@ public class RetireTool
       }
 
       AssetPredictor smaPredictor = new Multi3Predictor("SMA." + disposition, new AssetPredictor[] {
-          new SMAPredictor(1, risky.getName(), store), new SMAPredictor(5, risky.getName(), store),
-          new SMAPredictor(10, risky.getName(), store) }, disposition, store);
+          new SMAPredictor(1, prices.getName(), store), new SMAPredictor(5, prices.getName(), store),
+          new SMAPredictor(10, prices.getName(), store) }, disposition, store);
       multiSMAPredictors[disposition.ordinal()] = smaPredictor;
       Sequence sma = Strategy.calcReturns(smaPredictor, iStartSimulation, slippage, null, risky, safe);
 
@@ -1957,7 +2013,7 @@ public class RetireTool
     // genMomentumSweepChart(dir);
     // genNewHighSweepChart(dir);
     // genStockBondMixSweepChart(shiller, dir);
-    genDuelViz(dir);
+    // genDuelViz(dir);
     // genEfficientFrontier(shiller, dir);
     // genCorrelationGraph(shiller, dir);
     // genEndBalanceCharts(shiller, dir);
@@ -1965,5 +2021,6 @@ public class RetireTool
     // genDrawdownChart(dir);
     // genSavingsTargetChart(dir);
     genChartsForDifficultTimePeriods(dir);
+    // genCrossValidatedResults(dir);
   }
 }

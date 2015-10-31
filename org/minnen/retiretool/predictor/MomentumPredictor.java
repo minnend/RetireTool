@@ -16,6 +16,7 @@ public class MomentumPredictor extends AssetPredictor
     assert nSkipRecent < nLookback;
     this.nLookback = nLookback;
     this.nSkipRecent = nSkipRecent;
+    this.bAllowReuse = true;
   }
 
   public MomentumPredictor(int nLookback, SequenceStore store)

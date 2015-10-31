@@ -8,7 +8,9 @@ public abstract class AssetPredictor
 {
   public final String        name;
   public final SequenceStore store;
-  private long               lastFeedbackMS = Long.MIN_VALUE;
+
+  protected long             lastFeedbackMS = Long.MIN_VALUE;
+  protected boolean          bAllowReuse    = false;
 
   public AssetPredictor(String name, SequenceStore store)
   {
@@ -27,9 +29,9 @@ public abstract class AssetPredictor
 
   public void feedback(long timeMS, int iCorrect, double r)
   {
-    assert timeMS > lastFeedbackMS;
+    // Default behavior is to ignore feedback but protect against rewinds.
+    assert bAllowReuse || timeMS > lastFeedbackMS;
     lastFeedbackMS = timeMS;
-    // Default behavior is to ignore feedback.
   }
 
   public void reset()

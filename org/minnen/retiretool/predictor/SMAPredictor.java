@@ -14,6 +14,7 @@ public class SMAPredictor extends AssetPredictor
     super("SMA-" + nMonths, store);
     this.nMonths = nMonths;
     this.priceSeqName = priceSeqName;
+    this.bAllowReuse = true;
   }
 
   public int getNumMonths()
