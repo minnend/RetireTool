@@ -162,8 +162,9 @@ public class DataIO
 
       try {
         long time = parseDate(toks[0]);
+        double close = Double.parseDouble(toks[4]);
         double adjClose = Double.parseDouble(toks[6]);
-        data.addData(adjClose, time);
+        data.addData(new FeatureVec(2, adjClose, close), time);
       } catch (NumberFormatException e) {
         System.err.printf("Error parsing CSV data: [%s]\n", line);
         continue;

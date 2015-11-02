@@ -2,8 +2,8 @@ package org.minnen.retiretool.predictor;
 
 import java.util.Arrays;
 
-import org.minnen.retiretool.SequenceStore;
 import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.data.SequenceStore;
 
 /** Weighted Majority Algorithm Predictor */
 public class WMAPredictor extends AssetPredictor

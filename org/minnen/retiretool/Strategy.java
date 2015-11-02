@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.predictor.AssetPredictor;
 import org.minnen.retiretool.predictor.SMAPredictor;
 import org.minnen.retiretool.predictor.Multi3Predictor.Disposition;
@@ -534,16 +535,17 @@ public class Strategy
    * @param index last accessible index
    * @param numMonths number of months to average
    * @param prices sequences of prices
+   * @param iPrice dimension index that holds price data
    * @return multi-sma code.
    */
-  public static int calcSmaCode(int index, int[] numMonths, Sequence prices)
+  public static int calcSmaCode(int index, int[] numMonths, Sequence prices, int iPrice)
   {
     int code = 0;
     for (int i = 0; i < numMonths.length; ++i) {
       code <<= 1;
       final int a = Math.max(0, index - numMonths[i]);
-      double sma = prices.average(a, index).get(0);
-      double price = prices.get(index, 0);
+      double sma = prices.average(a, index).get(iPrice);
+      double price = prices.get(index, iPrice);
       if (price > sma) {
         ++code;
       }
@@ -551,7 +553,7 @@ public class Strategy
     return code;
   }
 
-  public static void calcMultiSmaStats(int iStart, Sequence prices, Sequence risky, Sequence safe)
+  public static void calcMultiSmaStats(int iStart, Sequence prices, int iPrice, Sequence risky, Sequence safe)
   {
     int N = risky.length();
     assert safe.length() == N;
@@ -560,7 +562,7 @@ public class Strategy
     Map<Integer, SeqCount> map = new TreeMap<Integer, SeqCount>();
 
     for (int i = numMonths[numMonths.length - 1] + 1; i < N; ++i) {
-      int code = calcSmaCode(i, numMonths, prices);
+      int code = calcSmaCode(i, numMonths, prices, iPrice);
 
       // Record result.
       SeqCount sc;
@@ -591,7 +593,7 @@ public class Strategy
     List<SeqCount> all = new ArrayList<>();
     all.add(rAll);
     for (int i = 0; i < M; ++i) {
-      smaPredictors[i] = new SMAPredictor(i + 1, prices.getName(), store);
+      smaPredictors[i] = new SMAPredictor(i + 1, prices.getName(), 0, store);
       r[i][0][0][0] = new SeqCount(String.format("SMA[%d]", i + 1));
       all.add(r[i][0][0][0]);
       for (int j = i + 1; j < M; ++j) {
@@ -658,21 +660,21 @@ public class Strategy
     }
   }
 
-  public static Sequence calcMultiSmaReturns(int iStart, Slippage slippage, Sequence prices, Sequence risky,
-      Sequence safe, Disposition disposition)
+  public static Sequence calcMultiSmaReturns(int iStart, Slippage slippage, Sequence prices, int iPrice,
+      Sequence risky, Sequence safe, Disposition disposition)
   {
-    return calcMultiSmaReturns(iStart, slippage, prices, risky, safe, disposition, -1);
+    return calcMultiSmaReturns(iStart, slippage, prices, iPrice, risky, safe, disposition, -1);
   }
 
-  public static Sequence calcMultiSmaReturns(int iStart, Slippage slippage, Sequence prices, Sequence risky,
-      Sequence safe, int assetMap)
+  public static Sequence calcMultiSmaReturns(int iStart, Slippage slippage, Sequence prices, int iPrice,
+      Sequence risky, Sequence safe, int assetMap)
   {
     assert assetMap >= 0;
-    return calcMultiSmaReturns(iStart, slippage, prices, risky, safe, Disposition.Defensive, assetMap);
+    return calcMultiSmaReturns(iStart, slippage, prices, iPrice, risky, safe, Disposition.Defensive, assetMap);
   }
 
-  public static Sequence calcMultiSmaReturns(int iStart, Slippage slippage, Sequence prices, Sequence risky,
-      Sequence safe, Disposition disposition, int assetMap)
+  public static Sequence calcMultiSmaReturns(int iStart, Slippage slippage, Sequence prices, int iPrice,
+      Sequence risky, Sequence safe, Disposition disposition, int assetMap)
   {
     int N = risky.length();
     assert safe.length() == N;
@@ -690,7 +692,7 @@ public class Strategy
     sma.addData(balance, risky.getTimeMS(iStart));
     Sequence currentAsset = null;
     for (int i = iStart + 1; i < N; ++i) {
-      int code = calcSmaCode(i - 1, numMonths, prices);
+      int code = calcSmaCode(i - 1, numMonths, prices, iPrice);
 
       // Use votes to select asset.
       Sequence nextAsset = selectAsset(code, disposition, assetMap, risky, safe);

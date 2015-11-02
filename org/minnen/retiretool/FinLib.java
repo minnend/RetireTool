@@ -5,12 +5,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 import java.util.function.Predicate;
 
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.DurationalStats;
@@ -32,6 +33,7 @@ public final class FinLib
   public static final int      MonthlyAverage          = 1;
   public static final int      MonthlyLow              = 2;
   public static final int      MonthlyHigh             = 3;
+  public static final int      MonthlyMisc             = 4;
 
   public static DecimalFormat  currencyFormatter       = new DecimalFormat("#,##0.00");
   public static DecimalFormat  dollarFormatter         = new DecimalFormat("#,##0");
@@ -1067,10 +1069,16 @@ public final class FinLib
 
   public static Sequence daily2monthly(Sequence daily)
   {
+    return daily2monthly(daily, 0, 0);
+  }
+
+  public static Sequence daily2monthly(Sequence daily, int dim, int nJitter)
+  {
     // TODO verify that we don't miss/skip any months.
     final int minDaysData = 12;
     final int N = daily.length();
     Calendar cal = Library.now();
+    List<Integer> monthEnds = new ArrayList<>();
 
     Sequence monthly = new Sequence(daily.getName());
     int i = 0;
@@ -1078,29 +1086,34 @@ public final class FinLib
       FeatureVec v = daily.get(i);
       cal.setTimeInMillis(v.getTime());
       int month = cal.get(Calendar.MONTH);
-      FeatureVec m = new FeatureVec(4);
+      FeatureVec m = new FeatureVec(5);
       m.fill(v.get(0));
+      int nn = 1;
       int j = i + 1;
       for (; j < N; ++j) {
         FeatureVec w = daily.get(j);
         cal.setTimeInMillis(w.getTime());
         if (cal.get(Calendar.MONTH) == month) {
-          double x = w.get(0);
+          double x = w.get(dim);
           m.set(MonthlyClose, x);
           m.set(MonthlyAverage, m.get(MonthlyAverage) + x);
+          ++nn;
           if (x < m.get(MonthlyLow)) {
             m.set(MonthlyLow, x);
           }
           if (x > m.get(MonthlyHigh)) {
             m.set(MonthlyHigh, x);
           }
+          m.set(MonthlyMisc, x);
         } else {
           break;
         }
       }
 
       int n = j - i;
+      assert nn == n;
       if (n >= minDaysData) {
+        monthEnds.add(j - 1);
         m.set(MonthlyAverage, m.get(MonthlyAverage) / n);
         cal.setTimeInMillis(v.getTime());
         cal.set(Calendar.DATE, 1); // Monthly data is always first of month
@@ -1109,6 +1122,34 @@ public final class FinLib
       }
 
       i = j;
+    }
+
+    if (nJitter > 0) {
+      assert monthEnds.size() == monthly.size();
+      Random rng = new Random();
+      int offset = -nJitter + rng.nextInt(nJitter * 2 + 1);
+      for (i = 0; i < monthly.size(); ++i) {
+        // int offset = -nJitter + rng.nextInt(nJitter * 2 + 1);
+        assert offset >= -nJitter && offset <= nJitter;
+        int x = monthEnds.get(i);
+        int y = Math.min(Math.max(x + offset, 0), daily.length() - 1);
+        monthly.get(i).set(MonthlyClose, daily.get(y, dim));
+        monthEnds.set(i, y);
+        // System.out.printf("%d: %d=[%s] -> [%s]\n", i, x, Library.formatDate(daily.getTimeMS(x)),
+        // Library.formatDate(daily.getTimeMS(y)));
+      }
+
+      double alpha = 0.8;
+      double ema = daily.get(0, dim);
+      int iNext = 0;
+      for (i = 0; i < daily.size() && iNext < monthEnds.size(); ++i) {
+        ema = ema * alpha + daily.get(i, dim) * (1.0 - alpha);
+        if (i == monthEnds.get(iNext)) {
+          monthly.get(iNext).set(MonthlyMisc, ema);
+          ema = daily.get(Math.min(i + 1, daily.length() - 1), dim);
+          ++iNext;
+        }
+      }
     }
 
     return monthly;

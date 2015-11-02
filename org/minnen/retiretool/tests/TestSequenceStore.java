@@ -3,8 +3,8 @@ package org.minnen.retiretool.tests;
 import static org.junit.Assert.*;
 
 import org.junit.Test;
-import org.minnen.retiretool.SequenceStore;
 import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.data.SequenceStore;
 
 public class TestSequenceStore
 {

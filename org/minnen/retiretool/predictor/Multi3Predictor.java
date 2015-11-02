@@ -1,7 +1,7 @@
 package org.minnen.retiretool.predictor;
 
-import org.minnen.retiretool.SequenceStore;
 import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.data.SequenceStore;
 
 /** Meta-Predictor that combines three base predictors. */
 public class Multi3Predictor extends AssetPredictor

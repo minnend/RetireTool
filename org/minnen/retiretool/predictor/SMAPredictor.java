@@ -1,20 +1,22 @@
 package org.minnen.retiretool.predictor;
 
 import org.minnen.retiretool.Library;
-import org.minnen.retiretool.SequenceStore;
 import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.data.SequenceStore;
 
 /** Single-scale Simple Moving Average (SMA) predictor. */
 public class SMAPredictor extends AssetPredictor
 {
   protected final String priceSeqName;
+  protected final int    iPrice;
   protected final int    nMonths;
 
-  public SMAPredictor(int nMonths, String priceSeqName, SequenceStore store)
+  public SMAPredictor(int nMonths, String priceSeqName, int iPrice, SequenceStore store)
   {
     super("SMA-" + nMonths, store);
     this.nMonths = nMonths;
     this.priceSeqName = priceSeqName;
+    this.iPrice = iPrice;
     this.bAllowReuse = true;
     this.bPredictOne = true;
   }
@@ -38,10 +40,10 @@ public class SMAPredictor extends AssetPredictor
     // Calculate trailing moving average.
     int iLast = prices.length() - 1;
     int iFirst = Math.max(0, iLast - nMonths);
-    double sma = prices.average(iFirst, iLast).get(0);
+    double sma = prices.average(iFirst, iLast).get(iPrice);
 
     // Test above / below moving average.
-    double price = prices.get(iLast, 0);
+    double price = prices.get(iLast, iPrice);
     return (price > sma ? 0 : 1);
   }
 }

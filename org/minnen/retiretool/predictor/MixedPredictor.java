@@ -2,8 +2,8 @@ package org.minnen.retiretool.predictor;
 
 import org.minnen.retiretool.FinLib;
 import org.minnen.retiretool.Library;
-import org.minnen.retiretool.SequenceStore;
 import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.data.SequenceStore;
 
 public class MixedPredictor extends AssetPredictor
 {

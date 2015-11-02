@@ -43,7 +43,7 @@ public class ReturnStats implements Comparable<ReturnStats>
   @Override
   public String toString()
   {
-    return String.format("%.2f [%.2f, %.2f, %.2f, %.2f, %.2f]", mean, min, percentile25, median, percentile75, max);
+    return String.format("%.2f [%.2f, %.2f, %.2f, %.2f, %.2f]", mean, min, percentile10, median, percentile90, max);
   }
 
   @Override

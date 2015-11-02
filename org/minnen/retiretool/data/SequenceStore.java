@@ -1,4 +1,4 @@
-package org.minnen.retiretool;
+package org.minnen.retiretool.data;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -8,7 +8,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.FinLib;
+import org.minnen.retiretool.FinLib.Inflation;
+import org.minnen.retiretool.Library;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.DurationalStats;
 
@@ -37,7 +39,7 @@ public class SequenceStore implements Iterable<Sequence>
 
   private final List<List<Sequence>>  seqLists          = new ArrayList<List<Sequence>>();
 
-  private int                         lastStatsDuration = 10 * 12;
+  private int                         lastStatsDuration = -1;
 
   public SequenceStore()
   {
@@ -51,6 +53,20 @@ public class SequenceStore implements Iterable<Sequence>
     seqLists.add(nominalReturns);
     seqLists.add(realReturns);
     seqLists.add(miscSeqs);
+  }
+
+  public void clear()
+  {
+    nominalReturns.clear();
+    realReturns.clear();
+    miscSeqs.clear();
+    cumulativeStats.clear();
+    durationalStats.clear();
+    nameToIndex.clear();
+    miscNameToIndex.clear();
+    aliasMap.clear();
+    nameToOrig.clear();
+    lastStatsDuration = -1;
   }
 
   public int getLastStatsDuration()
@@ -398,6 +414,22 @@ public class SequenceStore implements Iterable<Sequence>
         seq.unlock();
       }
     }
+  }
+
+  public long getStartMS()
+  {
+    if (nominalReturns.isEmpty()) {
+      return Library.TIME_ERROR;
+    }
+    return nominalReturns.get(0).getStartMS();
+  }
+
+  public long getEndMS()
+  {
+    if (nominalReturns.isEmpty()) {
+      return Library.TIME_ERROR;
+    }
+    return nominalReturns.get(0).getEndMS();
   }
 
   @Override
