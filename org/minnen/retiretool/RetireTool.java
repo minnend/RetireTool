@@ -1604,38 +1604,45 @@ public class RetireTool
     }
   }
 
-  public static void genCrossValidatedResults(File dir)
+  public static void genFirstLastHalfResults(File dir)
   {
     List<Sequence[]> testSeqs = new ArrayList<>();
 
     Sequence stock = store.get("Stock");
     Sequence bonds = store.get("Bonds");
-    Sequence prices = store.getMisc("StockData");
 
-    final Slippage slippage = Slippage.None;
+    final String priceSeqName = "StockData";
+
     final int iStart = 12;
+    final int N = stock.length();
 
     testSeqs.add(new Sequence[] { stock, bonds });
+    testSeqs.add(new Sequence[] { stock.subseq(0, N / 2).setName("Stock-FirstHalf"),
+        bonds.subseq(0, N / 2).setName("Bonds-FirstHalf") });
+    testSeqs.add(new Sequence[] { stock.subseq(N / 4, N / 2).setName("Stock-MiddleHalf"),
+        bonds.subseq(N / 4, N / 2).setName("Bonds-MiddleHalf") });
+    testSeqs.add(new Sequence[] { stock.subseq(N / 2).setName("Stock-SecondHalf"),
+        bonds.subseq(N / 2).setName("Bonds-SecondHalf") });
 
     AssetPredictor mom1312Aggressive = new Multi3Predictor("Mom[1,3,12].Aggressive", new AssetPredictor[] {
         new MomentumPredictor(1, store), new MomentumPredictor(3, store), new MomentumPredictor(12, store) },
         Disposition.Aggressive, store);
 
     AssetPredictor sma129Cautious = new Multi3Predictor("SMA[1,2,9].Cautious", new AssetPredictor[] {
-        new SMAPredictor(1, prices.getName(), store), new SMAPredictor(2, prices.getName(), store),
-        new SMAPredictor(9, prices.getName(), store) }, Disposition.Cautious, store);
+        new SMAPredictor(1, priceSeqName, store), new SMAPredictor(2, priceSeqName, store),
+        new SMAPredictor(9, priceSeqName, store) }, Disposition.Cautious, store);
 
     AssetPredictor sma129Moderate = new Multi3Predictor("SMA[1,2,9].Moderate", new AssetPredictor[] {
-        new SMAPredictor(1, prices.getName(), store), new SMAPredictor(2, prices.getName(), store),
-        new SMAPredictor(9, prices.getName(), store) }, Disposition.Moderate, store);
+        new SMAPredictor(1, priceSeqName, store), new SMAPredictor(2, priceSeqName, store),
+        new SMAPredictor(9, priceSeqName, store) }, Disposition.Moderate, store);
 
     AssetPredictor sma1310Moderate = new Multi3Predictor("SMA[1,3,10].Moderate", new AssetPredictor[] {
-        new SMAPredictor(1, prices.getName(), store), new SMAPredictor(3, prices.getName(), store),
-        new SMAPredictor(10, prices.getName(), store) }, Disposition.Moderate, store);
+        new SMAPredictor(1, priceSeqName, store), new SMAPredictor(3, priceSeqName, store),
+        new SMAPredictor(10, priceSeqName, store) }, Disposition.Moderate, store);
 
     AssetPredictor sma1310Aggressive = new Multi3Predictor("SMA[1,3,10].Aggressive", new AssetPredictor[] {
-        new SMAPredictor(1, prices.getName(), store), new SMAPredictor(3, prices.getName(), store),
-        new SMAPredictor(10, prices.getName(), store) }, Disposition.Aggressive, store);
+        new SMAPredictor(1, priceSeqName, store), new SMAPredictor(3, priceSeqName, store),
+        new SMAPredictor(10, priceSeqName, store) }, Disposition.Aggressive, store);
 
     AssetPredictor mix1 = new MixedPredictor(null, new AssetPredictor[] { sma129Cautious, sma1310Moderate }, new int[] {
         50, 50 }, store);
@@ -1647,12 +1654,18 @@ public class RetireTool
         sma1310Aggressive, mix1, mix2 };
 
     for (int iTest = 0; iTest < testSeqs.size(); ++iTest) {
-      System.out.printf("Test Sequences %d\n", iTest + 1);
       Sequence[] seqs = testSeqs.get(iTest);
+      System.out.printf("\n-- Test Sequences %d  [%s] -> [%s] --\n", iTest + 1,
+          Library.formatMonth(seqs[0].getStartMS()), Library.formatMonth(seqs[0].getEndMS()));
+      for (Sequence seq : seqs) {
+        if (!store.has(seq.getName())) {
+          store.addMisc(seq);
+        }
+      }
       for (AssetPredictor predictor : predictors) {
         Sequence returns = Strategy.calcReturnsUsingDistributions(predictor, iStart, seqs);
         CumulativeStats cstats = CumulativeStats.calc(returns);
-        System.out.printf(" %s\n", cstats);
+        System.out.println(cstats.toRowString());
 
         // if (predictor instanceof MixedPredictor) {
         // Sequence[] baseReturns = new Sequence[predictor.predictors.length];
@@ -2007,8 +2020,8 @@ public class RetireTool
     // genReturnChart(dir);
 
     // List<String> candidates = collectStrategyNames(true, true);
-    // List<String> candidates = new ArrayList<String>(store.getNames());
-    // genDominationChart(candidates, dir);
+    List<String> candidates = new ArrayList<String>(store.getNames());
+    genDominationChart(candidates, dir);
 
     // genSMASweepChart(dir);
     // genMomentumSweepChart(dir);
@@ -2022,6 +2035,6 @@ public class RetireTool
     // genDrawdownChart(dir);
     // genSavingsTargetChart(dir);
     // genChartsForDifficultTimePeriods(dir);
-    genCrossValidatedResults(dir);
+    genFirstLastHalfResults(dir);
   }
 }

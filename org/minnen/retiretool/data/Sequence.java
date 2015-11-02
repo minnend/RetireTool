@@ -71,9 +71,10 @@ public class Sequence implements Iterable<FeatureVec>
     return name;
   }
 
-  public void setName(String name)
+  public Sequence setName(String name)
   {
     this.name = name;
+    return this;
   }
 
   public String toString()

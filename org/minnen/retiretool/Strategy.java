@@ -107,7 +107,7 @@ public class Strategy
     returns.addData(balance, seqs[0].getTimeMS(iStart));
     for (int t = iStart + 1; t < N; ++t) {
       assert seqs[0].getTimeMS(t) == seqs[1].getTimeMS(t);
-      predictor.store.lock(seqs[0].getStartMS(), seqs[0].getTimeMS(t) - 1);
+      predictor.store.lock(Library.TIME_BEGIN, seqs[0].getTimeMS(t) - 1);
       double[] distribution = predictor.selectDistribution(seqs);
       assert distribution.length == seqs.length;
       predictor.store.unlock();

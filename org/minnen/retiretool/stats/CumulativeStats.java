@@ -132,6 +132,13 @@ public class CumulativeStats implements Comparable<CumulativeStats>
         annualPercentiles[2], annualPercentiles[3], annualPercentiles[4], percentDown10);
   }
 
+  public String toRowString()
+  {
+    return String.format("%50s: %.2f \tDD=%.1f  \t[%.1f|%.1f|%.1f|%.1f|%.1f] \tDown10=%.1f", FinLib.getBaseName(name()),
+        cagr, drawdown, annualPercentiles[0], annualPercentiles[1], annualPercentiles[2], annualPercentiles[3],
+        annualPercentiles[4], percentDown10);
+  }
+
   /**
    * Calculates the stats for a list of cumulative returns sequences.
    * 

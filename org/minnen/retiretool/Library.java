@@ -12,6 +12,8 @@ public final class Library
 {
   public final static long             LNAN         = Long.MIN_VALUE;
   public final static long             TIME_ERROR   = LNAN;
+  public final static long             TIME_BEGIN   = Long.MIN_VALUE + 1;
+  public final static long             TIME_END     = Long.MAX_VALUE - 1;
   public final static int              INDEX_ERROR  = Integer.MIN_VALUE;
 
   public final static double           FPMIN        = Double.MIN_VALUE;

@@ -1,5 +1,6 @@
 package org.minnen.retiretool.predictor;
 
+import org.minnen.retiretool.Library;
 import org.minnen.retiretool.SequenceStore;
 import org.minnen.retiretool.data.Sequence;
 
@@ -31,7 +32,8 @@ public class SMAPredictor extends AssetPredictor
 
     Sequence prices = store.getMisc(priceSeqName);
     assert prices.length() > 0;
-    assert prices.getEndMS() == seqs[0].getEndMS();
+    assert prices.getEndMS() == seqs[0].getEndMS() : String.format("%s vs. %s", Library.formatDate(prices.getEndMS()),
+        Library.formatDate(seqs[0].getEndMS()));
 
     // Calculate trailing moving average.
     int iLast = prices.length() - 1;
