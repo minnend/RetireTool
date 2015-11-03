@@ -15,83 +15,7 @@ import org.minnen.retiretool.stats.WinStats;
 
 public class Strategy
 {
-  public static Sequence calcReturns(AssetPredictor predictor, int iStart, Slippage slippage, WinStats winStats,
-      Sequence... seqs)
-  {
-    assert seqs.length > 1;
-    int N = seqs[0].length();
-    for (int i = 0; i < seqs.length; ++i) {
-      assert seqs[i].length() == N;
-      assert seqs[i].getStartMS() == seqs[0].getStartMS();
-      assert predictor.store.has(seqs[0].getName());
-    }
-
-    predictor.reset();
-    final double principal = 1.0; // TODO principal might matter due to slippage or min purchase reqs
-    double balance = principal;
-    Sequence currentAsset = null;
-    Sequence returns = new Sequence(predictor.name);
-    returns.addData(balance, seqs[0].getTimeMS(iStart));
-    if (winStats == null) {
-      winStats = new WinStats();
-    }
-    winStats.nCorrect = new int[seqs.length];
-    winStats.nSelected = new int[seqs.length];
-    for (int i = iStart + 1; i < N; ++i) {
-      assert seqs[0].getTimeMS(i) == seqs[1].getTimeMS(i);
-      predictor.store.lock(seqs[0].getStartMS(), seqs[0].getTimeMS(i) - 1);
-      int iSelected = predictor.selectAsset(seqs);
-      predictor.store.unlock();
-
-      if (slippage != null) {
-        Sequence nextAsset = (iSelected >= 0 ? seqs[iSelected] : null);
-        balance = slippage.adjustForAssetChange(balance, i - 1, currentAsset, nextAsset);
-        currentAsset = nextAsset;
-      }
-
-      // Find correct answer (sequence with highest return for current month)
-      double correctReturn = 1.0;
-      int iCorrect = -1;
-      for (int iSeq = 0; iSeq < seqs.length; ++iSeq) {
-        Sequence seq = seqs[iSeq];
-        double r = FinLib.getReturn(seq, i - 1, i);
-        if (r > correctReturn) {
-          correctReturn = r;
-          iCorrect = iSeq;
-        }
-      }
-      predictor.feedback(seqs[0].getTimeMS(i), iCorrect, correctReturn);
-
-      // Invest everything in best asset for this month.
-      // No bestSeq => hold everything in cash for no gain and no loss.
-      double realizedReturn = 1.0;
-      if (iSelected >= 0) {
-        realizedReturn = FinLib.getReturn(seqs[iSelected], i - 1, i);
-        balance *= realizedReturn;
-      }
-      returns.addData(balance, seqs[0].getTimeMS(i));
-
-      // Update win stats
-      if (realizedReturn > correctReturn - 1e-6) {
-        ++winStats.nPredCorrect;
-      } else {
-        ++winStats.nPredWrong;
-      }
-      if (iCorrect >= 0) {
-        ++winStats.nCorrect[iCorrect];
-      }
-      if (iSelected >= 0) {
-        ++winStats.nSelected[iSelected];
-      }
-    }
-
-    // Return cumulative returns normalized so that starting value is 1.0.
-    returns._div(principal);
-    assert Math.abs(returns.getFirst(0) - 1.0) < 1e-6;
-    return returns;
-  }
-
-  public static Sequence calcReturnsUsingDistributions(AssetPredictor predictor, int iStart, Sequence... seqs)
+  public static Sequence calcReturns(AssetPredictor predictor, int iStart, int nMinTradeGap, Sequence... seqs)
   {
     assert seqs.length > 1;
     int N = seqs[0].length();
@@ -106,12 +30,25 @@ public class Strategy
     double balance = principal;
     Sequence returns = new Sequence(predictor.name);
     returns.addData(balance, seqs[0].getTimeMS(iStart));
+    int iLastTrade = -1;
+    double[] prevDistribution = new double[seqs.length];
     for (int t = iStart + 1; t < N; ++t) {
       assert seqs[0].getTimeMS(t) == seqs[1].getTimeMS(t);
       predictor.store.lock(Library.TIME_BEGIN, seqs[0].getTimeMS(t) - 1);
       double[] distribution = predictor.selectDistribution(seqs);
       assert distribution.length == seqs.length;
       predictor.store.unlock();
+
+      // Is it too soon to trade again?
+      if (iLastTrade >= 0 && t - iLastTrade <= nMinTradeGap) {
+        assert prevDistribution.length == distribution.length;
+        System.arraycopy(prevDistribution, 0, distribution, 0, distribution.length);
+      } else {
+        if (!Library.almostEqual(prevDistribution, distribution, 1e-5)) {
+          iLastTrade = t;
+          System.arraycopy(distribution, 0, prevDistribution, 0, distribution.length);
+        }
+      }
 
       // Find correct answer (sequence with highest return for current month)
       double realizedReturn = 0.0;
@@ -136,129 +73,6 @@ public class Strategy
     returns._div(principal);
     assert Math.abs(returns.getFirst(0) - 1.0) < 1e-6;
     return returns;
-  }
-
-  /**
-   * Invest 100% in asset with highest CAGR over last N months.
-   * 
-   * @param nMonths calculate CAGR over last N months.
-   * @param iStart index of month to start investing.
-   * @param slippage slippage model to use for each trade.
-   * @param prediction stats will be saved here (optional; can be null)
-   * @param seqs cumulative returns for each asset.
-   * @return sequence of returns using the momentum strategy
-   */
-  public static Sequence calcMomentumReturns(int nMonths, int iStart, Slippage slippage, WinStats winStats,
-      Sequence... seqs)
-  {
-    assert seqs.length > 1;
-    int N = seqs[0].length();
-    for (int i = 1; i < seqs.length; ++i) {
-      assert seqs[i].length() == N;
-      assert seqs[i].getStartMS() == seqs[0].getStartMS();
-    }
-
-    Sequence currentAsset = null;
-    double balance = 1.0;
-    Sequence momentum = new Sequence("Momentum-" + nMonths);
-    momentum.addData(balance, seqs[0].getTimeMS(iStart));
-    if (winStats == null) {
-      winStats = new WinStats();
-    }
-    winStats.nCorrect = new int[seqs.length];
-    winStats.nSelected = new int[seqs.length];
-    for (int i = iStart + 1; i < N; ++i) {
-      // Select asset with best return over previous 12 months.
-      double bestReturn = 0.0, correctReturn = 1.0;
-      int iSelected = -1, iCorrect = -1;
-      for (int iSeq = 0; iSeq < seqs.length; ++iSeq) {
-        Sequence seq = seqs[iSeq];
-        seq.lock(0, i - 1); // lock sequence so only historical data is accessible
-        int iLast = seq.length() - 1;
-        double r = FinLib.getReturn(seq, iLast - nMonths, iLast);
-        seq.unlock();
-        if (r > bestReturn) {
-          iSelected = iSeq;
-          bestReturn = r;
-        }
-
-        // The correct return is the one actually realized for the current month.
-        r = FinLib.getReturn(seq, i - 1, i);
-        if (r > correctReturn) {
-          correctReturn = r;
-          iCorrect = iSeq;
-        }
-      }
-
-      if (slippage != null) {
-        Sequence nextAsset = (iSelected >= 0 ? seqs[iSelected] : null);
-        balance = slippage.adjustForAssetChange(balance, i - 1, currentAsset, nextAsset);
-        currentAsset = nextAsset;
-      }
-
-      // Invest everything in best asset for this month.
-      // No bestSeq => hold everything in cash for no gain and no loss.
-      double realizedReturn = iSelected < 0 ? 1.0 : FinLib.getReturn(seqs[iSelected], i - 1, i);
-      balance *= realizedReturn;
-      momentum.addData(balance, seqs[0].getTimeMS(i));
-
-      if (realizedReturn > correctReturn - 1e-6) {
-        ++winStats.nPredCorrect;
-      } else {
-        ++winStats.nPredWrong;
-      }
-      if (iCorrect >= 0) {
-        ++winStats.nCorrect[iCorrect];
-      }
-      if (iSelected >= 0) {
-        ++winStats.nSelected[iSelected];
-      }
-    }
-
-    return momentum;
-  }
-
-  /**
-   * Invest in risky asset when above SMA, otherwise safe asset.
-   * 
-   * @param numMonths calculate SMA over past N months
-   * @param iStart index of month to start investing.
-   * @param slippage slippage model to use for each trade.
-   * @param prices monthly price used for SMA and signal
-   * @param risky cumulative returns for risky asset
-   * @param safe cumulative returns for safe asset
-   * @return sequence of returns using the above/below-SMA strategy
-   */
-  public static Sequence calcSMAReturns(int numMonths, int iStart, Slippage slippage, Sequence prices, Sequence risky,
-      Sequence safe)
-  {
-    // TODO update to use sequence locking for safety.
-    assert risky.length() == safe.length();
-
-    Sequence sma = new Sequence("SMA-" + numMonths);
-    double balance = 1.0;
-    Sequence currentAsset = null;
-    sma.addData(balance, risky.getTimeMS(iStart));
-    for (int i = iStart + 1; i < risky.length(); ++i) {
-      // Calculate trailing moving average.
-      int a = Math.max(0, i - numMonths - 1);
-      double ma = prices.average(a, i - 1).get(0);
-
-      // Test above / below moving average.
-      double price = prices.get(i - 1, 0);
-
-      // Select asset based on price relative to moving average.
-      Sequence nextAsset = (price > ma ? risky : safe);
-      if (slippage != null) {
-        balance = slippage.adjustForAssetChange(balance, i - 1, currentAsset, nextAsset);
-      }
-      currentAsset = nextAsset;
-
-      double lastMonthReturn = FinLib.getReturn(nextAsset, i - 1, i);
-      balance *= lastMonthReturn;
-      sma.addData(balance, risky.getTimeMS(i));
-    }
-    return sma;
   }
 
   /**
@@ -294,47 +108,34 @@ public class Strategy
   }
 
   /**
-   * Calculate returns as a mixed of other returns.
+   * Calculate returns from multiple asset with rebalancing.
    * 
    * @param assets cumulative returns for each asset.
    * @param targetPercents target percentage for each asset (will be normalized).
-   * @param rebalanceMonths rebalance every N months (zero for never).
-   * @param rebalanceBand rebalance when allocation is too far from target percent (zero for never, 5.0 = 5% band).
+   * @param nMonths rebalance every N months (zero for never).
+   * @param band rebalance when allocation is too far from target percent (zero for never, 5.0 = 5% band).
    * @return sequence of returns using the mixed strategy.
    */
-  public static Sequence calcMixedReturns(Sequence[] assets, double[] targetPercents, int rebalanceMonths,
-      double rebalanceBand)
+  public static Sequence calcReturns(Sequence[] assets, RebalanceInfo rebalance)
   {
     final int numAssets = assets.length;
-    assert numAssets == targetPercents.length;
+    assert numAssets == rebalance.targetPercents.length;
     for (int i = 1; i < numAssets; ++i) {
       assert assets[i].length() == assets[0].length();
     }
 
-    // Normalize target percentages to sum to 1.0.
-    double targetSum = 0.0;
-    for (int i = 0; i < numAssets; ++i) {
-      targetSum += targetPercents[i];
-    }
-    assert targetSum > 0.0;
-    for (int i = 0; i < numAssets; ++i) {
-      targetPercents[i] /= targetSum;
-    }
-
     // Initialize asset values to correct percentage.
     double[] value = new double[numAssets];
-    for (int i = 0; i < numAssets; ++i) {
-      value[i] = targetPercents[i];
-    }
+    System.arraycopy(rebalance.targetPercents, 0, value, 0, value.length);
 
     // Convert percentage to decimal.
-    rebalanceBand /= 100.0;
+    double rebalanceBand = rebalance.band / 100.0;
 
     // Compute returns for each class and rebalance as requested.
     final int N = assets[0].length();
     Sequence returns = new Sequence("Mixed");
     returns.addData(1.0, assets[0].getStartMS());
-    int numRebalances = 0;
+    rebalance.nRebalances = 0;
     for (int index = 1; index < N; ++index) {
       double balance = 0.0;
       for (int i = 0; i < numAssets; ++i) {
@@ -344,11 +145,11 @@ public class Strategy
       returns.addData(balance, assets[0].getTimeMS(index));
 
       // Figure out if we need to rebalance.
-      boolean rebalanceNow = (rebalanceMonths > 0 && index % rebalanceMonths == 0);
+      boolean rebalanceNow = (rebalance.nMonths > 0 && index % rebalance.nMonths == 0);
       if (!rebalanceNow && rebalanceBand > 0.0) {
         // Check each asset to see if it has exceeded the allocation band.
         for (int i = 0; i < numAssets; ++i) {
-          double diff = (value[i] / balance - targetPercents[i]);
+          double diff = (value[i] / balance - rebalance.targetPercents[i]);
           if (Math.abs(diff) > rebalanceBand) {
             rebalanceNow = true;
             break;
@@ -358,64 +159,15 @@ public class Strategy
 
       // Rebalance if needed.
       if (rebalanceNow) {
-        ++numRebalances;
+        ++rebalance.nRebalances;
         for (int j = 0; j < numAssets; ++j) {
-          value[j] = balance * targetPercents[j];
+          value[j] = balance * rebalance.targetPercents[j];
         }
       }
     }
 
     // System.out.printf("Rebalances: %d\n", numRebalances);
     return returns;
-  }
-
-  public static Sequence calcMultiMomentumReturns(int iStart, Slippage slippage, Sequence risky, Sequence safe,
-      Disposition disposition)
-  {
-    return calcMultiMomentumReturns(iStart, slippage, risky, safe, disposition, -1);
-  }
-
-  public static Sequence calcMultiMomentumReturns(int iStart, Slippage slippage, Sequence risky, Sequence safe,
-      int assetMap)
-  {
-    assert assetMap >= 0;
-    return calcMultiMomentumReturns(iStart, slippage, risky, safe, Disposition.Defensive, assetMap);
-  }
-
-  private static Sequence calcMultiMomentumReturns(int iStart, Slippage slippage, Sequence risky, Sequence safe,
-      Disposition disposition, int assetMap)
-  {
-    int N = risky.length();
-    assert safe.length() == N;
-
-    int[] numMonths = new int[] { 1, 3, 12 };
-
-    String name;
-    if (assetMap >= 0) {
-      name = "Mom." + assetMap;
-    } else {
-      name = "Mom." + disposition;
-    }
-    Sequence mom = new Sequence(name);
-    Sequence currentAsset = null;
-    double balance = 1.0;
-    mom.addData(balance, risky.getTimeMS(iStart));
-    for (int i = iStart + 1; i < N; ++i) {
-      int code = calcMomentumCode(i - 1, numMonths, risky, safe);
-
-      // Use votes to select asset.
-      Sequence nextAsset = selectAsset(code, disposition, assetMap, risky, safe);
-      if (slippage != null) {
-        balance = slippage.adjustForAssetChange(balance, i - 1, currentAsset, nextAsset);
-      }
-      currentAsset = nextAsset;
-
-      // Invest everything in best asset for this month.
-      balance *= FinLib.getReturn(nextAsset, i - 1, i);
-      mom.addData(balance, risky.getTimeMS(i));
-    }
-
-    return mom;
   }
 
   static class SeqCount implements Comparable<SeqCount>
@@ -657,89 +409,6 @@ public class Strategy
     Collections.sort(all);
     for (int i = 0; i < all.size(); ++i) {
       System.out.println(all.get(i));
-    }
-  }
-
-  public static Sequence calcMultiSmaReturns(int iStart, Slippage slippage, Sequence prices, int iPrice,
-      Sequence risky, Sequence safe, Disposition disposition)
-  {
-    return calcMultiSmaReturns(iStart, slippage, prices, iPrice, risky, safe, disposition, -1);
-  }
-
-  public static Sequence calcMultiSmaReturns(int iStart, Slippage slippage, Sequence prices, int iPrice,
-      Sequence risky, Sequence safe, int assetMap)
-  {
-    assert assetMap >= 0;
-    return calcMultiSmaReturns(iStart, slippage, prices, iPrice, risky, safe, Disposition.Defensive, assetMap);
-  }
-
-  public static Sequence calcMultiSmaReturns(int iStart, Slippage slippage, Sequence prices, int iPrice,
-      Sequence risky, Sequence safe, Disposition disposition, int assetMap)
-  {
-    int N = risky.length();
-    assert safe.length() == N;
-
-    int[] numMonths = new int[] { 1, 5, 10 };
-
-    String name;
-    if (assetMap >= 0) {
-      name = "SMA." + assetMap;
-    } else {
-      name = "SMA." + disposition;
-    }
-    Sequence sma = new Sequence(name);
-    double balance = 1.0;
-    sma.addData(balance, risky.getTimeMS(iStart));
-    Sequence currentAsset = null;
-    for (int i = iStart + 1; i < N; ++i) {
-      int code = calcSmaCode(i - 1, numMonths, prices, iPrice);
-
-      // Use votes to select asset.
-      Sequence nextAsset = selectAsset(code, disposition, assetMap, risky, safe);
-      if (slippage != null) {
-        balance = slippage.adjustForAssetChange(balance, i - 1, currentAsset, nextAsset);
-      }
-      currentAsset = nextAsset;
-
-      // Invest everything in best asset for this month.
-      balance *= FinLib.getReturn(nextAsset, i - 1, i);
-      sma.addData(balance, risky.getTimeMS(i));
-    }
-
-    return sma;
-  }
-
-  private static Sequence selectAsset(int code, Disposition disposition, int assetMap, Sequence risky, Sequence safe)
-  {
-    assert code >= 0 && code <= 7;
-
-    if (assetMap >= 0) {
-      int x = (assetMap >> code) & 1;
-      return (x == 1 ? risky : safe);
-    } else {
-      // Complete support or shortest + mid => always risky.
-      if (code >= 6) {
-        return risky;
-      }
-
-      // Shortest + support => only Defensive is safe.
-      if (code == 5) {
-        return disposition == Disposition.Defensive ? safe : risky;
-      }
-
-      // Not shortest and zero or one other => always safe.
-      if (code <= 2) {
-        return safe;
-      }
-
-      // Not shortest but both others.
-      if (code == 3) {
-        return disposition == Disposition.Defensive || disposition == Disposition.Cautious ? safe : risky;
-      }
-
-      // Only short-term support.
-      assert code == 4;
-      return disposition == Disposition.Aggressive ? risky : safe;
     }
   }
 

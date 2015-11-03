@@ -1,17 +1,28 @@
 package org.minnen.retiretool;
 
-import org.minnen.retiretool.predictor.AssetPredictor;
-
 public class RebalanceInfo
 {
-  private final double[] targetPercents;
-  private final int      rebalanceMonths;
-  private final double   rebalanceBand;
+  public double[] targetPercents;
+  public int      nMonths;
+  public double   band;
+  public int      nRebalances;
 
-  public RebalanceInfo(double[] targetPercents, int rebalanceMonths, double rebalanceBand)
+  public RebalanceInfo(int[] targetPercents, int rebalanceMonths, double rebalanceBand)
   {
-    this.targetPercents = targetPercents;
-    this.rebalanceMonths = rebalanceMonths;
-    this.rebalanceBand = rebalanceBand;
+    this.targetPercents = new double[targetPercents.length];
+    this.nMonths = rebalanceMonths;
+    this.band = rebalanceBand;
+
+    int sum = Library.sum(targetPercents);
+    assert sum > 0;
+    for (int i = 0; i < targetPercents.length; ++i) {
+      this.targetPercents[i] = (double) targetPercents[i] / sum;
+    }
+  }
+
+  public void setPolicy(int rebalanceMonths, double rebalanceBand)
+  {
+    this.nMonths = rebalanceMonths;
+    this.band = rebalanceBand;
   }
 }

@@ -603,4 +603,17 @@ public final class Library
       return s.substring(0, n);
     }
   }
+
+  public static boolean almostEqual(double[] a, double[] b, double eps)
+  {
+    if (a.length != b.length) {
+      return false;
+    }
+    for (int i = 0; i < a.length; ++i) {
+      if (Math.abs(b[i] - a[i]) > eps) {
+        return false;
+      }
+    }
+    return true;
+  }
 }
