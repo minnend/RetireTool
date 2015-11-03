@@ -2,11 +2,13 @@ package org.minnen.retiretool.data;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.minnen.retiretool.FinLib;
 import org.minnen.retiretool.FinLib.Inflation;
@@ -353,6 +355,20 @@ public class SequenceStore implements Iterable<Sequence>
   {
     assert nameToIndex.size() == nameToOrig.size();
     return nameToOrig.values();
+  }
+
+  public List<String> getNames(String regex)
+  {
+    assert nameToIndex.size() == nameToOrig.size();
+    List<String> names = new ArrayList<>();
+    Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
+    for (String name : nameToOrig.values()) {
+      if (pattern.matcher(name).find()) {
+        names.add(name);
+      }
+    }
+    Collections.sort(names);
+    return names;
   }
 
   /**

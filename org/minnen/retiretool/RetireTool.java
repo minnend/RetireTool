@@ -50,7 +50,8 @@ public class RetireTool
 
   /** Dimension to use in the price sequence for SMA predictions. */
   public static int                 iPriceSMA    = 0;
-  public static int                 nMinTradeGap = 1;
+  public static int                 nMinTradeGap = 0;
+  public static double              smaMargin    = 1.0;
 
   public static void setupShillerData(File dataDir, File dir, boolean buildComplexStrategies) throws IOException
   {
@@ -252,20 +253,20 @@ public class RetireTool
     final Slippage slippage = Slippage.None; // new Slippage(0.01, 0.1);
 
     // Stock / Bond mixes.
-    for (int i = 10; i <= 90; i += 10) {
-      RebalanceInfo rebalance = new RebalanceInfo(new int[] { i, 100 - i }, rebalanceMonths, rebalanceBand);
-      Sequence mix = Strategy.calcReturns(new Sequence[] { store.get("Stock"), store.get("bonds") }, rebalance);
-      mix.setName(String.format("Stock/Bonds-%d/%d", i, 100 - i));
-      store.alias(String.format("%d/%d", i, 100 - i), mix.getName());
-      store.add(mix);
-    }
+    // for (int i = 10; i <= 90; i += 10) {
+    // RebalanceInfo rebalance = new RebalanceInfo(new int[] { i, 100 - i }, rebalanceMonths, rebalanceBand);
+    // Sequence mix = Strategy.calcReturns(new Sequence[] { store.get("Stock"), store.get("bonds") }, rebalance);
+    // mix.setName(String.format("Stock/Bonds-%d/%d", i, 100 - i));
+    // store.alias(String.format("%d/%d", i, 100 - i), mix.getName());
+    // store.add(mix);
+    // }
 
     // Build Momentum and SMA predictors.
     AssetPredictor[] momPredictors = new AssetPredictor[12];
     AssetPredictor[] smaPredictors = new AssetPredictor[12];
     for (int i = 0; i < momPredictors.length; ++i) {
       momPredictors[i] = new MomentumPredictor(i + 1, store);
-      smaPredictors[i] = new SMAPredictor(i + 1, prices.getName(), iPriceSMA, store);
+      smaPredictors[i] = new SMAPredictor(i + 1, smaMargin, prices.getName(), iPriceSMA, store);
     }
 
     // Momentum sweep.
@@ -299,6 +300,13 @@ public class RetireTool
       store.add(sma);
     }
 
+    // SMA margin sweep.
+    for (int i = 1; i <= 8; ++i) {
+      AssetPredictor predictor = new SMAPredictor(1, i * 0.25, prices.getName(), iPriceSMA, store);
+      Sequence sma = Strategy.calcReturns(predictor, iStartSimulation, nMinTradeGap, risky, safe);
+      store.add(sma);
+    }
+
     // NewHigh sweep.
     // for (int i = 1; i <= 12; ++i) {
     // AssetPredictor predictor = new NewHighPredictor(i, store);
@@ -307,28 +315,23 @@ public class RetireTool
     // }
 
     // Multi-scale Momentum and SMA methods.
-    AssetPredictor[] multiMomPredictors = new AssetPredictor[4];
-    AssetPredictor[] multiSMAPredictors = new AssetPredictor[4];
-    for (Disposition disposition : Disposition.values()) {
-      AssetPredictor momPredictor = new Multi3Predictor("Mom[1,3,12]." + disposition, new AssetPredictor[] {
-          new MomentumPredictor(1, store), new MomentumPredictor(3, store), new MomentumPredictor(12, store) },
-          disposition, store);
-      multiMomPredictors[disposition.ordinal()] = momPredictor;
-      Sequence mom = Strategy.calcReturns(momPredictor, iStartSimulation, nMinTradeGap, risky, safe);
-
-      AssetPredictor smaPredictor = new Multi3Predictor("SMA[1,5,10]." + disposition, new AssetPredictor[] {
-          new SMAPredictor(1, prices.getName(), iPriceSMA, store),
-          new SMAPredictor(5, prices.getName(), iPriceSMA, store),
-          new SMAPredictor(10, prices.getName(), iPriceSMA, store) }, disposition, store);
-      multiSMAPredictors[disposition.ordinal()] = smaPredictor;
-      Sequence sma = Strategy.calcReturns(smaPredictor, iStartSimulation, nMinTradeGap, risky, safe);
-
-      store.add(mom);
-      store.add(sma);
-
-      // System.out.println(store.getCumulativeStats(mom.getName()));
-      // System.out.println(store.getCumulativeStats(sma.getName()));
-    }
+    // AssetPredictor[] multiMomPredictors = new AssetPredictor[4];
+    // AssetPredictor[] multiSMAPredictors = new AssetPredictor[4];
+    // for (Disposition disposition : Disposition.values()) {
+    // AssetPredictor momPredictor = new Multi3Predictor("Mom[1,3,12]." + disposition, new AssetPredictor[] {
+    // momPredictors[0], momPredictors[2], momPredictors[11] }, disposition, store);
+    // multiMomPredictors[disposition.ordinal()] = momPredictor;
+    // Sequence mom = Strategy.calcReturns(momPredictor, iStartSimulation, nMinTradeGap, risky, safe);
+    // store.add(mom);
+    //
+    // AssetPredictor smaPredictor = new Multi3Predictor("SMA[1,5,10]." + disposition, new AssetPredictor[] {
+    // new SMAPredictor(1, smaMargin, prices.getName(), iPriceSMA, store),
+    // new SMAPredictor(5, smaMargin, prices.getName(), iPriceSMA, store),
+    // new SMAPredictor(10, smaMargin, prices.getName(), iPriceSMA, store) }, disposition, store);
+    // multiSMAPredictors[disposition.ordinal()] = smaPredictor;
+    // Sequence sma = Strategy.calcReturns(smaPredictor, iStartSimulation, nMinTradeGap, risky, safe);
+    // store.add(sma);
+    // }
 
     // Full multi-momentum/sma sweep.
     // for (int assetMap = 255, i = 0; i < 8; ++i) {
@@ -557,17 +560,18 @@ public class RetireTool
             Sequence seq;
 
             // System.out.printf("Build: %s\n", suffix);
-            name = "Mom" + suffix;
-            predictor = new Multi3Predictor(name, new AssetPredictor[] { new MomentumPredictor(x, store),
-                new MomentumPredictor(y, store), new MomentumPredictor(z, store) }, disposition, store);
-            predictors.add(predictor);
-            seq = Strategy.calcReturns(predictor, iStartSimulation, nMinTradeGap, risky, safe);
-            store.add(seq);
+            // name = "Mom" + suffix;
+            // predictor = new Multi3Predictor(name, new AssetPredictor[] { new MomentumPredictor(x, store),
+            // new MomentumPredictor(y, store), new MomentumPredictor(z, store) }, disposition, store);
+            // predictors.add(predictor);
+            // seq = Strategy.calcReturns(predictor, iStartSimulation, nMinTradeGap, risky, safe);
+            // store.add(seq);
 
             name = "SMA" + suffix;
             predictor = new Multi3Predictor(name, new AssetPredictor[] {
-                new SMAPredictor(x, priceName, iPriceSMA, store), new SMAPredictor(y, priceName, iPriceSMA, store),
-                new SMAPredictor(z, priceName, iPriceSMA, store) }, disposition, store);
+                new SMAPredictor(x, smaMargin, priceName, iPriceSMA, store),
+                new SMAPredictor(y, smaMargin, priceName, iPriceSMA, store),
+                new SMAPredictor(z, smaMargin, priceName, iPriceSMA, store) }, disposition, store);
             predictors.add(predictor);
             seq = Strategy.calcReturns(predictor, iStartSimulation, nMinTradeGap, risky, safe);
             store.add(seq);
@@ -1079,43 +1083,18 @@ public class RetireTool
 
   public static void genSMASweepChart(File dir) throws IOException
   {
-    final int[] months = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
     final int duration = 10 * 12;
     store.recalcDurationalStats(duration, FinLib.Inflation.Ignore);
 
     // Build list of names of assets/strategies that we care about for scatter plot.
     List<String> nameList = new ArrayList<>();
     nameList.add("stock");
-    for (int i = 0; i < months.length; ++i) {
-      nameList.add("sma-" + months[i]);
+    for (int i = 1; i <= 12; ++i) {
+      nameList.add("sma-" + i);
     }
+    nameList.addAll(store.getNames("sma-\\d+-"));
     String[] names = nameList.toArray(new String[nameList.size()]);
     Chart.saveStatsTable(new File(dir, "sma-sweep.html"), GRAPH_WIDTH, true, store.getCumulativeStats(names));
-    // Chart.printDecadeTable(store.get("sma-12"), store.get("stock"));
-
-    // Create scatterplot of returns vs. volatility.
-    List<DurationalStats> dstats = store.getDurationalStats(names);
-    Sequence scatter = new Sequence("SMA Results");
-    for (int i = 0; i < dstats.size(); ++i) {
-      DurationalStats stats = dstats.get(i);
-      String label = "Stock";
-      if (i < months.length) {
-        label = "" + months[i];
-      }
-      scatter.addData(new FeatureVec(label, 2, stats.mean, stats.sdev));
-    }
-
-    // names = new String[] { "stock", "bonds", "60/40", "sma-1", "sma-3", "sma-12", "SMA.Defensive", "SMA.cautious",
-    // "SMA.moderate", "SMA.Aggressive" };
-    // Chart.saveLineChart(new File(dir, "sma-cumulative.html"), "Cumulative Market Returns: sma Strategy", GRAPH_WIDTH,
-    // GRAPH_HEIGHT, true, store.getReturns(names));
-    //
-    // Chart.saveBoxPlots(new File(dir, "sma-box-plots.html"),
-    // String.format("SMA Returns (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
-    // store.getDurationalStats(names));
-    //
-    // List<CumulativeStats> cstats = store.getCumulativeStats(names);
-    // Chart.saveStatsTable(new File(dir, "sma-chart.html"), GRAPH_WIDTH, true, cstats);
   }
 
   public static List<String> collectMomentumNames(boolean bIncludeMapBased, boolean bIncludeMixed)
@@ -1262,13 +1241,14 @@ public class RetireTool
 
     // Filter candidates to find "dominating" strategies.
     store.recalcDurationalStats(10 * 12, FinLib.Inflation.Ignore);
-    FinLib.filterStrategies(candidates, store);
+    // FinLib.filterStrategies(candidates, store);
+    Collections.sort(candidates);
 
     List<CumulativeStats> winners = new ArrayList<CumulativeStats>();
     for (String name : candidates) {
       winners.add(store.getCumulativeStats(name));
     }
-    Collections.sort(winners, Collections.reverseOrder());
+    // Collections.sort(winners, Collections.reverseOrder());
     System.out.printf("Winners: %d\n", winners.size());
     Chart.saveStatsTable(new File(dir, "domination-chart.html"), GRAPH_WIDTH, true, winners);
 
@@ -2026,7 +2006,7 @@ public class RetireTool
     List<String> candidates = new ArrayList<String>(store.getNames());
     genDominationChart(candidates, dir);
 
-    genSMASweepChart(dir);
+    // genSMASweepChart(dir);
     // genMomentumSweepChart(dir);
     // genNewHighSweepChart(dir);
     // genStockBondMixSweepChart(shiller, dir);
