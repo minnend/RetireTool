@@ -53,6 +53,8 @@ public final class FinLib
   // VGTSX = International Stock
   public static final String[] VANGUARD_INVESTOR_FUNDS = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX" };
 
+  public static final String[] STOCK_MARKET_FUNDS      = new String[] { "^GSPC" };
+
   /**
    * Compute compound annual growth rate (CAGR) based on total multiplier.
    * 
@@ -1241,5 +1243,56 @@ public final class FinLib
       sb.append(percents[i]);
     }
     return sb.toString();
+  }
+
+  public static boolean equiv(double a, double b)
+  {
+    return Math.abs(a - b) < 1e-4;
+  }
+
+  public static boolean isLTG(long buy, long sell)
+  {
+    if (sell <= buy) { // handle nonsense case of sell before buy
+      return false;
+    }
+
+    Calendar cbuy = Library.now();
+    cbuy.setTimeInMillis(buy);
+
+    Calendar csell = Library.now();
+    csell.setTimeInMillis(sell);
+
+    // May be able to determine from year alone.
+    int year1 = cbuy.get(Calendar.YEAR);
+    int year2 = csell.get(Calendar.YEAR);
+    if (year2 <= year1) { // same year => stg
+      return false;
+    }
+    if (year2 > year1 + 1) { // more than one year => ltg
+      return true;
+    }
+    assert year2 == year1 + 1;
+
+    // Next year so month may be enough.
+    int month1 = cbuy.get(Calendar.MONTH);
+    int month2 = csell.get(Calendar.MONTH);
+    if (month2 < month1) {
+      return false;
+    }
+    if (month2 > month1) {
+      return true;
+    }
+    assert month1 == month2;
+
+    // Next year and same month so check day.
+    int day1 = cbuy.get(Calendar.DAY_OF_MONTH);
+    int day2 = csell.get(Calendar.DAY_OF_MONTH);
+
+    // Special case for Feb 28: sell on following Feb 29 is still STG.
+    if (month1 == 1 && day1 == 28) {
+      return false;
+    }
+
+    return day2 > day1;
   }
 }
