@@ -72,6 +72,33 @@ public final class Library
     return cal;
   }
 
+  public static Calendar calFromTime(long timeMS)
+  {
+    Calendar cal = now();
+    cal.setTimeInMillis(timeMS);
+    return cal;
+  }
+
+  public static boolean isSameDay(long time1, long time2)
+  {
+    Calendar cal1 = calFromTime(time1);
+    Calendar cal2 = calFromTime(time2);
+
+    if (cal1.get(Calendar.YEAR) != cal2.get(Calendar.YEAR)) {
+      return false;
+    }
+
+    if (cal1.get(Calendar.MONTH) != cal2.get(Calendar.MONTH)) {
+      return false;
+    }
+
+    if (cal1.get(Calendar.DAY_OF_MONTH) != cal2.get(Calendar.DAY_OF_MONTH)) {
+      return false;
+    }
+
+    return true;
+  }
+
   /**
    * @return calendar object representing the given date
    */
@@ -615,5 +642,23 @@ public final class Library
       }
     }
     return true;
+  }
+
+  public static double monthsBetween(long from, long to)
+  {
+    Calendar cal = now();
+    cal.setLenient(true);
+    cal.setTimeInMillis(from);
+
+    int year1 = cal.get(Calendar.YEAR);
+    int month1 = cal.get(Calendar.MONTH);
+    int day1 = cal.get(Calendar.DAY_OF_MONTH);
+
+    cal.setTimeInMillis(to);
+    int year2 = cal.get(Calendar.YEAR);
+    int month2 = cal.get(Calendar.MONTH);
+    int day2 = cal.get(Calendar.DAY_OF_MONTH);
+
+    return (year2 - year1) * 12 + (month2 - month1) + (day2 - day1) / 30.0;
   }
 }

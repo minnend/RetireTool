@@ -1,5 +1,8 @@
 package org.minnen.retiretool;
 
+import java.util.Calendar;
+
+import org.minnen.retiretool.FinLib.DividendMethod;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 
@@ -15,14 +18,12 @@ public class Shiller
   public static int GS10  = 3;
   public static int CAPE  = 4;
 
-  /** @return Sequence containing all inflation (CPI) data. */
-  public static Sequence getInflationData(Sequence shiller)
+  public static Sequence getData(int dim, String name, Sequence shiller)
   {
-    return getInflationData(shiller, 0, shiller.size() - 1);
+    return getData(dim, name, shiller, 0, shiller.size() - 1);
   }
 
-  /** @return Sequence containing inflation (CPI) data in the given range (inclusive). */
-  public static Sequence getInflationData(Sequence shiller, int iStart, int iEnd)
+  public static Sequence getData(int dim, String name, Sequence shiller, int iStart, int iEnd)
   {
     if (iStart < 0) {
       iStart += shiller.length();
@@ -30,33 +31,11 @@ public class Shiller
     if (iEnd < 0) {
       iEnd += shiller.length();
     }
-    Sequence cpi = new Sequence("CPI");
+    Sequence seq = new Sequence(name);
     for (int i = iStart; i <= iEnd; ++i) {
-      cpi.addData(shiller.get(i, CPI), shiller.getTimeMS(i));
+      seq.addData(shiller.get(i, dim), shiller.getTimeMS(i));
     }
-    return cpi;
-  }
-
-  /** @return Sequence containing all CAPE data. */
-  public static Sequence getCapeData(Sequence shiller)
-  {
-    return getCapeData(shiller, 0, shiller.size() - 1);
-  }
-
-  /** @return Sequence containing CAPE data in the given range (inclusive). */
-  public static Sequence getCapeData(Sequence shiller, int iStart, int iEnd)
-  {
-    if (iStart < 0) {
-      iStart += shiller.length();
-    }
-    if (iEnd < 0) {
-      iEnd += shiller.length();
-    }
-    Sequence cape = new Sequence("CAPE");
-    for (int i = iStart; i <= iEnd; ++i) {
-      cape.addData(shiller.get(i, CAPE), shiller.getTimeMS(i));
-    }
-    return cape;
+    return seq;
   }
 
   /** @return Sequence containing all stock and dividend data. */
@@ -81,25 +60,30 @@ public class Shiller
     return seq;
   }
 
-  /** @return Sequence containing all bond data. */
-  public static Sequence getBondData(Sequence shiller)
+  public static Sequence getDividendPayments(Sequence shiller, DividendMethod divMethod)
   {
-    return getBondData(shiller, 0, shiller.size() - 1);
-  }
+    if (divMethod == DividendMethod.NO_REINVEST) { // no payments => empty sequence
+      return new Sequence("Dividends");
+    } else if (divMethod == DividendMethod.MONTHLY) {
+      return getData(DIV, "Dividends", shiller);
+    } else {
+      assert divMethod == DividendMethod.QUARTERLY;
 
-  /** @return Sequence containing bond data in the given range (inclusive). */
-  public static Sequence getBondData(Sequence shiller, int iStart, int iEnd)
-  {
-    if (iStart < 0) {
-      iStart += shiller.length();
+      // Dividends at the end of every quarter (march, june, september, december).
+      Sequence seq = new Sequence("Dividends");
+      Calendar cal = Library.now();
+      double div = 0.0;
+      for (int i = 0; i < shiller.length(); ++i) {
+        long timeMS = shiller.getTimeMS(i);
+        div += shiller.get(i, Shiller.DIV);
+        cal.setTimeInMillis(timeMS);
+        int month = cal.get(Calendar.MONTH);
+        if (month % 3 == 2) { // time for a dividend!
+          seq.addData(div, timeMS);
+          div = 0.0;
+        }
+      }
+      return seq;
     }
-    if (iEnd < 0) {
-      iEnd += shiller.length();
-    }
-    Sequence seq = new Sequence("10-Year Treasury Notes");
-    for (int i = iStart; i <= iEnd; ++i) {
-      seq.addData(shiller.get(i, GS10), shiller.getTimeMS(i));
-    }
-    return seq;
   }
 }

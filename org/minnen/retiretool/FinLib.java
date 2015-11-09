@@ -62,11 +62,12 @@ public final class FinLib
    * @param nMonths number of months in term
    * @return average annual return as a percentage (e.g., 4.32 = 4.32%/yr)
    */
-  public static double getAnnualReturn(double totalReturn, int nMonths)
+  public static double getAnnualReturn(double totalReturn, double nMonths)
   {
-    if (nMonths < 1) {
+    if (nMonths <= 0.0) {
       return 1.0;
     }
+
     // x^n = y -> x = y ^ (1/n)
     return mul2ret(Math.pow(totalReturn, 12.0 / nMonths));
   }
@@ -746,13 +747,13 @@ public final class FinLib
     seq.addData(baseValue, snp.getTimeMS(iStart));
     for (int i = iStart + 1; i <= iEnd; ++i) {
       long timeMS = snp.getTimeMS(i);
-      double div = 0.0;
+      double divReinvest = 0.0;
       if (divMethod == DividendMethod.NO_REINVEST)
         // No dividend reinvestment so all dividends go to cash.
-        divCash += shares * snp.get(i, 1);
+        divCash += shares * snp.get(i, Shiller.DIV);
       else if (divMethod == DividendMethod.MONTHLY) {
         // Dividends at the end of every month.
-        div = snp.get(i, 1);
+        divReinvest = snp.get(i, Shiller.DIV);
       } else if (divMethod == DividendMethod.QUARTERLY) {
         // Dividends at the end of every quarter (march, june, september, december).
         Calendar cal = Library.now();
@@ -762,14 +763,14 @@ public final class FinLib
           for (int j = 0; j < 3; j++) {
             if (i - j < iStart)
               break;
-            div += snp.get(i - j, 1);
+            divReinvest += snp.get(i - j, Shiller.DIV);
           }
         }
       }
 
       // Apply the dividends (if any).
-      double price = snp.get(i, 0);
-      shares += shares * div / price;
+      double price = snp.get(i, Shiller.PRICE);
+      shares += shares * divReinvest / price;
 
       // Add data point for current value.
       double value = divCash + shares * price;
@@ -1294,5 +1295,12 @@ public final class FinLib
     }
 
     return day2 > day1;
+  }
+
+  public static long compareCash(double a, double b)
+  {
+    long x = Math.round(a * 1000.0);
+    long y = Math.round(b * 1000.0);
+    return x - y;
   }
 }

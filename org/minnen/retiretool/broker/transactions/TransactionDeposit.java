@@ -9,18 +9,18 @@ public class TransactionDeposit extends Transaction
   public final double amount;
   public final double postBalance;
 
-  public TransactionDeposit(Account account, long time, double amount)
+  public TransactionDeposit(Account account, long time, double amount, String memo)
   {
-    super(account, time);
+    super(account, time, memo);
     assert amount > 0.0;
     this.amount = amount;
-    this.postBalance = account.getBalance() + amount;
+    this.postBalance = account.getCash() + amount;
   }
 
   @Override
   public String toString()
   {
-    return String.format("[%s] Deposit: %s -> %s]", Library.formatDate(time), FinLib.formatDollars(amount),
-        FinLib.formatDollars(postBalance));
+    return String.format("%11s| Deposit: $%s -> $%s%s", Library.formatDate(time),
+        FinLib.currencyFormatter.format(amount), FinLib.currencyFormatter.format(postBalance), getMemoString());
   }
 }

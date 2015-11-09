@@ -204,6 +204,7 @@ public class SequenceStore implements Iterable<Sequence>
     miscSeqs.add(misc);
     miscNameToIndex.put(name.toLowerCase(), index);
     assert getMisc(name) == misc;
+    nameToOrig.put(name.toLowerCase(), name);
 
     if (name.toLowerCase().equals("inflation")) {
       recalcNominalReturns();
@@ -353,7 +354,6 @@ public class SequenceStore implements Iterable<Sequence>
 
   public Collection<String> getNames()
   {
-    assert nameToIndex.size() == nameToOrig.size();
     return nameToOrig.values();
   }
 

@@ -96,7 +96,7 @@ public class DataIO
           double price = Double.parseDouble(toks[1]);
 
           // snp dividend -- data is annual yield, we want monthly
-          double div = Double.parseDouble(toks[2]) / 12;
+          double div = Double.parseDouble(toks[2]) / 12.0;
 
           // cpi
           double cpi = Double.parseDouble(toks[4]);

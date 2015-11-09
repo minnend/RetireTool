@@ -19,6 +19,8 @@ import java.util.regex.Pattern;
 import org.minnen.retiretool.Chart.ChartType;
 import org.minnen.retiretool.FinLib.DividendMethod;
 import org.minnen.retiretool.predictor.Multi3Predictor.Disposition;
+import org.minnen.retiretool.broker.Account;
+import org.minnen.retiretool.broker.Broker;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
@@ -73,8 +75,10 @@ public class RetireTool
     // Library.formatDate(tbills.getEndMS()));
     // System.out.printf("Common: [%s] -> [%s]\n", Library.formatDate(commonStart), Library.formatDate(commonEnd));
 
-    // shiller = shiller.subseq(commonStart, commonEnd);
-    // tbillData = tbillData.subseq(commonStart, commonEnd);
+    long commonStart = Library.getTime(1, 1, 1872);
+    long commonEnd = Library.getTime(31, 12, 2014);
+    shiller = shiller.subseq(commonStart, commonEnd);
+    tbillData = tbillData.subseq(commonStart, commonEnd);
     // nikkei = nikkei.subseq(commonStart, commonEnd);
 
     buildCumulativeReturnsStore(shiller, tbillData, null, buildComplexStrategies);
@@ -173,7 +177,7 @@ public class RetireTool
 
     // Extract stock and bond data from shiller sequence.
     Sequence stockData = Shiller.getStockData(shiller, iStartData, iEndData);
-    Sequence bondData = Shiller.getBondData(shiller, iStartData, iEndData);
+    Sequence bondData = Shiller.getData(Shiller.GS10, "Bonds", shiller, iStartData, iEndData);
     assert stockData.matches(bondData);
     System.out.printf("Build Store: [%s] -> [%s]\n", Library.formatMonth(stockData.getStartMS()),
         Library.formatMonth(stockData.getEndMS()));
@@ -181,7 +185,7 @@ public class RetireTool
     store.addMisc(bondData, "BondData");
 
     // Add CPI data.
-    store.addMisc(Shiller.getInflationData(shiller, iStartData, iEndData), "cpi");
+    store.addMisc(Shiller.getData(Shiller.CPI, "cpi", shiller, iStartData, iEndData));
     store.alias("inflation", "cpi");
 
     // Calculate cumulative returns for full stock, bond, and t-bill data.
@@ -701,7 +705,7 @@ public class RetireTool
     int percentBonds = 40;
 
     Sequence snpData = Shiller.getStockData(shiller, iStartData, iEndData);
-    Sequence bondData = Shiller.getBondData(shiller, iStartData, iEndData);
+    Sequence bondData = Shiller.getData(Shiller.GS10, "Bonds", shiller, iStartData, iEndData);
 
     Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStartData, -1);
     bonds.setName("Bonds");
@@ -962,7 +966,7 @@ public class RetireTool
     // iEnd = getIndexForDate(2010, 1);
 
     Sequence snpData = Shiller.getStockData(shiller, iStart, iEnd);
-    Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
+    Sequence bondData = Shiller.getData(Shiller.GS10, "Bonds", shiller, iStart, iEnd);
 
     Sequence snp = FinLib.calcSnpReturns(snpData, iStart, -1, DividendMethod.MONTHLY);
     Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStart, -1);
@@ -1016,7 +1020,7 @@ public class RetireTool
     int iEnd = shiller.length() - 1;
 
     Sequence stockData = Shiller.getStockData(shiller, iStart, iEnd);
-    Sequence bondData = Shiller.getBondData(shiller, iStart, iEnd);
+    Sequence bondData = Shiller.getData(Shiller.GS10, "Bonds", shiller, iStart, iEnd);
 
     Sequence stock = FinLib.calcSnpReturns(stockData, iStart, -1, DividendMethod.MONTHLY);
     Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStart, -1);
@@ -1217,7 +1221,7 @@ public class RetireTool
 
   public static void genInterestRateGraph(Sequence shiller, Sequence tbills, File file) throws IOException
   {
-    Sequence bonds = Shiller.getBondData(shiller);
+    Sequence bonds = Shiller.getData(Shiller.GS10, "Bonds", shiller);
     Chart.saveHighChart(file, ChartType.Line, "Interest Rates", null, null, GRAPH_WIDTH, GRAPH_HEIGHT, 0.0, 16.0, 1.0,
         false, 0, bonds, tbills);
   }
@@ -1228,7 +1232,7 @@ public class RetireTool
     int iEndData = shiller.length() - 1;
 
     Sequence stockData = Shiller.getStockData(shiller, iStartData, iEndData);
-    Sequence bondData = Shiller.getBondData(shiller, iStartData, iEndData);
+    Sequence bondData = Shiller.getData(Shiller.GS10, "Bonds", shiller, iStartData, iEndData);
 
     Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, -1);
     bonds.setName("Bonds");
@@ -1444,10 +1448,11 @@ public class RetireTool
     tbillData.setName("3-Month Treasury Bills");
     tbillData = FinLib.pad(tbillData, shiller, 0.0);
 
-    Sequence stock = FinLib.calcSnpReturns(Shiller.getStockData(shiller), 0, -1, DividendMethod.MONTHLY);
-    Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, Shiller.getBondData(shiller), 0, -1);
+    Sequence stock = FinLib.calcSnpReturns(Shiller.getStockData(shiller), 0, -1, DividendMethod.QUARTERLY);
+    Sequence bondData = Shiller.getData(Shiller.GS10, "Bonds", shiller);
+    Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, -1);
     Sequence tbills = Bond.calcReturnsRebuy(BondFactory.bill3Month, tbillData, 0, -1);
-    Sequence cpi = Shiller.getInflationData(shiller);
+    Sequence cpi = Shiller.getData(Shiller.CPI, "cpi", shiller);
 
     Sequence nikkeiDaily = DataIO.loadDateValueCSV(new File(dataDir, "nikkei225-daily.csv"));
     Sequence nikkei = FinLib.daily2monthly(nikkeiDaily);
@@ -1839,6 +1844,95 @@ public class RetireTool
     }
   }
 
+  public static void runBroker(File dataDir, File dir) throws IOException
+  {
+    Sequence stockAll = DataIO.loadYahooData(new File(dataDir, "^GSPC.csv"));
+    System.out.printf("S&P (Daily): [%s] -> [%s]\n", Library.formatMonth(stockAll.getStartMS()),
+        Library.formatMonth(stockAll.getEndMS()));
+
+    Sequence shiller = DataIO.loadShillerData(new File(dataDir, "shiller.csv"));
+    System.out.printf("Shiller: [%s] -> [%s]\n", Library.formatMonth(shiller.getStartMS()),
+        Library.formatMonth(shiller.getEndMS()));
+
+    Sequence tbillData = DataIO.loadDateValueCSV(new File(dataDir, "treasury-bills-3-month.csv"));
+    tbillData.setName("3-Month Treasury Bills");
+    System.out.printf("TBills: [%s] -> [%s]\n", Library.formatMonth(tbillData.getStartMS()),
+        Library.formatMonth(tbillData.getEndMS()));
+    tbillData = FinLib.pad(tbillData, shiller, 0.0);
+
+    long commonStart = Library.calcCommonStart(shiller, tbillData, stockAll);
+    long commonEnd = Library.calcCommonEnd(shiller, tbillData, stockAll);
+    System.out.printf("Common: [%s] -> [%s]\n", Library.formatDate(commonStart), Library.formatDate(commonEnd));
+
+    stockAll = stockAll.subseq(commonStart, commonEnd);
+    shiller = shiller.subseq(commonStart, commonEnd);
+    tbillData = tbillData.subseq(commonStart, commonEnd);
+
+    store.addMisc(stockAll, "Stock");
+    store.addMisc(shiller, "Shiller");
+    store.addMisc(tbillData, "TBillData");
+    store.alias("interest-rates", "TBillData");
+
+    // Monthly S&P dividends.
+    Sequence divPayments = Shiller.getDividendPayments(shiller, DividendMethod.QUARTERLY);
+    store.addMisc(divPayments, "Stock-Dividends");
+
+    // Add CPI data.
+    store.addMisc(Shiller.getData(Shiller.CPI, "cpi", shiller));
+    store.alias("inflation", "cpi");
+
+    final int iStart = stockAll.getIndexAtOrAfter(stockAll.getStartMS() + 365 * 24 * 60 * 60 * 1000L);
+    final long startSim = stockAll.getTimeMS(iStart);
+
+    Sequence guideSeq = stockAll.subseq(iStart);
+    Broker broker = new Broker(store, startSim);
+
+    double principal = 1000.0;
+    Account account = broker.openAccount(principal, Account.Type.Roth, true);
+
+    System.out.printf("Sequences: %d, %d\n", store.getNumReturns(), store.getNumMisc());
+    for (String name : store.getNames())
+      System.out.printf(" - %s\n", name);
+
+    // int prevMonth = -1;
+    final int T = guideSeq.length();
+    for (int t = 0; t < T; ++t) {
+      long time = guideSeq.getTimeMS(t);
+      broker.setTime(time);
+
+      if (t == 0) {
+        account.buyValue("Stock", account.getCash(), null);
+      }
+
+      // End of day business.
+      long nextTime = (t == T - 1 ? time + 1 : guideSeq.getTimeMS(t + 1));
+      broker.doEndOfDayBusiness(nextTime);
+
+      account.printTransactions(time, Library.TIME_END);
+
+      // int month = Library.calFromTime(time).get(Calendar.MONTH);
+      // if (month != prevMonth) {
+      // prevMonth = month;
+      //
+      // double value = account.getValue();
+      // double tr = value / principal;
+      // double nMonths = Library.monthsBetween(startSim, time);
+      // double ar = FinLib.getAnnualReturn(tr, nMonths);
+      // System.out.printf("[%s]: $%s (%.3f%%)\n", Library.formatDate(time), FinLib.currencyFormatter.format(value), ar,
+      // nMonths);
+      // }
+    }
+
+    double value = account.getValue();
+    double tr = value / principal;
+    double nMonths = Library.monthsBetween(startSim, guideSeq.getEndMS());
+    double ar = FinLib.getAnnualReturn(tr, nMonths);
+    System.out.printf("%11s| $%s (%.2f%%)\n", Library.formatDate(guideSeq.getEndMS()),
+        FinLib.currencyFormatter.format(value), ar);
+
+    // account.printTransactions();
+  }
+
   public static void main(String[] args) throws IOException
   {
     File dataDir = new File("g:/research/finance");
@@ -1852,10 +1946,12 @@ public class RetireTool
     // runJitterTest(dataDir, dir);
 
     // setupVanguardData(0, dataDir, dir);
-    setupShillerData(dataDir, dir, true);
+    // setupShillerData(dataDir, dir, true);
+
+    runBroker(dataDir, dir);
 
     // DataIO.downloadDailyDataFromYahoo(dataDir, FinLib.VANGUARD_INVESTOR_FUNDS);
-    DataIO.downloadDailyDataFromYahoo(dataDir, FinLib.STOCK_MARKET_FUNDS);
+    // DataIO.downloadDailyDataFromYahoo(dataDir, FinLib.STOCK_MARKET_FUNDS);
 
     // Chart.printDecadeTable(store.get("Mom.risky"), store.get("stock"));
     // Chart.printDecadeTable(store.get("Mom.Risky/Mom.Cautious-20/80"), store.get("stock"));
@@ -1866,8 +1962,8 @@ public class RetireTool
     // genReturnViz(dir);
     // genReturnChart(dir);
 
-    List<String> candidates = new ArrayList<String>(store.getNames());
-    genDominationChart(candidates, dir);
+    // List<String> candidates = new ArrayList<String>(store.getNames());
+    // genDominationChart(candidates, dir);
 
     // genSMASweepChart(dir);
     // genMomentumSweepChart(dir);

@@ -3,31 +3,31 @@ package org.minnen.retiretool.broker;
 public class PositionLot
 {
   public final String name;
-  public final long   time;
-  public final double price;
+  public final long   purchaseTime;
+  public final double purchasePrice;
 
-  private int         nShares;
+  private double      nShares;
 
-  public PositionLot(String name, long time, int nShares, double price)
+  public PositionLot(String name, long time, double nShares, double price)
   {
     this.name = name;
-    this.time = time;
+    this.purchaseTime = time;
     this.nShares = nShares;
-    this.price = price;
+    this.purchasePrice = price;
   }
 
-  public int getNumShares()
+  public double getNumShares()
   {
     return nShares;
   }
 
-  public double getValue()
+  public double getCostBasis()
   {
     assert nShares > 0;
-    return nShares * price;
+    return nShares * purchasePrice;
   }
 
-  public void sell(int nSold)
+  public void sell(double nSold)
   {
     assert nSold <= nShares;
     nShares -= nSold;

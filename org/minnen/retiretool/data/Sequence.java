@@ -200,6 +200,9 @@ public class Sequence implements Iterable<FeatureVec>
   /** @return value of the d^th dimension in the i^th feature vector */
   public double get(int i, int d)
   {
+    if (i < 0) {
+      i += length();
+    }
     return get(i).get(d);
   }
 
@@ -587,8 +590,8 @@ public class Sequence implements Iterable<FeatureVec>
   public Sequence subseq(long startMs, long endMs)
   {
     assert startMs <= endMs;
-    int i = getIndexAtOrBefore(startMs);
-    int j = getIndexAtOrAfter(endMs);
+    int i = getClosestIndex(startMs);
+    int j = getClosestIndex(endMs);
     assert i <= j;
     return subseq(i, j - i + 1);
   }
