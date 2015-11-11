@@ -21,6 +21,8 @@ import org.minnen.retiretool.FinLib.DividendMethod;
 import org.minnen.retiretool.predictor.Multi3Predictor.Disposition;
 import org.minnen.retiretool.broker.Account;
 import org.minnen.retiretool.broker.Broker;
+import org.minnen.retiretool.broker.DailySMA;
+import org.minnen.retiretool.broker.TimeInfo;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
@@ -1885,28 +1887,51 @@ public class RetireTool
     final long startSim = stockAll.getTimeMS(iStart);
 
     Sequence guideSeq = stockAll.subseq(iStart);
-    Broker broker = new Broker(store, startSim);
-
-    double principal = 1000.0;
-    Account account = broker.openAccount(principal, Account.Type.Roth, true);
+    Broker broker = new Broker(store);
 
     System.out.printf("Sequences: %d, %d\n", store.getNumReturns(), store.getNumMisc());
     for (String name : store.getNames())
       System.out.printf(" - %s\n", name);
 
-    // int prevMonth = -1;
+    Account account = null;
+    DailySMA sma = null;
+
+    final String riskyName = "Stock";
+    final String safeName = "Cash";
     final int T = guideSeq.length();
+    final double principal = 1000.0;
+    long prevTime = stockAll.getTimeMS(iStart - 1);
     for (int t = 0; t < T; ++t) {
       long time = guideSeq.getTimeMS(t);
-      broker.setTime(time);
+      long nextTime = (t == T - 1 ? FinLib.getTimeForNextBusinessDay(time) : guideSeq.getTimeMS(t + 1));
+      broker.setTime(time, prevTime, nextTime);
+      TimeInfo timeInfo = broker.getTimeInfo();
 
-      if (t == 0) {
-        account.buyValue("Stock", account.getCash(), null);
+      // TODO support jitter for trade day.
+      boolean bMonthlyPrediction = timeInfo.isLastDayOfMonth;
+
+      if (account == null) {
+        account = broker.openAccount(principal, Account.Type.Roth, true);
+        sma = new DailySMA(account, riskyName, safeName);
+        sma.init(timeInfo);
+        bMonthlyPrediction = true; // need initial prediction
+        // account.buyValue("Stock", account.getCash(), null);
+      } else {
+        sma.step(timeInfo);
+      }
+
+      if (bMonthlyPrediction) {
+        boolean bOwnRisky = true;// sma.predict();
+        Map<String, Double> desiredDistribution = new TreeMap<>();
+        double fractionRisky = (bOwnRisky ? 1.0 : 0.0);
+        double fractionSafe = 1.0 - fractionRisky;
+        desiredDistribution.put(riskyName, fractionRisky);
+        desiredDistribution.put(safeName, fractionSafe);
+        account.rebalance(desiredDistribution);
       }
 
       // End of day business.
-      long nextTime = (t == T - 1 ? time + 1 : guideSeq.getTimeMS(t + 1));
-      broker.doEndOfDayBusiness(nextTime);
+      broker.doEndOfDayBusiness();
 
       account.printTransactions(time, Library.TIME_END);
 
@@ -1921,6 +1946,8 @@ public class RetireTool
       // System.out.printf("[%s]: $%s (%.3f%%)\n", Library.formatDate(time), FinLib.currencyFormatter.format(value), ar,
       // nMonths);
       // }
+
+      prevTime = time;
     }
 
     double value = account.getValue();

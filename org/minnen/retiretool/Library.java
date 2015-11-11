@@ -99,6 +99,18 @@ public final class Library
     return true;
   }
 
+  public static boolean isSameMonth(long time1, long time2)
+  {
+    Calendar cal1 = calFromTime(time1);
+    Calendar cal2 = calFromTime(time2);
+
+    if (cal1.get(Calendar.YEAR) != cal2.get(Calendar.YEAR)) {
+      return false;
+    }
+
+    return cal1.get(Calendar.MONTH) == cal2.get(Calendar.MONTH);
+  }
+
   /**
    * @return calendar object representing the given date
    */

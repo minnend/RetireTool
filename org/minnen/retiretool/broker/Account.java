@@ -28,6 +28,7 @@ public class Account
   private final List<Transaction>     transactions = new ArrayList<>();
   private final Map<String, Position> positions    = new TreeMap<>();
   private final List<Receipt>         receipts     = new ArrayList<>();
+  private final Map<String, Long>     lastDivPaid  = new TreeMap<>();
 
   private double                      cash;
 
@@ -42,39 +43,47 @@ public class Account
     transactions.add(new TransactionOpen(this, broker.getTime()));
   }
 
-  public void doEndOfDayBusiness(long time, SequenceStore store)
+  public void doEndOfDayBusiness(TimeInfo timeInfo, SequenceStore store)
   {
-    payDividends(time, store);
+    payDividends(timeInfo, store);
 
     cashSumForMonth += cash;
     ++numDaysInMonth;
   }
 
-  public void doEndOfMonthBusiness(long time, SequenceStore store)
+  public void doEndOfMonthBusiness(TimeInfo timeInfo, SequenceStore store)
   {
-    payInterest(time, store);
+    payInterest(timeInfo, store);
   }
 
-  private void payDividends(long time, SequenceStore store)
+  private void payDividends(TimeInfo timeInfo, SequenceStore store)
   {
     for (Position position : positions.values()) {
       String divName = position.name + "-Dividends";
       if (store.hasMisc(divName)) {
         Sequence divs = store.getMisc(divName);
-        int index = divs.getClosestIndex(time);
-        if (Library.isSameDay(time, divs.getTimeMS(index))) {
-          double div = divs.get(index, 0);
-          double value = position.getNumShares() * div;
-          deposit(value, "Dividend Payment");
-          if (bReinvestDividends) {
-            buyValue(position.name, value, "Dividend Reinvestment");
+        int index = divs.getClosestIndex(timeInfo.time);
+        long divTime = divs.getTimeMS(index);
+        if (timeInfo.time >= divTime && Library.isSameMonth(timeInfo.time, divTime)) {
+          // Did we already pay this dividend?
+          long lastDivTime = lastDivPaid.getOrDefault(position.name, Library.TIME_ERROR);
+          if (divTime > lastDivTime) {
+            lastDivPaid.put(position.name, divTime);
+
+            double div = divs.get(index, 0);
+            double value = position.getNumShares() * div;
+            System.out.printf("Dividend! %d = [%s] div=%.2f\n", index, Library.formatDate(timeInfo.time), div);
+            deposit(value, "Dividend Payment");
+            if (bReinvestDividends) {
+              buyValue(position.name, value, "Dividend Reinvestment");
+            }
           }
         }
       }
     }
   }
 
-  private void payInterest(long time, SequenceStore store)
+  private void payInterest(TimeInfo timeInfo, SequenceStore store)
   {
     // No cash => no interest payment.
     if (FinLib.compareCash(cashSumForMonth, 0.0) <= 0) {
@@ -87,7 +96,7 @@ public class Account
     }
 
     Sequence rates = store.getMisc("Interest-Rates");
-    int index = rates.getIndexAtOrBefore(time);
+    int index = rates.getIndexAtOrBefore(timeInfo.time);
     double annualRate = rates.get(index, 0);
     double mul = FinLib.ret2mul(annualRate);
 
@@ -113,11 +122,9 @@ public class Account
 
   public double getValue()
   {
-    long time = broker.getTime();
     double value = cash;
     for (Position position : positions.values()) {
-      double price = broker.getPrice(position.name, time);
-      value += position.getNumShares() * price;
+      value += position.getValue();
     }
     return value;
   }
@@ -238,6 +245,84 @@ public class Account
         break;
       }
       System.out.println(transaction);
+    }
+  }
+
+  public void rebalance(Map<String, Double> targetDistribution)
+  {
+    final double preValue = getValue();
+
+    // Figure out how much money is currently invested.
+    Map<String, Double> currentValue = new TreeMap<>();
+    double total = 0.0;
+    double targetSum = 0.0;
+    for (String name : targetDistribution.keySet()) {
+      targetSum += targetDistribution.get(name);
+
+      double value = 0.0;
+      if (name.equalsIgnoreCase("Cash")) {
+        value = getCash();
+      } else {
+        Position position = positions.getOrDefault(name, null);
+        if (position != null) {
+          value = position.getValue();
+        }
+      }
+      total += value;
+      currentValue.put(name, value);
+    }
+    assert targetSum > 0.0;
+    assert total > 0.0;
+    assert currentValue.size() == targetDistribution.size();
+
+    // Sell positions that are over target.
+    for (String name : targetDistribution.keySet()) {
+      System.out.printf("Target: %s = %.1f%%\n", name, targetDistribution.get(name) * 100.0 / targetSum);
+      if (name.equalsIgnoreCase("Cash")) {
+        continue;
+      }
+      double targetFrac = targetDistribution.get(name) / targetSum;
+      double current = currentValue.get(name);
+      double currentFrac = current / total;
+
+      // Don't adjust for small changes (1e-3 => 0.1%)
+      double fracSell = currentFrac - targetFrac;
+      if (fracSell > 1e-3) {
+        double sellValue = fracSell * total;
+        sellValue(name, sellValue, null);
+      }
+    }
+
+    // Buy positions that are under target.
+    for (String name : targetDistribution.keySet()) {
+      if (name.equalsIgnoreCase("Cash")) {
+        continue;
+      }
+      double targetFrac = targetDistribution.get(name) / targetSum;
+      double current = currentValue.get(name);
+      double currentFrac = current / total;
+
+      // Don't adjust for small changes (1e-3 => 0.1%)
+      double fracBuy = targetFrac - currentFrac;
+      if (fracBuy > 1e-3) {
+        double buyValue = fracBuy * total;
+        buyValue(name, buyValue, null);
+      }
+    }
+
+    // Make sure we adjusted correctly (debug).
+    assert FinLib.equiv(preValue, getValue());
+    for (String name : targetDistribution.keySet()) {
+      double value = 0.0;
+      if (name.equalsIgnoreCase("Cash")) {
+        value = getCash();
+      } else {
+        Position position = positions.getOrDefault(name, null);
+        if (position != null) {
+          value = position.getValue();
+        }
+      }
+      assert Math.abs(value / total - targetDistribution.get(name)) < 1e-3;
     }
   }
 }

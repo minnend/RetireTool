@@ -28,7 +28,7 @@ public class TransactionBuy extends Transaction
   @Override
   public String toString()
   {
-    return String.format("%11s| Buy: %s %.2f @ $%s%s", Library.formatDate(time), name, nShares,
-        FinLib.currencyFormatter.format(price), getMemoString());
+    return String.format("%11s| Buy: %s %.2f @ $%s ($%s)%s", Library.formatDate(time), name, nShares,
+        FinLib.currencyFormatter.format(price), FinLib.currencyFormatter.format(price * nShares), getMemoString());
   }
 }

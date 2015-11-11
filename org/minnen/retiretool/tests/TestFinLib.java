@@ -2,6 +2,8 @@ package org.minnen.retiretool.tests;
 
 import static org.junit.Assert.*;
 
+import java.util.Calendar;
+
 import org.junit.Test;
 import org.minnen.retiretool.FinLib;
 import org.minnen.retiretool.Library;
@@ -177,34 +179,71 @@ public class TestFinLib
 
     a = Library.getTime(1, 1, 2000);
     b = Library.getTime(1, 1, 1999);
-    assert !FinLib.isLTG(a, b);
+    assertFalse(FinLib.isLTG(a, b));
 
     a = Library.getTime(1, 1, 2000);
     b = Library.getTime(1, 1, 2000);
-    assert !FinLib.isLTG(a, b);
+    assertFalse(FinLib.isLTG(a, b));
 
     a = Library.getTime(1, 1, 2000);
     b = Library.getTime(1, 1, 2001);
-    assert !FinLib.isLTG(a, b);
+    assertFalse(FinLib.isLTG(a, b));
 
     a = Library.getTime(1, 1, 2000);
     b = Library.getTime(2, 1, 2001);
-    assert FinLib.isLTG(a, b);
+    assertTrue(FinLib.isLTG(a, b));
 
     a = Library.getTime(1, 1, 2000);
     b = Library.getTime(1, 2, 2001);
-    assert FinLib.isLTG(a, b);
+    assertTrue(FinLib.isLTG(a, b));
 
     a = Library.getTime(1, 1, 2000);
     b = Library.getTime(1, 1, 2002);
-    assert FinLib.isLTG(a, b);
+    assertTrue(FinLib.isLTG(a, b));
 
     a = Library.getTime(28, 2, 1999);
     b = Library.getTime(29, 2, 2000);
-    assert !FinLib.isLTG(a, b);
+    assertFalse(FinLib.isLTG(a, b));
 
     a = Library.getTime(28, 2, 1999);
     b = Library.getTime(1, 3, 2000);
-    assert FinLib.isLTG(a, b);
+    assertTrue(FinLib.isLTG(a, b));
+  }
+
+  @Test
+  public void testGetTimeForNextBusinessDay()
+  {
+    long time;
+    Calendar cal;
+
+    time = FinLib.getTimeForNextBusinessDay(Library.getTime(1, 11, 2015));
+    cal = Library.calFromTime(time);
+    assertEquals(2015, cal.get(Calendar.YEAR));
+    assertEquals(10, cal.get(Calendar.MONTH));
+    assertEquals(2, cal.get(Calendar.DAY_OF_MONTH));
+
+    time = FinLib.getTimeForNextBusinessDay(Library.getTime(30, 11, 2015));
+    cal = Library.calFromTime(time);
+    assertEquals(2015, cal.get(Calendar.YEAR));
+    assertEquals(11, cal.get(Calendar.MONTH));
+    assertEquals(1, cal.get(Calendar.DAY_OF_MONTH));
+
+    time = FinLib.getTimeForNextBusinessDay(Library.getTime(31, 10, 2015));
+    cal = Library.calFromTime(time);
+    assertEquals(2015, cal.get(Calendar.YEAR));
+    assertEquals(10, cal.get(Calendar.MONTH));
+    assertEquals(2, cal.get(Calendar.DAY_OF_MONTH));
+
+    time = FinLib.getTimeForNextBusinessDay(Library.getTime(1, 1, 2016));
+    cal = Library.calFromTime(time);
+    assertEquals(2016, cal.get(Calendar.YEAR));
+    assertEquals(0, cal.get(Calendar.MONTH));
+    assertEquals(4, cal.get(Calendar.DAY_OF_MONTH));
+
+    time = FinLib.getTimeForNextBusinessDay(Library.getTime(26, 2, 2016));
+    cal = Library.calFromTime(time);
+    assertEquals(2016, cal.get(Calendar.YEAR));
+    assertEquals(1, cal.get(Calendar.MONTH));
+    assertEquals(29, cal.get(Calendar.DAY_OF_MONTH));
   }
 }

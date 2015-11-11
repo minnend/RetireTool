@@ -10,42 +10,42 @@ import org.minnen.retiretool.data.SequenceStore;
 
 public class Broker
 {
-  private long                time     = Library.TIME_ERROR;
+  private TimeInfo            timeInfo;
   private final List<Account> accounts = new ArrayList<>();
   private final SequenceStore store;
 
-  public Broker(SequenceStore store, long timeMS)
+  public Broker(SequenceStore store)
   {
     this.store = store;
-    this.time = timeMS;
   }
 
-  public void setTime(long time)
+  public void setTime(long time, long prevTime, long nextTime)
   {
-    this.time = time;
+    timeInfo = new TimeInfo(time, prevTime, nextTime);
   }
 
   public long getTime()
   {
-    return time;
+    return timeInfo.time;
   }
 
-  public void doEndOfDayBusiness(long nextTime)
+  public TimeInfo getTimeInfo()
   {
-    assert nextTime > time;
+    return timeInfo;
+  }
 
+  public void doEndOfDayBusiness()
+  {
     // End of day business.
     for (Account account : accounts) {
-      account.doEndOfDayBusiness(time, store);
+      account.doEndOfDayBusiness(timeInfo, store);
     }
 
     // End of month business.
-    int month1 = Library.calFromTime(time).get(Calendar.MONTH);
-    int month2 = Library.calFromTime(nextTime).get(Calendar.MONTH);
-    assert (month1 == month2) || (month1 < 11 && month2 == month1 + 1) || (month1 == 11 && month2 == 0);
-    if (month2 != month1) {
+    if (timeInfo.isLastDayOfMonth) {
+      // System.out.printf("End of Month: [%s]\n", Library.formatDate(getTime()));
       for (Account account : accounts) {
-        account.doEndOfMonthBusiness(time, store);
+        account.doEndOfMonthBusiness(timeInfo, store);
       }
     }
   }
@@ -58,6 +58,11 @@ public class Broker
     accounts.add(account);
     account.deposit(startingBalance, "Initial Deposit");
     return account;
+  }
+
+  public double getPrice(String name)
+  {
+    return getPrice(name, getTime());
   }
 
   public double getPrice(String name, long time)

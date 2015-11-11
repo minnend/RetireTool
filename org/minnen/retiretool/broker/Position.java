@@ -31,6 +31,12 @@ public class Position
     return nShares;
   }
 
+  public double getValue()
+  {
+    double price = account.broker.getPrice(name);
+    return price * getNumShares();
+  }
+
   public void add(PositionLot lot)
   {
     assert lot.name.equals(name);

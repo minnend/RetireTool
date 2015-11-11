@@ -1246,6 +1246,7 @@ public final class FinLib
     return sb.toString();
   }
 
+  /** Compare dollar amounts. */
   public static boolean equiv(double a, double b)
   {
     return Math.abs(a - b) < 1e-4;
@@ -1302,5 +1303,70 @@ public final class FinLib
     long x = Math.round(a * 1000.0);
     long y = Math.round(b * 1000.0);
     return x - y;
+  }
+
+  public static long getTimeForPreviousBusinessDay(long time)
+  {
+    Calendar cal = Library.calFromTime(time);
+    while (true) {
+      cal.add(Calendar.DAY_OF_YEAR, -1);
+      int day = cal.get(Calendar.DAY_OF_WEEK);
+      if (day != Calendar.SATURDAY && day != Calendar.SUNDAY) {
+        break;
+      }
+    }
+    return cal.getTimeInMillis();
+  }
+
+  public static long getTimeForNextBusinessDay(long time)
+  {
+    Calendar cal = Library.calFromTime(time);
+    while (true) {
+      cal.add(Calendar.DAY_OF_YEAR, 1);
+      int day = cal.get(Calendar.DAY_OF_WEEK);
+      if (day != Calendar.SATURDAY && day != Calendar.SUNDAY) {
+        break;
+      }
+    }
+    return cal.getTimeInMillis();
+  }
+
+  /**
+   * Return time for closest business day for the given month and day.
+   * 
+   * @param timeInMonth Specify the month using any time in that month.
+   * @param dayOfMonth We want the equivalent time on this day (or closest business day).
+   * @param bAcceptDifferentMonth if false only days in the same month are considered.
+   * @return time (in ms) of the closest business day on the requested day.
+   */
+  public static long getClosestBusinessDay(long timeInMonth, int dayOfMonth, boolean bAcceptDifferentMonth)
+  {
+    Calendar cal = Library.calFromTime(timeInMonth);
+    long baseTime = Library.getTime(dayOfMonth, cal.get(Calendar.MONTH) + 1, cal.get(Calendar.YEAR));
+
+    // If base is a business day, we're done.
+    int day = cal.get(Calendar.DAY_OF_WEEK);
+    if (day != Calendar.SATURDAY && day != Calendar.SUNDAY) {
+      return baseTime;
+    }
+
+    long prevTime = getTimeForPreviousBusinessDay(baseTime);
+    long nextTime = getTimeForNextBusinessDay(baseTime);
+    assert prevTime < baseTime;
+    assert nextTime > baseTime;
+
+    if (!bAcceptDifferentMonth) {
+      Calendar calPrev = Library.calFromTime(prevTime);
+      if (calPrev.get(Calendar.MONTH) != cal.get(Calendar.MONTH)) {
+        return nextTime;
+      }
+
+      Calendar calNext = Library.calFromTime(nextTime);
+      if (calNext.get(Calendar.MONTH) != cal.get(Calendar.MONTH)) {
+        return prevTime;
+      }
+    }
+
+    return (baseTime - prevTime < nextTime - baseTime ? prevTime : nextTime);
   }
 }
