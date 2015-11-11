@@ -103,7 +103,10 @@ public class Account
     // Convert annual multiplier to monthly multiplier.
     mul = Math.pow(mul, Library.ONE_TWELFTH);
     double avgCash = cashSumForMonth / numDaysInMonth;
-    deposit(avgCash * (mul - 1.0), "Interest");
+    double interest = avgCash * (mul - 1.0);
+    if (FinLib.compareCash(interest, 0.0) > 0) {
+      deposit(interest, "Interest");
+    }
 
     // Reset accumulators.
     cashSumForMonth = 0.0;
@@ -150,6 +153,9 @@ public class Account
   private void apply(TransactionBuy buy)
   {
     cash -= buy.getValue();
+    if (FinLib.compareCash(cash, 0.0) <= 0) {
+      cash = 0.0;
+    }
     assert FinLib.equiv(cash, buy.postBalance);
 
     Position position = positions.getOrDefault(buy.name, null);
@@ -163,7 +169,7 @@ public class Account
 
   private void apply(TransactionSell sell)
   {
-    cash -= sell.getValue();
+    cash += sell.getValue();
     assert FinLib.equiv(cash, sell.postBalance);
   }
 
@@ -205,10 +211,17 @@ public class Account
     final long time = broker.getTime();
     double price = broker.getPrice(name, time);
     Position position = getPosition(name);
-    assert nShares <= position.getNumShares();
+    assert nShares < position.getNumShares() + 1e-4;
 
     Receipt receipt = position.sub(new PositionLot(name, time, nShares, price));
     receipts.add(receipt);
+
+    if (position.getNumLots() == 0) {
+      assert receipt.balance < 1e-4;
+      positions.remove(position.name);
+    } else {
+      assert receipt.balance > 0.0;
+    }
 
     TransactionSell sell = new TransactionSell(this, broker.getTime(), name, nShares, memo);
     transactions.add(sell);
@@ -288,6 +301,7 @@ public class Account
       // Don't adjust for small changes (1e-3 => 0.1%)
       double fracSell = currentFrac - targetFrac;
       if (fracSell > 1e-3) {
+        System.out.printf("Sell| %s: %.3f -> %.3f\n", name, currentFrac, targetFrac);
         double sellValue = fracSell * total;
         sellValue(name, sellValue, null);
       }
@@ -305,6 +319,7 @@ public class Account
       // Don't adjust for small changes (1e-3 => 0.1%)
       double fracBuy = targetFrac - currentFrac;
       if (fracBuy > 1e-3) {
+        System.out.printf("Buy| %s: %.3f -> %.3f\n", name, currentFrac, targetFrac);
         double buyValue = fracBuy * total;
         buyValue(name, buyValue, null);
       }
@@ -323,6 +338,14 @@ public class Account
         }
       }
       assert Math.abs(value / total - targetDistribution.get(name)) < 1e-3;
+    }
+  }
+
+  public void printPositions()
+  {
+    System.out.printf("Cash: $%s\n", FinLib.currencyFormatter.format(cash));
+    for (Position position : positions.values()) {
+      System.out.printf("%s: $%s\n", position.name, FinLib.currencyFormatter.format(position.getValue()));
     }
   }
 }

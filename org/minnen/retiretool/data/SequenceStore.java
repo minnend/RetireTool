@@ -192,12 +192,6 @@ public class SequenceStore implements Iterable<Sequence>
   {
     assert !miscNameToIndex.containsKey(name) : name;
 
-    // Make sure new sequence matches existing sequences.
-    // TODO should misc sequence have the same start/end times?
-    // if (!miscSeqs.isEmpty()) {
-    // assert misc.matches(miscSeqs.get(0));
-    // }
-
     // Add the new sequence to the store.
     final int index = miscSeqs.size();
     misc.setName(name);

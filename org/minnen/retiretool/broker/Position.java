@@ -19,11 +19,17 @@ public class Position
     this.name = name;
   }
 
+  public int getNumLots()
+  {
+    return lots.size();
+  }
+
   public double getNumShares()
   {
     // TODO recompute nShares for debug
     double n = 0;
     for (PositionLot lot : lots) {
+      assert lot.getNumShares() > 0;
       n += lot.getNumShares();
     }
     assert Math.abs(n - nShares) < 1e-6;
@@ -48,7 +54,7 @@ public class Position
   public Receipt sub(PositionLot lot)
   {
     assert lot.name.equals(name);
-    assert lot.getNumShares() <= nShares;
+    assert lot.getNumShares() < nShares + 1e-4;
 
     double longPL = 0.0;
     double shortPL = 0.0;
@@ -57,7 +63,7 @@ public class Position
 
     // First match with long-term lots.
     double nSharesLeft = lot.getNumShares();
-    while (nSharesLeft > 0) {
+    while (nSharesLeft > 1e-4) {
       PositionLot src = lots.get(0);
 
       // We only want LTCG here.
@@ -68,7 +74,7 @@ public class Position
       double n = Math.min(src.getNumShares(), nSharesLeft);
       nSharesLeft -= n;
       src.sell(n);
-      if (src.getNumShares() == 0) {
+      if (src.getNumShares() < 1e-4) {
         lots.remove(0);
       }
 
@@ -79,7 +85,7 @@ public class Position
     assert nSharesLeft == 0 || !FinLib.isLTG(lots.get(0).purchaseTime, lot.purchaseTime);
 
     // First match with long-term lots.
-    while (nSharesLeft > 0) {
+    while (nSharesLeft > 1e-4) {
       int iSrc = lots.size() - 1;
       PositionLot src = lots.get(iSrc);
       assert !FinLib.isLTG(src.purchaseTime, lot.purchaseTime);
@@ -87,16 +93,17 @@ public class Position
       double n = Math.min(src.getNumShares(), nSharesLeft);
       nSharesLeft -= n;
       src.sell(n);
-      if (src.getNumShares() == 0) {
+      if (src.getNumShares() < 1e-4) {
         lots.remove(iSrc);
       }
 
       double gain = lot.purchasePrice - src.purchasePrice;
       shortPL += gain;
     }
-    assert nSharesLeft == 0;
+    assert nSharesLeft < 1e-4;
 
     nShares -= lot.getNumShares();
-    return new Receipt(name, longPL, shortPL);
+    double balance = getValue();
+    return new Receipt(name, longPL, shortPL, balance);
   }
 }

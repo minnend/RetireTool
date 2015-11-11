@@ -33,6 +33,7 @@ public class DailySMA
 
   public boolean predict()
   {
+    // TODO
     Random rng = new Random();
     return rng.nextBoolean();
   }

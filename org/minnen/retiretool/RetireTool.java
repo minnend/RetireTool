@@ -1921,13 +1921,17 @@ public class RetireTool
       }
 
       if (bMonthlyPrediction) {
-        boolean bOwnRisky = true;// sma.predict();
+        boolean bOwnRisky = sma.predict();
         Map<String, Double> desiredDistribution = new TreeMap<>();
         double fractionRisky = (bOwnRisky ? 1.0 : 0.0);
         double fractionSafe = 1.0 - fractionRisky;
         desiredDistribution.put(riskyName, fractionRisky);
         desiredDistribution.put(safeName, fractionSafe);
+        System.out.println("BEFORE");
+        account.printPositions();
         account.rebalance(desiredDistribution);
+        System.out.println("AFTER");
+        account.printPositions();
       }
 
       // End of day business.

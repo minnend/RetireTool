@@ -9,9 +9,8 @@ public class TransactionOpen extends Transaction
   public TransactionOpen(Account account, long time)
   {
     super(account, time, null);
-    // TODO Auto-generated constructor stub
   }
-  
+
   @Override
   public String toString()
   {

@@ -10,6 +10,9 @@ public class PositionLot
 
   public PositionLot(String name, long time, double nShares, double price)
   {
+    assert nShares > 0.0;
+    assert price > 0.0;
+
     this.name = name;
     this.purchaseTime = time;
     this.nShares = nShares;
@@ -29,6 +32,7 @@ public class PositionLot
 
   public void sell(double nSold)
   {
+    assert nSold > 0.0;
     assert nSold <= nShares;
     nShares -= nSold;
   }
