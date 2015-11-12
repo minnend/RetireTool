@@ -14,6 +14,8 @@ public class DailySMA
 
   private double         currentValue;
 
+  private static Random  rng          = new Random(); // TODO
+
   public DailySMA(Account account, String riskyName, String safeName)
   {
     this.account = account;
@@ -34,7 +36,6 @@ public class DailySMA
   public boolean predict()
   {
     // TODO
-    Random rng = new Random();
     return rng.nextBoolean();
   }
 }

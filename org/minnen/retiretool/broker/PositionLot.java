@@ -1,5 +1,7 @@
 package org.minnen.retiretool.broker;
 
+import org.minnen.retiretool.Fixed;
+
 public class PositionLot
 {
   public final String name;
@@ -12,6 +14,7 @@ public class PositionLot
   {
     assert nShares > 0;
     assert price > 0;
+    assert nShares % Fixed.HUNDREDTH == 0;
 
     this.name = name;
     this.purchaseTime = time;
@@ -27,7 +30,7 @@ public class PositionLot
   public long getCostBasis()
   {
     assert nShares > 0;
-    return nShares * purchasePrice;
+    return Fixed.mul(nShares, purchasePrice);
   }
 
   public void sell(long nSold)

@@ -1899,7 +1899,7 @@ public class RetireTool
     final String riskyName = "Stock";
     final String safeName = "Cash";
     final int T = guideSeq.length();
-    final long principal = FixedPoint.toFixed(1000.0);
+    final long principal = Fixed.toFixed(1000.0);
     long prevTime = stockAll.getTimeMS(iStart - 1);
     for (int t = 0; t < T; ++t) {
       long time = guideSeq.getTimeMS(t);
@@ -1920,11 +1920,14 @@ public class RetireTool
         sma.step(timeInfo);
       }
 
+      // End of day business.
+      broker.doEndOfDayBusiness();
+
       if (bMonthlyPrediction) {
         boolean bOwnRisky = sma.predict();
-        Map<String, Long> desiredDistribution = new TreeMap<>();
-        long fractionRisky = bOwnRisky ? FixedPoint.ONE : FixedPoint.ZERO;
-        long fractionSafe = FixedPoint.ONE - fractionRisky;
+        Map<String, Double> desiredDistribution = new TreeMap<>();
+        double fractionRisky = bOwnRisky ? 1.0 : 0.0;
+        double fractionSafe = 1.0 - fractionRisky;
         desiredDistribution.put(riskyName, fractionRisky);
         desiredDistribution.put(safeName, fractionSafe);
         System.out.println("BEFORE");
@@ -1934,10 +1937,8 @@ public class RetireTool
         account.printPositions();
       }
 
-      // End of day business.
-      broker.doEndOfDayBusiness();
-
       account.printTransactions(time, Library.TIME_END);
+      // System.out.printf("Account Value: $%s\n", Fixed.formatCurrency(account.getValue()));
 
       // int month = Library.calFromTime(time).get(Calendar.MONTH);
       // if (month != prevMonth) {
@@ -1954,12 +1955,11 @@ public class RetireTool
       prevTime = time;
     }
 
-    double value = account.getValue();
-    double tr = value / principal;
+    long value = account.getValue();
+    long tr = Fixed.div(value, principal);
     double nMonths = Library.monthsBetween(startSim, guideSeq.getEndMS());
-    double ar = FinLib.getAnnualReturn(tr, nMonths);
-    System.out.printf("%11s| $%s (%.2f%%)\n", Library.formatDate(guideSeq.getEndMS()),
-        FinLib.currencyFormatter.format(value), ar);
+    double ar = FinLib.getAnnualReturn(Fixed.toFloat(tr), nMonths);
+    System.out.printf("%11s| $%s (%.2f%%)\n", Library.formatDate(guideSeq.getEndMS()), Fixed.formatCurrency(value), ar);
 
     // account.printTransactions();
   }

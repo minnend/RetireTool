@@ -3,11 +3,11 @@ package org.minnen.retiretool.broker;
 public class Receipt
 {
   public final String name;
-  public final double longPL;
-  public final double shortPL;
-  public final double balance;
+  public final long longPL;
+  public final long shortPL;
+  public final long balance;
 
-  public Receipt(String name, double longPL, double shortPL, double balance)
+  public Receipt(String name, long longPL, long shortPL, long balance)
   {
     this.name = name;
     this.longPL = longPL;

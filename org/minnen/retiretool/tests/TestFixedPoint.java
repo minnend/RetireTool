@@ -3,7 +3,7 @@ package org.minnen.retiretool.tests;
 import static org.junit.Assert.*;
 
 import org.junit.Test;
-import org.minnen.retiretool.FixedPoint;
+import org.minnen.retiretool.Fixed;
 
 public class TestFixedPoint
 {
@@ -13,22 +13,22 @@ public class TestFixedPoint
     long x;
 
     x = 101;
-    assertEquals(x, FixedPoint.toFixed(FixedPoint.toFloat(x)));
+    assertEquals(x, Fixed.toFixed(Fixed.toFloat(x)));
 
     x = 9321850;
-    assertEquals(x, FixedPoint.toFixed(FixedPoint.toFloat(x)));
+    assertEquals(x, Fixed.toFixed(Fixed.toFloat(x)));
 
     x = -101;
-    assertEquals(x, FixedPoint.toFixed(FixedPoint.toFloat(x)));
+    assertEquals(x, Fixed.toFixed(Fixed.toFloat(x)));
 
     x = 0;
-    assertEquals(x, FixedPoint.toFixed(FixedPoint.toFloat(x)));
+    assertEquals(x, Fixed.toFixed(Fixed.toFloat(x)));
 
     x = 1;
-    assertEquals(x, FixedPoint.toFixed(FixedPoint.toFloat(x)));
+    assertEquals(x, Fixed.toFixed(Fixed.toFloat(x)));
 
     x = -1;
-    assertEquals(x, FixedPoint.toFixed(FixedPoint.toFloat(x)));
+    assertEquals(x, Fixed.toFixed(Fixed.toFloat(x)));
   }
 
   @Test
@@ -38,114 +38,226 @@ public class TestFixedPoint
 
     x = 3;
     y = 4;
-    fx = FixedPoint.toFixed(x);
-    fy = FixedPoint.toFixed(y);
-    assertEquals(FixedPoint.toFixed(x * y), FixedPoint.mul(fx, fy));
+    fx = Fixed.toFixed(x);
+    fy = Fixed.toFixed(y);
+    assertEquals(Fixed.toFixed(x * y), Fixed.mul(fx, fy));
 
     x = -3;
     y = 4;
-    fx = FixedPoint.toFixed(x);
-    fy = FixedPoint.toFixed(y);
-    assertEquals(FixedPoint.toFixed(x * y), FixedPoint.mul(fx, fy));
+    fx = Fixed.toFixed(x);
+    fy = Fixed.toFixed(y);
+    assertEquals(Fixed.toFixed(x * y), Fixed.mul(fx, fy));
 
     x = 0;
     y = 1;
-    fx = FixedPoint.toFixed(x);
-    fy = FixedPoint.toFixed(y);
-    assertEquals(FixedPoint.toFixed(x * y), FixedPoint.mul(fx, fy));
+    fx = Fixed.toFixed(x);
+    fy = Fixed.toFixed(y);
+    assertEquals(Fixed.toFixed(x * y), Fixed.mul(fx, fy));
 
-    x = 3029847;
-    y = 430921;
-    fx = FixedPoint.toFixed(x);
-    fy = FixedPoint.toFixed(y);
-    assertEquals(FixedPoint.toFixed(x * y), FixedPoint.mul(fx, fy));
+    x = 302971;
+    y = 43092;
+    fx = Fixed.toFixed(x);
+    fy = Fixed.toFixed(y);
+    assertEquals(Fixed.toFixed(x * y), Fixed.mul(fx, fy));
 
-    x = 3121312;
+    x = 312131;
     y = -49898;
-    fx = FixedPoint.toFixed(x);
-    fy = FixedPoint.toFixed(y);
-    assertEquals(FixedPoint.toFixed(x * y), FixedPoint.mul(fx, fy));
+    fx = Fixed.toFixed(x);
+    fy = Fixed.toFixed(y);
+    assertEquals(Fixed.toFixed(x * y), Fixed.mul(fx, fy));
 
-    fx = FixedPoint.toFixed(2.5);
-    fy = FixedPoint.toFixed(3.0);
-    assertEquals(FixedPoint.toFixed(7.5), FixedPoint.mul(fx, fy));
+    fx = Fixed.toFixed(2.5);
+    fy = Fixed.toFixed(3.0);
+    assertEquals(Fixed.toFixed(7.5), Fixed.mul(fx, fy));
 
-    fx = FixedPoint.toFixed(-0.1);
-    fy = FixedPoint.toFixed(0.05);
-    assertEquals(FixedPoint.toFixed(-0.005), FixedPoint.mul(fx, fy));
+    fx = Fixed.toFixed(-0.1);
+    fy = Fixed.toFixed(0.05);
+    assertEquals(Fixed.toFixed(-0.005), Fixed.mul(fx, fy));
 
-    fx = FixedPoint.toFixed(0.02);
-    fy = FixedPoint.toFixed(0.075);
-    assertEquals(FixedPoint.toFixed(0.002), FixedPoint.mul(fx, fy));
+    // Note: the following cases test rounding, which depends on Fixed.SCALE.
+    fx = Fixed.toFixed(0.002);
+    fy = Fixed.toFixed(0.075);
+    assertEquals(Fixed.toFixed(0.0002), Fixed.mul(fx, fy));
 
-    fx = FixedPoint.toFixed(-0.02);
-    fy = FixedPoint.toFixed(0.075);
-    assertEquals(FixedPoint.toFixed(-0.002), FixedPoint.mul(fx, fy));
+    fx = Fixed.toFixed(-0.002);
+    fy = Fixed.toFixed(0.075);
+    assertEquals(Fixed.toFixed(-0.0002), Fixed.mul(fx, fy));
 
-    fx = FixedPoint.toFixed(0.02);
-    fy = FixedPoint.toFixed(-0.075);
-    assertEquals(FixedPoint.toFixed(-0.002), FixedPoint.mul(fx, fy));
+    fx = Fixed.toFixed(0.002);
+    fy = Fixed.toFixed(-0.075);
+    assertEquals(Fixed.toFixed(-0.0002), Fixed.mul(fx, fy));
 
-    fx = FixedPoint.toFixed(-0.02);
-    fy = FixedPoint.toFixed(-0.075);
-    assertEquals(FixedPoint.toFixed(0.002), FixedPoint.mul(fx, fy));
+    fx = Fixed.toFixed(-0.002);
+    fy = Fixed.toFixed(-0.075);
+    assertEquals(Fixed.toFixed(0.0002), Fixed.mul(fx, fy));
   }
 
   @Test
-  public void testDiv()
+  public void testDivRound()
   {
     long fx, fy;
 
-    fx = FixedPoint.toFixed(12);
-    fy = FixedPoint.toFixed(4);
-    assertEquals(FixedPoint.toFixed(3), FixedPoint.div(fx, fy));
+    fx = Fixed.toFixed(12);
+    fy = Fixed.toFixed(4);
+    assertEquals(Fixed.toFixed(3), Fixed.div(fx, fy));
 
-    fx = FixedPoint.toFixed(3);
-    fy = FixedPoint.toFixed(6);
-    assertEquals(FixedPoint.toFixed(0.5), FixedPoint.div(fx, fy));
+    fx = Fixed.toFixed(3);
+    fy = Fixed.toFixed(6);
+    assertEquals(Fixed.toFixed(0.5), Fixed.div(fx, fy));
 
-    fx = FixedPoint.toFixed(-12);
-    fy = FixedPoint.toFixed(4);
-    assertEquals(FixedPoint.toFixed(-3), FixedPoint.div(fx, fy));
+    fx = Fixed.toFixed(-12);
+    fy = Fixed.toFixed(4);
+    assertEquals(Fixed.toFixed(-3), Fixed.div(fx, fy));
 
-    fx = FixedPoint.toFixed(-12);
-    fy = FixedPoint.toFixed(-4);
-    assertEquals(FixedPoint.toFixed(3), FixedPoint.div(fx, fy));
+    fx = Fixed.toFixed(-12);
+    fy = Fixed.toFixed(-4);
+    assertEquals(Fixed.toFixed(3), Fixed.div(fx, fy));
 
-    fx = FixedPoint.toFixed(12);
-    fy = FixedPoint.toFixed(-4);
-    assertEquals(FixedPoint.toFixed(-3), FixedPoint.div(fx, fy));
+    fx = Fixed.toFixed(12);
+    fy = Fixed.toFixed(-4);
+    assertEquals(Fixed.toFixed(-3), Fixed.div(fx, fy));
 
-    fx = FixedPoint.toFixed(0);
-    fy = FixedPoint.toFixed(4);
-    assertEquals(FixedPoint.toFixed(0), FixedPoint.div(fx, fy));
+    fx = Fixed.toFixed(0);
+    fy = Fixed.toFixed(4);
+    assertEquals(Fixed.toFixed(0), Fixed.div(fx, fy));
 
-    fx = FixedPoint.toFixed(1000000);
-    fy = FixedPoint.toFixed(250000);
-    assertEquals(FixedPoint.toFixed(4), FixedPoint.div(fx, fy));
+    fx = Fixed.toFixed(1000000);
+    fy = Fixed.toFixed(250000);
+    assertEquals(Fixed.toFixed(4), Fixed.div(fx, fy));
 
-    fx = FixedPoint.toFixed(1);
-    fy = FixedPoint.toFixed(10);
-    assertEquals(FixedPoint.toFixed(0.1), FixedPoint.div(fx, fy));
+    fx = Fixed.toFixed(1);
+    fy = Fixed.toFixed(10);
+    assertEquals(Fixed.toFixed(0.1), Fixed.div(fx, fy));
 
-    fx = FixedPoint.toFixed(1);
-    fy = FixedPoint.toFixed(100);
-    assertEquals(FixedPoint.toFixed(0.01), FixedPoint.div(fx, fy));
+    fx = Fixed.toFixed(1);
+    fy = Fixed.toFixed(100);
+    assertEquals(Fixed.toFixed(0.01), Fixed.div(fx, fy));
 
-    fx = FixedPoint.toFixed(1);
-    fy = FixedPoint.toFixed(1000);
-    assertEquals(FixedPoint.toFixed(0.001), FixedPoint.div(fx, fy));
+    fx = Fixed.toFixed(1);
+    fy = Fixed.toFixed(1000);
+    assertEquals(Fixed.toFixed(0.001), Fixed.div(fx, fy));
 
-    fx = FixedPoint.toFixed(14);
-    fy = FixedPoint.toFixed(10000);
-    assertEquals(FixedPoint.toFixed(0.001), FixedPoint.div(fx, fy));
+    // Note: the following cases test rounding, which depends on Fixed.SCALE.
+    fx = Fixed.toFixed(14);
+    fy = Fixed.toFixed(100000);
+    assertEquals(Fixed.toFixed(0.0001), Fixed.div(fx, fy));
 
-    fx = FixedPoint.toFixed(16);
-    fy = FixedPoint.toFixed(10000);
-    assertEquals(FixedPoint.toFixed(0.002), FixedPoint.div(fx, fy));
+    fx = Fixed.toFixed(16);
+    fy = Fixed.toFixed(100000);
+    assertEquals(Fixed.toFixed(0.0002), Fixed.div(fx, fy));
 
-    fx = FixedPoint.toFixed(15);
-    fy = FixedPoint.toFixed(10000);
-    assertEquals(FixedPoint.toFixed(0.002), FixedPoint.div(fx, fy));
+    fx = Fixed.toFixed(15);
+    fy = Fixed.toFixed(100000);
+    assertEquals(Fixed.toFixed(0.0002), Fixed.div(fx, fy));
+
+    fx = Fixed.toFixed(-16);
+    fy = Fixed.toFixed(100000);
+    assertEquals(Fixed.toFixed(-0.0002), Fixed.div(fx, fy));
+
+    fx = Fixed.toFixed(15);
+    fy = Fixed.toFixed(-100000);
+    assertEquals(Fixed.toFixed(-0.0002), Fixed.div(fx, fy));
+  }
+
+  @Test
+  public void testDivTrunc()
+  {
+    long fx, fy;
+
+    fx = Fixed.toFixed(12);
+    fy = Fixed.toFixed(4);
+    assertEquals(Fixed.toFixed(3), Fixed.divTrunc(fx, fy));
+
+    fx = Fixed.toFixed(3);
+    fy = Fixed.toFixed(6);
+    assertEquals(Fixed.toFixed(0.5), Fixed.divTrunc(fx, fy));
+
+    fx = Fixed.toFixed(-12);
+    fy = Fixed.toFixed(4);
+    assertEquals(Fixed.toFixed(-3), Fixed.divTrunc(fx, fy));
+
+    fx = Fixed.toFixed(-12);
+    fy = Fixed.toFixed(-4);
+    assertEquals(Fixed.toFixed(3), Fixed.divTrunc(fx, fy));
+
+    fx = Fixed.toFixed(12);
+    fy = Fixed.toFixed(-4);
+    assertEquals(Fixed.toFixed(-3), Fixed.divTrunc(fx, fy));
+
+    fx = Fixed.toFixed(0);
+    fy = Fixed.toFixed(4);
+    assertEquals(Fixed.toFixed(0), Fixed.divTrunc(fx, fy));
+
+    fx = Fixed.toFixed(1000000);
+    fy = Fixed.toFixed(250000);
+    assertEquals(Fixed.toFixed(4), Fixed.divTrunc(fx, fy));
+
+    fx = Fixed.toFixed(1);
+    fy = Fixed.toFixed(10);
+    assertEquals(Fixed.toFixed(0.1), Fixed.divTrunc(fx, fy));
+
+    fx = Fixed.toFixed(1);
+    fy = Fixed.toFixed(100);
+    assertEquals(Fixed.toFixed(0.01), Fixed.divTrunc(fx, fy));
+
+    fx = Fixed.toFixed(1);
+    fy = Fixed.toFixed(1000);
+    assertEquals(Fixed.toFixed(0.001), Fixed.divTrunc(fx, fy));
+
+    fx = Fixed.toFixed(14);
+    fy = Fixed.toFixed(Fixed.SCALE * 10);
+    assertEquals(Fixed.toFixed(0.0001), Fixed.divTrunc(fx, fy));
+
+    fx = Fixed.toFixed(16);
+    fy = Fixed.toFixed(Fixed.SCALE * 10);
+    assertEquals(Fixed.toFixed(0.0001), Fixed.divTrunc(fx, fy));
+
+    fx = Fixed.toFixed(15);
+    fy = Fixed.toFixed(Fixed.SCALE * 10);
+    assertEquals(Fixed.toFixed(0.0001), Fixed.divTrunc(fx, fy));
+
+    fx = Fixed.toFixed(-16);
+    fy = Fixed.toFixed(Fixed.SCALE * 10);
+    assertEquals(Fixed.toFixed(-0.0001), Fixed.divTrunc(fx, fy));
+
+    fx = Fixed.toFixed(15);
+    fy = Fixed.toFixed(-Fixed.SCALE * 10);
+    assertEquals(Fixed.toFixed(-0.0001), Fixed.divTrunc(fx, fy));
+  }
+
+  @Test
+  public void testTruncate()
+  {
+    long x, y;
+
+    x = Fixed.toFixed(100);
+    y = Fixed.toFixed(100);
+    assertEquals(y, Fixed.truncate(x, Fixed.HUNDREDTH));
+
+    x = Fixed.toFixed(0.1234);
+    y = Fixed.toFixed(0.12);
+    assertEquals(y, Fixed.truncate(x, Fixed.HUNDREDTH));
+
+    x = Fixed.toFixed(0.1289);
+    y = Fixed.toFixed(0.12);
+    assertEquals(y, Fixed.truncate(x, Fixed.HUNDREDTH));
+  }
+
+  @Test
+  public void testRound()
+  {
+    long x, y;
+
+    x = Fixed.toFixed(100);
+    y = Fixed.toFixed(100);
+    assertEquals(y, Fixed.round(x, Fixed.HUNDREDTH));
+
+    x = Fixed.toFixed(0.1234);
+    y = Fixed.toFixed(0.12);
+    assertEquals(y, Fixed.round(x, Fixed.HUNDREDTH));
+
+    x = Fixed.toFixed(0.1289);
+    y = Fixed.toFixed(0.13);
+    assertEquals(y, Fixed.round(x, Fixed.HUNDREDTH));
   }
 }

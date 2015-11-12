@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.minnen.retiretool.FinLib;
-import org.minnen.retiretool.FixedPoint;
+import org.minnen.retiretool.Fixed;
 import org.minnen.retiretool.Library;
 import org.minnen.retiretool.broker.transactions.Transaction;
 import org.minnen.retiretool.broker.transactions.TransactionBuy;
@@ -71,8 +71,8 @@ public class Account
           if (divTime > lastDivTime) {
             lastDivPaid.put(position.name, divTime);
 
-            long div = FixedPoint.toFixed(divs.get(index, 0));
-            long value = position.getNumShares() * div;
+            double div = divs.get(index, 0);
+            long value = Math.round(position.getNumShares() * div);
             System.out.printf("Dividend! %d = [%s] div=%.2f\n", index, Library.formatDate(timeInfo.time), div);
             deposit(value, "Dividend Payment");
             if (bReinvestDividends) {
@@ -104,9 +104,10 @@ public class Account
 
     // Convert annual multiplier to monthly multiplier.
     mul = Math.pow(mul, Library.ONE_TWELFTH);
-    long avgCash = cashSumForMonth / numDaysInMonth;
+    long avgCash = Math.round((double) cashSumForMonth / numDaysInMonth);
     long interest = Math.round(avgCash * (mul - 1.0));
-    if (interest > 0) {
+    if (interest >= Fixed.PENNY) {
+      System.out.printf("Interest! $%s\n", Fixed.formatCurrency(interest));
       deposit(interest, "Interest");
     }
 
@@ -134,6 +135,15 @@ public class Account
     return value;
   }
 
+  public long getValue(String name)
+  {
+    if (name.equalsIgnoreCase("cash")) {
+      return getCash();
+    }
+    Position position = positions.getOrDefault(name, null);
+    return (position == null ? 0L : position.getValue());
+  }
+
   private Position getPosition(String name)
   {
     assert positions.containsKey(name);
@@ -149,12 +159,14 @@ public class Account
   private void apply(TransactionWithdraw withdraw)
   {
     cash -= withdraw.amount;
+    assert cash >= 0;
     assert cash == withdraw.postBalance;
   }
 
   private void apply(TransactionBuy buy)
   {
     cash -= buy.getValue();
+    assert cash >= 0;
     assert cash == buy.postBalance;
 
     Position position = positions.getOrDefault(buy.name, null);
@@ -188,50 +200,72 @@ public class Account
     apply(withdraw);
   }
 
-  public void buyShares(String name, long nShares, String memo)
+  public boolean buyShares(String name, long nShares, String memo)
   {
-    long price = broker.getPrice(name, broker.getTime());
-    long value = price * nShares;
-    assert value <= cash;
+    nShares = Fixed.truncate(nShares, Fixed.HUNDREDTH);
+    if (nShares == 0) {
+      return false;
+    }
+    assert nShares > 0;
+
+    long price = broker.getPrice(name);
+    assert Fixed.mul(price, nShares) <= cash;
     TransactionBuy buy = new TransactionBuy(this, broker.getTime(), name, nShares, memo);
     transactions.add(buy);
     apply(buy);
+    return true;
   }
 
-  public void buyValue(String name, long value, String memo)
+  public boolean buyValue(String name, long value, String memo)
   {
     assert value <= cash;
-    long price = broker.getPrice(name, broker.getTime());
-    buyShares(name, value / price, memo);
+    long price = broker.getPrice(name);
+    long nShares = Fixed.divTrunc(value, price);
+    return buyShares(name, nShares, memo);
   }
 
-  public void sellShares(String name, long nShares, String memo)
+  public boolean sellShares(String name, long nShares, String memo)
   {
-    final long time = broker.getTime();
-    long price = broker.getPrice(name, time);
+    nShares = Fixed.truncate(nShares, Fixed.HUNDREDTH);
+    if (nShares == 0) {
+      return false;
+    }
+    assert nShares > 0;
+
+    long time = broker.getTime();
+    long price = broker.getPrice(name);
     Position position = getPosition(name);
-    assert nShares < position.getNumShares() + 1e-4;
+    assert nShares <= position.getNumShares();
 
     Receipt receipt = position.sub(new PositionLot(name, time, nShares, price));
     receipts.add(receipt);
 
     if (position.getNumLots() == 0) {
-      assert receipt.balance < 1e-4;
+      assert receipt.balance == 0;
       positions.remove(position.name);
     } else {
-      assert receipt.balance > 0.0;
+      assert receipt.balance > 0;
     }
 
-    TransactionSell sell = new TransactionSell(this, broker.getTime(), name, nShares, memo);
+    TransactionSell sell = new TransactionSell(this, time, name, nShares, memo);
     transactions.add(sell);
     apply(sell);
+    return true;
   }
 
-  public void sellValue(String name, long value, String memo)
+  public boolean sellValue(String name, long value, String memo)
   {
-    final long time = broker.getTime();
-    final long price = broker.getPrice(name, time);
-    sellShares(name, value / price, memo);
+    Position position = positions.get(name);
+    long positionValue = position.getValue();
+    assert value <= positionValue;
+    long nShares;
+    if (value == positionValue) {
+      nShares = position.getNumShares();
+    } else {
+      long price = broker.getPrice(name);
+      nShares = Fixed.divTrunc(value, price);
+    }
+    return sellShares(name, nShares, memo);
   }
 
   public void sellAll(String name, String memo)
@@ -260,14 +294,16 @@ public class Account
     }
   }
 
-  public void rebalance(Map<String, Long> targetDistribution)
+  public void rebalance(Map<String, Double> targetDistribution)
   {
     final long preValue = getValue();
+    System.out.printf("Rebalance.pre: $%s (Price=$%s)\n", Fixed.formatCurrency(preValue),
+        Fixed.formatCurrency(broker.getPrice("Stock")));
 
     // Figure out how much money is currently invested.
     Map<String, Long> currentValue = new TreeMap<>();
     long total = 0L;
-    long targetSum = 0L;
+    double targetSum = 0.0;
     for (String name : targetDistribution.keySet()) {
       targetSum += targetDistribution.get(name);
 
@@ -283,9 +319,10 @@ public class Account
       total += value;
       currentValue.put(name, value);
     }
-    assert targetSum > 0;
+    assert Math.abs(targetSum - 1.0) < 1e-8;
     assert total > 0;
     assert currentValue.size() == targetDistribution.size();
+    assert total == preValue;
 
     // Sell positions that are over target.
     for (String name : targetDistribution.keySet()) {
@@ -293,17 +330,16 @@ public class Account
       if (name.equalsIgnoreCase("Cash")) {
         continue;
       }
-      long targetFrac = targetDistribution.get(name) / targetSum;
+      double targetFrac = targetDistribution.get(name);
       long current = currentValue.get(name);
-      long currentFrac = FixedPoint.div(current, total);
 
-      // Don't adjust for small changes (1e-3 => 0.1%)
-      long fracSell = currentFrac - targetFrac;
-      if (fracSell > 1e-3) {
-        System.out.printf("Sell| %s: %.3f -> %.3f\n", name, FixedPoint.toFloat(currentFrac),
-            FixedPoint.toFloat(targetFrac));
-        long sellValue = FixedPoint.mul(fracSell, total);
+      // Only adjust if there is a change.
+      long targetValue = Math.round(total * targetFrac);
+      long sellValue = Math.min(getValue(name), current - targetValue);
+      if (sellValue > 0) {
+        System.out.printf("Sell| %s: %.3f%% => Value=$%s\n", name, targetFrac, Fixed.formatCurrency(sellValue));
         sellValue(name, sellValue, null);
+        assert preValue == getValue();
       }
     }
 
@@ -312,41 +348,33 @@ public class Account
       if (name.equalsIgnoreCase("Cash")) {
         continue;
       }
-      long targetFrac = FixedPoint.div(targetDistribution.get(name), targetSum);
+      double targetFrac = targetDistribution.get(name);
       long current = currentValue.get(name);
-      long currentFrac = FixedPoint.div(current, total);
 
-      // Don't adjust for small changes (1e-3 => 0.1%)
-      long fracBuy = targetFrac - currentFrac;
-      if (fracBuy > 0) {
-        System.out.printf("Buy| %s: %.3f -> %.3f\n", name, FixedPoint.toFloat(currentFrac),
-            FixedPoint.toFloat(targetFrac));
-        long buyValue = FixedPoint.mul(fracBuy, total);
+      // Only adjust if there is a change.
+      long targetValue = Math.round(total * targetFrac);
+      long buyValue = Math.min(getCash(), targetValue - current);
+      if (buyValue > 0) {
+        System.out.printf("Buy| %s: %.3f%% => Value=$%s\n", name, targetFrac, Fixed.formatCurrency(buyValue));
         buyValue(name, buyValue, null);
+        assert preValue == getValue();
       }
     }
 
     // Make sure we adjusted correctly (debug).
     assert preValue == getValue();
     for (String name : targetDistribution.keySet()) {
-      long value = 0L;
-      if (name.equalsIgnoreCase("Cash")) {
-        value = getCash();
-      } else {
-        Position position = positions.getOrDefault(name, null);
-        if (position != null) {
-          value = position.getValue();
-        }
-      }
-      assert FixedPoint.div(value, total) == targetDistribution.get(name);
+      double actual = Fixed.toFloat(Fixed.div(getValue(name), total));
+      double target = targetDistribution.get(name);
+      assert Math.abs(actual - target) < 0.01 : String.format("%f vs %f", actual, target);
     }
   }
 
   public void printPositions()
   {
-    System.out.printf("Cash: $%s\n", FinLib.currencyFormatter.format(cash));
+    System.out.printf("Cash: $%s\n", Fixed.formatCurrency(cash));
     for (Position position : positions.values()) {
-      System.out.printf("%s: $%s\n", position.name, FinLib.currencyFormatter.format(position.getValue()));
+      System.out.printf("%s: $%s\n", position.name, Fixed.formatCurrency(position.getValue()));
     }
   }
 }

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.minnen.retiretool.FinLib;
+import org.minnen.retiretool.Fixed;
 
 public class Position
 {
@@ -32,7 +33,8 @@ public class Position
       assert lot.getNumShares() > 0;
       n += lot.getNumShares();
     }
-    assert Math.abs(n - nShares) < 1e-6;
+    assert n == nShares;
+    assert nShares % Fixed.HUNDREDTH == 0;
 
     return nShares;
   }
@@ -40,7 +42,16 @@ public class Position
   public long getValue()
   {
     long price = account.broker.getPrice(name);
-    return price * getNumShares();
+    long value = Fixed.mul(price, getNumShares());
+
+    // TODO for debug
+    long sum = 0L;
+    for (PositionLot lot : lots) {
+      sum += Fixed.mul(price, lot.getNumShares());
+    }
+    assert sum == value;
+
+    return value;
   }
 
   public void add(PositionLot lot)
@@ -54,7 +65,7 @@ public class Position
   public Receipt sub(PositionLot lot)
   {
     assert lot.name.equals(name);
-    assert lot.getNumShares() < nShares + 1e-4;
+    assert lot.getNumShares() <= nShares;
 
     long longPL = 0L;
     long shortPL = 0L;
@@ -63,7 +74,7 @@ public class Position
 
     // First match with long-term lots.
     long nSharesLeft = lot.getNumShares();
-    while (nSharesLeft > 1e-4) {
+    while (nSharesLeft > 0) {
       PositionLot src = lots.get(0);
 
       // We only want LTCG here.

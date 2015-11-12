@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
-import org.minnen.retiretool.FixedPoint;
+import org.minnen.retiretool.Fixed;
 import org.minnen.retiretool.Library;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
@@ -53,7 +53,7 @@ public class Broker
 
   public Account openAccount(long startingBalance, Account.Type accountType, boolean bReinvestDividends)
   {
-    assert startingBalance >= 0.0;
+    assert startingBalance >= 0L;
 
     Account account = new Account(this, accountType, bReinvestDividends);
     accounts.add(account);
@@ -70,6 +70,8 @@ public class Broker
   {
     Sequence seq = store.getMisc(name);
     int index = seq.getClosestIndex(time);
-    return FixedPoint.toFixed(seq.get(index, 0));
+    double floatPrice = seq.get(index, 0);
+    long price = Fixed.round(Fixed.toFixed(floatPrice), Fixed.THOUSANDTH);
+    return price;
   }
 }

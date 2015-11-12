@@ -1,14 +1,15 @@
 package org.minnen.retiretool.broker.transactions;
 
 import org.minnen.retiretool.FinLib;
+import org.minnen.retiretool.Fixed;
 import org.minnen.retiretool.broker.Account;
 
 public class TransactionWithdraw extends Transaction
 {
-  public final double amount;
-  public final double postBalance;
+  public final long amount;
+  public final long postBalance;
 
-  public TransactionWithdraw(Account account, long time, double amount, String memo)
+  public TransactionWithdraw(Account account, long time, long amount, String memo)
   {
     super(account, time, memo);
     assert amount > 0.0;
@@ -19,7 +20,7 @@ public class TransactionWithdraw extends Transaction
   @Override
   public String toString()
   {
-    return String.format("%11s| Withdraw: $%s -> $%s", FinLib.currencyFormatter.format(amount),
-        FinLib.currencyFormatter.format(postBalance), getMemoString());
+    return String.format("%11s| Withdraw: $%s -> $%s", Fixed.formatCurrency(amount),
+        Fixed.formatCurrency(postBalance), getMemoString());
   }
 }
