@@ -4,14 +4,14 @@ public class PositionLot
 {
   public final String name;
   public final long   purchaseTime;
-  public final double purchasePrice;
+  public final long   purchasePrice;
 
-  private double      nShares;
+  private long        nShares;
 
-  public PositionLot(String name, long time, double nShares, double price)
+  public PositionLot(String name, long time, long nShares, long price)
   {
-    assert nShares > 0.0;
-    assert price > 0.0;
+    assert nShares > 0;
+    assert price > 0;
 
     this.name = name;
     this.purchaseTime = time;
@@ -19,20 +19,20 @@ public class PositionLot
     this.purchasePrice = price;
   }
 
-  public double getNumShares()
+  public long getNumShares()
   {
     return nShares;
   }
 
-  public double getCostBasis()
+  public long getCostBasis()
   {
     assert nShares > 0;
     return nShares * purchasePrice;
   }
 
-  public void sell(double nSold)
+  public void sell(long nSold)
   {
-    assert nSold > 0.0;
+    assert nSold > 0;
     assert nSold <= nShares;
     nShares -= nSold;
   }

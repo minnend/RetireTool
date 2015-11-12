@@ -11,7 +11,7 @@ public class Position
   public final String             name;
   private final List<PositionLot> lots = new ArrayList<>();
 
-  private double                  nShares;
+  private long                    nShares;
 
   public Position(Account account, String name)
   {
@@ -24,10 +24,10 @@ public class Position
     return lots.size();
   }
 
-  public double getNumShares()
+  public long getNumShares()
   {
     // TODO recompute nShares for debug
-    double n = 0;
+    long n = 0;
     for (PositionLot lot : lots) {
       assert lot.getNumShares() > 0;
       n += lot.getNumShares();
@@ -37,9 +37,9 @@ public class Position
     return nShares;
   }
 
-  public double getValue()
+  public long getValue()
   {
-    double price = account.broker.getPrice(name);
+    long price = account.broker.getPrice(name);
     return price * getNumShares();
   }
 
@@ -56,13 +56,13 @@ public class Position
     assert lot.name.equals(name);
     assert lot.getNumShares() < nShares + 1e-4;
 
-    double longPL = 0.0;
-    double shortPL = 0.0;
+    long longPL = 0L;
+    long shortPL = 0L;
 
     // TODO smarter share matching.
 
     // First match with long-term lots.
-    double nSharesLeft = lot.getNumShares();
+    long nSharesLeft = lot.getNumShares();
     while (nSharesLeft > 1e-4) {
       PositionLot src = lots.get(0);
 
@@ -71,14 +71,14 @@ public class Position
         break;
       }
 
-      double n = Math.min(src.getNumShares(), nSharesLeft);
+      long n = Math.min(src.getNumShares(), nSharesLeft);
       nSharesLeft -= n;
       src.sell(n);
       if (src.getNumShares() < 1e-4) {
         lots.remove(0);
       }
 
-      double gain = lot.purchasePrice - src.purchasePrice;
+      long gain = lot.purchasePrice - src.purchasePrice;
       longPL += gain;
     }
     assert nSharesLeft >= 0;
@@ -90,20 +90,20 @@ public class Position
       PositionLot src = lots.get(iSrc);
       assert !FinLib.isLTG(src.purchaseTime, lot.purchaseTime);
 
-      double n = Math.min(src.getNumShares(), nSharesLeft);
+      long n = Math.min(src.getNumShares(), nSharesLeft);
       nSharesLeft -= n;
       src.sell(n);
       if (src.getNumShares() < 1e-4) {
         lots.remove(iSrc);
       }
 
-      double gain = lot.purchasePrice - src.purchasePrice;
+      long gain = lot.purchasePrice - src.purchasePrice;
       shortPL += gain;
     }
     assert nSharesLeft < 1e-4;
 
     nShares -= lot.getNumShares();
-    double balance = getValue();
+    long balance = getValue();
     return new Receipt(name, longPL, shortPL, balance);
   }
 }

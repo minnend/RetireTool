@@ -1899,7 +1899,7 @@ public class RetireTool
     final String riskyName = "Stock";
     final String safeName = "Cash";
     final int T = guideSeq.length();
-    final double principal = 1000.0;
+    final long principal = FixedPoint.toFixed(1000.0);
     long prevTime = stockAll.getTimeMS(iStart - 1);
     for (int t = 0; t < T; ++t) {
       long time = guideSeq.getTimeMS(t);
@@ -1922,9 +1922,9 @@ public class RetireTool
 
       if (bMonthlyPrediction) {
         boolean bOwnRisky = sma.predict();
-        Map<String, Double> desiredDistribution = new TreeMap<>();
-        double fractionRisky = (bOwnRisky ? 1.0 : 0.0);
-        double fractionSafe = 1.0 - fractionRisky;
+        Map<String, Long> desiredDistribution = new TreeMap<>();
+        long fractionRisky = bOwnRisky ? FixedPoint.ONE : FixedPoint.ZERO;
+        long fractionSafe = FixedPoint.ONE - fractionRisky;
         desiredDistribution.put(riskyName, fractionRisky);
         desiredDistribution.put(safeName, fractionSafe);
         System.out.println("BEFORE");

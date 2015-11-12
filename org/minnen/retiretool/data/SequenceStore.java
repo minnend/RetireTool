@@ -148,7 +148,6 @@ public class SequenceStore implements Iterable<Sequence>
     nominalReturns.add(cumulativeReturns);
     nameToIndex.put(name.toLowerCase(), index);
     nameToOrig.put(name.toLowerCase(), name);
-    assert nameToIndex.size() == nameToOrig.size();
     assert get(name) == cumulativeReturns;
 
     // Calculate and add real returns (inflation-adjusted) to the store.

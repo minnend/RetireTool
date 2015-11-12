@@ -7,11 +7,11 @@ import org.minnen.retiretool.broker.Account;
 public class TransactionBuy extends Transaction
 {
   public final String name;
-  public final double nShares;
-  public final double price;
-  public final double postBalance;
+  public final long nShares;
+  public final long price;
+  public final long postBalance;
 
-  public TransactionBuy(Account account, long time, String name, double nShares, String memo)
+  public TransactionBuy(Account account, long time, String name, long nShares, String memo)
   {
     super(account, time, memo);
     this.name = name;
@@ -20,7 +20,7 @@ public class TransactionBuy extends Transaction
     this.postBalance = account.getCash() - nShares * price;
   }
 
-  public double getValue()
+  public long getValue()
   {
     return nShares * price;
   }
