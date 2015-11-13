@@ -13,6 +13,7 @@ import java.util.regex.Pattern;
 import org.minnen.retiretool.FinLib;
 import org.minnen.retiretool.FinLib.Inflation;
 import org.minnen.retiretool.Library;
+import org.minnen.retiretool.TimeLib;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.DurationalStats;
 
@@ -428,7 +429,7 @@ public class SequenceStore implements Iterable<Sequence>
   public long getStartMS()
   {
     if (nominalReturns.isEmpty()) {
-      return Library.TIME_ERROR;
+      return TimeLib.TIME_ERROR;
     }
     return nominalReturns.get(0).getStartMS();
   }
@@ -436,7 +437,7 @@ public class SequenceStore implements Iterable<Sequence>
   public long getEndMS()
   {
     if (nominalReturns.isEmpty()) {
-      return Library.TIME_ERROR;
+      return TimeLib.TIME_ERROR;
     }
     return nominalReturns.get(0).getEndMS();
   }

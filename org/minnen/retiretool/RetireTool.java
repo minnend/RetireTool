@@ -69,16 +69,16 @@ public class RetireTool
 
     // long commonStart = Library.calcCommonStart(shiller, tbillData);
     // long commonEnd = Library.calcCommonEnd(shiller, tbillData);
-    // System.out.printf("Shiller: [%s] -> [%s]\n", Library.formatDate(shiller.getStartMS()),
-    // Library.formatDate(shiller.getEndMS()));
-    // System.out.printf("Stock: [%s] -> [%s]\n", Library.formatMonth(nikkei.getStartMS()),
-    // Library.formatMonth(nikkei.getEndMS()));
-    // System.out.printf("T-Bills: [%s] -> [%s]\n", Library.formatDate(tbills.getStartMS()),
-    // Library.formatDate(tbills.getEndMS()));
-    // System.out.printf("Common: [%s] -> [%s]\n", Library.formatDate(commonStart), Library.formatDate(commonEnd));
+    // System.out.printf("Shiller: [%s] -> [%s]\n", TimeLib.formatDate(shiller.getStartMS()),
+    // TimeLib.formatDate(shiller.getEndMS()));
+    // System.out.printf("Stock: [%s] -> [%s]\n", TimeLib.formatMonth(nikkei.getStartMS()),
+    // TimeLib.formatMonth(nikkei.getEndMS()));
+    // System.out.printf("T-Bills: [%s] -> [%s]\n", TimeLib.formatDate(tbills.getStartMS()),
+    // TimeLib.formatDate(tbills.getEndMS()));
+    // System.out.printf("Common: [%s] -> [%s]\n", TimeLib.formatDate(commonStart), TimeLib.formatDate(commonEnd));
 
-    long commonStart = Library.getTime(1, 1, 1872);
-    long commonEnd = Library.getTime(31, 12, 2014);
+    long commonStart = TimeLib.getTime(1, 1, 1872);
+    long commonEnd = TimeLib.getTime(31, 12, 2014);
     shiller = shiller.subseq(commonStart, commonEnd);
     tbillData = tbillData.subseq(commonStart, commonEnd);
     // nikkei = nikkei.subseq(commonStart, commonEnd);
@@ -95,32 +95,32 @@ public class RetireTool
     store.addMisc(stockDaily, "Stock-Daily");
     Sequence stock = FinLib.daily2monthly(stockDaily);
     Sequence stockNoDiv = FinLib.daily2monthly(stockDaily, 1, 0);
-    System.out.printf("Stock: [%s] -> [%s]\n", Library.formatMonth(stock.getStartMS()),
-        Library.formatMonth(stock.getEndMS()));
+    System.out.printf("Stock: [%s] -> [%s]\n", TimeLib.formatMonth(stock.getStartMS()),
+        TimeLib.formatMonth(stock.getEndMS()));
 
     Sequence bondsDaily = DataIO.loadYahooData(new File(dataDir, "VBMFX.csv"));
     store.addMisc(bondsDaily, "Bonds-Daily");
     Sequence bonds = FinLib.daily2monthly(bondsDaily);
-    System.out.printf("Bond: [%s] -> [%s]\n", Library.formatMonth(bonds.getStartMS()),
-        Library.formatMonth(bonds.getEndMS()));
+    System.out.printf("Bond: [%s] -> [%s]\n", TimeLib.formatMonth(bonds.getStartMS()),
+        TimeLib.formatMonth(bonds.getEndMS()));
 
     Sequence reitsDaily = DataIO.loadYahooData(new File(dataDir, "VGSIX.csv"));
     store.addMisc(reitsDaily, "REITs-Daily");
     Sequence reits = FinLib.daily2monthly(reitsDaily);
-    System.out.printf("REIT: [%s] -> [%s]\n", Library.formatMonth(reits.getStartMS()),
-        Library.formatMonth(reits.getEndMS()));
+    System.out.printf("REIT: [%s] -> [%s]\n", TimeLib.formatMonth(reits.getStartMS()),
+        TimeLib.formatMonth(reits.getEndMS()));
 
     Sequence istockDaily = DataIO.loadYahooData(new File(dataDir, "VGTSX.csv"));
     store.addMisc(istockDaily, "IntStock-Daily");
     Sequence istock = FinLib.daily2monthly(istockDaily);
-    System.out.printf("Int Stock: [%s] -> [%s]\n", Library.formatMonth(istock.getStartMS()),
-        Library.formatMonth(istock.getEndMS()));
+    System.out.printf("Int Stock: [%s] -> [%s]\n", TimeLib.formatMonth(istock.getStartMS()),
+        TimeLib.formatMonth(istock.getEndMS()));
 
     Sequence shiller = DataIO.loadShillerData(new File(dataDir, "shiller.csv"));
 
-    long commonStart = Library.calcCommonStart(stock, bonds, reits, istock, shiller);
-    long commonEnd = Library.calcCommonEnd(stock, bonds, reits, istock, shiller);
-    System.out.printf("Common: [%s] -> [%s]\n", Library.formatMonth(commonStart), Library.formatMonth(commonEnd));
+    long commonStart = TimeLib.calcCommonStart(stock, bonds, reits, istock, shiller);
+    long commonEnd = TimeLib.calcCommonEnd(stock, bonds, reits, istock, shiller);
+    System.out.printf("Common: [%s] -> [%s]\n", TimeLib.formatMonth(commonStart), TimeLib.formatMonth(commonEnd));
 
     stock = stock.subseq(commonStart, commonEnd);
     stockNoDiv = stockNoDiv.subseq(commonStart, commonEnd);
@@ -181,8 +181,8 @@ public class RetireTool
     Sequence stockData = Shiller.getStockData(shiller, iStartData, iEndData);
     Sequence bondData = Shiller.getData(Shiller.GS10, "Bonds", shiller, iStartData, iEndData);
     assert stockData.matches(bondData);
-    System.out.printf("Build Store: [%s] -> [%s]\n", Library.formatMonth(stockData.getStartMS()),
-        Library.formatMonth(stockData.getEndMS()));
+    System.out.printf("Build Store: [%s] -> [%s]\n", TimeLib.formatMonth(stockData.getStartMS()),
+        TimeLib.formatMonth(stockData.getEndMS()));
     store.addMisc(stockData, "StockData");
     store.addMisc(bondData, "BondData");
 
@@ -249,7 +249,7 @@ public class RetireTool
     }
 
     System.out.printf("Finished Building Store (%d, %s).\n", store.size(),
-        Library.formatDuration(Library.getTime() - startMS));
+        TimeLib.formatDuration(TimeLib.getTime() - startMS));
   }
 
   public static void addStrategiesToStore(Sequence risky, Sequence safe, Sequence prices, int iStartSimulation)
@@ -351,14 +351,14 @@ public class RetireTool
     System.out.printf("Building multiscale variations... ");
     long startMS = System.currentTimeMillis();
     buildMultiscaleVariations(iStartSimulation, slippage, risky, safe, prices);
-    System.out.printf("done (%d, %s).\n", store.size(), Library.formatDuration(System.currentTimeMillis() - startMS));
+    System.out.printf("done (%d, %s).\n", store.size(), TimeLib.formatDuration(System.currentTimeMillis() - startMS));
 
     // System.out.printf("Building all mixes (%d)... ", store.size());
     // startMS = System.currentTimeMillis();
     // buildAllMixes(50, null, "NewHigh");
     // buildAllMixes("NewHigh[10]", null, "NewHigh");
     // buildAllMixes("NewHigh[6]", null, "NewHigh");
-    // System.out.printf("done (%d, %s).\n", store.size(), Library.formatDuration(System.currentTimeMillis() -
+    // System.out.printf("done (%d, %s).\n", store.size(), TimeLib.formatDuration(System.currentTimeMillis() -
     // startMS));
 
     // int pctInc = 10;
@@ -760,7 +760,7 @@ public class RetireTool
       stats[i] = DurationalStats.calc(all[i], duration);
     }
     Chart.saveBoxPlots(new File(dir, "rebalance-box.html"),
-        String.format("Return Stats (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
+        String.format("Return Stats (%s)", TimeLib.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
         stats);
   }
 
@@ -802,11 +802,11 @@ public class RetireTool
     Chart.saveStatsTable(new File(dir, "strategy-report.html"), GRAPH_WIDTH, true, cstats);
 
     Chart.saveBoxPlots(new File(dir, "strategy-box.html"),
-        String.format("Return Stats (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
+        String.format("Return Stats (%s)", TimeLib.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
         rstats);
 
     Chart.saveScatterPlot(new File(dir, "strategy-scatter.html"),
-        String.format("Momentum: Returns vs. Volatility (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH,
+        String.format("Momentum: Returns vs. Volatility (%s)", TimeLib.formatDurationMonths(duration)), GRAPH_WIDTH,
         GRAPH_HEIGHT, 5, scatter);
 
     // Win rate vs. first strategy.
@@ -862,7 +862,7 @@ public class RetireTool
       // for (int j = 0; j < returns[i].length(); ++j) {
       // FeatureVec v = returns[i].get(j);
       // if (v.get(0) > 62.0 || v.get(0) < -42.0) {
-      // System.out.printf("%d: %.2f  [%s]\n", j, v.get(0), Library.formatMonth(v.getTime()));
+      // System.out.printf("%d: %.2f  [%s]\n", j, v.get(0), TimeLib.formatMonth(v.getTime()));
       // }
       // }
       returns[i].setName(assets[i].getName());
@@ -882,13 +882,13 @@ public class RetireTool
       histograms[i].setName(assets[i].getName());
     }
 
-    String title = "Histogram of Returns - " + Library.formatDurationMonths(nMonths);
+    String title = "Histogram of Returns - " + TimeLib.formatDurationMonths(nMonths);
     String[] labels = FinLib.getLabelsFromHistogram(histograms[0]);
     Chart.saveHighChart(new File(dir, "histogram-returns.html"), Chart.ChartType.Bar, title, labels, null, GRAPH_WIDTH,
         GRAPH_HEIGHT, Double.NaN, Double.NaN, Double.NaN, false, 1, histograms);
 
     // Generate histogram showing future returns.
-    title = String.format("Future CAGR: %s (%s)", returns[0].getName(), Library.formatDurationMonths(nMonths));
+    title = String.format("Future CAGR: %s (%s)", returns[0].getName(), TimeLib.formatDurationMonths(nMonths));
     Chart.saveHighChart(new File(dir, "future-returns.html"), Chart.ChartType.Area, title, null, null, GRAPH_WIDTH,
         GRAPH_HEIGHT, Double.NaN, Double.NaN, Double.NaN, false, 0, returns[0]);
   }
@@ -923,12 +923,12 @@ public class RetireTool
     // ReturnStats.printDurationTable(player2);
 
     // Generate scatter plot comparing results.
-    String title = String.format("%s vs. %s (%s)", name1, name2, Library.formatDurationMonths(duration));
+    String title = String.format("%s vs. %s (%s)", name1, name2, TimeLib.formatDurationMonths(duration));
     Chart.saveHighChartScatter(new File(dir, "duel-scatter.html"), title, 730, GRAPH_HEIGHT, 0,
         dstatsB.durationReturns, dstatsA.durationReturns);
 
     // Generate histogram summarizing excess returns of B over A.
-    title = String.format("Excess Returns: %s vs. %s (%s)", name1, name2, Library.formatDurationMonths(duration));
+    title = String.format("Excess Returns: %s vs. %s (%s)", name1, name2, TimeLib.formatDurationMonths(duration));
     Sequence excessReturns = dstatsA.durationReturns.sub(dstatsB.durationReturns);
     Sequence histogramExcess = FinLib.computeHistogram(excessReturns, 0.5, 0.0);
     histogramExcess.setName(String.format("%s vs. %s", name1, name2));
@@ -955,7 +955,7 @@ public class RetireTool
     // double[] a = excessReturns.extractDim(0);
     // int[] ii = Library.sort(a, true);
     // for (int i = 0; i < excessReturns.length(); ++i) {
-    // System.out.printf("[%s]  %.3f\n", Library.formatMonth(excessReturns.getTimeMS(ii[i])), a[i]);
+    // System.out.printf("[%s]  %.3f\n", TimeLib.formatMonth(excessReturns.getTimeMS(ii[i])), a[i]);
     // }
   }
 
@@ -1012,7 +1012,7 @@ public class RetireTool
       all[i].setName(String.format("%d/%d (%.2f%%)", percentStock[i], 100 - percentStock[i], stats[i].mean));
     }
     Chart.saveBoxPlots(new File(dir, "stock-bond-sweep-box.html"),
-        String.format("Return Stats (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
+        String.format("Return Stats (%s)", TimeLib.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
         stats);
   }
 
@@ -1034,9 +1034,9 @@ public class RetireTool
     int[] durations = new int[] { 1, 5, 10, 15, 20, 30 };
 
     // Generate curve for each decade.
-    Calendar cal = Library.now();
+    Calendar cal = TimeLib.now();
     List<Sequence> decades = new ArrayList<Sequence>();
-    int iDecadeStart = Library.FindStartofFirstDecade(stockData);
+    int iDecadeStart = TimeLib.findStartofFirstDecade(stockData);
     for (int i = iDecadeStart; i + 120 < stockData.length(); i += 120) {
       cal.setTimeInMillis(stockData.getTimeMS(i));
       Sequence decadeStock = FinLib.calcSnpReturns(stockData, i, 120, DividendMethod.MONTHLY);
@@ -1063,7 +1063,7 @@ public class RetireTool
     Sequence[] frontiers = new Sequence[durations.length];
     for (int i = 0; i < durations.length; ++i) {
       int duration = durations[i] * 12;
-      Sequence frontier = new Sequence(Library.formatDurationMonths(duration));
+      Sequence frontier = new Sequence(TimeLib.formatDurationMonths(duration));
       for (int j = 0; j < percentStock.length; ++j) {
         int pctStock = percentStock[j];
         int pctBonds = 100 - percentStock[j];
@@ -1105,7 +1105,7 @@ public class RetireTool
 
   public static List<String> genDominationChart(List<String> candidates, File dir) throws IOException
   {
-    long startMS = Library.getTime();
+    long startMS = TimeLib.getTime();
 
     // Filter candidates to find "dominating" strategies.
     store.recalcDurationalStats(10 * 12, FinLib.Inflation.Ignore);
@@ -1120,7 +1120,7 @@ public class RetireTool
     System.out.printf("Winners: %d\n", winners.size());
     Chart.saveStatsTable(new File(dir, "domination-chart.html"), GRAPH_WIDTH, true, winners);
 
-    System.out.printf("Done (%s).\n", Library.formatDuration(Library.getTime() - startMS));
+    System.out.printf("Done (%s).\n", TimeLib.formatDuration(TimeLib.getTime() - startMS));
 
     List<String> names = new ArrayList<String>();
     for (CumulativeStats cstats : winners) {
@@ -1157,7 +1157,7 @@ public class RetireTool
       scatter.addData(new FeatureVec(label, 2, stats.mean, stats.sdev));
     }
     Chart.saveScatterPlot(new File(dir, "momentum-scatter.html"),
-        String.format("Momentum: Returns vs. Volatility (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH,
+        String.format("Momentum: Returns vs. Volatility (%s)", TimeLib.formatDurationMonths(duration)), GRAPH_WIDTH,
         GRAPH_HEIGHT, 5, scatter);
 
     names = new String[] { "stock", "bonds", "60/40", "momentum-1", "momentum-3", "momentum-12", "Mom.Defensive",
@@ -1166,7 +1166,7 @@ public class RetireTool
         GRAPH_WIDTH, GRAPH_HEIGHT, true, store.getReturns(names));
 
     Chart.saveBoxPlots(new File(dir, "momentum-box-plots.html"),
-        String.format("Momentum Returns (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
+        String.format("Momentum Returns (%s)", TimeLib.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
         store.getDurationalStats(names));
 
     List<CumulativeStats> cstats = store.getCumulativeStats(names);
@@ -1190,7 +1190,7 @@ public class RetireTool
     Chart.saveLineChart(new File(dir, "NewHigh-cumulative.html"), "Cumulative Market Returns: NewHigh Strategy",
         GRAPH_WIDTH, GRAPH_HEIGHT, true, store.getReturns(names));
     Chart.saveBoxPlots(new File(dir, "NewHigh-box-plots.html"),
-        String.format("NewHigh Returns (%s)", Library.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
+        String.format("NewHigh Returns (%s)", TimeLib.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
         store.getDurationalStats(names));
     List<CumulativeStats> cstats = store.getCumulativeStats(names);
     Chart.saveStatsTable(new File(dir, "NewHigh-chart.html"), GRAPH_WIDTH, true, cstats);
@@ -1332,12 +1332,12 @@ public class RetireTool
 
   public static void genChartsForDifficultTimePeriods(File dir) throws IOException
   {
-    final long[][] timePeriods = new long[][] { { Library.getTime(31, 12, 1924), Library.getTime(31, 12, 1934) },
-        { Library.getTime(31, 12, 1994), Library.getTime(31, 12, 2004) },
-        { Library.getTime(31, 12, 2004), Library.getTime(31, 12, 2014) },
-        { Library.getTime(31, 12, 1999), Library.getTime(31, 12, 2009) },
-        { Library.getTime(31, 12, 1999), Library.getTime(30, 8, 2015) },
-        { Library.getTime(1, 1, 1994), Library.getTime(31, 12, 2013) } };
+    final long[][] timePeriods = new long[][] { { TimeLib.getTime(31, 12, 1924), TimeLib.getTime(31, 12, 1934) },
+        { TimeLib.getTime(31, 12, 1994), TimeLib.getTime(31, 12, 2004) },
+        { TimeLib.getTime(31, 12, 2004), TimeLib.getTime(31, 12, 2014) },
+        { TimeLib.getTime(31, 12, 1999), TimeLib.getTime(31, 12, 2009) },
+        { TimeLib.getTime(31, 12, 1999), TimeLib.getTime(30, 8, 2015) },
+        { TimeLib.getTime(1, 1, 1994), TimeLib.getTime(31, 12, 2013) } };
 
     // String[] names = new String[] { "stock", "bonds", "60/40", "80/20",
     // "sma[1,2,9].cautious/sma[1,3,10].moderate-50/50", "SMA[1,2,9].Moderate/SMA[1,3,10].Aggressive-50/50",
@@ -1350,17 +1350,17 @@ public class RetireTool
     for (int iTimePeriod = 0; iTimePeriod < timePeriods.length; ++iTimePeriod) {
       long[] timePeriod = timePeriods[iTimePeriod];
       // System.out.printf("%d: %d -> %d\n", iTimePeriod + 1, timePeriod[0], timePeriod[1]);
-      // System.out.printf("   [%s] -> [%s]\n", Library.formatMonth(timePeriod[0]), Library.formatMonth(timePeriod[1]));
+      // System.out.printf("   [%s] -> [%s]\n", TimeLib.formatMonth(timePeriod[0]), TimeLib.formatMonth(timePeriod[1]));
       for (int i = 0; i < names.length; ++i) {
         Sequence seq = store.get(names[i]).subseq(timePeriod[0], timePeriod[1]);
-        // System.out.printf("%d: [%s] -> [%s]\n", i + 1, Library.formatMonth(seq.getStartMS()),
-        // Library.formatMonth(seq.getEndMS()));
+        // System.out.printf("%d: [%s] -> [%s]\n", i + 1, TimeLib.formatMonth(seq.getStartMS()),
+        // TimeLib.formatMonth(seq.getEndMS()));
         returns[i] = seq.div(seq.getFirst(0));
         double cagr = FinLib.getAnnualReturn(returns[i].getLast(0) / returns[i].getFirst(0), returns[i].length() - 1);
         returns[i].setName(String.format("%s (%.2f%%)", FinLib.getBaseName(seq.getName()), cagr));
       }
-      String title = String.format("[%s] - [%s]", Library.formatMonth(timePeriod[0]),
-          Library.formatMonth(timePeriod[1]));
+      String title = String.format("[%s] - [%s]", TimeLib.formatMonth(timePeriod[0]),
+          TimeLib.formatMonth(timePeriod[1]));
       Chart.saveHighChart(new File(dir, String.format("time-period-%02d.html", iTimePeriod + 1)), ChartType.Line,
           title, null, null, GRAPH_WIDTH, GRAPH_HEIGHT, Double.NaN, Double.NaN, 1.0, true, 0, returns);
     }
@@ -1418,7 +1418,7 @@ public class RetireTool
     for (int iTest = 0; iTest < testSeqs.size(); ++iTest) {
       Sequence[] seqs = testSeqs.get(iTest);
       System.out.printf("\n-- Test Sequences %d  [%s] -> [%s] --\n", iTest + 1,
-          Library.formatMonth(seqs[0].getStartMS()), Library.formatMonth(seqs[0].getEndMS()));
+          TimeLib.formatMonth(seqs[0].getStartMS()), TimeLib.formatMonth(seqs[0].getEndMS()));
       for (Sequence seq : seqs) {
         if (!store.has(seq.getName())) {
           store.addMisc(seq);
@@ -1505,7 +1505,7 @@ public class RetireTool
     }
 
     // Extend synthetic data by sampling from historical data.
-    Calendar cal = Library.now();
+    Calendar cal = TimeLib.now();
     double[] dValues = new double[derivs.length];
     int[] offsets = new int[4];
     while (synth.length() < duration) {
@@ -1559,13 +1559,13 @@ public class RetireTool
       writer.write("Date,Stock,Bonds,TBills,Source\n");
       for (int i = 0; i < synth.length(); ++i) {
         FeatureVec v = synth.get(i);
-        writer.write(String.format("%s,%.2f,%.2f,%.2f,%s\n", Library.formatYMD(v.getTime()), v.get(0), v.get(1),
+        writer.write(String.format("%s,%.2f,%.2f,%.2f,%s\n", TimeLib.formatYMD(v.getTime()), v.get(0), v.get(1),
             v.get(2), Library.prefix(source.get(i), "-")));
       }
     }
 
-    System.out.printf("Synthetic Data (%d): [%s] -> [%s]\n", synth.length(), Library.formatMonth(synth.getStartMS()),
-        Library.formatMonth(synth.getEndMS()));
+    System.out.printf("Synthetic Data (%d): [%s] -> [%s]\n", synth.length(), TimeLib.formatMonth(synth.getStartMS()),
+        TimeLib.formatMonth(synth.getEndMS()));
 
     Chart.saveLineChart(new File(dir, "synth.html"), "Synthetic Data", 1600, 800, true, synth.extractDims(0),
         synth.extractDims(1), synth.extractDims(2));
@@ -1576,8 +1576,8 @@ public class RetireTool
   public static void runSyntheticTest(File dataDir, File dir) throws IOException
   {
     Sequence synth = DataIO.loadCSV(new File(dataDir, "synth-500.csv"), new int[] { 1, 2, 3 });
-    System.out.printf("Synthetic Data (%d): [%s] -> [%s]\n", synth.length(), Library.formatMonth(synth.getStartMS()),
-        Library.formatMonth(synth.getEndMS()));
+    System.out.printf("Synthetic Data (%d): [%s] -> [%s]\n", synth.length(), TimeLib.formatMonth(synth.getStartMS()),
+        TimeLib.formatMonth(synth.getEndMS()));
 
     Sequence stockAll = synth.extractDims(0);
     stockAll._div(stockAll.get(0, 0));
@@ -1849,22 +1849,22 @@ public class RetireTool
   public static void runBroker(File dataDir, File dir) throws IOException
   {
     Sequence stockAll = DataIO.loadYahooData(new File(dataDir, "^GSPC.csv"));
-    System.out.printf("S&P (Daily): [%s] -> [%s]\n", Library.formatMonth(stockAll.getStartMS()),
-        Library.formatMonth(stockAll.getEndMS()));
+    System.out.printf("S&P (Daily): [%s] -> [%s]\n", TimeLib.formatMonth(stockAll.getStartMS()),
+        TimeLib.formatMonth(stockAll.getEndMS()));
 
     Sequence shiller = DataIO.loadShillerData(new File(dataDir, "shiller.csv"));
-    System.out.printf("Shiller: [%s] -> [%s]\n", Library.formatMonth(shiller.getStartMS()),
-        Library.formatMonth(shiller.getEndMS()));
+    System.out.printf("Shiller: [%s] -> [%s]\n", TimeLib.formatMonth(shiller.getStartMS()),
+        TimeLib.formatMonth(shiller.getEndMS()));
 
     Sequence tbillData = DataIO.loadDateValueCSV(new File(dataDir, "treasury-bills-3-month.csv"));
     tbillData.setName("3-Month Treasury Bills");
-    System.out.printf("TBills: [%s] -> [%s]\n", Library.formatMonth(tbillData.getStartMS()),
-        Library.formatMonth(tbillData.getEndMS()));
+    System.out.printf("TBills: [%s] -> [%s]\n", TimeLib.formatMonth(tbillData.getStartMS()),
+        TimeLib.formatMonth(tbillData.getEndMS()));
     tbillData = FinLib.pad(tbillData, shiller, 0.0);
 
-    long commonStart = Library.calcCommonStart(shiller, tbillData, stockAll);
-    long commonEnd = Library.calcCommonEnd(shiller, tbillData, stockAll);
-    System.out.printf("Common: [%s] -> [%s]\n", Library.formatDate(commonStart), Library.formatDate(commonEnd));
+    long commonStart = TimeLib.calcCommonStart(shiller, tbillData, stockAll);
+    long commonEnd = TimeLib.calcCommonEnd(shiller, tbillData, stockAll);
+    System.out.printf("Common: [%s] -> [%s]\n", TimeLib.formatDate(commonStart), TimeLib.formatDate(commonEnd));
 
     stockAll = stockAll.subseq(commonStart, commonEnd);
     shiller = shiller.subseq(commonStart, commonEnd);
@@ -1903,6 +1903,7 @@ public class RetireTool
     long prevTime = stockAll.getTimeMS(iStart - 1);
     for (int t = 0; t < T; ++t) {
       long time = guideSeq.getTimeMS(t);
+      store.lock(TimeLib.TIME_BEGIN, time);
       long nextTime = (t == T - 1 ? FinLib.getTimeForNextBusinessDay(time) : guideSeq.getTimeMS(t + 1));
       broker.setTime(time, prevTime, nextTime);
       TimeInfo timeInfo = broker.getTimeInfo();
@@ -1912,7 +1913,7 @@ public class RetireTool
 
       if (account == null) {
         account = broker.openAccount(principal, Account.Type.Roth, true);
-        sma = new DailySMA(account, riskyName, safeName);
+        sma = new DailySMA(account, riskyName);
         sma.init(timeInfo);
         bMonthlyPrediction = true; // need initial prediction
         // account.buyValue("Stock", account.getCash(), null);
@@ -1923,6 +1924,7 @@ public class RetireTool
       // End of day business.
       broker.doEndOfDayBusiness();
 
+      // Is it time for a prediction and possible asset change?
       if (bMonthlyPrediction) {
         boolean bOwnRisky = sma.predict();
         Map<String, Double> desiredDistribution = new TreeMap<>();
@@ -1930,15 +1932,15 @@ public class RetireTool
         double fractionSafe = 1.0 - fractionRisky;
         desiredDistribution.put(riskyName, fractionRisky);
         desiredDistribution.put(safeName, fractionSafe);
-        System.out.println("BEFORE");
-        account.printPositions();
-        account.rebalance(desiredDistribution);
-        System.out.println("AFTER");
-        account.printPositions();
-      }
 
-      account.printTransactions(time, Library.TIME_END);
-      // System.out.printf("Account Value: $%s\n", Fixed.formatCurrency(account.getValue()));
+        // System.out.printf("Stock: %.1f%%  Cash: %.1f%%\n", 100.0 * fractionRisky, 100.0 * fractionSafe);
+        account.rebalance(desiredDistribution);
+      }
+      // account.printTransactions(time, TimeLib.TIME_END);
+      if (bMonthlyPrediction) {
+        // account.printPositions();
+        System.out.printf("[%s] $%s\n", TimeLib.formatMonth(time), Fixed.formatCurrency(account.getValue()));
+      }
 
       // int month = Library.calFromTime(time).get(Calendar.MONTH);
       // if (month != prevMonth) {
@@ -1948,18 +1950,19 @@ public class RetireTool
       // double tr = value / principal;
       // double nMonths = Library.monthsBetween(startSim, time);
       // double ar = FinLib.getAnnualReturn(tr, nMonths);
-      // System.out.printf("[%s]: $%s (%.3f%%)\n", Library.formatDate(time), FinLib.currencyFormatter.format(value), ar,
+      // System.out.printf("[%s]: $%s (%.3f%%)\n", TimeLib.formatDate(time), FinLib.currencyFormatter.format(value), ar,
       // nMonths);
       // }
 
+      store.unlock();
       prevTime = time;
     }
 
     long value = account.getValue();
     long tr = Fixed.div(value, principal);
-    double nMonths = Library.monthsBetween(startSim, guideSeq.getEndMS());
+    double nMonths = TimeLib.monthsBetween(startSim, guideSeq.getEndMS());
     double ar = FinLib.getAnnualReturn(Fixed.toFloat(tr), nMonths);
-    System.out.printf("%11s| $%s (%.2f%%)\n", Library.formatDate(guideSeq.getEndMS()), Fixed.formatCurrency(value), ar);
+    System.out.printf("%11s| $%s (%.2f%%)\n", TimeLib.formatDate(guideSeq.getEndMS()), Fixed.formatCurrency(value), ar);
 
     // account.printTransactions();
   }

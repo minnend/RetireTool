@@ -3,13 +3,14 @@ package org.minnen.retiretool.data;
 import java.util.*;
 
 import org.minnen.retiretool.Library;
+import org.minnen.retiretool.TimeLib;
 
 /** represents a vector in R^n */
 public class FeatureVec
 {
   /** actual data */
   private double[] vec;
-  private long     timestamp = Library.TIME_ERROR;
+  private long     timestamp = TimeLib.TIME_ERROR;
   private String   name;
 
   /**
@@ -163,7 +164,7 @@ public class FeatureVec
   /** @return true if the timestamp for this point is valid */
   public boolean hasTime()
   {
-    return timestamp != Library.TIME_ERROR;
+    return timestamp != TimeLib.TIME_ERROR;
   }
 
   /** @return true if no dimensions are NaN */

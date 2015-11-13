@@ -14,7 +14,6 @@ public class PositionLot
   {
     assert nShares > 0;
     assert price > 0;
-    assert nShares % Fixed.HUNDREDTH == 0;
 
     this.name = name;
     this.purchaseTime = time;

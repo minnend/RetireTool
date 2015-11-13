@@ -3,6 +3,7 @@ package org.minnen.retiretool.data;
 import java.util.*;
 
 import org.minnen.retiretool.Library;
+import org.minnen.retiretool.TimeLib;
 import org.minnen.retiretool.data.FeatureVec;
 
 /**
@@ -79,8 +80,8 @@ public class Sequence implements Iterable<FeatureVec>
 
   public String toString()
   {
-    return String.format("[Seq: len=%d, %dD  [%s]->[%s]]", length(), getNumDims(), Library.formatTime(getStartMS()),
-        Library.formatTime(getEndMS()));
+    return String.format("[Seq: len=%d, %dD  [%s]->[%s]]", length(), getNumDims(), TimeLib.formatTime(getStartMS()),
+        TimeLib.formatTime(getEndMS()));
   }
 
   /**
@@ -277,7 +278,7 @@ public class Sequence implements Iterable<FeatureVec>
   public long getStartMS()
   {
     if (isEmpty()) {
-      return Library.TIME_ERROR;
+      return TimeLib.TIME_ERROR;
     } else {
       return getFirst().getTime();
     }
@@ -289,7 +290,7 @@ public class Sequence implements Iterable<FeatureVec>
   public long getEndMS()
   {
     if (isEmpty()) {
-      return Library.TIME_ERROR;
+      return TimeLib.TIME_ERROR;
     } else {
       return getLast().getTime();
     }
@@ -557,7 +558,7 @@ public class Sequence implements Iterable<FeatureVec>
   /** @return index in data sequence for the given year and month (January == 1). */
   public int getIndexForDate(int year, int month)
   {
-    long ms = Library.getTime(1, month, year);
+    long ms = TimeLib.getTime(1, month, year);
     return getClosestIndex(ms);
   }
 

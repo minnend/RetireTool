@@ -34,7 +34,6 @@ public class Position
       n += lot.getNumShares();
     }
     assert n == nShares;
-    assert nShares % Fixed.HUNDREDTH == 0;
 
     return nShares;
   }

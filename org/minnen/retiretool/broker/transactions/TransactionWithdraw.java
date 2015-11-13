@@ -1,6 +1,5 @@
 package org.minnen.retiretool.broker.transactions;
 
-import org.minnen.retiretool.FinLib;
 import org.minnen.retiretool.Fixed;
 import org.minnen.retiretool.broker.Account;
 

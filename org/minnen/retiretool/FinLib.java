@@ -396,7 +396,7 @@ public final class FinLib
   public static Sequence calcReturnsForDuration(Sequence cumulativeReturns, int nMonths)
   {
     final int N = cumulativeReturns.size();
-    String name = String.format("%s (%s)", cumulativeReturns.getName(), Library.formatDurationMonths(nMonths));
+    String name = String.format("%s (%s)", cumulativeReturns.getName(), TimeLib.formatDurationMonths(nMonths));
     Sequence rois = new Sequence(name);
     if (N <= nMonths) {
       double growth = FinLib.getReturn(cumulativeReturns, 0, N - 1);
@@ -547,7 +547,7 @@ public final class FinLib
     final int nData = cumulativeReturns.size();
     assert (iStart >= 0 && nMonths >= 1 && iStart + nMonths < nData);
 
-    Calendar cal = Library.now();
+    Calendar cal = TimeLib.now();
     final double monthlyExpenseRatio = (expenseRatio / 100.0) / 12.0;
     double balance = principal;
     double totalDeposit = principal;
@@ -756,8 +756,7 @@ public final class FinLib
         divReinvest = snp.get(i, Shiller.DIV);
       } else if (divMethod == DividendMethod.QUARTERLY) {
         // Dividends at the end of every quarter (march, june, september, december).
-        Calendar cal = Library.now();
-        cal.setTimeInMillis(timeMS);
+        Calendar cal = TimeLib.ms2cal(timeMS);
         int month = cal.get(Calendar.MONTH);
         if (month % 3 == 2) { // time for a dividend!
           for (int j = 0; j < 3; j++) {
@@ -788,7 +787,7 @@ public final class FinLib
       r2[i - 1] = returns2.get(i, 0) / returns2.get(i - 1, 0);
     }
 
-    Sequence corr = new Sequence(String.format("Correlation (%s): %s vs. %s", Library.formatDurationMonths(window),
+    Sequence corr = new Sequence(String.format("Correlation (%s): %s vs. %s", TimeLib.formatDurationMonths(window),
         returns1.getName(), returns2.getName()));
     double[] a = new double[window];
     double[] b = new double[window];
@@ -1080,7 +1079,7 @@ public final class FinLib
     // TODO verify that we don't miss/skip any months.
     final int minDaysData = 12;
     final int N = daily.length();
-    Calendar cal = Library.now();
+    Calendar cal = TimeLib.now();
     List<Integer> monthEnds = new ArrayList<>();
 
     Sequence monthly = new Sequence(daily.getName());
@@ -1258,11 +1257,8 @@ public final class FinLib
       return false;
     }
 
-    Calendar cbuy = Library.now();
-    cbuy.setTimeInMillis(buy);
-
-    Calendar csell = Library.now();
-    csell.setTimeInMillis(sell);
+    Calendar cbuy = TimeLib.ms2cal(buy);
+    Calendar csell = TimeLib.ms2cal(sell);
 
     // May be able to determine from year alone.
     int year1 = cbuy.get(Calendar.YEAR);
@@ -1307,7 +1303,7 @@ public final class FinLib
 
   public static long getTimeForPreviousBusinessDay(long time)
   {
-    Calendar cal = Library.calFromTime(time);
+    Calendar cal = TimeLib.ms2cal(time);
     while (true) {
       cal.add(Calendar.DAY_OF_YEAR, -1);
       int day = cal.get(Calendar.DAY_OF_WEEK);
@@ -1320,7 +1316,7 @@ public final class FinLib
 
   public static long getTimeForNextBusinessDay(long time)
   {
-    Calendar cal = Library.calFromTime(time);
+    Calendar cal = TimeLib.ms2cal(time);
     while (true) {
       cal.add(Calendar.DAY_OF_YEAR, 1);
       int day = cal.get(Calendar.DAY_OF_WEEK);
@@ -1341,8 +1337,8 @@ public final class FinLib
    */
   public static long getClosestBusinessDay(long timeInMonth, int dayOfMonth, boolean bAcceptDifferentMonth)
   {
-    Calendar cal = Library.calFromTime(timeInMonth);
-    long baseTime = Library.getTime(dayOfMonth, cal.get(Calendar.MONTH) + 1, cal.get(Calendar.YEAR));
+    Calendar cal = TimeLib.ms2cal(timeInMonth);
+    long baseTime = TimeLib.getTime(dayOfMonth, cal.get(Calendar.MONTH) + 1, cal.get(Calendar.YEAR));
 
     // If base is a business day, we're done.
     int day = cal.get(Calendar.DAY_OF_WEEK);
@@ -1356,12 +1352,12 @@ public final class FinLib
     assert nextTime > baseTime;
 
     if (!bAcceptDifferentMonth) {
-      Calendar calPrev = Library.calFromTime(prevTime);
+      Calendar calPrev = TimeLib.ms2cal(prevTime);
       if (calPrev.get(Calendar.MONTH) != cal.get(Calendar.MONTH)) {
         return nextTime;
       }
 
-      Calendar calNext = Library.calFromTime(nextTime);
+      Calendar calNext = TimeLib.ms2cal(nextTime);
       if (calNext.get(Calendar.MONTH) != cal.get(Calendar.MONTH)) {
         return prevTime;
       }

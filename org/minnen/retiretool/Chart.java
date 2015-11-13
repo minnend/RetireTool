@@ -77,7 +77,7 @@ public class Chart
         }
       } else {
         for (int i = 0; i < seqs[0].size(); ++i) {
-          writer.write("'" + Library.formatMonth(seqs[0].getTimeMS(i)) + "'");
+          writer.write("'" + TimeLib.formatMonth(seqs[0].getTimeMS(i)) + "'");
           if (i < seqs[0].size() - 1) {
             writer.write(",");
           }
@@ -858,7 +858,7 @@ public class Chart
 
   public static void printDecadeTable(Sequence cumulativeReturns)
   {
-    int iStart = Library.FindStartofFirstDecade(cumulativeReturns);
+    int iStart = TimeLib.findStartofFirstDecade(cumulativeReturns);
     if (iStart < 0) {
       return;
     }
@@ -868,7 +868,7 @@ public class Chart
         .printf("<tr><th>Decade</th><th>CAGR</th><th>Dev</th><th>Drawdown</th><th>Down 10%%</th><th>Total<br/>Return</th></tr>\n");
     System.out.printf("</thead><tbody>\n");
 
-    Calendar cal = Library.now();
+    Calendar cal = TimeLib.now();
     for (int i = iStart; i + 120 < cumulativeReturns.length(); i += 120) {
       cal.setTimeInMillis(cumulativeReturns.getTimeMS(i));
       Sequence decade = cumulativeReturns.subseq(i, 121);
@@ -889,7 +889,7 @@ public class Chart
   public static void printDecadeTable(Sequence returns1, Sequence returns2)
   {
     assert returns1.length() == returns2.length();
-    int iStart = Library.FindStartofFirstDecade(returns1);
+    int iStart = TimeLib.findStartofFirstDecade(returns1);
     if (iStart < 0) {
       return;
     }
@@ -902,7 +902,7 @@ public class Chart
     System.out.printf("</thead><tbody>\n");
 
     final double eps = 0.01; // epsilon for larger cagr
-    Calendar cal = Library.now();
+    Calendar cal = TimeLib.now();
     for (int i = iStart; i + 120 < returns1.length(); i += 120) {
       assert returns1.getTimeMS(i) == returns2.getTimeMS(i);
       cal.setTimeInMillis(returns1.getTimeMS(i));

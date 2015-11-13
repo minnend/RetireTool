@@ -63,6 +63,7 @@ public class Fixed
 
     // Check for overflow.
     assert Long.MAX_VALUE / x >= y;
+    // TODO use BigInteger to handle case where result fits but intermediate value overflows.
 
     return sign * ((x * y + HALF_SCALE) / SCALE);
   }
@@ -80,6 +81,7 @@ public class Fixed
       y = -y;
     }
 
+    // TODO use BigInteger to handle case where result fits but intermediate value overflows.
     return sign * (x * SCALE + y / 2) / y;
   }
 

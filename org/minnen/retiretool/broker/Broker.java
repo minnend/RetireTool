@@ -11,9 +11,10 @@ import org.minnen.retiretool.data.SequenceStore;
 
 public class Broker
 {
-  private TimeInfo            timeInfo;
   private final List<Account> accounts = new ArrayList<>();
-  private final SequenceStore store;
+  public final SequenceStore  store;
+
+  private TimeInfo            timeInfo;
 
   public Broker(SequenceStore store)
   {

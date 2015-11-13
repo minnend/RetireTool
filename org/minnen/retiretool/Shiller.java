@@ -71,7 +71,7 @@ public class Shiller
 
       // Dividends at the end of every quarter (march, june, september, december).
       Sequence seq = new Sequence("Dividends");
-      Calendar cal = Library.now();
+      Calendar cal = TimeLib.now();
       double div = 0.0;
       for (int i = 0; i < shiller.length(); ++i) {
         long timeMS = shiller.getTimeMS(i);

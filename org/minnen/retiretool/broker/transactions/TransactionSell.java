@@ -1,8 +1,7 @@
 package org.minnen.retiretool.broker.transactions;
 
-import org.minnen.retiretool.FinLib;
 import org.minnen.retiretool.Fixed;
-import org.minnen.retiretool.Library;
+import org.minnen.retiretool.TimeLib;
 import org.minnen.retiretool.broker.Account;
 
 public class TransactionSell extends Transaction
@@ -29,7 +28,7 @@ public class TransactionSell extends Transaction
   @Override
   public String toString()
   {
-    return String.format("%11s| Sell: %s %.2f @ $%s%s", Library.formatDate(time), name, Fixed.toFloat(nShares),
+    return String.format("%11s| Sell: %s %.2f @ $%s%s", TimeLib.formatDate(time), name, Fixed.toFloat(nShares),
         Fixed.formatCurrency(price), getMemoString());
   }
 }

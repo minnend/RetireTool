@@ -11,6 +11,7 @@ import java.nio.channels.ReadableByteChannel;
 import java.util.Calendar;
 
 import org.minnen.retiretool.Library;
+import org.minnen.retiretool.TimeLib;
 
 public class DataIO
 {
@@ -53,8 +54,7 @@ public class DataIO
         int month = Integer.parseInt(dateFields[1]);
         double rate = Double.parseDouble(toks[1]);
 
-        Calendar cal = buildDate(year, month, 1);
-        data.addData(rate, cal.getTimeInMillis());
+        data.addData(rate, TimeLib.getTime(1, month, year));
       } catch (NumberFormatException e) {
         System.err.printf("Error parsing CSV data: [%s]\n", line);
         continue;
@@ -107,8 +107,8 @@ public class DataIO
           // CAPE
           double cape = Library.tryParse(toks[10], 0.0);
 
-          Calendar cal = buildDate(year, month, 1);
-          seq.addData(new FeatureVec(5, price, div, cpi, gs10, cape), cal.getTimeInMillis());
+          long timeMS = TimeLib.getTime(1, month, year);
+          seq.addData(new FeatureVec(5, price, div, cpi, gs10, cape), timeMS);
 
           // System.out.printf("%d/%d:  $%.2f  $%.2f  $%.2f\n", year,
           // month, price, div, cpi);
@@ -261,28 +261,6 @@ public class DataIO
     int month = Integer.parseInt(dateFields[1]);
     int day = Integer.parseInt(dateFields[2]);
 
-    Calendar cal = buildDate(year, month, day);
-    return cal.getTimeInMillis();
-  }
-
-  /**
-   * Create a calendar for using with daily price data.
-   * 
-   * @param year year (e.g. 2015)
-   * @param month month (January = 1, December = 12)
-   * @param day day of month (1-31)
-   * @return corresponding calendar object for the given day
-   */
-  private static Calendar buildDate(int year, int month, int day)
-  {
-    Calendar cal = Library.now();
-    cal.set(Calendar.YEAR, year);
-    cal.set(Calendar.MONTH, month - 1);
-    cal.set(Calendar.DAY_OF_MONTH, day);
-    cal.set(Calendar.HOUR_OF_DAY, 8);
-    cal.set(Calendar.MINUTE, 0);
-    cal.set(Calendar.SECOND, 0);
-    cal.set(Calendar.MILLISECOND, 0);
-    return cal;
+    return TimeLib.getTime(day, month, year);
   }
 }

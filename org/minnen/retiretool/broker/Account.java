@@ -8,6 +8,7 @@ import java.util.TreeMap;
 import org.minnen.retiretool.FinLib;
 import org.minnen.retiretool.Fixed;
 import org.minnen.retiretool.Library;
+import org.minnen.retiretool.TimeLib;
 import org.minnen.retiretool.broker.transactions.Transaction;
 import org.minnen.retiretool.broker.transactions.TransactionBuy;
 import org.minnen.retiretool.broker.transactions.TransactionDeposit;
@@ -65,15 +66,15 @@ public class Account
         Sequence divs = store.getMisc(divName);
         int index = divs.getClosestIndex(timeInfo.time);
         long divTime = divs.getTimeMS(index);
-        if (timeInfo.time >= divTime && Library.isSameMonth(timeInfo.time, divTime)) {
+        if (timeInfo.time >= divTime && TimeLib.isSameMonth(timeInfo.time, divTime)) {
           // Did we already pay this dividend?
-          long lastDivTime = lastDivPaid.getOrDefault(position.name, Library.TIME_ERROR);
+          long lastDivTime = lastDivPaid.getOrDefault(position.name, TimeLib.TIME_ERROR);
           if (divTime > lastDivTime) {
             lastDivPaid.put(position.name, divTime);
 
             double div = divs.get(index, 0);
             long value = Math.round(position.getNumShares() * div);
-            System.out.printf("Dividend! %d = [%s] div=%.2f\n", index, Library.formatDate(timeInfo.time), div);
+            // System.out.printf("Dividend! %d = [%s] div=%.2f\n", index, TimeLib.formatDate(timeInfo.time), div);
             deposit(value, "Dividend Payment");
             if (bReinvestDividends) {
               buyValue(position.name, value, "Dividend Reinvestment");
@@ -107,7 +108,7 @@ public class Account
     long avgCash = Math.round((double) cashSumForMonth / numDaysInMonth);
     long interest = Math.round(avgCash * (mul - 1.0));
     if (interest >= Fixed.PENNY) {
-      System.out.printf("Interest! $%s\n", Fixed.formatCurrency(interest));
+      // System.out.printf("Interest! $%s\n", Fixed.formatCurrency(interest));
       deposit(interest, "Interest");
     }
 
@@ -186,7 +187,7 @@ public class Account
 
   public void deposit(long amount, String memo)
   {
-    assert amount > 0.0;
+    assert amount > 0;
     TransactionDeposit deposit = new TransactionDeposit(this, broker.getTime(), amount, memo);
     transactions.add(deposit);
     apply(deposit);
@@ -194,7 +195,7 @@ public class Account
 
   public void withdraw(long amount, String memo)
   {
-    assert amount > 0.0;
+    assert amount > 0;
     TransactionWithdraw withdraw = new TransactionWithdraw(this, broker.getTime(), amount, memo);
     transactions.add(withdraw);
     apply(withdraw);
@@ -202,6 +203,7 @@ public class Account
 
   public boolean buyShares(String name, long nShares, String memo)
   {
+    // Only allowed to buy shares in units of 1/100.
     nShares = Fixed.truncate(nShares, Fixed.HUNDREDTH);
     if (nShares == 0) {
       return false;
@@ -226,6 +228,7 @@ public class Account
 
   public boolean sellShares(String name, long nShares, String memo)
   {
+    // Only allowed to sell shares in units of 1/100.
     nShares = Fixed.truncate(nShares, Fixed.HUNDREDTH);
     if (nShares == 0) {
       return false;
@@ -297,8 +300,8 @@ public class Account
   public void rebalance(Map<String, Double> targetDistribution)
   {
     final long preValue = getValue();
-    System.out.printf("Rebalance.pre: $%s (Price=$%s)\n", Fixed.formatCurrency(preValue),
-        Fixed.formatCurrency(broker.getPrice("Stock")));
+    // System.out.printf("Rebalance.pre: $%s (Price=$%s)\n", Fixed.formatCurrency(preValue),
+    // Fixed.formatCurrency(broker.getPrice("Stock")));
 
     // Figure out how much money is currently invested.
     Map<String, Long> currentValue = new TreeMap<>();
@@ -326,7 +329,7 @@ public class Account
 
     // Sell positions that are over target.
     for (String name : targetDistribution.keySet()) {
-      System.out.printf("Target: %s = %.1f%%\n", name, targetDistribution.get(name) * 100.0 / targetSum);
+      // System.out.printf("Target: %s = %.1f%%\n", name, targetDistribution.get(name) * 100.0 / targetSum);
       if (name.equalsIgnoreCase("Cash")) {
         continue;
       }
@@ -337,7 +340,7 @@ public class Account
       long targetValue = Math.round(total * targetFrac);
       long sellValue = Math.min(getValue(name), current - targetValue);
       if (sellValue > 0) {
-        System.out.printf("Sell| %s: %.3f%% => Value=$%s\n", name, targetFrac, Fixed.formatCurrency(sellValue));
+        // System.out.printf("Sell| %s: %.3f%% => Value=$%s\n", name, targetFrac, Fixed.formatCurrency(sellValue));
         sellValue(name, sellValue, null);
         assert preValue == getValue();
       }
@@ -355,7 +358,7 @@ public class Account
       long targetValue = Math.round(total * targetFrac);
       long buyValue = Math.min(getCash(), targetValue - current);
       if (buyValue > 0) {
-        System.out.printf("Buy| %s: %.3f%% => Value=$%s\n", name, targetFrac, Fixed.formatCurrency(buyValue));
+        // System.out.printf("Buy| %s: %.3f%% => Value=$%s\n", name, targetFrac, Fixed.formatCurrency(buyValue));
         buyValue(name, buyValue, null);
         assert preValue == getValue();
       }

@@ -3,6 +3,7 @@ package org.minnen.retiretool.broker;
 import java.util.Calendar;
 
 import org.minnen.retiretool.Library;
+import org.minnen.retiretool.TimeLib;
 
 public class TimeInfo
 {
@@ -16,10 +17,10 @@ public class TimeInfo
   public TimeInfo(long time, long prevTime, long nextTime)
   {
     this.time = time;
-    calendar = Library.calFromTime(time);
+    calendar = TimeLib.ms2cal(time);
 
-    Calendar calPrev = Library.calFromTime(prevTime);
-    Calendar calNext = Library.calFromTime(nextTime);
+    Calendar calPrev = TimeLib.ms2cal(prevTime);
+    Calendar calNext = TimeLib.ms2cal(nextTime);
 
     int month = calendar.get(Calendar.MONTH);
     int monthPrev = calPrev.get(Calendar.MONTH);
