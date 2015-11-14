@@ -19,6 +19,10 @@ public class Sequence implements Iterable<FeatureVec>
   private int              lockStart = -1;
   private int              lockEnd   = -1;
 
+  public enum EndpointBehavior {
+    Closest, Inside, Outside
+  }
+
   /**
    * Create an anonymous sequence at 1Hz
    */
@@ -588,13 +592,29 @@ public class Sequence implements Iterable<FeatureVec>
   }
 
   /** @return smallest subsequence that contains start and end times. */
-  public Sequence subseq(long startMs, long endMs)
+  public Sequence subseq(long startMs, long endMs, EndpointBehavior endpointBehavior)
   {
     assert startMs <= endMs;
-    int i = getIndexAtOrAfter(startMs);
-    int j = getIndexAtOrBefore(endMs);
+    int i, j;
+    if (endpointBehavior == EndpointBehavior.Closest) {
+      i = getClosestIndex(startMs);
+      j = getClosestIndex(endMs);
+    } else if (endpointBehavior == EndpointBehavior.Inside) {
+      i = getIndexAtOrAfter(startMs);
+      j = getIndexAtOrBefore(endMs);
+    } else {
+      assert endpointBehavior == EndpointBehavior.Outside;
+      i = getIndexAtOrBefore(startMs);
+      j = getIndexAtOrAfter(endMs);
+    }
     assert i <= j;
     return subseq(i, j - i + 1);
+  }
+
+  /** @return smallest subsequence that contains start and end times. */
+  public Sequence subseq(long startMs, long endMs)
+  {
+    return subseq(startMs, endMs, EndpointBehavior.Inside);
   }
 
   /** @return new sequence equal to this sequence added (summed with) the given sequence. */
