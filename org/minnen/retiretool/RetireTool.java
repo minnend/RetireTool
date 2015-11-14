@@ -80,7 +80,7 @@ public class RetireTool
     // long commonStart = TimeLib.getTime(1, 1, 1872);
     // long commonEnd = TimeLib.getTime(31, 12, 2014);
     long commonStart = TimeLib.getTime(1, 1, 1950);
-    long commonEnd = TimeLib.getTime(31, 8, 2015);
+    long commonEnd = TimeLib.getTime(31, 9, 2015);
     shiller = shiller.subseq(commonStart, commonEnd);
     tbillData = tbillData.subseq(commonStart, commonEnd);
     // nikkei = nikkei.subseq(commonStart, commonEnd);
@@ -226,6 +226,11 @@ public class RetireTool
     assert stock.matches(bonds);
     store.add(stock, "Stock");
     store.add(bonds, "Bonds");
+
+    // System.out.printf("%d: [%s] -> [%s]\n", stock.length(), TimeLib.formatDate(stock.getStartMS()),
+    // TimeLib.formatDate(stock.getEndMS()));
+    // int nMonths = TimeLib.monthsBetween(stock.getStartMS(), stock.getEndMS());
+    // System.out.printf("  #months: %d\n", nMonths);
 
     if (tbillsAll != null) {
       Sequence tbills = tbillsAll.subseq(iStartSimulation);
@@ -1852,18 +1857,19 @@ public class RetireTool
   public static void runBroker(File dataDir, File dir) throws IOException
   {
     Sequence stockAll = DataIO.loadYahooData(new File(dataDir, "^GSPC.csv"));
-    System.out.printf("S&P (Daily): [%s] -> [%s]\n", TimeLib.formatMonth(stockAll.getStartMS()),
-        TimeLib.formatMonth(stockAll.getEndMS()));
-
     Sequence shiller = DataIO.loadShillerData(new File(dataDir, "shiller.csv"));
-    System.out.printf("Shiller: [%s] -> [%s]\n", TimeLib.formatMonth(shiller.getStartMS()),
-        TimeLib.formatMonth(shiller.getEndMS()));
-
+    shiller.adjustDatesToEndOfMonth();
     Sequence tbillData = DataIO.loadDateValueCSV(new File(dataDir, "treasury-bills-3-month.csv"));
     tbillData.setName("3-Month Treasury Bills");
+    tbillData.adjustDatesToEndOfMonth();
+    tbillData = FinLib.pad(tbillData, shiller, 0.0);
+
+    System.out.printf("S&P (Daily): [%s] -> [%s]\n", TimeLib.formatDate(stockAll.getStartMS()),
+        TimeLib.formatDate(stockAll.getEndMS()));
+    System.out.printf("Shiller: [%s] -> [%s]\n", TimeLib.formatMonth(shiller.getStartMS()),
+        TimeLib.formatMonth(shiller.getEndMS()));
     System.out.printf("TBills: [%s] -> [%s]\n", TimeLib.formatMonth(tbillData.getStartMS()),
         TimeLib.formatMonth(tbillData.getEndMS()));
-    tbillData = FinLib.pad(tbillData, shiller, 0.0);
 
     long commonStart = TimeLib.calcCommonStart(shiller, tbillData, stockAll);
     commonStart = TimeLib.toFirstOfMonth(commonStart);
@@ -1887,15 +1893,11 @@ public class RetireTool
     store.addMisc(Shiller.getData(Shiller.CPI, "cpi", shiller));
     store.alias("inflation", "cpi");
 
-    final int iStart = stockAll.getIndexAtOrAfter(stockAll.getStartMS() + 365 * 24 * 60 * 60 * 1000L);
-    final long startSim = stockAll.getTimeMS(iStart);
-
+    final int iStart = stockAll.getIndexAtOrAfter(stockAll.getStartMS() + 365 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stockAll.subseq(iStart);
     Broker broker = new Broker(store);
 
-    System.out.printf("Sequences: %d, %d\n", store.getNumReturns(), store.getNumMisc());
-    for (String name : store.getNames())
-      System.out.printf(" - %s\n", name);
+    System.out.printf("#Store: %d  #Misc: %d\n", store.getNumReturns(), store.getNumMisc());
 
     Account account = null;
     DailySMA smaDaily = null;
@@ -1905,12 +1907,14 @@ public class RetireTool
     final int T = guideSeq.length();
     final long principal = Fixed.toFixed(1000.0);
     long prevTime = stockAll.getTimeMS(iStart - 1);
+    Sequence returns = new Sequence("Returns");
     for (int t = 0; t < T; ++t) {
       long time = guideSeq.getTimeMS(t);
       store.lock(TimeLib.TIME_BEGIN, time);
-      long nextTime = (t == T - 1 ? FinLib.getTimeForNextBusinessDay(time) : guideSeq.getTimeMS(t + 1));
+      long nextTime = (t == T - 1 ? TimeLib.toNextBusinessDay(time) : guideSeq.getTimeMS(t + 1));
       broker.setTime(time, prevTime, nextTime);
       TimeInfo timeInfo = broker.getTimeInfo();
+      // System.out.printf("Broker: [%s]\n", TimeLib.formatDate(broker.getTime()));
 
       // TODO support jitter for trade day.
       boolean bMonthlyPrediction = timeInfo.isLastDayOfMonth;
@@ -1921,6 +1925,7 @@ public class RetireTool
         smaDaily.init(timeInfo);
         bMonthlyPrediction = true; // need initial prediction
         // account.buyValue("Stock", account.getCash(), null);
+        returns.addData(1.0, time);
       } else {
         smaDaily.step(timeInfo);
       }
@@ -1932,7 +1937,7 @@ public class RetireTool
       if (bMonthlyPrediction) {
         boolean bOwnRisky = smaDaily.predict();
         Map<String, Double> desiredDistribution = new TreeMap<>();
-        double fractionRisky = bOwnRisky ? 1.0 : 0.0;
+        double fractionRisky = (bOwnRisky ? 1.0 : 0.0);
         double fractionSafe = 1.0 - fractionRisky;
         desiredDistribution.put(riskyName, fractionRisky);
         desiredDistribution.put(safeName, fractionSafe);
@@ -1941,10 +1946,10 @@ public class RetireTool
         account.rebalance(desiredDistribution);
       }
       // account.printTransactions(time, TimeLib.TIME_END);
-      if (bMonthlyPrediction) {
-        // account.printPositions();
-        // System.out.printf("[%s] $%s\n", TimeLib.formatMonth(time), Fixed.formatCurrency(account.getValue()));
-      }
+      // if (bMonthlyPrediction) {
+      // account.printPositions();
+      // System.out.printf("[%s] $%s\n", TimeLib.formatMonth(time), Fixed.formatCurrency(account.getValue()));
+      // }
 
       // int month = Library.calFromTime(time).get(Calendar.MONTH);
       // if (month != prevMonth) {
@@ -1959,28 +1964,43 @@ public class RetireTool
       // }
 
       store.unlock();
+      if (timeInfo.isLastDayOfMonth) {
+        returns.addData(Fixed.toFloat(Fixed.div(account.getValue(), principal)), time);
+      }
       prevTime = time;
     }
 
+    account.printBuySell();
+
     long value = account.getValue();
     long tr = Fixed.div(value, principal);
-    double nMonths = TimeLib.monthsBetween(startSim, guideSeq.getEndMS());
+    // System.out.printf("%.3f vs %.3f\n", Fixed.toFloat(tr), returns.getLast(0));
+    // System.out.printf("[%s] vs. [%s]\n", TimeLib.formatDate(broker.getTime()),
+    // TimeLib.formatDate(returns.getEndMS()));
+    int nMonths = TimeLib.monthsBetween(returns.getStartMS(), returns.getEndMS());
+    // System.out.printf("Returns #Months: %d\n", nMonths);
     double ar = FinLib.getAnnualReturn(Fixed.toFloat(tr), nMonths);
-    System.out.printf("%11s| $%s (%.2f%%)\n", TimeLib.formatDate(guideSeq.getEndMS()), Fixed.formatCurrency(value), ar);
+    System.out.printf("%11s| $%s (%.2f%%)\n", TimeLib.formatDate(returns.getEndMS()), Fixed.formatCurrency(value), ar);
 
     // account.printTransactions();
 
-    System.out.printf("Shiller.Full: [%s] -> [%s]\n", TimeLib.formatMonth(shiller.getStartMS()),
-        TimeLib.formatMonth(shiller.getEndMS()));
-    Sequence snp = Shiller.getStockData(shiller).subseq(0, -2);
-    Sequence snp2 = smaDaily.getSNP();
-    System.out.printf(" Shiller[%d]: [%s] -> [%s]\n", snp.length(), TimeLib.formatMonth(snp.getStartMS()),
-        TimeLib.formatMonth(snp.getEndMS()));
-    System.out.printf("SMADaily[%d]: [%s] -> [%s]\n", snp2.length(), TimeLib.formatMonth(snp2.getStartMS()),
-        TimeLib.formatMonth(snp2.getEndMS()));
+    // System.out.printf("Returns: %.2f -> %.2f\n", returns.get(0, 0), returns.getLast(0));
+    // System.out.printf("Returns[%d]: [%s] -> [%s]\n", returns.length(), TimeLib.formatDate(returns.getStartMS()),
+    // TimeLib.formatDate(returns.getEndMS()));
+    // nMonths = TimeLib.monthsBetween(returns.getStartMS(), returns.getEndMS());
+    // System.out.printf("  #months: %d\n", nMonths);
 
-    assert snp.length() == snp2.length();
-    Chart.saveLineChart(new File(dir, "snp-comp.html"), "S&P Comparison", GRAPH_WIDTH, GRAPH_HEIGHT, true, snp, snp2);
+    // Sequence snp = Shiller.getStockData(shiller).subseq(0, -1);
+    // Sequence snp2 = smaDaily.getSNP();
+    // System.out.printf("Shiller.Full: [%s] -> [%s]\n", TimeLib.formatMonth(shiller.getStartMS()),
+    // TimeLib.formatMonth(shiller.getEndMS()));
+    // System.out.printf(" Shiller[%d]: [%s] -> [%s]\n", snp.length(), TimeLib.formatMonth(snp.getStartMS()),
+    // TimeLib.formatMonth(snp.getEndMS()));
+    // System.out.printf("SMADaily[%d]: [%s] -> [%s]\n", snp2.length(), TimeLib.formatMonth(snp2.getStartMS()),
+    // TimeLib.formatMonth(snp2.getEndMS()));
+    // assert snp.length() == snp2.length();
+    // Chart.saveLineChart(new File(dir, "snp-comp.html"), "S&P Comparison", GRAPH_WIDTH, GRAPH_HEIGHT, true, snp,
+    // snp2);
   }
 
   public static void main(String[] args) throws IOException

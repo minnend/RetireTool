@@ -79,7 +79,7 @@ public class Shiller
         cal.setTimeInMillis(timeMS);
         int month = cal.get(Calendar.MONTH);
         if (month % 3 == 2) { // time for a dividend!
-          timeMS = FinLib.getClosestBusinessDay(timeMS, 23, false);
+          timeMS = TimeLib.getClosestBusinessDay(timeMS, 23, false);
           seq.addData(div, timeMS);
           div = 0.0;
         }

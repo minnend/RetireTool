@@ -223,6 +223,12 @@ public class Account
     assert value <= cash;
     long price = broker.getPrice(name);
     long nShares = Fixed.divTrunc(value, price);
+
+    // Don't buy less than 1/10 share.
+    if (nShares < Fixed.toFixed(0.1)) {
+      return false;
+    }
+
     return buyShares(name, nShares, memo);
   }
 
@@ -281,6 +287,17 @@ public class Account
   {
     for (Transaction transaction : transactions) {
       System.out.println(transaction);
+    }
+  }
+
+  public void printBuySell()
+  {
+    for (Transaction transaction : transactions) {
+      if ((transaction instanceof TransactionBuy || transaction instanceof TransactionSell)
+          && !transaction.memo.contains("Interest") && !transaction.memo.contains("Dividend")) {
+        System.out.println(transaction);
+
+      }
     }
   }
 

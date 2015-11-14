@@ -12,7 +12,7 @@ public abstract class Transaction
   {
     this.account = account;
     this.time = time;
-    this.memo = memo;
+    this.memo = (memo == null ? "" : memo);
   }
 
   protected String getMemoString()

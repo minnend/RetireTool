@@ -288,6 +288,20 @@ public class TimeLib
     return cal.getTimeInMillis();
   }
 
+  /** @return ms for the given time moved to the first day of the month */
+  public static long toLastBusinessDayOfMonth(long ms)
+  {
+    // Move to next month.
+    Calendar cal = ms2cal(ms);
+    cal.add(Calendar.MONTH, 1);
+
+    // Move to first day of next month.
+    ms = toFirstOfMonth(cal.getTimeInMillis());
+
+    // Return previous business day.
+    return toPreviousBusinessDay(ms);
+  }
+
   /** @return string representation of the given time (year, month, date, hour, minute, second) */
   public static String formatTime(Date date)
   {
@@ -369,5 +383,70 @@ public class TimeLib
     SimpleDateFormat sdf = new SimpleDateFormat(sFormat);
     sdf.setTimeZone(utc);
     return sdf;
+  }
+
+  public static long toPreviousBusinessDay(long time)
+  {
+    Calendar cal = TimeLib.ms2cal(time);
+    while (true) {
+      cal.add(Calendar.DAY_OF_YEAR, -1);
+      int day = cal.get(Calendar.DAY_OF_WEEK);
+      if (day != Calendar.SATURDAY && day != Calendar.SUNDAY) {
+        break;
+      }
+    }
+    return cal.getTimeInMillis();
+  }
+
+  public static long toNextBusinessDay(long time)
+  {
+    Calendar cal = TimeLib.ms2cal(time);
+    while (true) {
+      cal.add(Calendar.DAY_OF_YEAR, 1);
+      int day = cal.get(Calendar.DAY_OF_WEEK);
+      if (day != Calendar.SATURDAY && day != Calendar.SUNDAY) {
+        break;
+      }
+    }
+    return cal.getTimeInMillis();
+  }
+
+  /**
+   * Return time for closest business day for the given month and day.
+   * 
+   * @param timeInMonth Specify the month using any time in that month.
+   * @param dayOfMonth We want the equivalent time on this day (or closest business day).
+   * @param bAcceptDifferentMonth if false only days in the same month are considered.
+   * @return time (in ms) of the closest business day on the requested day.
+   */
+  public static long getClosestBusinessDay(long timeInMonth, int dayOfMonth, boolean bAcceptDifferentMonth)
+  {
+    Calendar cal = TimeLib.ms2cal(timeInMonth);
+    long baseTime = TimeLib.getTime(dayOfMonth, cal.get(Calendar.MONTH) + 1, cal.get(Calendar.YEAR));
+
+    // If base is a business day, we're done.
+    int day = cal.get(Calendar.DAY_OF_WEEK);
+    if (day != Calendar.SATURDAY && day != Calendar.SUNDAY) {
+      return baseTime;
+    }
+
+    long prevTime = toPreviousBusinessDay(baseTime);
+    long nextTime = toNextBusinessDay(baseTime);
+    assert prevTime < baseTime;
+    assert nextTime > baseTime;
+
+    if (!bAcceptDifferentMonth) {
+      Calendar calPrev = TimeLib.ms2cal(prevTime);
+      if (calPrev.get(Calendar.MONTH) != cal.get(Calendar.MONTH)) {
+        return nextTime;
+      }
+
+      Calendar calNext = TimeLib.ms2cal(nextTime);
+      if (calNext.get(Calendar.MONTH) != cal.get(Calendar.MONTH)) {
+        return prevTime;
+      }
+    }
+
+    return (baseTime - prevTime < nextTime - baseTime ? prevTime : nextTime);
   }
 }

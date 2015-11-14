@@ -28,7 +28,7 @@ public class TransactionSell extends Transaction
   @Override
   public String toString()
   {
-    return String.format("%11s| Sell: %s %.2f @ $%s%s", TimeLib.formatDate(time), name, Fixed.toFloat(nShares),
-        Fixed.formatCurrency(price), getMemoString());
+    return String.format("%11s| Sell: %s %.2f @ $%s ($%s)%s", TimeLib.formatDate(time), name, Fixed.toFloat(nShares),
+        Fixed.formatCurrency(price), Fixed.formatCurrency(getValue()), getMemoString());
   }
 }

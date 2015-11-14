@@ -591,7 +591,7 @@ public class Sequence implements Iterable<FeatureVec>
     return seq;
   }
 
-  /** @return smallest subsequence that contains start and end times. */
+  /** @return subsequence based on start/end times. */
   public Sequence subseq(long startMs, long endMs, EndpointBehavior endpointBehavior)
   {
     assert startMs <= endMs;
@@ -611,7 +611,7 @@ public class Sequence implements Iterable<FeatureVec>
     return subseq(i, j - i + 1);
   }
 
-  /** @return smallest subsequence that contains start and end times. */
+  /** @return subsequence that does not extend beyond start/end times. */
   public Sequence subseq(long startMs, long endMs)
   {
     return subseq(startMs, endMs, EndpointBehavior.Inside);
@@ -762,5 +762,13 @@ public class Sequence implements Iterable<FeatureVec>
       prev = cur;
     }
     return deriv;
+  }
+
+  /** Change all timestamps to the last business day of the month. */
+  public void adjustDatesToEndOfMonth()
+  {
+    for (FeatureVec v : data) {
+      v.setTime(TimeLib.toLastBusinessDayOfMonth(v.getTime()));
+    }
   }
 }

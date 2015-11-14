@@ -210,41 +210,4 @@ public class TestFinLib
     b = TimeLib.getTime(1, 3, 2000);
     assertTrue(FinLib.isLTG(a, b));
   }
-
-  @Test
-  public void testGetTimeForNextBusinessDay()
-  {
-    long time;
-    Calendar cal;
-
-    time = FinLib.getTimeForNextBusinessDay(TimeLib.getTime(1, 11, 2015));
-    cal = TimeLib.ms2cal(time);
-    assertEquals(2015, cal.get(Calendar.YEAR));
-    assertEquals(10, cal.get(Calendar.MONTH));
-    assertEquals(2, cal.get(Calendar.DAY_OF_MONTH));
-
-    time = FinLib.getTimeForNextBusinessDay(TimeLib.getTime(30, 11, 2015));
-    cal = TimeLib.ms2cal(time);
-    assertEquals(2015, cal.get(Calendar.YEAR));
-    assertEquals(11, cal.get(Calendar.MONTH));
-    assertEquals(1, cal.get(Calendar.DAY_OF_MONTH));
-
-    time = FinLib.getTimeForNextBusinessDay(TimeLib.getTime(31, 10, 2015));
-    cal = TimeLib.ms2cal(time);
-    assertEquals(2015, cal.get(Calendar.YEAR));
-    assertEquals(10, cal.get(Calendar.MONTH));
-    assertEquals(2, cal.get(Calendar.DAY_OF_MONTH));
-
-    time = FinLib.getTimeForNextBusinessDay(TimeLib.getTime(1, 1, 2016));
-    cal = TimeLib.ms2cal(time);
-    assertEquals(2016, cal.get(Calendar.YEAR));
-    assertEquals(0, cal.get(Calendar.MONTH));
-    assertEquals(4, cal.get(Calendar.DAY_OF_MONTH));
-
-    time = FinLib.getTimeForNextBusinessDay(TimeLib.getTime(26, 2, 2016));
-    cal = TimeLib.ms2cal(time);
-    assertEquals(2016, cal.get(Calendar.YEAR));
-    assertEquals(1, cal.get(Calendar.MONTH));
-    assertEquals(29, cal.get(Calendar.DAY_OF_MONTH));
-  }
 }

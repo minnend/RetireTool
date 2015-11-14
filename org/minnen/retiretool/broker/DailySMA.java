@@ -88,7 +88,7 @@ public class DailySMA
 
     // Include data for last (really first) month.
     if (n > 0) {
-      System.out.printf("%d: [%s] -> [%s]\n", nCurrentAge, TimeLib.formatDate(tb), TimeLib.formatDate(ta));
+      // System.out.printf("%d: [%s] -> [%s]\n", nCurrentAge, TimeLib.formatDate(tb), TimeLib.formatDate(ta));
       double mean = sum / n;
       monthlyMeans[nCurrentAge] = mean;
       long ms = TimeLib.toFirstOfMonth(ta / 2 + tb / 2);
@@ -104,6 +104,7 @@ public class DailySMA
   {
     Sequence seq = account.broker.store.getMisc(name);
     int index = seq.getClosestIndex(timeInfo.time);
+    assert Math.abs(timeInfo.time - seq.getTimeMS(index)) < 8 * TimeLib.MS_IN_HOUR;
 
     // Incorporate price from today.
     double price = seq.get(index, iPrice);
@@ -138,6 +139,8 @@ public class DailySMA
     double mean = Library.sum(monthlyMeans, 0, nLookback) / (nLookback + 1);
     double ratio = currentValue / mean;
     // System.out.printf("Predict[%s]: %.2f, %.3f\n", TimeLib.formatDate(account.broker.getTime()), mean, ratio);
-    return ratio >= 1.0; // TODO incorporate margin
+    // TODO incorporate margin
+    return ratio >= 1.0;
+
   }
 }
