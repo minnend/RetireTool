@@ -16,6 +16,8 @@ public class TimeLib
   public final static long             TIME_ERROR = Library.LNAN;
   public final static long             TIME_BEGIN = Long.MIN_VALUE + 1;
   public final static long             TIME_END   = Long.MAX_VALUE - 1;
+  public final static long             MS_IN_HOUR = 60 * 60 * 1000L;
+  public final static long             MS_IN_DAY  = 24 * MS_IN_HOUR;
 
   public static TimeZone               utc        = TimeZone.getTimeZone("GMT");
   public final static SimpleDateFormat sdfTime    = getSDF("yyyy MMM d HH:mm:ss");
@@ -271,12 +273,19 @@ public class TimeLib
   /** @return ms since epoch at midnight that starts the day of the given time */
   public static long toMidnight(long ms)
   {
-    final long d1 = 1000 * 60 * 60 * 24; // ms in one day
-    long days = ms / d1;
+    long days = ms / MS_IN_DAY;
     // if data is before 1970, ms is neg and floor does the wrong thing
     if (ms < 0)
       days -= 1;
-    return days * d1;
+    return days * MS_IN_DAY;
+  }
+
+  /** @return ms for the given time moved to the first day of the month */
+  public static long toFirstOfMonth(long ms)
+  {
+    Calendar cal = ms2cal(ms);
+    cal.set(Calendar.DATE, 1);
+    return cal.getTimeInMillis();
   }
 
   /** @return string representation of the given time (year, month, date, hour, minute, second) */

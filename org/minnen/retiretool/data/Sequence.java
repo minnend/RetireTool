@@ -576,7 +576,7 @@ public class Sequence implements Iterable<FeatureVec>
       iStart += N;
     }
     if (numElements < 0) {
-      numElements = N - iStart;
+      numElements += (N - iStart) + 1;
     }
     assert iStart >= 0 && numElements > 0;
     Sequence seq = new Sequence(name);
@@ -591,8 +591,8 @@ public class Sequence implements Iterable<FeatureVec>
   public Sequence subseq(long startMs, long endMs)
   {
     assert startMs <= endMs;
-    int i = getClosestIndex(startMs);
-    int j = getClosestIndex(endMs);
+    int i = getIndexAtOrAfter(startMs);
+    int j = getIndexAtOrBefore(endMs);
     assert i <= j;
     return subseq(i, j - i + 1);
   }
@@ -680,6 +680,7 @@ public class Sequence implements Iterable<FeatureVec>
     return average._div(N);
   }
 
+  /** Reverse elements of this sequence (in-place). */
   public void reverse()
   {
     final int N = length();

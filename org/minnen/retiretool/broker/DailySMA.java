@@ -1,8 +1,12 @@
 package org.minnen.retiretool.broker;
 
+import java.util.Date;
+
 import org.minnen.retiretool.Library;
 import org.minnen.retiretool.TimeLib;
+import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.predictor.NewHighPredictor;
 
 public class DailySMA
 {
@@ -10,7 +14,7 @@ public class DailySMA
   private final String   name;
 
   private final double   margin       = 1.0 / 100.0;
-  private final int      nLookback    = 10;
+  private final int      nLookback    = 5;
   private final double[] monthlyMeans = new double[13];
   private final int      iPrice       = 0;
 
@@ -18,10 +22,17 @@ public class DailySMA
   private double         currentSum;
   private int            currentN;
 
+  private final Sequence snp          = new Sequence("SNP.DailySMA");
+
   public DailySMA(Account account, String name)
   {
     this.account = account;
     this.name = name;
+  }
+
+  public Sequence getSNP()
+  {
+    return snp;
   }
 
   public void init(TimeInfo timeInfo)
@@ -31,29 +42,38 @@ public class DailySMA
 
     // Fill in monthly means.
     assert TimeLib.isSameDay(seq.getEndMS(), timeInfo.time);
-    // System.out.printf("SMA Init: [%s]\n", TimeLib.formatDate(seq.getEndMS()));
-    int i = seq.length() - 1;
     double sum = 0.0;
     int n = 0;
     int nCurrentAge = 0;
-    for (; i >= 0; --i) {
-      double price = seq.get(i, iPrice);
-      int nMonthsBetween = TimeLib.monthsBetween(timeInfo.time, seq.getTimeMS(i));
+    long ta = timeInfo.time, tb = timeInfo.time;
+    for (int i = seq.length() - 1; i >= 0; --i) {
+      final double price = seq.get(i, iPrice);
+      final long time = seq.getTimeMS(i);
+      final int nMonthsBetween = TimeLib.monthsBetween(timeInfo.time, time);
       assert nMonthsBetween >= nCurrentAge;
       if (nMonthsBetween == nCurrentAge) {
+        tb = time;
         sum += price;
         ++n;
       } else {
         assert nMonthsBetween == nCurrentAge + 1;
         assert n > 0;
-        monthlyMeans[nCurrentAge] = sum / n;
+        double mean = sum / n;
+        monthlyMeans[nCurrentAge] = mean;
+
+        long ms = TimeLib.toFirstOfMonth(tb);
+        // System.out.printf("i=%d [%s]: %.2f  [%s]\n", i, TimeLib.formatDate(ms), mean, TimeLib.sdfTime.format(new
+        // Date(ms)));
+        snp.addData(mean, ms);
+
+        // System.out.printf("%d: [%s] -> [%s]\n", nCurrentAge, TimeLib.formatDate(tb), TimeLib.formatDate(ta));
+        ta = tb = time;
+
         if (nCurrentAge == 0) {
           currentSum = sum;
           currentN = n;
-          currentValue = monthlyMeans[nCurrentAge];
+          currentValue = mean;
         }
-        // System.out.printf("SMA.init: %d -> %.2f (%d) [%s] [%s]\n", nCurrentAge, monthlyMeans[nCurrentAge - 1], n,
-        // TimeLib.formatDate(seq.getTimeMS(i)), TimeLib.formatDate(seq.getTimeMS(i+1)));
         sum = 0.0;
         n = 0;
 
@@ -61,10 +81,23 @@ public class DailySMA
         if (nMonthsBetween > 12) {
           break;
         }
+
+        nCurrentAge = nMonthsBetween;
       }
-      nCurrentAge = nMonthsBetween;
     }
+
+    // Include data for last (really first) month.
+    if (n > 0) {
+      System.out.printf("%d: [%s] -> [%s]\n", nCurrentAge, TimeLib.formatDate(tb), TimeLib.formatDate(ta));
+      double mean = sum / n;
+      monthlyMeans[nCurrentAge] = mean;
+      long ms = TimeLib.toFirstOfMonth(ta / 2 + tb / 2);
+      snp.addData(mean, ms);
+    }
+
     assert nCurrentAge == 12;
+    assert snp.length() == 13;
+    snp.reverse();
   }
 
   public void step(TimeInfo timeInfo)
@@ -90,12 +123,13 @@ public class DailySMA
         monthlyMeans[i] = monthlyMeans[i - 1];
       }
       monthlyMeans[0] = currentValue;
-
-      // System.out.printf("[%s] %.2f", TimeLib.formatDate(timeInfo.time), monthlyMeans[0]);
-      // for (int i=1; i<monthlyMeans.length; ++i) {
-      // System.out.printf(", %.2f", monthlyMeans[i]);
-      // }
-      // System.out.println();
+      long ms = TimeLib.toFirstOfMonth(timeInfo.time - 5 * TimeLib.MS_IN_DAY);
+      assert ms >= snp.getEndMS();
+      if (ms == snp.getEndMS()) {
+        snp.set(snp.length() - 1, 0, currentValue);
+      } else {
+        snp.addData(currentValue, ms);
+      }
     }
   }
 

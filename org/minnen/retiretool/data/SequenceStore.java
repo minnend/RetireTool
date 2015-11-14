@@ -348,12 +348,11 @@ public class SequenceStore implements Iterable<Sequence>
 
   public Collection<String> getNames()
   {
-    return nameToOrig.values();
+    return nameToIndex.keySet();
   }
 
   public List<String> getNames(String regex)
   {
-    assert nameToIndex.size() == nameToOrig.size();
     List<String> names = new ArrayList<>();
     Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
     for (String name : nameToOrig.values()) {

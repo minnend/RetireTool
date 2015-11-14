@@ -55,7 +55,7 @@ public class RetireTool
   /** Dimension to use in the price sequence for SMA predictions. */
   public static int                 iPriceSMA    = 0;
   public static int                 nMinTradeGap = 0;
-  public static double              smaMargin    = 1.0;
+  public static double              smaMargin    = 0.0;
 
   public static void setupShillerData(File dataDir, File dir, boolean buildComplexStrategies) throws IOException
   {
@@ -77,8 +77,10 @@ public class RetireTool
     // TimeLib.formatDate(tbills.getEndMS()));
     // System.out.printf("Common: [%s] -> [%s]\n", TimeLib.formatDate(commonStart), TimeLib.formatDate(commonEnd));
 
-    long commonStart = TimeLib.getTime(1, 1, 1872);
-    long commonEnd = TimeLib.getTime(31, 12, 2014);
+    // long commonStart = TimeLib.getTime(1, 1, 1872);
+    // long commonEnd = TimeLib.getTime(31, 12, 2014);
+    long commonStart = TimeLib.getTime(1, 1, 1950);
+    long commonEnd = TimeLib.getTime(31, 8, 2015);
     shiller = shiller.subseq(commonStart, commonEnd);
     tbillData = tbillData.subseq(commonStart, commonEnd);
     // nikkei = nikkei.subseq(commonStart, commonEnd);
@@ -242,7 +244,7 @@ public class RetireTool
     // Setup risky and safe assets for use with dynamic asset allocation strategies.
     if (buildComplexStrategies) {
       Sequence risky = stockAll;
-      Sequence safe = bondsAll;
+      Sequence safe = tbillsAll;// bondsAll;
       Sequence prices = store.getMisc("StockData");
       // Strategy.calcSmaStats(prices, risky, safe, store);
       addStrategiesToStore(risky, safe, prices, iStartSimulation);
@@ -307,11 +309,11 @@ public class RetireTool
     }
 
     // SMA margin sweep.
-    for (int i = 1; i <= 8; ++i) {
-      AssetPredictor predictor = new SMAPredictor(1, i * 0.25, prices.getName(), iPriceSMA, store);
-      Sequence sma = Strategy.calcReturns(predictor, iStartSimulation, nMinTradeGap, risky, safe);
-      store.add(sma);
-    }
+    // for (int i = 1; i <= 8; ++i) {
+    // AssetPredictor predictor = new SMAPredictor(1, i * 0.25, prices.getName(), iPriceSMA, store);
+    // Sequence sma = Strategy.calcReturns(predictor, iStartSimulation, nMinTradeGap, risky, safe);
+    // store.add(sma);
+    // }
 
     // NewHigh sweep.
     // for (int i = 1; i <= 12; ++i) {
@@ -348,10 +350,11 @@ public class RetireTool
     // assetMap &= ~(1 << i);
     // }
 
-    System.out.printf("Building multiscale variations... ");
-    long startMS = System.currentTimeMillis();
-    buildMultiscaleVariations(iStartSimulation, slippage, risky, safe, prices);
-    System.out.printf("done (%d, %s).\n", store.size(), TimeLib.formatDuration(System.currentTimeMillis() - startMS));
+    // System.out.printf("Building multiscale variations... ");
+    // long startMS = System.currentTimeMillis();
+    // buildMultiscaleVariations(iStartSimulation, slippage, risky, safe, prices);
+    // System.out.printf("done (%d, %s).\n", store.size(), TimeLib.formatDuration(System.currentTimeMillis() -
+    // startMS));
 
     // System.out.printf("Building all mixes (%d)... ", store.size());
     // startMS = System.currentTimeMillis();
@@ -1863,6 +1866,7 @@ public class RetireTool
     tbillData = FinLib.pad(tbillData, shiller, 0.0);
 
     long commonStart = TimeLib.calcCommonStart(shiller, tbillData, stockAll);
+    commonStart = TimeLib.toFirstOfMonth(commonStart);
     long commonEnd = TimeLib.calcCommonEnd(shiller, tbillData, stockAll);
     System.out.printf("Common: [%s] -> [%s]\n", TimeLib.formatDate(commonStart), TimeLib.formatDate(commonEnd));
 
@@ -1894,7 +1898,7 @@ public class RetireTool
       System.out.printf(" - %s\n", name);
 
     Account account = null;
-    DailySMA sma = null;
+    DailySMA smaDaily = null;
 
     final String riskyName = "Stock";
     final String safeName = "Cash";
@@ -1913,12 +1917,12 @@ public class RetireTool
 
       if (account == null) {
         account = broker.openAccount(principal, Account.Type.Roth, true);
-        sma = new DailySMA(account, riskyName);
-        sma.init(timeInfo);
+        smaDaily = new DailySMA(account, riskyName);
+        smaDaily.init(timeInfo);
         bMonthlyPrediction = true; // need initial prediction
         // account.buyValue("Stock", account.getCash(), null);
       } else {
-        sma.step(timeInfo);
+        smaDaily.step(timeInfo);
       }
 
       // End of day business.
@@ -1926,7 +1930,7 @@ public class RetireTool
 
       // Is it time for a prediction and possible asset change?
       if (bMonthlyPrediction) {
-        boolean bOwnRisky = sma.predict();
+        boolean bOwnRisky = smaDaily.predict();
         Map<String, Double> desiredDistribution = new TreeMap<>();
         double fractionRisky = bOwnRisky ? 1.0 : 0.0;
         double fractionSafe = 1.0 - fractionRisky;
@@ -1939,7 +1943,7 @@ public class RetireTool
       // account.printTransactions(time, TimeLib.TIME_END);
       if (bMonthlyPrediction) {
         // account.printPositions();
-        System.out.printf("[%s] $%s\n", TimeLib.formatMonth(time), Fixed.formatCurrency(account.getValue()));
+        // System.out.printf("[%s] $%s\n", TimeLib.formatMonth(time), Fixed.formatCurrency(account.getValue()));
       }
 
       // int month = Library.calFromTime(time).get(Calendar.MONTH);
@@ -1965,6 +1969,18 @@ public class RetireTool
     System.out.printf("%11s| $%s (%.2f%%)\n", TimeLib.formatDate(guideSeq.getEndMS()), Fixed.formatCurrency(value), ar);
 
     // account.printTransactions();
+
+    System.out.printf("Shiller.Full: [%s] -> [%s]\n", TimeLib.formatMonth(shiller.getStartMS()),
+        TimeLib.formatMonth(shiller.getEndMS()));
+    Sequence snp = Shiller.getStockData(shiller).subseq(0, -2);
+    Sequence snp2 = smaDaily.getSNP();
+    System.out.printf(" Shiller[%d]: [%s] -> [%s]\n", snp.length(), TimeLib.formatMonth(snp.getStartMS()),
+        TimeLib.formatMonth(snp.getEndMS()));
+    System.out.printf("SMADaily[%d]: [%s] -> [%s]\n", snp2.length(), TimeLib.formatMonth(snp2.getStartMS()),
+        TimeLib.formatMonth(snp2.getEndMS()));
+
+    assert snp.length() == snp2.length();
+    Chart.saveLineChart(new File(dir, "snp-comp.html"), "S&P Comparison", GRAPH_WIDTH, GRAPH_HEIGHT, true, snp, snp2);
   }
 
   public static void main(String[] args) throws IOException
