@@ -14,8 +14,8 @@ public class DailySMA
   private final String   name;
 
   private final double   margin       = 1.0 / 100.0;
-  private final int      nLookback    = 5;
-  private final double[] monthlyMeans = new double[13];
+  private final int      nLookback    = 2;
+  private final double[] monthlyMeans = new double[12];
   private final int      iPrice       = 0;
 
   private double         currentValue;
@@ -59,14 +59,15 @@ public class DailySMA
         assert nMonthsBetween == nCurrentAge + 1;
         assert n > 0;
         double mean = sum / n;
-        monthlyMeans[nCurrentAge] = mean;
 
-        long ms = TimeLib.toFirstOfMonth(tb);
-        // System.out.printf("i=%d [%s]: %.2f  [%s]\n", i, TimeLib.formatDate(ms), mean, TimeLib.sdfTime.format(new
-        // Date(ms)));
-        snp.addData(mean, ms);
+        if (nCurrentAge >= 1) {
+          monthlyMeans[nCurrentAge - 1] = mean;
+          long ms = TimeLib.toFirstOfMonth(tb);
+          // System.out.printf("i=%d [%s]: %.2f\n", i, TimeLib.sdfTime.format(new Date(ms)), mean);
+          // System.out.printf(" %d: [%s] -> [%s]\n", nCurrentAge, TimeLib.formatDate(tb), TimeLib.formatDate(ta));
+          snp.addData(mean, ms);
+        }
 
-        // System.out.printf("%d: [%s] -> [%s]\n", nCurrentAge, TimeLib.formatDate(tb), TimeLib.formatDate(ta));
         ta = tb = time;
 
         if (nCurrentAge == 0) {
@@ -90,14 +91,21 @@ public class DailySMA
     if (n > 0) {
       // System.out.printf("%d: [%s] -> [%s]\n", nCurrentAge, TimeLib.formatDate(tb), TimeLib.formatDate(ta));
       double mean = sum / n;
-      monthlyMeans[nCurrentAge] = mean;
+      monthlyMeans[nCurrentAge - 1] = mean;
+      // System.out.printf(" %d: [%s] -> [%s] (Last / leftover)\n", nCurrentAge, TimeLib.formatDate(tb),
+      // TimeLib.formatDate(ta));
       long ms = TimeLib.toFirstOfMonth(ta / 2 + tb / 2);
       snp.addData(mean, ms);
     }
 
     assert nCurrentAge == 12;
-    assert snp.length() == 13;
+    assert snp.length() == 12;
     snp.reverse();
+
+    // System.out.println("Monthly Means after Init:");
+    // for (int i = 0; i < monthlyMeans.length; ++i) {
+    // System.out.printf(" %d: %.2f\n", i, monthlyMeans[i]);
+    // }
   }
 
   public void step(TimeInfo timeInfo)
@@ -112,6 +120,12 @@ public class DailySMA
     ++currentN;
     currentValue = currentSum / currentN;
 
+    // if ((timeInfo.time >= TimeLib.getTime(31, 11, 1950)) && (timeInfo.time < TimeLib.getTime(11, 1, 1951))) {
+    // System.out.printf("Step [%s]: %.2f / %d = %.2f (%.2f)\n", TimeLib.formatDate(timeInfo.time), currentSum,
+    // currentN,
+    // currentValue, price);
+    // }
+
     // System.out.printf("[%s]: %.2f (%d)\n", TimeLib.formatDate(timeInfo.time), currentValue, currentN);
 
     if (timeInfo.isLastDayOfMonth) {
@@ -124,6 +138,7 @@ public class DailySMA
         monthlyMeans[i] = monthlyMeans[i - 1];
       }
       monthlyMeans[0] = currentValue;
+      // System.out.printf("End of Month: [%s] %.2f (%d)\n", TimeLib.formatDate(timeInfo.time), currentValue, currentN);
       long ms = TimeLib.toFirstOfMonth(timeInfo.time - 5 * TimeLib.MS_IN_DAY);
       assert ms >= snp.getEndMS();
       if (ms == snp.getEndMS()) {
@@ -136,9 +151,20 @@ public class DailySMA
 
   public boolean predict()
   {
+    long time = account.broker.getTime();
+
     double mean = Library.sum(monthlyMeans, 0, nLookback) / (nLookback + 1);
     double ratio = currentValue / mean;
+
+    // System.out.printf(" sma: %.2f  price=%.2f\n", mean, currentValue);
+    // System.out.printf(" %d: [%.2f", nLookback, monthlyMeans[0]);
+    // for (int i = 1; i <= nLookback; ++i)
+    // System.out.printf(", %.2f", monthlyMeans[i]);
+    // System.out.println("]");
+
     // System.out.printf("Predict[%s]: %.2f, %.3f\n", TimeLib.formatDate(account.broker.getTime()), mean, ratio);
+    // System.out.printf("Predict [%s]: %s\n", TimeLib.formatDate(time), ratio >= 1.0 ? "Risky" : "Safe");
+
     // TODO incorporate margin
     return ratio >= 1.0;
 

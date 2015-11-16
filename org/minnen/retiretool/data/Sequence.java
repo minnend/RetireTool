@@ -695,7 +695,7 @@ public class Sequence implements Iterable<FeatureVec>
 
     FeatureVec average = new FeatureVec(getNumDims());
     for (int j = iStart; j <= iEnd; ++j) {
-      average._add(get(iStart));
+      average._add(get(j));
     }
     return average._div(N);
   }

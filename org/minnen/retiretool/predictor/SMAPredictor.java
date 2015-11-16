@@ -1,5 +1,6 @@
 package org.minnen.retiretool.predictor;
 
+import org.minnen.retiretool.TimeLib;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 
@@ -8,7 +9,7 @@ public class SMAPredictor extends AssetPredictor
 {
   protected final String priceSeqName;
   protected final int    iPrice;
-  protected final int    nMonths;
+  protected final int    nLookback;
   protected final double margin;
 
   protected int          reloc = 0;   // below/at/above = -1/0/1
@@ -18,15 +19,15 @@ public class SMAPredictor extends AssetPredictor
     this(nMonths, 0.0, priceSeqName, iPrice, store);
   }
 
-  public SMAPredictor(int nMonths, double margin, String priceSeqName, int iPrice, SequenceStore store)
+  public SMAPredictor(int nLookback, double margin, String priceSeqName, int iPrice, SequenceStore store)
   {
-    super(buildName(nMonths, margin), store);
+    super(buildName(nLookback, margin), store);
 
-    assert nMonths > 0;
+    assert nLookback > 0;
     assert margin >= 0.0;
     assert iPrice >= 0;
 
-    this.nMonths = nMonths;
+    this.nLookback = nLookback;
     this.margin = margin;
     this.priceSeqName = priceSeqName;
     this.iPrice = iPrice;
@@ -45,7 +46,7 @@ public class SMAPredictor extends AssetPredictor
 
   public int getNumMonths()
   {
-    return nMonths;
+    return nLookback;
   }
 
   @Override
@@ -60,7 +61,7 @@ public class SMAPredictor extends AssetPredictor
 
     // Calculate trailing moving average.
     int iLast = prices.length() - 1;
-    int iFirst = Math.max(0, iLast - nMonths);
+    int iFirst = Math.max(0, iLast - nLookback);
     double sma = prices.average(iFirst, iLast).get(iPrice);
 
     // Test above / below moving average.
@@ -70,6 +71,15 @@ public class SMAPredictor extends AssetPredictor
     }
 
     double price = prices.get(iLast, iPrice);
+
+    // System.out.printf(" %s: [%d,%d] sma=%.2f  price=%.2f\n", name, iFirst, iLast, sma, price);
+    // System.out.printf(" [%s] -> [%s]: %.2f", TimeLib.formatMonth(seqs[0].getTimeMS(iFirst)),
+    // TimeLib.formatMonth(seqs[0].getTimeMS(iLast)), prices.get(iFirst, iPrice));
+    // for (int i = iFirst + 1; i <= iLast; ++i) {
+    // System.out.printf(", %.2f", prices.get(i, iPrice));
+    // }
+    // System.out.println();
+
     if (price > threshold) {
       reloc = 1;
       return 0;
@@ -77,6 +87,5 @@ public class SMAPredictor extends AssetPredictor
       reloc = 0;
       return 1;
     }
-    // return (price > sma ? 0 : 1);
   }
 }

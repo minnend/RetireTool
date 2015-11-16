@@ -249,7 +249,7 @@ public class RetireTool
     // Setup risky and safe assets for use with dynamic asset allocation strategies.
     if (buildComplexStrategies) {
       Sequence risky = stockAll;
-      Sequence safe = tbillsAll;// bondsAll;
+      Sequence safe = store.getMisc("Cash"); // Bonds-All
       Sequence prices = store.getMisc("StockData");
       // Strategy.calcSmaStats(prices, risky, safe, store);
       addStrategiesToStore(risky, safe, prices, iStartSimulation);
@@ -284,15 +284,8 @@ public class RetireTool
 
     // Momentum sweep.
     // for (int i = 0; i < momPredictors.length; ++i) {
-    // Sequence momOrig = Strategy.calcMomentumReturns(i + 1, iStartSimulation, slippage, null, risky, safe);
-    // Sequence mom = Strategy.calcReturns(momPredictors[i], iStartSimulation, slippage, null, risky, safe);
-    //
-    // assert mom.length() == momOrig.length(); // TODO
-    // for (int ii = 0; ii < mom.length(); ++ii) {
-    // double a = mom.get(ii, 0);
-    // double b = momOrig.get(ii, 0);
-    // assert Math.abs(a - b) < 1e-6 : String.format("%f vs. %f", a, b);
-    // }
+    // Sequence mom = Strategy.calcReturns(momPredictors[i], iStartSimulation, nMinTradeGap, risky, safe);
+    // store.add(mom);
     // }
 
     // store.add(mom);
@@ -306,6 +299,9 @@ public class RetireTool
     // // System.out.printf(" %.2f%% / %.2f%%  (%d / %d)\n", winStats.percentSelected(0), winStats.percentSelected(1),
     // // winStats.nSelected[0], winStats.nSelected[1]);
     // }
+
+    // TODO for comparison to broker (daily) results.
+    // Strategy.calcReturns(smaPredictors[1], iStartSimulation, nMinTradeGap, risky, safe);
 
     // SMA sweep.
     for (int i = 0; i < smaPredictors.length; ++i) {
@@ -1153,32 +1149,9 @@ public class RetireTool
     Chart.saveStatsTable(new File(dir, "momentum-sweep.html"), GRAPH_WIDTH, true, store.getCumulativeStats(names));
     // Chart.printDecadeTable(store.get("momentum-12"), store.get("stock"));
 
-    // Create scatterplot of returns vs. volatility.
-    List<DurationalStats> dstats = store.getDurationalStats(names);
-    Sequence scatter = new Sequence("Momentum Results");
-    for (int i = 0; i < dstats.size(); ++i) {
-      DurationalStats stats = dstats.get(i);
-      String label = "Stock";
-      if (i < momentumMonths.length) {
-        label = "" + momentumMonths[i];
-      }
-      scatter.addData(new FeatureVec(label, 2, stats.mean, stats.sdev));
-    }
-    Chart.saveScatterPlot(new File(dir, "momentum-scatter.html"),
-        String.format("Momentum: Returns vs. Volatility (%s)", TimeLib.formatDurationMonths(duration)), GRAPH_WIDTH,
-        GRAPH_HEIGHT, 5, scatter);
-
-    names = new String[] { "stock", "bonds", "60/40", "momentum-1", "momentum-3", "momentum-12", "Mom.Defensive",
-        "Mom.cautious", "Mom.moderate", "Mom.Aggressive" };
-    Chart.saveLineChart(new File(dir, "momentum-cumulative.html"), "Cumulative Market Returns: Momentum Strategy",
-        GRAPH_WIDTH, GRAPH_HEIGHT, true, store.getReturns(names));
-
     Chart.saveBoxPlots(new File(dir, "momentum-box-plots.html"),
         String.format("Momentum Returns (%s)", TimeLib.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
         store.getDurationalStats(names));
-
-    List<CumulativeStats> cstats = store.getCumulativeStats(names);
-    Chart.saveStatsTable(new File(dir, "momentum-chart.html"), GRAPH_WIDTH, true, cstats);
   }
 
   public static void genNewHighSweepChart(File dir) throws IOException
@@ -1910,6 +1883,9 @@ public class RetireTool
     Sequence returns = new Sequence("Returns");
     for (int t = 0; t < T; ++t) {
       long time = guideSeq.getTimeMS(t);
+      // if (time > TimeLib.getTime(10, 9, 1952)) { // TODO for debug
+      // System.exit(0);
+      // }
       store.lock(TimeLib.TIME_BEGIN, time);
       long nextTime = (t == T - 1 ? TimeLib.toNextBusinessDay(time) : guideSeq.getTimeMS(t + 1));
       broker.setTime(time, prevTime, nextTime);
@@ -1970,7 +1946,7 @@ public class RetireTool
       prevTime = time;
     }
 
-    account.printBuySell();
+    // account.printBuySell();
 
     long value = account.getValue();
     long tr = Fixed.div(value, principal);
