@@ -1859,15 +1859,15 @@ public class RetireTool
     store.addMisc(tbillData, "TBillData");
     store.alias("interest-rates", "TBillData");
 
-    {
-      for (int i = 1; i <= 12; ++i) {
-        long ta = TimeLib.getTime(1, i, 1951);
-        long tb = TimeLib.toEndOfMonth(ta);
-        Sequence seq = stockAll.subseq(ta, tb, EndpointBehavior.Inside);
-        double mean = seq.average(0, -1).get(0);
-        System.out.printf("[%s] -> [%s]: %.2f\n", TimeLib.formatDate(ta), TimeLib.formatDate(tb), mean);
-      }
-    }
+    // {
+    // for (int i = 1; i <= 12; ++i) {
+    // long ta = TimeLib.getTime(1, i, 1951);
+    // long tb = TimeLib.toEndOfMonth(ta);
+    // Sequence seq = stockAll.subseq(ta, tb, EndpointBehavior.Inside);
+    // double mean = seq.average(0, -1).get(0);
+    // System.out.printf("[%s] -> [%s]: %.2f\n", TimeLib.formatDate(ta), TimeLib.formatDate(tb), mean);
+    // }
+    // }
 
     // Monthly S&P dividends.
     Sequence divPayments = Shiller.getDividendPayments(shiller, DividendMethod.QUARTERLY);
@@ -1890,6 +1890,9 @@ public class RetireTool
     final String safeName = "Cash";
     final int T = guideSeq.length();
     final long principal = Fixed.toFixed(1000.0);
+    int nFlips = 0;
+    boolean bPrevOwnRisky = false;
+    long timeLastFlip = TimeLib.TIME_ERROR;
     long prevTime = stockAll.getTimeMS(iStart - 1);
     Sequence returns = new Sequence("Returns");
     for (int t = 0; t < T; ++t) {
@@ -1904,13 +1907,11 @@ public class RetireTool
       // System.out.printf("Broker: [%s]\n", TimeLib.formatDate(broker.getTime()));
 
       // TODO support jitter for trade day.
-      boolean bMonthlyPrediction = timeInfo.isLastDayOfMonth;
 
       if (account == null) {
         account = broker.openAccount(principal, Account.Type.Roth, true);
         smaDaily = new DailySMA(account, riskyName);
         smaDaily.init(timeInfo);
-        bMonthlyPrediction = true; // need initial prediction
         // account.buyValue("Stock", account.getCash(), null);
         returns.addData(1.0, time);
       } else {
@@ -1920,9 +1921,14 @@ public class RetireTool
       // End of day business.
       broker.doEndOfDayBusiness();
 
-      // Is it time for a prediction and possible asset change?
-      if (bMonthlyPrediction) {
-        boolean bOwnRisky = smaDaily.predict();
+      // Time for a prediction and possible asset change.
+      boolean bOwnRisky = smaDaily.predict();
+      if (bOwnRisky != bPrevOwnRisky) {
+        bPrevOwnRisky = bOwnRisky;
+        ++nFlips;
+        System.out.printf("Flip [%s]: %d days\n", TimeLib.formatDate(time), (time - timeLastFlip) / TimeLib.MS_IN_DAY);
+        timeLastFlip = time;
+
         Map<String, Double> desiredDistribution = new TreeMap<>();
         double fractionRisky = (bOwnRisky ? 1.0 : 0.0);
         double fractionSafe = 1.0 - fractionRisky;
@@ -1931,13 +1937,15 @@ public class RetireTool
 
         // System.out.printf("Stock: %.1f%%  Cash: %.1f%%\n", 100.0 * fractionRisky, 100.0 * fractionSafe);
         account.rebalance(desiredDistribution);
-        if (time < TimeLib.getTime(2, 1, 1952)) {
-          System.out.printf("[%s]: %.2f + %.2f = %.2f\n", TimeLib.formatDate(time),
-              Fixed.toFloat(account.getValue() - account.getCash()), Fixed.toFloat(account.getCash()),
-              Fixed.toFloat(account.getValue()));
-        }
       }
-      account.printTransactions(time, TimeLib.getTime(2, 10, 1951));
+
+      // if (timeInfo.isLastDayOfMonth && time < TimeLib.getTime(2, 1, 1952)) {
+      // System.out.printf("[%s]: %.2f + %.2f = %.2f\n", TimeLib.formatDate(time),
+      // Fixed.toFloat(account.getValue() - account.getCash()), Fixed.toFloat(account.getCash()),
+      // Fixed.toFloat(account.getValue()));
+      // }
+      //
+      // account.printTransactions(time, TimeLib.getTime(2, 10, 1951));
       // if (bMonthlyPrediction) {
       // account.printPositions();
       // System.out.printf("[%s] $%s\n", TimeLib.formatMonth(time), Fixed.formatCurrency(account.getValue()));
@@ -1973,6 +1981,7 @@ public class RetireTool
     // System.out.printf("Returns #Months: %d\n", nMonths);
     double ar = FinLib.getAnnualReturn(Fixed.toFloat(tr), nMonths);
     System.out.printf("%11s| $%s (%.2f%%)\n", TimeLib.formatDate(returns.getEndMS()), Fixed.formatCurrency(value), ar);
+    System.out.printf("#Flips: %d\n", nFlips);
 
     // account.printTransactions();
 

@@ -456,6 +456,15 @@ public class Sequence implements Iterable<FeatureVec>
   }
 
   /**
+   * @return index of the data point with the exact time; -1 if none found.
+   */
+  public int getIndexAt(long ms)
+  {
+    int index = getClosestIndex(ms);
+    return (ms == getTimeMS(index) ? index : -1);
+  }
+
+  /**
    * @return index of the data point at or before the given time (if possible).
    */
   public int getIndexAtOrBefore(long ms)
@@ -559,7 +568,7 @@ public class Sequence implements Iterable<FeatureVec>
     return extractDim(iDim, 0, length());
   }
 
-  /** @return index in data sequence for the given year and month (January == 1). */
+  /** @return closest index in data sequence for the given year and month (January == 1). */
   public int getIndexForDate(int year, int month)
   {
     long ms = TimeLib.getTime(1, month, year);
