@@ -22,7 +22,7 @@ public final class FinLib
   public static final double SOC_SEC_AT70 = 3480.00; // http://www.ssa.gov/oact/quickcalc/
 
   public enum DividendMethod {
-    NO_REINVEST, MONTHLY, QUARTERLY
+    NO_REINVEST_MONTHLY, NO_REINVEST_QUARTERLY, MONTHLY, QUARTERLY, IGNORE_DIVIDENDS
   };
 
   public enum Inflation {
@@ -717,6 +717,23 @@ public final class FinLib
     return stats;
   }
 
+  private static double getQuarterlyDividendsPerShare(Sequence snp, int index, int iMinIndex)
+  {
+    double div = 0.0;
+
+    // Dividends at the end of every quarter (march, june, september, december).
+    Calendar cal = TimeLib.ms2cal(snp.getTimeMS(index));
+    int month = cal.get(Calendar.MONTH);
+    if (month % 3 == 2) { // time for a dividend!
+      for (int j = 0; j < 3; j++) {
+        if (index - j < iMinIndex)
+          break;
+        div += snp.get(index - j, Shiller.DIV);
+      }
+    }
+    return div;
+  }
+
   /**
    * Calculates S&P ROI for the given range.
    * 
@@ -738,42 +755,40 @@ public final class FinLib
       throw new IllegalArgumentException(String.format("iStart=%d, iEnd=%d, length=%d", iStart, iEnd, snp.length()));
     }
 
-    Sequence seq = new Sequence(divMethod == DividendMethod.NO_REINVEST ? "S&P-NoReinvest" : "S&P");
+    Sequence seq = new Sequence("S&P-" + divMethod);
 
     // note: it's equivalent to keep track of total value or number of shares
     double divCash = 0.0;
     double baseValue = 1.0;
     double shares = baseValue / snp.get(iStart, 0);
-    seq.addData(baseValue, snp.getTimeMS(iStart));
+    seq.addData(new FeatureVec(2, baseValue, 0.0), snp.getTimeMS(iStart));
     for (int i = iStart + 1; i <= iEnd; ++i) {
       long timeMS = snp.getTimeMS(i);
       double divReinvest = 0.0;
-      if (divMethod == DividendMethod.NO_REINVEST)
+      if (divMethod == DividendMethod.NO_REINVEST_MONTHLY)
         // No dividend reinvestment so all dividends go to cash.
         divCash += shares * snp.get(i, Shiller.DIV);
       else if (divMethod == DividendMethod.MONTHLY) {
         // Dividends at the end of every month.
-        divReinvest = snp.get(i, Shiller.DIV);
+        divReinvest = shares * snp.get(i, Shiller.DIV);
       } else if (divMethod == DividendMethod.QUARTERLY) {
         // Dividends at the end of every quarter (march, june, september, december).
-        Calendar cal = TimeLib.ms2cal(timeMS);
-        int month = cal.get(Calendar.MONTH);
-        if (month % 3 == 2) { // time for a dividend!
-          for (int j = 0; j < 3; j++) {
-            if (i - j < iStart)
-              break;
-            divReinvest += snp.get(i - j, Shiller.DIV);
-          }
-        }
+        divReinvest += shares * getQuarterlyDividendsPerShare(snp, i, iStart);
+      } else if (divMethod == DividendMethod.NO_REINVEST_QUARTERLY) {
+        // Dividends at the end of every quarter (march, june, september, december).
+        divCash += shares * getQuarterlyDividendsPerShare(snp, i, iStart);
+      } else {
+        assert divMethod == DividendMethod.IGNORE_DIVIDENDS;
+        // Nothing to do when we're ignoring dividends.
       }
 
       // Apply the dividends (if any).
       double price = snp.get(i, Shiller.PRICE);
-      shares += shares * divReinvest / price;
+      shares += divReinvest / price;
 
       // Add data point for current value.
       double value = divCash + shares * price;
-      seq.addData(value, timeMS);
+      seq.addData(new FeatureVec(2, value, divCash), timeMS);
     }
     return seq;
   }

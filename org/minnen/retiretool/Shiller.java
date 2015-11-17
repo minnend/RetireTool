@@ -62,20 +62,20 @@ public class Shiller
 
   public static Sequence getDividendPayments(Sequence shiller, DividendMethod divMethod)
   {
-    if (divMethod == DividendMethod.NO_REINVEST) { // no payments => empty sequence
+    if (divMethod == DividendMethod.IGNORE_DIVIDENDS) { // no payments => empty sequence
       return new Sequence("Dividends");
-    } else if (divMethod == DividendMethod.MONTHLY) {
+    } else if (divMethod == DividendMethod.MONTHLY || divMethod == DividendMethod.NO_REINVEST_MONTHLY) {
       return getData(DIV, "Dividends", shiller);
     } else {
-      assert divMethod == DividendMethod.QUARTERLY;
+      assert divMethod == DividendMethod.QUARTERLY || divMethod == DividendMethod.NO_REINVEST_QUARTERLY;
 
       // Dividends at the end of every quarter (march, june, september, december).
       Sequence seq = new Sequence("Dividends");
       Calendar cal = TimeLib.now();
       double div = 0.0;
       for (int i = 0; i < shiller.length(); ++i) {
-        long timeMS = shiller.getTimeMS(i);
         div += shiller.get(i, Shiller.DIV);
+        long timeMS = shiller.getTimeMS(i);
         cal.setTimeInMillis(timeMS);
         int month = cal.get(Calendar.MONTH);
         if (month % 3 == 2) { // time for a dividend!

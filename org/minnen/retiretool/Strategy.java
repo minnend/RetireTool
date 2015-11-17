@@ -24,26 +24,23 @@ public class Strategy
       assert seqs[i].getStartMS() == seqs[0].getStartMS();
       assert predictor.store.has(seqs[0].getName());
     }
-    // N = 20; // TODO for debug
-    // System.out.printf("Predictor: %s\n", predictor.name);
+    N = 24; // TODO for debug
+    System.out.printf("Predictor: %s\n", predictor.name);
 
     predictor.reset();
-    final double principal = 1.0; // TODO principal might matter due to slippage or min purchase reqs
+    final double principal = 1000.0; // TODO principal might matter due to slippage or min purchase reqs
     double balance = principal;
     Sequence returns = new Sequence(predictor.name);
     returns.addData(balance, seqs[0].getTimeMS(iStart));
     int iLastTrade = -1;
     double[] prevDistribution = new double[seqs.length];
     for (int t = iStart + 1; t < N; ++t) {
-      // System.out.printf("Process: %d = [%s]\n", t, TimeLib.formatMonth(seqs[0].getTimeMS(t)));
+      System.out.printf("Process: %d = [%s]\n", t, TimeLib.formatMonth(seqs[0].getTimeMS(t)));
       assert seqs[0].getTimeMS(t) == seqs[1].getTimeMS(t);
       predictor.store.lock(TimeLib.TIME_BEGIN, seqs[0].getTimeMS(t) - 1);
       double[] distribution = predictor.selectDistribution(seqs);
       assert distribution.length == seqs.length;
       predictor.store.unlock();
-
-      // System.out.printf(" t=%d [%s]: distribution=[%.1f, %.1f]\n", t, TimeLib.formatMonth(seqs[0].getTimeMS(t)),
-      // 100.0 * distribution[0], 100.0 * distribution[1]);
 
       // Is it too soon to trade again?
       if (iLastTrade >= 0 && t - iLastTrade <= nMinTradeGap) {
@@ -71,6 +68,8 @@ public class Strategy
       }
       predictor.feedback(seqs[0].getTimeMS(t), iCorrect, correctReturn);
       balance *= realizedReturn;
+
+      System.out.printf(" %s  $%.2f  (%f)\n", distribution[0] > 0.0 ? "Risky" : "Safe", balance, realizedReturn);
 
       returns.addData(balance, seqs[0].getTimeMS(t));
     }

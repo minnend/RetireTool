@@ -288,7 +288,22 @@ public class TimeLib
     return cal.getTimeInMillis();
   }
 
-  /** @return ms for the given time moved to the first day of the month */
+  /** @return ms for the given time moved to the last day of the month */
+  public static long toEndOfMonth(long ms)
+  {
+    // Move to next month.
+    Calendar cal = ms2cal(ms);
+    cal.add(Calendar.MONTH, 1);
+
+    // Move to first day of next month.
+    cal.setTimeInMillis(toFirstOfMonth(cal.getTimeInMillis()));
+
+    // Move one day back, which is the last day of the original month.
+    cal.add(Calendar.DATE, -1);
+    return cal.getTimeInMillis();
+  }
+
+  /** @return ms for the given time moved to the last business day of the month */
   public static long toLastBusinessDayOfMonth(long ms)
   {
     // Move to next month.

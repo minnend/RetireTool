@@ -690,6 +690,9 @@ public class Sequence implements Iterable<FeatureVec>
    */
   public FeatureVec average(int iStart, int iEnd)
   {
+    if (iEnd < 0) {
+      iEnd += length();
+    }
     final int N = iEnd - iStart + 1;
     assert N > 0;
 

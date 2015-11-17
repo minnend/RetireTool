@@ -55,15 +55,12 @@ public class FeatureVec
    */
   public FeatureVec(int nDims, double... x)
   {
-    vec = new double[nDims];
-
-    int N = x.length;
-    int M = Math.min(nDims, N);
-    for (int i = 0; i < M; i++)
-      vec[i] = x[i];
-    double rep = (N > 0 ? x[N - 1] : 0);
-    for (int i = M; i < nDims; i++)
-      vec[i] = rep;
+    assert x.length == nDims || x.length == 0;
+    if (x.length == 0) {
+      vec = new double[nDims];
+    } else {
+      vec = Arrays.copyOf(x, nDims);
+    }
   }
 
   public String getName()
@@ -904,9 +901,9 @@ public class FeatureVec
   public String toString()
   {
     StringBuffer sb = new StringBuffer();
-    sb.append("[FV:");
-    for (int i = 0; i < vec.length; i++)
-      sb.append(String.format(" %.3f", vec[i]));
+    sb.append(String.format("[%.3f", vec[0]));
+    for (int i = 1; i < vec.length; i++)
+      sb.append(String.format(",%.3f", vec[i]));
     sb.append("]");
     return sb.toString();
   }

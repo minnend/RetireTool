@@ -27,6 +27,7 @@ import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.data.Sequence.EndpointBehavior;
 import org.minnen.retiretool.predictor.AssetPredictor;
 import org.minnen.retiretool.predictor.ConstantPredictor;
 import org.minnen.retiretool.predictor.MixedPredictor;
@@ -86,84 +87,6 @@ public class RetireTool
     // nikkei = nikkei.subseq(commonStart, commonEnd);
 
     buildCumulativeReturnsStore(shiller, tbillData, null, buildComplexStrategies);
-  }
-
-  public static void setupVanguardData(File dataDir, File dir) throws IOException
-  {
-    iPriceSMA = FinLib.MonthlyClose; // should SMA use close or average?
-    final int iStartSimulation = 12;
-
-    Sequence stockDaily = DataIO.loadYahooData(new File(dataDir, "VTSMX.csv"));
-    store.addMisc(stockDaily, "Stock-Daily");
-    Sequence stock = FinLib.daily2monthly(stockDaily);
-    Sequence stockNoDiv = FinLib.daily2monthly(stockDaily, 1, 0);
-    System.out.printf("Stock: [%s] -> [%s]\n", TimeLib.formatMonth(stock.getStartMS()),
-        TimeLib.formatMonth(stock.getEndMS()));
-
-    Sequence bondsDaily = DataIO.loadYahooData(new File(dataDir, "VBMFX.csv"));
-    store.addMisc(bondsDaily, "Bonds-Daily");
-    Sequence bonds = FinLib.daily2monthly(bondsDaily);
-    System.out.printf("Bond: [%s] -> [%s]\n", TimeLib.formatMonth(bonds.getStartMS()),
-        TimeLib.formatMonth(bonds.getEndMS()));
-
-    Sequence reitsDaily = DataIO.loadYahooData(new File(dataDir, "VGSIX.csv"));
-    store.addMisc(reitsDaily, "REITs-Daily");
-    Sequence reits = FinLib.daily2monthly(reitsDaily);
-    System.out.printf("REIT: [%s] -> [%s]\n", TimeLib.formatMonth(reits.getStartMS()),
-        TimeLib.formatMonth(reits.getEndMS()));
-
-    Sequence istockDaily = DataIO.loadYahooData(new File(dataDir, "VGTSX.csv"));
-    store.addMisc(istockDaily, "IntStock-Daily");
-    Sequence istock = FinLib.daily2monthly(istockDaily);
-    System.out.printf("Int Stock: [%s] -> [%s]\n", TimeLib.formatMonth(istock.getStartMS()),
-        TimeLib.formatMonth(istock.getEndMS()));
-
-    Sequence shiller = DataIO.loadShillerData(new File(dataDir, "shiller.csv"));
-
-    long commonStart = TimeLib.calcCommonStart(stock, bonds, reits, istock, shiller);
-    long commonEnd = TimeLib.calcCommonEnd(stock, bonds, reits, istock, shiller);
-    System.out.printf("Common: [%s] -> [%s]\n", TimeLib.formatMonth(commonStart), TimeLib.formatMonth(commonEnd));
-
-    stock = stock.subseq(commonStart, commonEnd);
-    stockNoDiv = stockNoDiv.subseq(commonStart, commonEnd);
-    bonds = bonds.subseq(commonStart, commonEnd);
-    reits = reits.subseq(commonStart, commonEnd);
-    istock = istock.subseq(commonStart, commonEnd);
-    shiller = shiller.subseq(commonStart, commonEnd);
-
-    store.addMisc(stock, "Stock-All");
-    store.addMisc(stockNoDiv, "StockNoDiv-All");
-    store.addMisc(bonds, "Bonds-All");
-    store.addMisc(reits, "REITs-All");
-    store.addMisc(istock, "IntStock-All");
-
-    // Add CPI data.
-    // Sequence cpi = Shiller.getInflationData(shiller);
-    // store.addMisc(cpi, "cpi");
-    // store.alias("inflation", "cpi");
-
-    store.add(stock.dup().subseq(iStartSimulation), "Stock");
-    store.add(bonds.dup().subseq(iStartSimulation), "Bonds");
-    store.add(reits.dup().subseq(iStartSimulation), "REITs");
-    store.add(istock.dup().subseq(iStartSimulation), "IntStock");
-
-    Sequence risky = store.getMisc("Stock-All");
-    Sequence safe = store.getMisc("Bonds-All");
-    Sequence prices = store.getMisc("Stock-All");
-
-    addStrategiesToStore(risky, safe, prices, iStartSimulation);
-
-    Chart.saveLineChart(new File(dir, "vanguard-funds.html"), "Vanguard Funds", GRAPH_WIDTH, GRAPH_HEIGHT, true,
-        store.getReturns("Stock", "Bonds", "REITs", "IntStock"));
-
-    // Chart.saveLineChart(new File(dir, "vanguard-momentum.html"), "Vanguard Momentum", GRAPH_WIDTH, GRAPH_HEIGHT,
-    // true,
-    // store.getReturns(riskyName, safeName, "Momentum-1", "Mom.Defensive", "Mom.Cautious", "Mom.Moderate",
-    // "Mom.Aggressive", "Mom.Aggressive/SMA.Defensive-50/50"));
-    //
-    // Chart.saveLineChart(new File(dir, "vanguard-sma.html"), "Vanguard SMA", GRAPH_WIDTH, GRAPH_HEIGHT, true, store
-    // .getReturns(riskyName, safeName, "sma-1", "sma-3", "sma-5", "sma-10", "SMA.Defensive", "SMA.Cautious",
-    // "SMA.Moderate", "SMA.Aggressive"));
   }
 
   public static void buildCumulativeReturnsStore(Sequence shiller, Sequence tbillData, Sequence nikkeiAll,
@@ -301,13 +224,13 @@ public class RetireTool
     // }
 
     // TODO for comparison to broker (daily) results.
-    // Strategy.calcReturns(smaPredictors[1], iStartSimulation, nMinTradeGap, risky, safe);
+    Strategy.calcReturns(smaPredictors[1], iStartSimulation, nMinTradeGap, risky, safe);
 
     // SMA sweep.
-    for (int i = 0; i < smaPredictors.length; ++i) {
-      Sequence sma = Strategy.calcReturns(smaPredictors[i], iStartSimulation, nMinTradeGap, risky, safe);
-      store.add(sma);
-    }
+    // for (int i = 0; i < smaPredictors.length; ++i) {
+    // Sequence sma = Strategy.calcReturns(smaPredictors[i], iStartSimulation, nMinTradeGap, risky, safe);
+    // store.add(sma);
+    // }
 
     // SMA margin sweep.
     // for (int i = 1; i <= 8; ++i) {
@@ -496,6 +419,84 @@ public class RetireTool
     // Perfect = impossible strategy that always picks the best asset.
     // Sequence perfect = Strategy.calcPerfectReturns(iStartSimulation, risky, safe);
     // store.add(perfect);
+  }
+
+  public static void setupVanguardData(File dataDir, File dir) throws IOException
+  {
+    iPriceSMA = FinLib.MonthlyClose; // should SMA use close or average?
+    final int iStartSimulation = 12;
+
+    Sequence stockDaily = DataIO.loadYahooData(new File(dataDir, "VTSMX.csv"));
+    store.addMisc(stockDaily, "Stock-Daily");
+    Sequence stock = FinLib.daily2monthly(stockDaily);
+    Sequence stockNoDiv = FinLib.daily2monthly(stockDaily, 1, 0);
+    System.out.printf("Stock: [%s] -> [%s]\n", TimeLib.formatMonth(stock.getStartMS()),
+        TimeLib.formatMonth(stock.getEndMS()));
+
+    Sequence bondsDaily = DataIO.loadYahooData(new File(dataDir, "VBMFX.csv"));
+    store.addMisc(bondsDaily, "Bonds-Daily");
+    Sequence bonds = FinLib.daily2monthly(bondsDaily);
+    System.out.printf("Bond: [%s] -> [%s]\n", TimeLib.formatMonth(bonds.getStartMS()),
+        TimeLib.formatMonth(bonds.getEndMS()));
+
+    Sequence reitsDaily = DataIO.loadYahooData(new File(dataDir, "VGSIX.csv"));
+    store.addMisc(reitsDaily, "REITs-Daily");
+    Sequence reits = FinLib.daily2monthly(reitsDaily);
+    System.out.printf("REIT: [%s] -> [%s]\n", TimeLib.formatMonth(reits.getStartMS()),
+        TimeLib.formatMonth(reits.getEndMS()));
+
+    Sequence istockDaily = DataIO.loadYahooData(new File(dataDir, "VGTSX.csv"));
+    store.addMisc(istockDaily, "IntStock-Daily");
+    Sequence istock = FinLib.daily2monthly(istockDaily);
+    System.out.printf("Int Stock: [%s] -> [%s]\n", TimeLib.formatMonth(istock.getStartMS()),
+        TimeLib.formatMonth(istock.getEndMS()));
+
+    Sequence shiller = DataIO.loadShillerData(new File(dataDir, "shiller.csv"));
+
+    long commonStart = TimeLib.calcCommonStart(stock, bonds, reits, istock, shiller);
+    long commonEnd = TimeLib.calcCommonEnd(stock, bonds, reits, istock, shiller);
+    System.out.printf("Common: [%s] -> [%s]\n", TimeLib.formatMonth(commonStart), TimeLib.formatMonth(commonEnd));
+
+    stock = stock.subseq(commonStart, commonEnd);
+    stockNoDiv = stockNoDiv.subseq(commonStart, commonEnd);
+    bonds = bonds.subseq(commonStart, commonEnd);
+    reits = reits.subseq(commonStart, commonEnd);
+    istock = istock.subseq(commonStart, commonEnd);
+    shiller = shiller.subseq(commonStart, commonEnd);
+
+    store.addMisc(stock, "Stock-All");
+    store.addMisc(stockNoDiv, "StockNoDiv-All");
+    store.addMisc(bonds, "Bonds-All");
+    store.addMisc(reits, "REITs-All");
+    store.addMisc(istock, "IntStock-All");
+
+    // Add CPI data.
+    // Sequence cpi = Shiller.getInflationData(shiller);
+    // store.addMisc(cpi, "cpi");
+    // store.alias("inflation", "cpi");
+
+    store.add(stock.dup().subseq(iStartSimulation), "Stock");
+    store.add(bonds.dup().subseq(iStartSimulation), "Bonds");
+    store.add(reits.dup().subseq(iStartSimulation), "REITs");
+    store.add(istock.dup().subseq(iStartSimulation), "IntStock");
+
+    Sequence risky = store.getMisc("Stock-All");
+    Sequence safe = store.getMisc("Bonds-All");
+    Sequence prices = store.getMisc("Stock-All");
+
+    addStrategiesToStore(risky, safe, prices, iStartSimulation);
+
+    Chart.saveLineChart(new File(dir, "vanguard-funds.html"), "Vanguard Funds", GRAPH_WIDTH, GRAPH_HEIGHT, true,
+        store.getReturns("Stock", "Bonds", "REITs", "IntStock"));
+
+    // Chart.saveLineChart(new File(dir, "vanguard-momentum.html"), "Vanguard Momentum", GRAPH_WIDTH, GRAPH_HEIGHT,
+    // true,
+    // store.getReturns(riskyName, safeName, "Momentum-1", "Mom.Defensive", "Mom.Cautious", "Mom.Moderate",
+    // "Mom.Aggressive", "Mom.Aggressive/SMA.Defensive-50/50"));
+    //
+    // Chart.saveLineChart(new File(dir, "vanguard-sma.html"), "Vanguard SMA", GRAPH_WIDTH, GRAPH_HEIGHT, true, store
+    // .getReturns(riskyName, safeName, "sma-1", "sma-3", "sma-5", "sma-10", "SMA.Defensive", "SMA.Cautious",
+    // "SMA.Moderate", "SMA.Aggressive"));
   }
 
   public static void printReturnLikelihoods(Sequence cumulativeReturns, boolean bInvert)
@@ -1858,6 +1859,16 @@ public class RetireTool
     store.addMisc(tbillData, "TBillData");
     store.alias("interest-rates", "TBillData");
 
+    {
+      for (int i = 1; i <= 12; ++i) {
+        long ta = TimeLib.getTime(1, i, 1951);
+        long tb = TimeLib.toEndOfMonth(ta);
+        Sequence seq = stockAll.subseq(ta, tb, EndpointBehavior.Inside);
+        double mean = seq.average(0, -1).get(0);
+        System.out.printf("[%s] -> [%s]: %.2f\n", TimeLib.formatDate(ta), TimeLib.formatDate(tb), mean);
+      }
+    }
+
     // Monthly S&P dividends.
     Sequence divPayments = Shiller.getDividendPayments(shiller, DividendMethod.QUARTERLY);
     store.addMisc(divPayments, "Stock-Dividends");
@@ -1920,8 +1931,13 @@ public class RetireTool
 
         // System.out.printf("Stock: %.1f%%  Cash: %.1f%%\n", 100.0 * fractionRisky, 100.0 * fractionSafe);
         account.rebalance(desiredDistribution);
+        if (time < TimeLib.getTime(2, 1, 1952)) {
+          System.out.printf("[%s]: %.2f + %.2f = %.2f\n", TimeLib.formatDate(time),
+              Fixed.toFloat(account.getValue() - account.getCash()), Fixed.toFloat(account.getCash()),
+              Fixed.toFloat(account.getValue()));
+        }
       }
-      // account.printTransactions(time, TimeLib.TIME_END);
+      account.printTransactions(time, TimeLib.getTime(2, 10, 1951));
       // if (bMonthlyPrediction) {
       // account.printPositions();
       // System.out.printf("[%s] $%s\n", TimeLib.formatMonth(time), Fixed.formatCurrency(account.getValue()));
