@@ -5,28 +5,28 @@ import org.minnen.retiretool.TimeLib;
 
 public class TimeInfo
 {
-  public final long     time;
-  public final Calendar calendar;
-  public final boolean  isFirstDayOfYear;
-  public final boolean  isLastDayOfYear;
-  public final boolean  isFirstDayOfMonth;
-  public final boolean  isLastDayOfMonth;
+  public final long    time;
+  public final boolean isFirstDayOfYear;
+  public final boolean isLastDayOfYear;
+  public final boolean isFirstDayOfMonth;
+  public final boolean isLastDayOfMonth;
 
   public TimeInfo(long time, long prevTime, long nextTime)
   {
     this.time = time;
-    calendar = TimeLib.ms2cal(time);
+    Calendar cal = TimeLib.borrowCal(time);
+    Calendar calPrev = TimeLib.borrowCal(prevTime);
+    Calendar calNext = TimeLib.borrowCal(nextTime);
 
-    Calendar calPrev = TimeLib.ms2cal(prevTime);
-    Calendar calNext = TimeLib.ms2cal(nextTime);
-
-    int month = calendar.get(Calendar.MONTH);
+    int month = cal.get(Calendar.MONTH);
     int monthPrev = calPrev.get(Calendar.MONTH);
     int monthNext = calNext.get(Calendar.MONTH);
 
-    int year = calendar.get(Calendar.YEAR);
+    int year = cal.get(Calendar.YEAR);
     int yearPrev = calPrev.get(Calendar.YEAR);
     int yearNext = calNext.get(Calendar.YEAR);
+
+    TimeLib.returnCals(cal, calPrev, calNext);
 
     assert (year == yearPrev) || (year == yearPrev + 1);
     isFirstDayOfYear = (year != yearPrev);

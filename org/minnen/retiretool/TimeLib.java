@@ -3,25 +3,31 @@ package org.minnen.retiretool;
 import static java.util.Calendar.SUNDAY;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
+import java.util.Stack;
 import java.util.TimeZone;
 
 import org.minnen.retiretool.data.Sequence;
 
 public class TimeLib
 {
-  public final static long             TIME_ERROR = Library.LNAN;
-  public final static long             TIME_BEGIN = Long.MIN_VALUE + 1;
-  public final static long             TIME_END   = Long.MAX_VALUE - 1;
-  public final static long             MS_IN_HOUR = 60 * 60 * 1000L;
-  public final static long             MS_IN_DAY  = 24 * MS_IN_HOUR;
+  public final static long             TIME_ERROR   = Library.LNAN;
+  public final static long             TIME_BEGIN   = Long.MIN_VALUE + 1;
+  public final static long             TIME_END     = Long.MAX_VALUE - 1;
+  public final static long             MS_IN_HOUR   = 60 * 60 * 1000L;
+  public final static long             MS_IN_DAY    = 24 * MS_IN_HOUR;
 
-  public static TimeZone               utc        = TimeZone.getTimeZone("GMT");
-  public final static SimpleDateFormat sdfTime    = getSDF("yyyy MMM d HH:mm:ss");
-  public final static SimpleDateFormat sdfDate    = getSDF("d MMM yyyy");
-  public final static SimpleDateFormat sdfMonth   = getSDF("MMM yyyy");
-  public final static SimpleDateFormat sdfYMD     = getSDF("yyyy-MM-dd");
+  public static TimeZone               utc          = TimeZone.getTimeZone("GMT");
+  public final static SimpleDateFormat sdfTime      = getSDF("yyyy MMM d HH:mm:ss");
+  public final static SimpleDateFormat sdfDate      = getSDF("d MMM yyyy");
+  public final static SimpleDateFormat sdfMonth     = getSDF("MMM yyyy");
+  public final static SimpleDateFormat sdfYMD       = getSDF("yyyy-MM-dd");
+
+  public final static Stack<Calendar>  calendars    = new Stack<Calendar>();
+  private static int                   nCalsCreated = 0;
 
   /**
    * Return the current time in milliseconds. This function just forwards the request to System.currentTimeMillis();
@@ -117,6 +123,32 @@ public class TimeLib
     return last;
   }
 
+  public static Calendar borrowCal(long timeMS)
+  {
+    if (calendars.isEmpty()) {
+      ++nCalsCreated;
+      System.out.printf("Calendars: %d (%d)\n", calendars.size(), nCalsCreated);
+      return ms2cal(timeMS);
+    } else {
+      Calendar cal = calendars.pop();
+      cal.setTimeInMillis(timeMS);
+      return cal;
+    }
+  }
+
+  public static void returnCal(Calendar cal)
+  {
+    assert cal != null;
+    calendars.push(cal);
+  }
+
+  public static void returnCals(Calendar... cals)
+  {
+    for (Calendar cal : cals) {
+      returnCal(cal);
+    }
+  }
+
   public static Calendar ms2cal(long timeMS)
   {
     Calendar cal = now();
@@ -146,14 +178,14 @@ public class TimeLib
 
   public static boolean isSameMonth(long time1, long time2)
   {
-    Calendar cal1 = ms2cal(time1);
-    Calendar cal2 = ms2cal(time2);
+    Calendar cal1 = borrowCal(time1);
+    Calendar cal2 = borrowCal(time2);
 
-    if (cal1.get(Calendar.YEAR) != cal2.get(Calendar.YEAR)) {
-      return false;
-    }
+    boolean bSame = (cal1.get(Calendar.MONTH) == cal2.get(Calendar.MONTH) && cal1.get(Calendar.YEAR) == cal2
+        .get(Calendar.YEAR));
 
-    return cal1.get(Calendar.MONTH) == cal2.get(Calendar.MONTH);
+    returnCals(cal1, cal2);
+    return bSame;
   }
 
   /**

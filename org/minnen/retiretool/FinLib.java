@@ -1309,16 +1309,18 @@ public final class FinLib
       return false;
     }
 
-    Calendar cbuy = TimeLib.ms2cal(buy);
-    Calendar csell = TimeLib.ms2cal(sell);
+    Calendar cbuy = TimeLib.borrowCal(buy);
+    Calendar csell = TimeLib.borrowCal(sell);
 
     // May be able to determine from year alone.
     int year1 = cbuy.get(Calendar.YEAR);
     int year2 = csell.get(Calendar.YEAR);
     if (year2 <= year1) { // same year => stg
+      TimeLib.returnCals(cbuy, csell);
       return false;
     }
     if (year2 > year1 + 1) { // more than one year => ltg
+      TimeLib.returnCals(cbuy, csell);
       return true;
     }
     assert year2 == year1 + 1;
@@ -1327,9 +1329,11 @@ public final class FinLib
     int month1 = cbuy.get(Calendar.MONTH);
     int month2 = csell.get(Calendar.MONTH);
     if (month2 < month1) {
+      TimeLib.returnCals(cbuy, csell);
       return false;
     }
     if (month2 > month1) {
+      TimeLib.returnCals(cbuy, csell);
       return true;
     }
     assert month1 == month2;
@@ -1340,9 +1344,11 @@ public final class FinLib
 
     // Special case for Feb 28: sell on following Feb 29 is still STG.
     if (month1 == 1 && day1 == 28) {
+      TimeLib.returnCals(cbuy, csell);
       return false;
     }
 
+    TimeLib.returnCals(cbuy, csell);
     return day2 > day1;
   }
 
