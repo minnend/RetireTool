@@ -8,9 +8,9 @@ import java.util.TreeMap;
 
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
-import org.minnen.retiretool.predictor.AssetPredictor;
-import org.minnen.retiretool.predictor.SMAPredictor;
-import org.minnen.retiretool.predictor.Multi3Predictor.Disposition;
+import org.minnen.retiretool.predictor.monthly.AssetPredictor;
+import org.minnen.retiretool.predictor.monthly.SMAPredictor;
+import org.minnen.retiretool.predictor.monthly.Multi3Predictor.Disposition;
 import org.minnen.retiretool.stats.WinStats;
 
 public class Strategy

@@ -1,4 +1,4 @@
-package org.minnen.retiretool.predictor;
+package org.minnen.retiretool.predictor.monthly;
 
 import java.util.Arrays;
 

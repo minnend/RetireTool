@@ -1,6 +1,5 @@
-package org.minnen.retiretool.predictor;
+package org.minnen.retiretool.predictor.monthly;
 
-import org.minnen.retiretool.TimeLib;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 

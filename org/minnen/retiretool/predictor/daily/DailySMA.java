@@ -1,6 +1,8 @@
-package org.minnen.retiretool.broker;
+package org.minnen.retiretool.predictor.daily;
 
 import org.minnen.retiretool.TimeLib;
+import org.minnen.retiretool.broker.Account;
+import org.minnen.retiretool.broker.TimeInfo;
 import org.minnen.retiretool.data.Sequence;
 
 public class DailySMA
