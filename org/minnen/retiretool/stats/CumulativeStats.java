@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.minnen.retiretool.FinLib;
+import org.minnen.retiretool.TimeLib;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.WeightedValue;
 
@@ -34,8 +35,9 @@ public class CumulativeStats implements Comparable<CumulativeStats>
     stats.cumulativeReturns = cumulativeReturns;
 
     if (cumulativeReturns != null && !cumulativeReturns.isEmpty()) {
+      int nMonths = TimeLib.monthsBetween(cumulativeReturns.getStartMS(), cumulativeReturns.getEndMS());
       stats.totalReturn = cumulativeReturns.getLast(0) / cumulativeReturns.getFirst(0);
-      stats.cagr = FinLib.getAnnualReturn(stats.totalReturn, cumulativeReturns.size() - 1);
+      stats.cagr = FinLib.getAnnualReturn(stats.totalReturn, nMonths);
 
       DurationalStats rstats = DurationalStats.calc(cumulativeReturns, 12);
       stats.meanAnnualReturn = rstats.mean;

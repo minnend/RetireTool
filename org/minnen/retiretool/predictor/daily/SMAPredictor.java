@@ -43,6 +43,7 @@ public class SMAPredictor extends Predictor
     // Not enough data => invest in safe asset.
     if (iBaseA < 0 || iTriggerA < 0) {
       reloc = -1;
+      timeLastFlip = time;
       return false;
     }
 

@@ -24,4 +24,11 @@ public class ConfigSMA
     this.iPrice = iPrice;
     this.minTimeBetweenFlips = minTimeBetweenFlips;
   }
+
+  @Override
+  public String toString()
+  {
+    return String.format("[%d,%d] / [%d,%d] m=%.2f%%", nLookbackTriggerA, nLookbackTriggerB, nLookbackBaseA,
+        nLookbackBaseB, margin * 100.0);
+  }
 }

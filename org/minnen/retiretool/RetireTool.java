@@ -2,6 +2,9 @@ package org.minnen.retiretool;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -9,6 +12,7 @@ import org.minnen.retiretool.FinLib.DividendMethod;
 import org.minnen.retiretool.predictor.config.ConfigSMA;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.predictor.daily.SMAPredictor;
+import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.broker.Account;
 import org.minnen.retiretool.broker.Broker;
 import org.minnen.retiretool.broker.TimeInfo;
@@ -80,43 +84,29 @@ public class RetireTool
     System.out.printf("#Store: %d  #Misc: %d\n", store.getNumReturns(), store.getNumMisc());
   }
 
-  public static void runBroker()
+  public static Sequence runBrokerSim(Predictor predictor, Broker broker, Sequence guideSeq)
   {
     final String riskyName = "Stock";
     final String safeName = "Cash";
 
-    Sequence stock = store.getMisc(riskyName);
-    final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
-    Sequence guideSeq = stock.subseq(iStart);
-    Broker broker = new Broker(store, guideSeq.getStartMS());
-    Account account = broker.openAccount(Account.Type.Roth, true);
-    ConfigSMA configSMA = new ConfigSMA(50, 0, 200, 0, 0.1, 0, 0L);
-    Predictor predictor = new SMAPredictor(configSMA, riskyName, safeName, broker.accessObject);
-
     final int T = guideSeq.length();
     final long principal = Fixed.toFixed(1000.0);
-    int nFlips = 0;
     boolean bPrevOwnRisky = false;
-    long timeLastFlip = TimeLib.TIME_ERROR;
-    long prevTime = stock.getTimeMS(iStart - 1);
+    long prevTime = guideSeq.getStartMS() - TimeLib.MS_IN_DAY;
     Sequence returns = new Sequence("Returns");
+    Account account = broker.openAccount(Account.Type.Roth, true);
     for (int t = 0; t < T; ++t) {
       long time = guideSeq.getTimeMS(t);
-      // if (time > TimeLib.getTime(10, 9, 1952)) { // TODO for debug
-      // System.exit(0);
-      // }
       store.lock(TimeLib.TIME_BEGIN, time);
       long nextTime = (t == T - 1 ? TimeLib.toNextBusinessDay(time) : guideSeq.getTimeMS(t + 1));
       broker.setTime(time, prevTime, nextTime);
       TimeInfo timeInfo = broker.getTimeInfo();
-      // System.out.printf("Broker: [%s]\n", TimeLib.formatDate(broker.getTime()));
 
       // TODO support jitter for trade day.
 
       // Handle initialization issues at t==0.
       if (t == 0) {
         account.deposit(principal, "Initial Deposit");
-        // account.buyValue("Stock", account.getCash(), null);
         returns.addData(1.0, time);
       }
 
@@ -129,12 +119,6 @@ public class RetireTool
       boolean bOwnRisky = (assetToOwn.equals(riskyName));
       if (bOwnRisky != bPrevOwnRisky) {
         bPrevOwnRisky = bOwnRisky;
-        if (t > 0) {
-          ++nFlips;
-          System.out
-              .printf("Flip [%s]: %d days\n", TimeLib.formatDate(time), (time - timeLastFlip) / TimeLib.MS_IN_DAY);
-        }
-        timeLastFlip = time;
 
         Map<String, Double> desiredDistribution = new TreeMap<>();
         double fractionRisky = (bOwnRisky ? 1.0 : 0.0);
@@ -146,30 +130,6 @@ public class RetireTool
         account.rebalance(desiredDistribution);
       }
 
-      // if (timeInfo.isLastDayOfMonth && time < TimeLib.getTime(2, 1, 1952)) {
-      // System.out.printf("[%s]: %.2f + %.2f = %.2f\n", TimeLib.formatDate(time),
-      // Fixed.toFloat(account.getValue() - account.getCash()), Fixed.toFloat(account.getCash()),
-      // Fixed.toFloat(account.getValue()));
-      // }
-      //
-      // account.printTransactions(time, TimeLib.getTime(2, 10, 1951));
-      // if (bMonthlyPrediction) {
-      // account.printPositions();
-      // System.out.printf("[%s] $%s\n", TimeLib.formatMonth(time), Fixed.formatCurrency(account.getValue()));
-      // }
-
-      // int month = Library.calFromTime(time).get(Calendar.MONTH);
-      // if (month != prevMonth) {
-      // prevMonth = month;
-      //
-      // double value = account.getValue();
-      // double tr = value / principal;
-      // double nMonths = Library.monthsBetween(startSim, time);
-      // double ar = FinLib.getAnnualReturn(tr, nMonths);
-      // System.out.printf("[%s]: $%s (%.3f%%)\n", TimeLib.formatDate(time), FinLib.currencyFormatter.format(value), ar,
-      // nMonths);
-      // }
-
       store.unlock();
       if (timeInfo.isLastDayOfMonth) {
         returns.addData(Fixed.toFloat(Fixed.div(account.getValue(), principal)), time);
@@ -177,20 +137,103 @@ public class RetireTool
       prevTime = time;
     }
 
-    // account.printBuySell();
+    return returns;
+  }
+  
+  public static void runSweep(File dir) throws IOException
+  {
+    final String riskyName = "Stock";
+    final String safeName = "Cash";
 
-    long value = account.getValue();
-    long tr = Fixed.div(value, principal);
-    // System.out.printf("%.3f vs %.3f\n", Fixed.toFloat(tr), returns.getLast(0));
-    // System.out.printf("[%s] vs. [%s]\n", TimeLib.formatDate(broker.getTime()),
-    // TimeLib.formatDate(returns.getEndMS()));
-    int nMonths = TimeLib.monthsBetween(returns.getStartMS(), returns.getEndMS());
-    // System.out.printf("Returns #Months: %d\n", nMonths);
-    double ar = FinLib.getAnnualReturn(Fixed.toFloat(tr), nMonths);
-    System.out.printf("%11s| $%s (%.2f%%)\n", TimeLib.formatDate(returns.getEndMS()), Fixed.formatCurrency(value), ar);
-    System.out.printf("#Flips: %d\n", nFlips);
+    final double[] margins = new double[] { 0.1, 0.25, 0.5, 1.0, 2.0, 3.0, 5.0, 10.0 };
 
-    // account.printTransactions();
+    Sequence stock = store.getMisc(riskyName);
+    final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
+    Sequence guideSeq = stock.subseq(iStart);
+
+    List<CumulativeStats> allStats = new ArrayList<CumulativeStats>();
+    int n = 0;
+    for (int i = 5; i <= 60; i += 5) {
+      for (int ii = 0; ii < i; ii += 5) {
+        for (int j = 10; j <= 250; j += 10) {
+          if (j <= i) {
+            continue;
+          }
+          int nn = 0;
+          long startMS = TimeLib.getTime();
+          for (int jj = 0; jj < j; jj += 10) {
+            for (int k = 0; k < margins.length; ++k) {
+              Broker broker = new Broker(store, guideSeq.getStartMS());
+              ConfigSMA config = new ConfigSMA(i, ii, j, jj, margins[k], 0, 0L);
+              Predictor predictor = new SMAPredictor(config, riskyName, safeName, broker.accessObject);
+
+              Sequence returns = runBrokerSim(predictor, broker, guideSeq);
+              returns.setName(config.toString());
+              CumulativeStats cstats = CumulativeStats.calc(returns);
+              allStats.add(cstats);
+              ++n;
+              ++nn;
+              // System.out.printf("%s = %s\n", config, cstats);
+            }
+          }
+          FinLib.filterStrategies(allStats);
+          Collections.sort(allStats);
+          long duration = TimeLib.getTime() - startMS;
+          System.out.printf("--- Summary (%d / %d @ %.1f/s) ------ \n", allStats.size(), n, 1000.0 * nn / duration);
+          for (CumulativeStats cstats : allStats) {
+            System.out.printf("%s\n", cstats.toRowString());
+          }
+        }
+      }
+    }
+  }
+
+  public static void runJitterTest(File dir) throws IOException
+  {
+    final String riskyName = "Stock";
+    final String safeName = "Cash";
+
+    final double[] margins = new double[] { 0.1, 0.25, 0.5, 1.0, 2.0, 3.0, 5.0, 10.0 };
+
+    Sequence stock = store.getMisc(riskyName);
+    final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
+    Sequence guideSeq = stock.subseq(iStart);
+
+    List<CumulativeStats> allStats = new ArrayList<CumulativeStats>();
+    int n = 0;
+    for (int i = 5; i <= 60; i += 5) {
+      for (int ii = 0; ii < i; ii += 5) {
+        for (int j = 10; j <= 250; j += 10) {
+          if (j <= i) {
+            continue;
+          }
+          int nn = 0;
+          long startMS = TimeLib.getTime();
+          for (int jj = 0; jj < j; jj += 10) {
+            for (int k = 0; k < margins.length; ++k) {
+              Broker broker = new Broker(store, guideSeq.getStartMS());
+              ConfigSMA config = new ConfigSMA(i, ii, j, jj, margins[k], 0, 0L);
+              Predictor predictor = new SMAPredictor(config, riskyName, safeName, broker.accessObject);
+
+              Sequence returns = runBrokerSim(predictor, broker, guideSeq);
+              returns.setName(config.toString());
+              CumulativeStats cstats = CumulativeStats.calc(returns);
+              allStats.add(cstats);
+              ++n;
+              ++nn;
+              // System.out.printf("%s = %s\n", config, cstats);
+            }
+          }
+          FinLib.filterStrategies(allStats);
+          Collections.sort(allStats);
+          long duration = TimeLib.getTime() - startMS;
+          System.out.printf("--- Summary (%d / %d @ %.1f/s) ------ \n", allStats.size(), n, 1000.0 * nn / duration);
+          for (CumulativeStats cstats : allStats) {
+            System.out.printf("%s\n", cstats.toRowString());
+          }
+        }
+      }
+    }
   }
 
   public static void main(String[] args) throws IOException
@@ -201,7 +244,8 @@ public class RetireTool
     assert dir.isDirectory();
 
     setupBroker(dataDir, dir);
-    runBroker();
+    runSweep(dir);
+    //runJitterTest(dir);
 
     // DataIO.downloadDailyDataFromYahoo(dataDir, FinLib.VANGUARD_INVESTOR_FUNDS);
     // DataIO.downloadDailyDataFromYahoo(dataDir, FinLib.STOCK_MARKET_FUNDS);
