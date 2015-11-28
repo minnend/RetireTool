@@ -8,17 +8,29 @@ public class DailySMA
   private final Account account;
   private final String  assetName;
 
-  private final double  margin              = 5.0 / 100.0;
-  private final int     nLookbackBase       = 50;
-  private final int     nLookbackTrigger    = 5;
-  private final int     iPrice              = 0;
-  private final long    minTimeBetweenFlips = 2 * TimeLib.MS_IN_DAY;
+  private final double  margin;
+  private final int     nLookbackBase;
+  private final int     nLookbackTrigger;
+  private final int     iPrice;
+  private final long    minTimeBetweenFlips;
 
-  private int           reloc               = 0;
-  private long          timeLastFlip        = TimeLib.TIME_BEGIN;
+  /** Relative location: -1 = below threshold; 1 = above threshold. */
+  private int           reloc        = 0;
+  private long          timeLastFlip = TimeLib.TIME_ERROR;
 
-  public DailySMA(Account account, String assetName)
+  public DailySMA(int nLookbackTrigger, int nLookbackBase, double margin, String assetName, Account account)
   {
+    this(nLookbackTrigger, nLookbackBase, margin, 0L, 0, assetName, account);
+  }
+
+  public DailySMA(int nLookbackTrigger, int nLookbackBase, double margin, long minTimeBetweenFlips, int iPrice,
+      String assetName, Account account)
+  {
+    this.nLookbackTrigger = nLookbackTrigger;
+    this.nLookbackBase = nLookbackBase;
+    this.margin = margin / 100.0;
+    this.minTimeBetweenFlips = minTimeBetweenFlips;
+    this.iPrice = iPrice;
     this.account = account;
     this.assetName = assetName;
   }
@@ -26,7 +38,6 @@ public class DailySMA
   public void init(TimeInfo timeInfo)
   {
     // Nothing to do.
-    timeLastFlip = timeInfo.time - minTimeBetweenFlips - 1L;
   }
 
   public void step(TimeInfo timeInfo)
@@ -37,17 +48,20 @@ public class DailySMA
   public boolean predict()
   {
     final long time = account.broker.getTime();
-    if (reloc != 0 && time - timeLastFlip < minTimeBetweenFlips) {
+
+    // If it's too soon to change, repeat last decision.
+    if (reloc != 0 && (timeLastFlip == TimeLib.TIME_ERROR || time - timeLastFlip < minTimeBetweenFlips)) {
       return reloc > 0;
     }
 
-    Sequence seq = account.broker.store.getMisc(assetName);
+    final Sequence seq = account.broker.store.getMisc(assetName);
     final int iLast = seq.length() - 1;
     final int iBase = iLast - nLookbackBase;
     final int iTrigger = iLast - nLookbackTrigger;
 
     // Not enough data => invest in safe asset.
     if (iBase < 0 || iTrigger < 0) {
+      reloc = -1;
       return false;
     }
 

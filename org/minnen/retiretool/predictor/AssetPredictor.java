@@ -3,6 +3,7 @@ package org.minnen.retiretool.predictor;
 import java.util.Arrays;
 
 import org.minnen.retiretool.Library;
+import org.minnen.retiretool.TimeLib;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 
@@ -14,7 +15,7 @@ public abstract class AssetPredictor
 
   public AssetPredictor[]    predictors;
 
-  protected long             lastFeedbackMS = Long.MIN_VALUE;
+  protected long             lastFeedbackMS = TimeLib.TIME_BEGIN;
 
   /** True for predictors with no state or memory. */
   protected boolean          bAllowReuse    = false;

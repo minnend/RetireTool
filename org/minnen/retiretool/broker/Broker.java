@@ -16,9 +16,10 @@ public class Broker
 
   private TimeInfo            timeInfo;
 
-  public Broker(SequenceStore store)
+  public Broker(SequenceStore store, long time)
   {
     this.store = store;
+    timeInfo = new TimeInfo(time, time, time);
   }
 
   public void setTime(long time, long prevTime, long nextTime)
@@ -52,13 +53,20 @@ public class Broker
     }
   }
 
+  public Account openAccount(Account.Type accountType, boolean bReinvestDividends)
+  {
+    return openAccount(0L, accountType, bReinvestDividends);
+  }
+
   public Account openAccount(long startingBalance, Account.Type accountType, boolean bReinvestDividends)
   {
     assert startingBalance >= 0L;
 
     Account account = new Account(this, accountType, bReinvestDividends);
     accounts.add(account);
-    account.deposit(startingBalance, "Initial Deposit");
+    if (startingBalance > 0L) {
+      account.deposit(startingBalance, "Initial Deposit");
+    }
     return account;
   }
 
