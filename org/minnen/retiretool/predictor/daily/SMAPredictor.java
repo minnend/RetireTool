@@ -2,61 +2,49 @@ package org.minnen.retiretool.predictor.daily;
 
 import org.minnen.retiretool.TimeLib;
 import org.minnen.retiretool.broker.Account;
+import org.minnen.retiretool.broker.BrokerInfoAccess;
 import org.minnen.retiretool.broker.TimeInfo;
 import org.minnen.retiretool.data.Sequence;
 
-public class SMAPredictor
+public class SMAPredictor extends DailyPredictor
 {
-  private final Account account;
-  private final String  assetName;
-
-  private final double  margin;
-  private final int     nLookbackBase;
-  private final int     nLookbackTrigger;
-  private final int     iPrice;
-  private final long    minTimeBetweenFlips;
+  private final double margin;
+  private final int    nLookbackBase;
+  private final int    nLookbackTrigger;
+  private final int    iPrice;
+  private final long   minTimeBetweenFlips;
 
   /** Relative location: -1 = below threshold; 1 = above threshold. */
-  private int           reloc        = 0;
-  private long          timeLastFlip = TimeLib.TIME_ERROR;
+  private int          reloc        = 0;
+  private long         timeLastFlip = TimeLib.TIME_ERROR;
 
-  public SMAPredictor(int nLookbackTrigger, int nLookbackBase, double margin, String assetName, Account account)
+  public SMAPredictor(int nLookbackTrigger, int nLookbackBase, double margin, String assetName,
+      String alternativeAsset, BrokerInfoAccess brokerAccess)
   {
-    this(nLookbackTrigger, nLookbackBase, margin, 0L, 0, assetName, account);
+    this(nLookbackTrigger, nLookbackBase, margin, 0L, 0, assetName, alternativeAsset, brokerAccess);
   }
 
   public SMAPredictor(int nLookbackTrigger, int nLookbackBase, double margin, long minTimeBetweenFlips, int iPrice,
-      String assetName, Account account)
+      String assetName, String alternativeAsset, BrokerInfoAccess brokerAccess)
   {
+    super("SMA", brokerAccess, new String[] { assetName, alternativeAsset });
     this.nLookbackTrigger = nLookbackTrigger;
     this.nLookbackBase = nLookbackBase;
     this.margin = margin / 100.0;
     this.minTimeBetweenFlips = minTimeBetweenFlips;
     this.iPrice = iPrice;
-    this.account = account;
-    this.assetName = assetName;
-  }
-
-  public void init(TimeInfo timeInfo)
-  {
-    // Nothing to do.
-  }
-
-  public void step(TimeInfo timeInfo)
-  {
-    // Nothing to do.
   }
 
   public boolean predict()
   {
-    final long time = account.broker.getTime();
+    final long time = brokerAccess.getTime();
 
     // If it's too soon to change, repeat last decision.
     if (reloc != 0 && (timeLastFlip == TimeLib.TIME_ERROR || time - timeLastFlip < minTimeBetweenFlips)) {
       return reloc > 0;
     }
 
-    final Sequence seq = account.broker.store.getMisc(assetName);
+    final Sequence seq = brokerAccess.getPriceSeq(assetChoices[0]);
     final int iLast = seq.length() - 1;
     final int iBase = iLast - nLookbackBase;
     final int iTrigger = iLast - nLookbackTrigger;

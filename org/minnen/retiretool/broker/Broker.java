@@ -77,6 +77,8 @@ public class Broker
 
   public long getPrice(String name, long time)
   {
+    assert time <= getTime(); // No peeking into the future.
+
     Sequence seq = store.getMisc(name);
     int index = seq.getClosestIndex(time);
     double floatPrice = seq.get(index, 0);

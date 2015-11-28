@@ -71,7 +71,7 @@ public abstract class AssetPredictor
     throw new RuntimeException("Asset Predictors that predict a distribution should override this method.");
   }
 
-  public void feedback(long timeMS, int iCorrect, double r)
+  public void feedback(long timeMS, int iCorrect, double observedReturn)
   {
     // Default behavior is to ignore feedback but protect against rewinds.
     assert bAllowReuse || timeMS > lastFeedbackMS;
