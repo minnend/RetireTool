@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
 
 import org.minnen.retiretool.Chart.ChartType;
 import org.minnen.retiretool.FinLib.DividendMethod;
-import org.minnen.retiretool.predictor.daily.DailySMA;
+import org.minnen.retiretool.predictor.daily.SMAPredictor;
 import org.minnen.retiretool.predictor.monthly.AssetPredictor;
 import org.minnen.retiretool.predictor.monthly.ConstantPredictor;
 import org.minnen.retiretool.predictor.monthly.MixedPredictor;
@@ -1885,14 +1885,14 @@ public class RetireTool
     final String riskyName = "Stock";
     final String safeName = "Cash";
 
-    DailySMA smaDaily = null;
+    SMAPredictor smaDaily = null;
 
     Sequence stock = store.getMisc(riskyName);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stock.subseq(iStart);
     Broker broker = new Broker(store, guideSeq.getStartMS());
     Account account = broker.openAccount(Account.Type.Roth, true);
-    smaDaily = new DailySMA(50, 200, 0.1, riskyName, account);
+    smaDaily = new SMAPredictor(50, 200, 0.1, riskyName, account);
 
     final int T = guideSeq.length();
     final long principal = Fixed.toFixed(1000.0);

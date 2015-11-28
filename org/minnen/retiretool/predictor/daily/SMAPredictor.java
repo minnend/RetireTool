@@ -5,7 +5,7 @@ import org.minnen.retiretool.broker.Account;
 import org.minnen.retiretool.broker.TimeInfo;
 import org.minnen.retiretool.data.Sequence;
 
-public class DailySMA
+public class SMAPredictor
 {
   private final Account account;
   private final String  assetName;
@@ -20,12 +20,12 @@ public class DailySMA
   private int           reloc        = 0;
   private long          timeLastFlip = TimeLib.TIME_ERROR;
 
-  public DailySMA(int nLookbackTrigger, int nLookbackBase, double margin, String assetName, Account account)
+  public SMAPredictor(int nLookbackTrigger, int nLookbackBase, double margin, String assetName, Account account)
   {
     this(nLookbackTrigger, nLookbackBase, margin, 0L, 0, assetName, account);
   }
 
-  public DailySMA(int nLookbackTrigger, int nLookbackBase, double margin, long minTimeBetweenFlips, int iPrice,
+  public SMAPredictor(int nLookbackTrigger, int nLookbackBase, double margin, long minTimeBetweenFlips, int iPrice,
       String assetName, Account account)
   {
     this.nLookbackTrigger = nLookbackTrigger;
