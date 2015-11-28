@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.minnen.retiretool.FinLib.DividendMethod;
+import org.minnen.retiretool.predictor.config.ConfigSMA;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.predictor.daily.SMAPredictor;
 import org.minnen.retiretool.broker.Account;
@@ -89,7 +90,8 @@ public class RetireTool
     Sequence guideSeq = stock.subseq(iStart);
     Broker broker = new Broker(store, guideSeq.getStartMS());
     Account account = broker.openAccount(Account.Type.Roth, true);
-    Predictor predictor = new SMAPredictor(50, 200, 0.1, riskyName, safeName, broker.accessObject);
+    ConfigSMA configSMA = new ConfigSMA(50, 0, 200, 0, 0.1, 0, 0L);
+    Predictor predictor = new SMAPredictor(configSMA, riskyName, safeName, broker.accessObject);
 
     final int T = guideSeq.length();
     final long principal = Fixed.toFixed(1000.0);
