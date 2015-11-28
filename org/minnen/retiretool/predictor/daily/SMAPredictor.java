@@ -48,8 +48,8 @@ public class SMAPredictor extends Predictor
     }
 
     // Calculate SMA values for base (threshold) and trigger.
-    double threshold = seq.average(iBaseA, iBaseB).get(config.iPrice);
-    double trigger = seq.average(iTriggerA, iTriggerB).get(config.iPrice);
+    double threshold = seq.average(iBaseA, iBaseB, config.iPrice);
+    double trigger = seq.average(iTriggerA, iTriggerB, config.iPrice);
 
     // Adjust threshold if we're using a trigger margin.
     if (config.margin > 0.0) {

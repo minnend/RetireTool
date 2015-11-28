@@ -197,6 +197,9 @@ public class Sequence implements Iterable<FeatureVec>
   /** @return i^th feature vector */
   public FeatureVec get(int i)
   {
+    if (i < 0) {
+      i += length();
+    }
     i = adjustIndex(i);
     return data.get(i);
   }
@@ -204,9 +207,6 @@ public class Sequence implements Iterable<FeatureVec>
   /** @return value of the d^th dimension in the i^th feature vector */
   public double get(int i, int d)
   {
-    if (i < 0) {
-      i += length();
-    }
     return get(i).get(d);
   }
 
@@ -709,6 +709,29 @@ public class Sequence implements Iterable<FeatureVec>
       average._add(get(j));
     }
     return average._div(N);
+  }
+
+  /**
+   * Calculate the average in [iStart, iEnd] for the given sequence.
+   * 
+   * @param iStart first index (inclusive)
+   * @param iEnd last index (inclusive)
+   * @param iDim index of dimension over which to calculate the average
+   * @return vector of averages in [iStart, iEnd]
+   */
+  public double average(int iStart, int iEnd, int iDim)
+  {
+    if (iEnd < 0) {
+      iEnd += length();
+    }
+    final int N = iEnd - iStart + 1;
+    assert N > 0;
+
+    double sum = 0.0;
+    for (int j = iStart; j <= iEnd; ++j) {
+      sum += get(j, iDim);
+    }
+    return sum / N;
   }
 
   /** Reverse elements of this sequence (in-place). */

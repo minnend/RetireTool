@@ -117,4 +117,18 @@ public class TestSequence
     assertEquals(3.5, seq.average(2, 3).get(0), eps);
     assertEquals(4.0, seq.average(3, 3).get(0), eps);
   }
+
+  @Test
+  public void testAverageDim()
+  {
+    Sequence seq = new Sequence(new double[] { 1.0, 2.0, 3.0, 4.0 });
+
+    assertEquals(1.0, seq.average(0, 0, 0), eps);
+    assertEquals(1.5, seq.average(0, 1, 0), eps);
+    assertEquals(2.0, seq.average(0, 2, 0), eps);
+    assertEquals(2.5, seq.average(0, 3, 0), eps);
+
+    assertEquals(3.5, seq.average(2, 3, 0), eps);
+    assertEquals(4.0, seq.average(3, 3, 0), eps);
+  }
 }
