@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.minnen.retiretool.FinLib.DividendMethod;
+import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.predictor.daily.SMAPredictor;
 import org.minnen.retiretool.broker.Account;
 import org.minnen.retiretool.broker.Broker;
@@ -83,14 +84,12 @@ public class RetireTool
     final String riskyName = "Stock";
     final String safeName = "Cash";
 
-    SMAPredictor smaDaily = null;
-
     Sequence stock = store.getMisc(riskyName);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stock.subseq(iStart);
     Broker broker = new Broker(store, guideSeq.getStartMS());
     Account account = broker.openAccount(Account.Type.Roth, true);
-    smaDaily = new SMAPredictor(50, 200, 0.1, riskyName, safeName, broker.accessObject);
+    Predictor predictor = new SMAPredictor(50, 200, 0.1, riskyName, safeName, broker.accessObject);
 
     final int T = guideSeq.length();
     final long principal = Fixed.toFixed(1000.0);
@@ -123,11 +122,16 @@ public class RetireTool
       broker.doEndOfDayBusiness();
 
       // Time for a prediction and possible asset change.
-      boolean bOwnRisky = smaDaily.predict();
+      String assetToOwn = predictor.selectAsset();
+      assert assetToOwn.equals(riskyName) || assetToOwn.equals(safeName);
+      boolean bOwnRisky = (assetToOwn.equals(riskyName));
       if (bOwnRisky != bPrevOwnRisky) {
         bPrevOwnRisky = bOwnRisky;
-        ++nFlips;
-        System.out.printf("Flip [%s]: %d days\n", TimeLib.formatDate(time), (time - timeLastFlip) / TimeLib.MS_IN_DAY);
+        if (t > 0) {
+          ++nFlips;
+          System.out
+              .printf("Flip [%s]: %d days\n", TimeLib.formatDate(time), (time - timeLastFlip) / TimeLib.MS_IN_DAY);
+        }
         timeLastFlip = time;
 
         Map<String, Double> desiredDistribution = new TreeMap<>();

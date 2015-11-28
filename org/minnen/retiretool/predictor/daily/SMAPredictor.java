@@ -1,12 +1,10 @@
 package org.minnen.retiretool.predictor.daily;
 
 import org.minnen.retiretool.TimeLib;
-import org.minnen.retiretool.broker.Account;
 import org.minnen.retiretool.broker.BrokerInfoAccess;
-import org.minnen.retiretool.broker.TimeInfo;
 import org.minnen.retiretool.data.Sequence;
 
-public class SMAPredictor extends DailyPredictor
+public class SMAPredictor extends Predictor
 {
   private final double margin;
   private final int    nLookbackBase;
@@ -28,6 +26,7 @@ public class SMAPredictor extends DailyPredictor
       String assetName, String alternativeAsset, BrokerInfoAccess brokerAccess)
   {
     super("SMA", brokerAccess, new String[] { assetName, alternativeAsset });
+    this.predictorType = PredictorType.InOut;
     this.nLookbackTrigger = nLookbackTrigger;
     this.nLookbackBase = nLookbackBase;
     this.margin = margin / 100.0;
@@ -35,7 +34,8 @@ public class SMAPredictor extends DailyPredictor
     this.iPrice = iPrice;
   }
 
-  public boolean predict()
+  @Override
+  protected boolean calcInOut()
   {
     final long time = brokerAccess.getTime();
 

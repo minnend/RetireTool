@@ -6,7 +6,7 @@ import org.minnen.retiretool.broker.BrokerInfoAccess;
 import org.minnen.retiretool.data.DiscreteDistribution;
 
 /** Abstract parent class for all broker-based predictors. */
-public abstract class DailyPredictor
+public abstract class Predictor
 {
   /**
    * Type of Predictor.
@@ -17,7 +17,7 @@ public abstract class DailyPredictor
    * <li>Distribution = Generate a distribution over all assets.
    * </ul>
    */
-  public enum Type {
+  public enum PredictorType {
     InOut, SelectOne, Distribution
   }
 
@@ -31,18 +31,18 @@ public abstract class DailyPredictor
   public final BrokerInfoAccess brokerAccess;
 
   /** Sub-predictors that are aggregated by this predictor (e.g. to support ensembles). */
-  public DailyPredictor[]       predictors;
+  public Predictor[]       predictors;
 
   /** Timestamp for last feedback; used to detect out-of-order feedback. */
   protected long                lastFeedbackMS = TimeLib.TIME_BEGIN;
 
   /** Type of predictor. */
-  protected Type                predictorType;
+  protected PredictorType                predictorType;
 
   /** Reusable distribution array to reduce object creation. */
   private DiscreteDistribution  distribution;
 
-  public DailyPredictor(String name, BrokerInfoAccess brokerAccess, String... assetChoices)
+  public Predictor(String name, BrokerInfoAccess brokerAccess, String... assetChoices)
   {
     this.name = name;
     this.assetChoices = assetChoices;
@@ -51,14 +51,14 @@ public abstract class DailyPredictor
 
   public final String selectAsset()
   {
-    if (predictorType == Type.InOut) {
+    if (predictorType == PredictorType.InOut) {
       boolean bIn = calcInOut();
       return assetChoices[bIn ? 0 : 1];
-    } else if (predictorType == Type.SelectOne) {
+    } else if (predictorType == PredictorType.SelectOne) {
       int index = calcSelectOne();
       return assetChoices[index];
     } else {
-      assert predictorType == Type.Distribution;
+      assert predictorType == PredictorType.Distribution : predictorType;
       DiscreteDistribution distribution = selectDistribution();
       int index = Library.argmax(distribution.weights);
       assert Math.abs(distribution.weights[index] - 1.0) < 1e-6;
@@ -75,14 +75,14 @@ public abstract class DailyPredictor
       distribution.clear();
     }
 
-    if (predictorType == Type.InOut) {
+    if (predictorType == PredictorType.InOut) {
       boolean bIn = calcInOut();
       distribution.weights[bIn ? 0 : 1] = 1.0;
-    } else if (predictorType == Type.SelectOne) {
+    } else if (predictorType == PredictorType.SelectOne) {
       int index = calcSelectOne();
       distribution.weights[index] = 1.0;
     } else {
-      assert predictorType == Type.Distribution;
+      assert predictorType == PredictorType.Distribution;
       calcDistribution(distribution);
     }
 
@@ -116,7 +116,7 @@ public abstract class DailyPredictor
   {
     lastFeedbackMS = Long.MIN_VALUE;
     if (predictors != null) {
-      for (DailyPredictor predictor : predictors) {
+      for (Predictor predictor : predictors) {
         predictor.reset();
       }
     }
