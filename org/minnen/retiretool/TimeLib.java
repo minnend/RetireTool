@@ -50,10 +50,16 @@ public class TimeLib
     return cal;
   }
 
+  public static Calendar ms2cal(long timeMS)
+  {
+    Calendar cal = now();
+    cal.setTimeInMillis(timeMS);
+    return cal;
+  }
+
   public static double fractionalMonthsBetween(long from, long to)
   {
-    Calendar cal = ms2cal(from);
-
+    Calendar cal = borrowCal(from);
     int year1 = cal.get(Calendar.YEAR);
     int month1 = cal.get(Calendar.MONTH);
     int day1 = cal.get(Calendar.DAY_OF_MONTH);
@@ -62,20 +68,21 @@ public class TimeLib
     int year2 = cal.get(Calendar.YEAR);
     int month2 = cal.get(Calendar.MONTH);
     int day2 = cal.get(Calendar.DAY_OF_MONTH);
+    returnCal(cal);
 
     return (year2 - year1) * 12 + (month2 - month1) + (day2 - day1) / 30.0;
   }
 
   public static int monthsBetween(long from, long to)
   {
-    Calendar cal = ms2cal(from);
-
+    Calendar cal = borrowCal(from);
     int year1 = cal.get(Calendar.YEAR);
     int month1 = cal.get(Calendar.MONTH);
 
     cal.setTimeInMillis(to);
     int year2 = cal.get(Calendar.YEAR);
     int month2 = cal.get(Calendar.MONTH);
+    returnCal(cal);
 
     return Math.abs((year2 - year1) * 12 + (month2 - month1));
   }
@@ -123,23 +130,32 @@ public class TimeLib
     return last;
   }
 
+  /** Borrow a Calendar set to the given time (ms since epoch). */
   public static Calendar borrowCal(long timeMS)
+  {
+    assert timeMS != TIME_ERROR;
+    Calendar cal = borrowCal();
+    cal.setTimeInMillis(timeMS);
+    return cal;
+  }
+
+  /** Borrow a Calendar set to an arbitrary time. */
+  public static Calendar borrowCal()
   {
     if (calendars.isEmpty()) {
       ++nCalsCreated;
       System.out.printf("Calendars: %d (%d)\n", calendars.size(), nCalsCreated);
-      return ms2cal(timeMS);
+      return now();
     } else {
-      Calendar cal = calendars.pop();
-      cal.setTimeInMillis(timeMS);
-      return cal;
+      return calendars.pop();
     }
   }
 
-  public static void returnCal(Calendar cal)
+  public static long returnCal(Calendar cal)
   {
     assert cal != null;
     calendars.push(cal);
+    return cal.getTimeInMillis();
   }
 
   public static void returnCals(Calendar... cals)
@@ -149,31 +165,16 @@ public class TimeLib
     }
   }
 
-  public static Calendar ms2cal(long timeMS)
-  {
-    Calendar cal = now();
-    cal.setTimeInMillis(timeMS);
-    return cal;
-  }
-
   public static boolean isSameDay(long time1, long time2)
   {
-    Calendar cal1 = ms2cal(time1);
-    Calendar cal2 = ms2cal(time2);
+    Calendar cal1 = borrowCal(time1);
+    Calendar cal2 = borrowCal(time2);
 
-    if (cal1.get(Calendar.YEAR) != cal2.get(Calendar.YEAR)) {
-      return false;
-    }
+    boolean bSame = (cal1.get(Calendar.DAY_OF_MONTH) == cal2.get(Calendar.DAY_OF_MONTH)
+        && cal1.get(Calendar.MONTH) == cal2.get(Calendar.MONTH) && cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR));
 
-    if (cal1.get(Calendar.MONTH) != cal2.get(Calendar.MONTH)) {
-      return false;
-    }
-
-    if (cal1.get(Calendar.DAY_OF_MONTH) != cal2.get(Calendar.DAY_OF_MONTH)) {
-      return false;
-    }
-
-    return true;
+    returnCals(cal1, cal2);
+    return bSame;
   }
 
   public static boolean isSameMonth(long time1, long time2)
@@ -227,7 +228,9 @@ public class TimeLib
    */
   public static long getTime(int day, int month, int year)
   {
-    return getCal(day, month, year).getTimeInMillis();
+    Calendar cal = borrowCal(0L);
+    setTime(cal, day, month, year);
+    return returnCal(cal);
   }
 
   /**
@@ -236,13 +239,10 @@ public class TimeLib
    * @param year Gregorian year
    * @return milliseconds since the epoch for midnight on the specified date (midnight = start of day, not end of day)
    */
-  public static Calendar getCal(int day, int month, int year)
+  public static Calendar setTime(Calendar cal, int day, int month, int year)
   {
     assert day >= 1 && day <= 31;
     assert month >= 1 && month <= 12;
-    Calendar cal = now();
-    cal.setLenient(true);
-    cal.setTimeInMillis(0);
     cal.set(Calendar.DATE, day);
     cal.set(Calendar.MONTH, month - 1);
     cal.set(Calendar.YEAR, year);
@@ -256,11 +256,12 @@ public class TimeLib
   /** @return milliseconds since start of the day for the given time (specified in ms since epoch) */
   public static long getMillisSinceStartOfDay(long ms)
   {
-    Calendar cal = now();
+    Calendar cal = borrowCal();
     cal.setTimeInMillis(ms);
     int day = cal.get(Calendar.DAY_OF_MONTH);
     int month = cal.get(Calendar.MONTH) + 1;
     int year = cal.get(Calendar.YEAR);
+    returnCal(cal);
     long startOfDay = getTime(day, month, year);
     return ms - startOfDay;
   }
@@ -303,6 +304,7 @@ public class TimeLib
   /** @return ms since epoch at midnight that starts the day of the given time */
   public static long toMidnight(long ms)
   {
+    assert ms != TIME_ERROR;
     long days = ms / MS_IN_DAY;
     // if data is before 1970, ms is neg and floor does the wrong thing
     if (ms < 0)
@@ -313,16 +315,16 @@ public class TimeLib
   /** @return ms for the given time moved to the first day of the month */
   public static long toFirstOfMonth(long ms)
   {
-    Calendar cal = ms2cal(ms);
+    Calendar cal = borrowCal(ms);
     cal.set(Calendar.DATE, 1);
-    return cal.getTimeInMillis();
+    return returnCal(cal);
   }
 
   /** @return ms for the given time moved to the last day of the month */
   public static long toEndOfMonth(long ms)
   {
     // Move to next month.
-    Calendar cal = ms2cal(ms);
+    Calendar cal = borrowCal(ms);
     cal.add(Calendar.MONTH, 1);
 
     // Move to first day of next month.
@@ -330,18 +332,19 @@ public class TimeLib
 
     // Move one day back, which is the last day of the original month.
     cal.add(Calendar.DATE, -1);
-    return cal.getTimeInMillis();
+    return returnCal(cal);
   }
 
   /** @return ms for the given time moved to the last business day of the month */
   public static long toLastBusinessDayOfMonth(long ms)
   {
     // Move to next month.
-    Calendar cal = ms2cal(ms);
+    Calendar cal = borrowCal(ms);
     cal.add(Calendar.MONTH, 1);
 
     // Move to first day of next month.
     ms = toFirstOfMonth(cal.getTimeInMillis());
+    returnCal(cal);
 
     // Return previous business day.
     return toPreviousBusinessDay(ms);
@@ -432,7 +435,7 @@ public class TimeLib
 
   public static long toPreviousBusinessDay(long time)
   {
-    Calendar cal = TimeLib.ms2cal(time);
+    Calendar cal = TimeLib.borrowCal(time);
     while (true) {
       cal.add(Calendar.DAY_OF_YEAR, -1);
       int day = cal.get(Calendar.DAY_OF_WEEK);
@@ -440,12 +443,12 @@ public class TimeLib
         break;
       }
     }
-    return cal.getTimeInMillis();
+    return returnCal(cal);
   }
 
   public static long toNextBusinessDay(long time)
   {
-    Calendar cal = TimeLib.ms2cal(time);
+    Calendar cal = TimeLib.borrowCal(time);
     while (true) {
       cal.add(Calendar.DAY_OF_YEAR, 1);
       int day = cal.get(Calendar.DAY_OF_WEEK);
@@ -453,7 +456,7 @@ public class TimeLib
         break;
       }
     }
-    return cal.getTimeInMillis();
+    return returnCal(cal);
   }
 
   /**
@@ -466,12 +469,13 @@ public class TimeLib
    */
   public static long getClosestBusinessDay(long timeInMonth, int dayOfMonth, boolean bAcceptDifferentMonth)
   {
-    Calendar cal = TimeLib.ms2cal(timeInMonth);
+    Calendar cal = TimeLib.borrowCal(timeInMonth);
     long baseTime = TimeLib.getTime(dayOfMonth, cal.get(Calendar.MONTH) + 1, cal.get(Calendar.YEAR));
 
     // If base is a business day, we're done.
     int day = cal.get(Calendar.DAY_OF_WEEK);
     if (day != Calendar.SATURDAY && day != Calendar.SUNDAY) {
+      TimeLib.returnCal(cal);
       return baseTime;
     }
 
@@ -481,17 +485,20 @@ public class TimeLib
     assert nextTime > baseTime;
 
     if (!bAcceptDifferentMonth) {
-      Calendar calPrev = TimeLib.ms2cal(prevTime);
+      Calendar calPrev = TimeLib.borrowCal(prevTime);
       if (calPrev.get(Calendar.MONTH) != cal.get(Calendar.MONTH)) {
+        TimeLib.returnCals(cal, calPrev);
         return nextTime;
       }
 
-      Calendar calNext = TimeLib.ms2cal(nextTime);
+      Calendar calNext = TimeLib.borrowCal(nextTime);
       if (calNext.get(Calendar.MONTH) != cal.get(Calendar.MONTH)) {
+        TimeLib.returnCals(cal, calNext);
         return prevTime;
       }
     }
 
+    TimeLib.returnCal(cal);
     return (baseTime - prevTime < nextTime - baseTime ? prevTime : nextTime);
   }
 }

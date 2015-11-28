@@ -722,8 +722,9 @@ public final class FinLib
     double div = 0.0;
 
     // Dividends at the end of every quarter (march, june, september, december).
-    Calendar cal = TimeLib.ms2cal(snp.getTimeMS(index));
+    Calendar cal = TimeLib.borrowCal(snp.getTimeMS(index));
     int month = cal.get(Calendar.MONTH);
+    TimeLib.returnCal(cal);
     if (month % 3 == 2) { // time for a dividend!
       for (int j = 0; j < 3; j++) {
         if (index - j < iMinIndex)
