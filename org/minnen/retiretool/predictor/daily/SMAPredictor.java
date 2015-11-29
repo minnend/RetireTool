@@ -84,4 +84,11 @@ public class SMAPredictor extends Predictor
     }
     return reloc >= 0;
   }
+
+  @Override
+  public void reset()
+  {
+    reloc = 0;
+    timeLastFlip = TimeLib.TIME_ERROR;
+  }
 }

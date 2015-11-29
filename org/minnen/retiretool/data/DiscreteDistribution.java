@@ -63,4 +63,14 @@ public class DiscreteDistribution
   {
     Arrays.fill(weights, 0.0);
   }
+
+  public static DiscreteDistribution makeUniform(int n)
+  {
+    DiscreteDistribution distribution = new DiscreteDistribution(n);
+    double w = 1.0 / n;
+    for (int i = 0; i < n; ++i) {
+      distribution.weights[i] = w;
+    }
+    return distribution;
+  }
 }

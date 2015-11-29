@@ -10,6 +10,7 @@ import java.util.TreeMap;
 
 import org.minnen.retiretool.FinLib.DividendMethod;
 import org.minnen.retiretool.predictor.config.ConfigSMA;
+import org.minnen.retiretool.predictor.daily.MixedPredictor;
 import org.minnen.retiretool.predictor.daily.MultiPredictor;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.predictor.daily.SMAPredictor;
@@ -19,6 +20,7 @@ import org.minnen.retiretool.broker.Account;
 import org.minnen.retiretool.broker.Broker;
 import org.minnen.retiretool.broker.TimeInfo;
 import org.minnen.retiretool.data.DataIO;
+import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
@@ -202,22 +204,22 @@ public class RetireTool
     Sequence stock = store.getMisc(riskyName);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stock.subseq(iStart);
+    Broker broker = new Broker(store, guideSeq.getStartMS());
 
     Sequence results = new Sequence();
-
     long startMS = TimeLib.getTime();
     for (int da = -2; da <= 2; da += 2) {
       for (int db = -2; db <= 2; db += 2) {
         for (int dc = -2; dc <= 2; dc += 2) {
           for (int dd = -2; dd <= 2; dd += 2) {
             for (int dm = -2; dm <= 2; dm += 2) {
-              Broker broker = new Broker(store, guideSeq.getStartMS());
               ConfigSMA jitteredConfig = new ConfigSMA(config.nLookbackTriggerA + da, config.nLookbackTriggerB + db,
                   config.nLookbackBaseA + dc, config.nLookbackBaseB + dd, config.margin * (1.0 + dm / 10.0),
                   config.iPrice, config.minTimeBetweenFlips);
               if (!jitteredConfig.isValid()) {
                 continue;
               }
+              broker.reset();
               Predictor predictor = new SMAPredictor(jitteredConfig, riskyName, safeName, broker.accessObject);
 
               Sequence returns = runBrokerSim(predictor, broker, guideSeq);
@@ -241,33 +243,34 @@ public class RetireTool
     System.out.println(drawdownStats);
   }
 
-  public static void runOne(File dir) throws IOException
+  public static void runMultiSweep(File dir) throws IOException
   {
     final String riskyName = "stock";
     final String safeName = "cash";
 
-    final long gap = 2 * TimeLib.MS_IN_DAY;
-    ConfigSMA[] configs = new ConfigSMA[] {
-        new ConfigSMA(5, 0, 160, 0, 0.5, 0, gap),
-        //new ConfigSMA(35, 0, 50, 10, 2.0, 0, gap),
-        new ConfigSMA(55, 30, 80, 70, 0.1, 0, gap),
-        new ConfigSMA(60, 0, 70, 10, 1.0, 0, gap) };
-
-    Predictor[] predictors = new SMAPredictor[configs.length];
-
     Sequence stock = store.getMisc(riskyName);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stock.subseq(iStart);
+    Broker broker = new Broker(store, guideSeq.getStartMS());
+
+    final long gap = 2 * TimeLib.MS_IN_DAY;
+    ConfigSMA[] configs = new ConfigSMA[] {
+        // new ConfigSMA(5, 0, 160, 0, 0.5, 0, gap),
+        // new ConfigSMA(35, 0, 50, 10, 2.0, 0, gap),
+        new ConfigSMA(15, 5, 30, 0, 2.0, 0, gap), new ConfigSMA(55, 30, 80, 70, 0.1, 0, gap),
+        new ConfigSMA(60, 0, 70, 10, 1.0, 0, gap), };
+
+    Predictor[] predictors = new SMAPredictor[configs.length];
+    for (int i = 0; i < predictors.length; ++i) {
+      predictors[i] = new SMAPredictor(configs[i], riskyName, safeName, broker.accessObject);
+    }
 
     int maxCode = (1 << predictors.length) - 1;
     long maxMap = (1 << (maxCode + 1)) - 1;
     System.out.printf("maxCode=%d  maxMap=%d\n", maxCode, maxMap);
     List<CumulativeStats> allStats = new ArrayList<CumulativeStats>();
     for (long assetMap = 0; assetMap <= maxMap; assetMap += 2) {
-      Broker broker = new Broker(store, guideSeq.getStartMS());
-      for (int i = 0; i < predictors.length; ++i) {
-        predictors[i] = new SMAPredictor(configs[i], riskyName, safeName, broker.accessObject);
-      }
+      broker.reset();
       MultiPredictor predictor = new MultiPredictor(predictors, assetMap, riskyName, safeName, broker.accessObject);
       Sequence returns = runBrokerSim(predictor, broker, guideSeq);
       returns.setName(String.format("%d", assetMap));
@@ -284,6 +287,33 @@ public class RetireTool
     }
   }
 
+  public static void runOne(File dir) throws IOException
+  {
+    final String riskyName = "stock";
+    final String safeName = "cash";
+
+    Sequence stock = store.getMisc(riskyName);
+    final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
+    Sequence guideSeq = stock.subseq(iStart);
+    Broker broker = new Broker(store, guideSeq.getStartMS());
+
+    final long gap = 2 * TimeLib.MS_IN_DAY;
+    ConfigSMA[] configs = new ConfigSMA[] { new ConfigSMA(5, 0, 160, 0, 0.5, 0, gap),
+        new ConfigSMA(35, 0, 50, 10, 2.0, 0, gap), new ConfigSMA(15, 5, 30, 0, 2.0, 0, gap),
+        new ConfigSMA(55, 30, 80, 70, 0.1, 0, gap), new ConfigSMA(60, 0, 70, 10, 1.0, 0, gap), };
+
+    Predictor[] predictors = new SMAPredictor[configs.length];
+    for (int i = 0; i < predictors.length; ++i) {
+      predictors[i] = new SMAPredictor(configs[i], riskyName, safeName, broker.accessObject);
+    }
+
+    DiscreteDistribution distribution = DiscreteDistribution.makeUniform(predictors.length);
+    MixedPredictor predictor = new MixedPredictor(predictors, distribution, broker.accessObject);
+    Sequence returns = runBrokerSim(predictor, broker, guideSeq);
+    CumulativeStats cstats = CumulativeStats.calc(returns);
+    System.out.println(cstats);
+  }
+
   public static void main(String[] args) throws IOException
   {
     File dataDir = new File("g:/research/finance");
@@ -294,6 +324,7 @@ public class RetireTool
     setupBroker(dataDir, dir);
     // runSweep(dir);
     // runJitterTest(dir);
+    // runMultiSweep(dir);
     runOne(dir);
 
     // DataIO.downloadDailyDataFromYahoo(dataDir, FinLib.VANGUARD_INVESTOR_FUNDS);

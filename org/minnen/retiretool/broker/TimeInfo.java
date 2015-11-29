@@ -11,6 +11,11 @@ public class TimeInfo
   public final boolean isFirstDayOfMonth;
   public final boolean isLastDayOfMonth;
 
+  public TimeInfo(long time)
+  {
+    this(time, time, time);
+  }
+
   public TimeInfo(long time, long prevTime, long nextTime)
   {
     this.time = time;

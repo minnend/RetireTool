@@ -114,7 +114,7 @@ public abstract class Predictor
 
   public void reset()
   {
-    lastFeedbackMS = Long.MIN_VALUE;
+    lastFeedbackMS = TimeLib.TIME_BEGIN;
     if (predictors != null) {
       for (Predictor predictor : predictors) {
         predictor.reset();

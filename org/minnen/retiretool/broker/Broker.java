@@ -9,17 +9,25 @@ import org.minnen.retiretool.data.SequenceStore;
 
 public class Broker
 {
+  public final BrokerInfoAccess accessObject = new BrokerInfoAccess(this);
   private final List<Account>   accounts     = new ArrayList<>();
   public final SequenceStore    store;
+  private final long            originalTime;
 
   private TimeInfo              timeInfo;
-
-  public final BrokerInfoAccess accessObject = new BrokerInfoAccess(this);
 
   public Broker(SequenceStore store, long time)
   {
     this.store = store;
-    timeInfo = new TimeInfo(time, time, time);
+    this.originalTime = time;
+    timeInfo = new TimeInfo(time);
+  }
+
+  public void reset()
+  {
+    accounts.clear();
+    store.unlock();
+    timeInfo = new TimeInfo(originalTime);
   }
 
   public void setTime(long time, long prevTime, long nextTime)
