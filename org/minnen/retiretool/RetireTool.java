@@ -60,10 +60,10 @@ public class RetireTool
     shiller = shiller.subseq(commonStart, commonEnd);
     tbillData = tbillData.subseq(commonStart, commonEnd);
 
-    store.addMisc(stock, "Stock");
-    store.addMisc(shiller, "Shiller");
-    store.addMisc(tbillData, "TBillData");
-    store.alias("interest-rates", "TBillData");
+    store.addMisc(stock, "stock");
+    store.addMisc(shiller, "shiller");
+    store.addMisc(tbillData, "tbilldata");
+    store.alias("interest-rates", "tbilldata");
 
     // Monthly S&P dividends.
     Sequence divPayments = Shiller.getDividendPayments(shiller, DividendMethod.QUARTERLY);
@@ -86,8 +86,8 @@ public class RetireTool
   public static Sequence runBrokerSim(Predictor predictor, Broker broker, Sequence guideSeq)
   {
     // TODO shouldn't need to know asset names here!
-    final String riskyName = "Stock";
-    final String safeName = "Cash";
+    final String riskyName = "stock";
+    final String safeName = "cash";
 
     final int T = guideSeq.length();
     final long principal = Fixed.toFixed(1000.0);
@@ -142,8 +142,8 @@ public class RetireTool
 
   public static void runSweep(File dir) throws IOException
   {
-    final String riskyName = "Stock";
-    final String safeName = "Cash";
+    final String riskyName = "stock";
+    final String safeName = "cash";
 
     final double[] margins = new double[] { 0.1, 0.25, 0.5, 1.0, 2.0, 3.0, 5.0, 10.0 };
 
@@ -190,8 +190,8 @@ public class RetireTool
 
   public static void runJitterTest(File dir) throws IOException
   {
-    final String riskyName = "Stock";
-    final String safeName = "Cash";
+    final String riskyName = "stock";
+    final String safeName = "cash";
 
     ConfigSMA config = new ConfigSMA(55, 30, 80, 70, 0.1, 0, 0L);
     // ConfigSMA config = new ConfigSMA(50, 0, 200, 0, 0.5, 0, 0L);
@@ -239,8 +239,8 @@ public class RetireTool
 
   public static void runOne(File dir) throws IOException
   {
-    final String riskyName = "Stock";
-    final String safeName = "Cash";
+    final String riskyName = "stock";
+    final String safeName = "cash";
 
     ConfigSMA config = new ConfigSMA(55, 30, 80, 70, 0.1, 0, 0L);
     // ConfigSMA config = new ConfigSMA(50, 0, 200, 0, 0.5, 0, 0L);

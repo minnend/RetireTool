@@ -94,11 +94,11 @@ public class Account
     }
 
     // Make sure we have interest rate data.
-    if (!store.hasMisc("Interest-Rates")) {
+    if (!store.hasMisc("interest-rates")) {
       return;
     }
 
-    Sequence rates = store.getMisc("Interest-Rates");
+    Sequence rates = store.getMisc("interest-rates");
     int index = rates.getIndexAtOrBefore(timeInfo.time);
     double annualRate = rates.get(index, 0);
     double mul = FinLib.ret2mul(annualRate);

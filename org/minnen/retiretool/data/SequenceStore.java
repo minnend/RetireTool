@@ -76,7 +76,7 @@ public class SequenceStore implements Iterable<Sequence>
 
   public void alias(String from, String to)
   {
-    aliasMap.put(from.toLowerCase(), to.toLowerCase());
+    aliasMap.put(from, to);
   }
 
   /**
@@ -144,8 +144,8 @@ public class SequenceStore implements Iterable<Sequence>
     final int index = nominalReturns.size();
     cumulativeReturns.setName(name);
     nominalReturns.add(cumulativeReturns);
-    nameToIndex.put(name.toLowerCase(), index);
-    nameToOrig.put(name.toLowerCase(), name);
+    nameToIndex.put(name, index);
+    nameToOrig.put(name, name);
     assert get(name) == cumulativeReturns;
 
     // Calculate and add real returns (inflation-adjusted) to the store.
@@ -193,11 +193,11 @@ public class SequenceStore implements Iterable<Sequence>
     final int index = miscSeqs.size();
     misc.setName(name);
     miscSeqs.add(misc);
-    miscNameToIndex.put(name.toLowerCase(), index);
+    miscNameToIndex.put(name, index);
     assert getMisc(name) == misc;
-    nameToOrig.put(name.toLowerCase(), name);
+    nameToOrig.put(name, name);
 
-    if (name.toLowerCase().equals("inflation")) {
+    if (name.equals("inflation")) {
       recalcNominalReturns();
     }
 
@@ -239,7 +239,6 @@ public class SequenceStore implements Iterable<Sequence>
 
   private int getIndex(String name)
   {
-    name = name.toLowerCase();
     name = aliasMap.getOrDefault(name, name);
     int index = nameToIndex.getOrDefault(name, -1);
     if (index < 0) {
@@ -275,7 +274,6 @@ public class SequenceStore implements Iterable<Sequence>
 
   private int getMiscIndex(String name)
   {
-    name = name.toLowerCase();
     name = aliasMap.getOrDefault(name, name);
     int index = miscNameToIndex.getOrDefault(name, -1);
     if (index < 0) {
@@ -424,7 +422,7 @@ public class SequenceStore implements Iterable<Sequence>
   {
     for (List<Sequence> seqs : seqLists) {
       for (Sequence seq : seqs) {
-        int iStart = seq.getIndexAtOrAfter(startMS);
+        int iStart = (startMS == TimeLib.TIME_BEGIN ? 0 : seq.getIndexAtOrAfter(startMS));
         int iEnd = seq.getIndexAtOrBefore(endMS);
         seq.lock(iStart, iEnd);
       }

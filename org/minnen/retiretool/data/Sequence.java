@@ -15,8 +15,9 @@ public class Sequence implements Iterable<FeatureVec>
   /** data stored in this data set */
   private List<FeatureVec> data;
   private String           name;
-  private int              lockStart = -1;
-  private int              lockEnd   = -1;
+  private int              lockStart   = -1;
+  private int              lockEnd     = -1;
+  private int              prevLockEnd = -1;
 
   public enum EndpointBehavior {
     Closest, Inside, Outside
@@ -128,6 +129,7 @@ public class Sequence implements Iterable<FeatureVec>
 
   public Sequence unlock()
   {
+    prevLockEnd = lockEnd;
     lockStart = lockEnd = -1;
     return this;
   }
@@ -468,11 +470,35 @@ public class Sequence implements Iterable<FeatureVec>
    */
   public int getIndexAtOrBefore(long ms)
   {
-    int i = getClosestIndex(ms);
-    if (i >= 0 && get(i).getTime() > ms) {
-      --i;
+    int i = -1;
+
+    // Heuristic check since a typical use case is incremental locking.
+    if (prevLockEnd >= 0 && !isLocked()) {
+      long t1 = data.get(prevLockEnd).getTime();
+      long t2 = prevLockEnd + 1 < data.size() ? data.get(prevLockEnd + 1).getTime() : TimeLib.TIME_END;
+      long t3 = prevLockEnd + 2 < data.size() ? data.get(prevLockEnd + 2).getTime() : TimeLib.TIME_END;
+      if (ms >= t1 && ms <= t3) {
+        if (ms == t3) {
+          return prevLockEnd + 2;
+        } else if (t2 <= ms) {
+          return prevLockEnd + 1;
+        } else {
+          assert t1 <= ms;
+          return prevLockEnd;
+        }
+      }
     }
+
+    // If the heuristic failed, search for the correct index.
+    if (i < 0) {
+      i = getClosestIndex(ms);
+      if (i >= 0 && get(i).getTime() > ms) {
+        --i;
+      }
+    }
+
     assert i < 0 || getTimeMS(i) <= ms;
+    assert i + 1 >= length() || getTimeMS(i + 1) > ms;
     return i;
   }
 
