@@ -108,4 +108,15 @@ public class DiscreteDistribution
     }
     return true;
   }
+
+  @Override
+  public String toString()
+  {
+    StringBuilder sb = new StringBuilder(String.format("[%.1f", weights[0]));
+    for (int i = 1; i < weights.length; ++i) {
+      sb.append(String.format(",%.1f", weights[i]));
+    }
+    sb.append("]");
+    return sb.toString();
+  }
 }

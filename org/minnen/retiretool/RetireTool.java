@@ -88,13 +88,10 @@ public class RetireTool
 
   public static Sequence runBrokerSim(Predictor predictor, Broker broker, Sequence guideSeq)
   {
-    assert predictor.assetChoices.length == 2;
-    final String riskyName = predictor.assetChoices[0];
-    final String safeName = predictor.assetChoices[1];
-
     final int T = guideSeq.length();
     final long principal = Fixed.toFixed(1000.0);
     long prevTime = guideSeq.getStartMS() - TimeLib.MS_IN_DAY;
+    long lastRebalance = TimeLib.TIME_BEGIN;
     DiscreteDistribution prevDistribution = null;
     Sequence returns = new Sequence("Returns");
     Account account = broker.openAccount(Account.Type.Roth, true);
@@ -118,15 +115,25 @@ public class RetireTool
 
       // Time for a prediction and possible asset change.
       DiscreteDistribution distribution = predictor.selectDistribution();
-      boolean bNeedRebalance = true;
+
+      // Rebalance once a year.
+      boolean bNeedRebalance = ((time - lastRebalance) / TimeLib.MS_IN_DAY > 365);
       if (prevDistribution == null) {
         prevDistribution = new DiscreteDistribution(distribution);
+        bNeedRebalance = true;
       } else {
-        bNeedRebalance = !distribution.isSimilar(prevDistribution, 0.02);
+        // Rebalance if desired distribution changes by more than 2%.
+        // Note: we're comparing the current request to the previous one, not the current request to the actual
+        // distribution, which could change due to price movement.
+        if (!bNeedRebalance && !distribution.isSimilar(prevDistribution, 0.02)) {
+          bNeedRebalance = true;
+        }
         prevDistribution.copyFrom(distribution);
       }
       if (bNeedRebalance) {
+        // System.out.printf("%s [%s]\n", distribution, TimeLib.formatDate(time));
         account.rebalance(distribution);
+        lastRebalance = time;
       }
 
       store.unlock();
@@ -187,7 +194,7 @@ public class RetireTool
     // System.out.printf("n=%d\n", n);
   }
 
-  public static void runJitterTest(File dir) throws IOException
+  public static void runParamJitterTest(File dir) throws IOException
   {
     final String riskyName = "stock";
     final String safeName = "cash";
@@ -319,9 +326,9 @@ public class RetireTool
 
     setupBroker(dataDir, dir);
     // runSweep(dir);
-    // runJitterTest(dir);
-    runMultiSweep(dir);
-    // runOne(dir);
+    // runParamJitterTest(dir);
+    // runMultiSweep(dir);
+    runOne(dir);
 
     // DataIO.downloadDailyDataFromYahoo(dataDir, FinLib.VANGUARD_INVESTOR_FUNDS);
     // DataIO.downloadDailyDataFromYahoo(dataDir, FinLib.STOCK_MARKET_FUNDS);
