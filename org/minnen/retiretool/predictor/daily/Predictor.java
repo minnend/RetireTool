@@ -70,7 +70,7 @@ public abstract class Predictor
   {
     // Create / reset distribution.
     if (distribution == null || distribution.size() != assetChoices.length) {
-      distribution = new DiscreteDistribution(assetChoices.length);
+      distribution = new DiscreteDistribution(assetChoices);
     } else {
       distribution.clear();
     }

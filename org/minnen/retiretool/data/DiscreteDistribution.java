@@ -22,6 +22,12 @@ public class DiscreteDistribution
     names = new String[n];
   }
 
+  public DiscreteDistribution(String... names)
+  {
+    this(names.length);
+    System.arraycopy(names, 0, this.names, 0, names.length);
+  }
+
   public DiscreteDistribution(double... weights)
   {
     this(weights.length);

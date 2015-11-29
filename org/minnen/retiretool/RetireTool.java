@@ -88,13 +88,12 @@ public class RetireTool
 
   public static Sequence runBrokerSim(Predictor predictor, Broker broker, Sequence guideSeq)
   {
-    // TODO shouldn't need to know asset names here!
-    final String riskyName = "stock";
-    final String safeName = "cash";
+    assert predictor.assetChoices.length == 2;
+    final String riskyName = predictor.assetChoices[0];
+    final String safeName = predictor.assetChoices[1];
 
     final int T = guideSeq.length();
     final long principal = Fixed.toFixed(1000.0);
-    boolean bPrevOwnRisky = false;
     long prevTime = guideSeq.getStartMS() - TimeLib.MS_IN_DAY;
     Sequence returns = new Sequence("Returns");
     Account account = broker.openAccount(Account.Type.Roth, true);
@@ -117,21 +116,8 @@ public class RetireTool
       broker.doEndOfDayBusiness();
 
       // Time for a prediction and possible asset change.
-      String assetToOwn = predictor.selectAsset();
-      assert assetToOwn.equals(riskyName) || assetToOwn.equals(safeName);
-      boolean bOwnRisky = (assetToOwn.equals(riskyName));
-      if (bOwnRisky != bPrevOwnRisky) {
-        bPrevOwnRisky = bOwnRisky;
-
-        DiscreteDistribution desiredDistribution = new DiscreteDistribution(2);
-        double fractionRisky = (bOwnRisky ? 1.0 : 0.0);
-        double fractionSafe = 1.0 - fractionRisky;
-        desiredDistribution.set(0, riskyName, fractionRisky);
-        desiredDistribution.set(1, safeName, fractionSafe);
-
-        // System.out.printf("Stock: %.1f%%  Cash: %.1f%%\n", 100.0 * fractionRisky, 100.0 * fractionSafe);
-        account.rebalance(desiredDistribution);
-      }
+      DiscreteDistribution distribution = predictor.selectDistribution();
+      account.rebalance(distribution);
 
       store.unlock();
       if (timeInfo.isLastDayOfMonth) {
@@ -322,10 +308,10 @@ public class RetireTool
     assert dir.isDirectory();
 
     setupBroker(dataDir, dir);
-    // runSweep(dir);
+    runSweep(dir);
     // runJitterTest(dir);
-    // runMultiSweep(dir);
-    runOne(dir);
+    //runMultiSweep(dir);
+    // runOne(dir);
 
     // DataIO.downloadDailyDataFromYahoo(dataDir, FinLib.VANGUARD_INVESTOR_FUNDS);
     // DataIO.downloadDailyDataFromYahoo(dataDir, FinLib.STOCK_MARKET_FUNDS);
