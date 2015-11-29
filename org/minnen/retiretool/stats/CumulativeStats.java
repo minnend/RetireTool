@@ -129,9 +129,12 @@ public class CumulativeStats implements Comparable<CumulativeStats>
   @Override
   public String toString()
   {
-    return String.format("[%s: CAGR=%.2f  DD=%.1f  DEV=%.2f  %%[%.1f|%.1f|%.1f|%.1f|%.1f]  Down10=%.1f]",
-        FinLib.getBaseName(name()), cagr, drawdown, devAnnualReturn, annualPercentiles[0], annualPercentiles[1],
-        annualPercentiles[2], annualPercentiles[3], annualPercentiles[4], percentDown10);
+    // return String.format("[%s: CAGR=%.2f  DD=%.1f  DEV=%.2f  %%[%.1f|%.1f|%.1f|%.1f|%.1f]  Down10=%.1f]",
+    // FinLib.getBaseName(name()), cagr, drawdown, devAnnualReturn, annualPercentiles[0], annualPercentiles[1],
+    // annualPercentiles[2], annualPercentiles[3], annualPercentiles[4], percentDown10);
+
+    return String.format("[%s: CAGR=%.2f  DD=%.1f  Down10=%.1f]", FinLib.getBaseName(name()), cagr, drawdown,
+        percentDown10);
   }
 
   public String toRowString()

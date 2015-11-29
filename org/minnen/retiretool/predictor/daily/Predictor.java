@@ -31,13 +31,13 @@ public abstract class Predictor
   public final BrokerInfoAccess brokerAccess;
 
   /** Sub-predictors that are aggregated by this predictor (e.g. to support ensembles). */
-  public Predictor[]       predictors;
+  public Predictor[]            predictors;
 
   /** Timestamp for last feedback; used to detect out-of-order feedback. */
   protected long                lastFeedbackMS = TimeLib.TIME_BEGIN;
 
   /** Type of predictor. */
-  protected PredictorType                predictorType;
+  protected PredictorType       predictorType;
 
   /** Reusable distribution array to reduce object creation. */
   private DiscreteDistribution  distribution;

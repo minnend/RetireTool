@@ -12,12 +12,14 @@ public class SMAPredictor extends Predictor
   /** Relative location: -1 = below threshold; 1 = above threshold. */
   private int             reloc        = 0;
   private long            timeLastFlip = TimeLib.TIME_ERROR;
+  private final String    integralName;
 
   public SMAPredictor(ConfigSMA config, String assetName, String alternativeAsset, BrokerInfoAccess brokerAccess)
   {
     super("SMA", brokerAccess, new String[] { assetName, alternativeAsset });
     this.predictorType = PredictorType.InOut;
     this.config = config;
+    this.integralName = assetName + "-integral";
   }
 
   @Override
@@ -31,7 +33,6 @@ public class SMAPredictor extends Predictor
     }
 
     // Get either the price sequence or the integral sequence.
-    final String integralName = assetChoices[0] + "-integral";
     final Sequence integral = brokerAccess.tryGetSeq(integralName);
     final Sequence seq = (integral != null ? null : brokerAccess.getSeq(assetChoices[0]));
 
