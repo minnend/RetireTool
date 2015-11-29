@@ -154,35 +154,35 @@ public class RetireTool
     List<CumulativeStats> allStats = new ArrayList<CumulativeStats>();
     int n = 0;
     long startMS = TimeLib.getTime();
-    for (int i = 10; i <= 60; i += 10) {
-      for (int ii = 0; ii < i && ii <= 20; ii += 10) {
-        for (int j = 10; j <= 250; j += 10) {
-          if (j <= i) {
-            continue;
-          }
-          for (int jj = 0; jj + 20 <= j; jj += 10) {
-            for (int k = 0; k < margins.length; ++k) {
-              Broker broker = new Broker(store, guideSeq.getStartMS());
-              ConfigSMA config = new ConfigSMA(i, ii, j, jj, margins[k], 0, 0L);
-              Predictor predictor = new SMAPredictor(config, riskyName, safeName, broker.accessObject);
-
-              Sequence returns = runBrokerSim(predictor, broker, guideSeq);
-              returns.setName(config.toString());
-              CumulativeStats cstats = CumulativeStats.calc(returns);
-              allStats.add(cstats);
-              ++n;
-              // System.out.printf("%s = %s\n", config, cstats);
-            }
-          }
-          FinLib.filterStrategies(allStats);
-          Collections.sort(allStats);
-          long duration = TimeLib.getTime() - startMS;
-          System.out.printf("--- Summary (%d / %d, %s @ %.1f/s) ------ \n", allStats.size(), n,
-              TimeLib.formatDuration(duration), 1000.0 * n / duration);
-          for (CumulativeStats cstats : allStats) {
-            System.out.printf("%s\n", cstats.toRowString());
-          }
+    for (int i = 5; i <= 100; i += 5) {
+      // for (int ii = 0; ii + 10 <= i; ii += 5) {
+      int ii = 0;
+      for (int j = 10; j <= 300; j += 5) {
+        if (j <= i) {
+          continue;
         }
+        // for (int jj = 0; jj + 20 <= j; jj += 10) {
+        int jj = 0;
+        for (int k = 0; k < margins.length; ++k) {
+          Broker broker = new Broker(store, guideSeq.getStartMS());
+          ConfigSMA config = new ConfigSMA(i, ii, j, jj, margins[k], 0, 0L);
+          Predictor predictor = new SMAPredictor(config, riskyName, safeName, broker.accessObject);
+
+          Sequence returns = runBrokerSim(predictor, broker, guideSeq);
+          returns.setName(config.toString());
+          CumulativeStats cstats = CumulativeStats.calc(returns);
+          allStats.add(cstats);
+          ++n;
+          // System.out.printf("%s = %s\n", config, cstats);
+        }
+      }
+      FinLib.filterStrategies(allStats);
+      Collections.sort(allStats);
+      long duration = TimeLib.getTime() - startMS;
+      System.out.printf("--- Summary (%d / %d, %s @ %.1f/s) ------ \n", allStats.size(), n,
+          TimeLib.formatDuration(duration), 1000.0 * n / duration);
+      for (CumulativeStats cstats : allStats) {
+        System.out.printf("%s\n", cstats.toRowString());
       }
     }
     // System.out.printf("n=%d\n", n);
@@ -193,8 +193,10 @@ public class RetireTool
     final String riskyName = "stock";
     final String safeName = "cash";
 
-    ConfigSMA config = new ConfigSMA(55, 30, 80, 70, 0.1, 0, 0L);
-    // ConfigSMA config = new ConfigSMA(50, 0, 200, 0, 0.5, 0, 0L);
+    final long gap = 2 * TimeLib.MS_IN_DAY;
+    // ConfigSMA config = new ConfigSMA(55, 30, 80, 70, 0.1, 0, gap);
+    // ConfigSMA config = new ConfigSMA(60, 0, 70, 10, 1.0, 0, gap);
+    ConfigSMA config = new ConfigSMA(50, 30, 80, 60, 0.25, 0, gap);
 
     Sequence stock = store.getMisc(riskyName);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
@@ -210,7 +212,8 @@ public class RetireTool
             for (int dm = -2; dm <= 2; dm += 2) {
               Broker broker = new Broker(store, guideSeq.getStartMS());
               ConfigSMA jitteredConfig = new ConfigSMA(config.nLookbackTriggerA + da, config.nLookbackTriggerB + db,
-                  config.nLookbackBaseA + dc, config.nLookbackBaseB + dd, config.margin * (1.0 + dm / 10.0), 0, 0L);
+                  config.nLookbackBaseA + dc, config.nLookbackBaseB + dd, config.margin * (1.0 + dm / 10.0),
+                  config.iPrice, config.minTimeBetweenFlips);
               if (!jitteredConfig.isValid()) {
                 continue;
               }

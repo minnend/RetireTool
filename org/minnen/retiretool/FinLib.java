@@ -395,6 +395,7 @@ public final class FinLib
    */
   public static Sequence calcReturnsForDuration(Sequence cumulativeReturns, int nMonths)
   {
+    // TODO update to use timestamps instead of assuming monthly data.
     final int N = cumulativeReturns.size();
     String name = String.format("%s (%s)", cumulativeReturns.getName(), TimeLib.formatDurationMonths(nMonths));
     Sequence rois = new Sequence(name);
