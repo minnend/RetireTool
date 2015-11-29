@@ -95,6 +95,7 @@ public class RetireTool
     final int T = guideSeq.length();
     final long principal = Fixed.toFixed(1000.0);
     long prevTime = guideSeq.getStartMS() - TimeLib.MS_IN_DAY;
+    DiscreteDistribution prevDistribution = null;
     Sequence returns = new Sequence("Returns");
     Account account = broker.openAccount(Account.Type.Roth, true);
     for (int t = 0; t < T; ++t) {
@@ -117,7 +118,16 @@ public class RetireTool
 
       // Time for a prediction and possible asset change.
       DiscreteDistribution distribution = predictor.selectDistribution();
-      account.rebalance(distribution);
+      boolean bNeedRebalance = true;
+      if (prevDistribution == null) {
+        prevDistribution = new DiscreteDistribution(distribution);
+      } else {
+        bNeedRebalance = !distribution.isSimilar(prevDistribution, 0.02);
+        prevDistribution.copyFrom(distribution);
+      }
+      if (bNeedRebalance) {
+        account.rebalance(distribution);
+      }
 
       store.unlock();
       if (timeInfo.isLastDayOfMonth) {
@@ -308,9 +318,9 @@ public class RetireTool
     assert dir.isDirectory();
 
     setupBroker(dataDir, dir);
-    runSweep(dir);
+    // runSweep(dir);
     // runJitterTest(dir);
-    //runMultiSweep(dir);
+    runMultiSweep(dir);
     // runOne(dir);
 
     // DataIO.downloadDailyDataFromYahoo(dataDir, FinLib.VANGUARD_INVESTOR_FUNDS);

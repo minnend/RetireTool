@@ -1,7 +1,6 @@
 package org.minnen.retiretool.data;
 
 import java.util.Arrays;
-import java.util.Iterator;
 
 import org.minnen.retiretool.Library;
 
@@ -41,6 +40,19 @@ public class DiscreteDistribution
 
     System.arraycopy(names, 0, this.names, 0, names.length);
     System.arraycopy(weights, 0, this.weights, 0, weights.length);
+  }
+
+  public DiscreteDistribution(DiscreteDistribution distribution)
+  {
+    this(distribution.names, distribution.weights);
+  }
+
+  public DiscreteDistribution copyFrom(DiscreteDistribution distribution)
+  {
+    assert distribution.size() == size();
+    System.arraycopy(distribution.names, 0, names, 0, names.length);
+    System.arraycopy(distribution.weights, 0, weights, 0, weights.length);
+    return this;
   }
 
   public void set(int i, String name, double weight)
@@ -86,5 +98,14 @@ public class DiscreteDistribution
       distribution.weights[i] = w;
     }
     return distribution;
+  }
+
+  public boolean isSimilar(DiscreteDistribution distribution, double eps)
+  {
+    if (distribution.size() != size()) return false;
+    for (int i = 0; i < distribution.size(); ++i) {
+      if (Math.abs(distribution.weights[i] - weights[i]) > eps) return false;
+    }
+    return true;
   }
 }
