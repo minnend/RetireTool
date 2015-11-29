@@ -244,7 +244,8 @@ public class SequenceStore implements Iterable<Sequence>
   {
     name = name.toLowerCase();
     name = aliasMap.getOrDefault(name, name);
-    if (!nameToIndex.containsKey(name)) {
+    int index = nameToIndex.getOrDefault(name, -1);
+    if (index < 0) {
       String s = FinLib.getBaseName(name);
       if (s.equals(name)) {
         return -1;
@@ -252,7 +253,7 @@ public class SequenceStore implements Iterable<Sequence>
         return getIndex(s);
       }
     }
-    return nameToIndex.get(name);
+    return index;
   }
 
   public Sequence get(String name)
@@ -260,6 +261,12 @@ public class SequenceStore implements Iterable<Sequence>
     int index = getIndex(name);
     assert index >= 0 : "Can't find sequence: " + name;
     return nominalReturns.get(index);
+  }
+
+  public Sequence tryGet(String name)
+  {
+    int index = getIndex(name);
+    return (index < 0 ? null : nominalReturns.get(index));
   }
 
   public Sequence getReal(String name)
@@ -273,7 +280,8 @@ public class SequenceStore implements Iterable<Sequence>
   {
     name = name.toLowerCase();
     name = aliasMap.getOrDefault(name, name);
-    if (!miscNameToIndex.containsKey(name)) {
+    int index = miscNameToIndex.getOrDefault(name, -1);
+    if (index < 0) {
       String s = FinLib.getBaseName(name);
       if (s.equals(name)) {
         return -1;
@@ -281,7 +289,7 @@ public class SequenceStore implements Iterable<Sequence>
         return getMiscIndex(s);
       }
     }
-    return miscNameToIndex.get(name);
+    return index;
   }
 
   public Sequence getMisc(String name)
@@ -289,6 +297,12 @@ public class SequenceStore implements Iterable<Sequence>
     int index = getMiscIndex(name);
     assert index >= 0 : "Can't find misc sequence: " + name;
     return miscSeqs.get(index);
+  }
+
+  public Sequence tryGetMisc(String name)
+  {
+    int index = getMiscIndex(name);
+    return (index < 0 ? null : miscSeqs.get(index));
   }
 
   public CumulativeStats getCumulativeStats(int i)
@@ -349,6 +363,11 @@ public class SequenceStore implements Iterable<Sequence>
   public Collection<String> getNames()
   {
     return nameToIndex.keySet();
+  }
+
+  public Collection<String> getMiscNames()
+  {
+    return miscNameToIndex.keySet();
   }
 
   public List<String> getNames(String regex)

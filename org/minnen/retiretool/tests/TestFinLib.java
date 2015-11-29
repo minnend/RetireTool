@@ -2,11 +2,8 @@ package org.minnen.retiretool.tests;
 
 import static org.junit.Assert.*;
 
-import java.util.Calendar;
-
 import org.junit.Test;
 import org.minnen.retiretool.FinLib;
-import org.minnen.retiretool.Library;
 import org.minnen.retiretool.TimeLib;
 import org.minnen.retiretool.data.Sequence;
 

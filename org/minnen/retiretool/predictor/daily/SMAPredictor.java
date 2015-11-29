@@ -30,8 +30,12 @@ public class SMAPredictor extends Predictor
       return reloc > 0;
     }
 
-    final Sequence seq = brokerAccess.getPriceSeq(assetChoices[0]);
-    final int iLast = seq.length() - 1;
+    // Get either the price sequence or the integral sequence.
+    final String integralName = assetChoices[0] + "-integral";
+    final Sequence integral = brokerAccess.tryGetSeq(integralName);
+    final Sequence seq = (integral != null ? null : brokerAccess.getSeq(assetChoices[0]));
+
+    final int iLast = (integral != null ? integral.length() : seq.length()) - 1;
     final int iBaseA = iLast - config.nLookbackBaseA;
     final int iBaseB = iLast - config.nLookbackBaseB;
     final int iTriggerA = iLast - config.nLookbackTriggerA;
@@ -48,12 +52,27 @@ public class SMAPredictor extends Predictor
     }
 
     // Calculate SMA values for base (threshold) and trigger.
-    double threshold = seq.average(iBaseA, iBaseB, config.iPrice);
-    double trigger = seq.average(iTriggerA, iTriggerB, config.iPrice);
+    double threshold, trigger;
+    if (integral != null) {
+      threshold = integral.get(iBaseB, config.iPrice);
+      if (iTriggerA > 0) {
+        threshold -= integral.get(iBaseA - 1, config.iPrice);
+      }
+      threshold /= (iBaseB - iBaseA + 1);
+
+      trigger = integral.get(iTriggerB, config.iPrice);
+      if (iTriggerA > 0) {
+        trigger -= integral.get(iTriggerA - 1, config.iPrice);
+      }
+      trigger /= (iTriggerB - iTriggerA + 1);
+    } else {
+      threshold = seq.average(iBaseA, iBaseB, config.iPrice);
+      trigger = seq.average(iTriggerA, iTriggerB, config.iPrice);
+    }
 
     // Adjust threshold if we're using a trigger margin.
     if (config.margin > 0.0) {
-      threshold -= reloc * threshold * config.margin;
+      threshold -= reloc * threshold * config.margin / 100.0;
     }
 
     // Compare trigger to threshold and update state if there is a change.

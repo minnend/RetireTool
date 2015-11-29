@@ -805,4 +805,18 @@ public class Sequence implements Iterable<FeatureVec>
       v.setTime(TimeLib.toLastBusinessDayOfMonth(v.getTime()));
     }
   }
+
+  public Sequence getIntegralSeq()
+  {
+    Sequence seq = new Sequence(name + "-integral");
+    if (length() > 0) {
+      FeatureVec sum = new FeatureVec(getNumDims());
+      for (FeatureVec v : data) {
+        sum = sum.add(v);
+        seq.addData(sum, v.getTime());
+      }
+    }
+    assert seq.matches(this);
+    return seq;
+  }
 }

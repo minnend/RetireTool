@@ -11,8 +11,8 @@ public class TestSequenceStore
   @Test
   public void testReturns()
   {
-    Sequence r1 = new Sequence("r1", new double[] { 1, 2, 3 });
-    Sequence r2 = new Sequence("r2", new double[] { 4, 5, 6 });
+    Sequence r1 = AllTests.buildMonthlySequence("r1", new double[] { 1, 2, 3 });
+    Sequence r2 = AllTests.buildMonthlySequence("r2", new double[] { 4, 5, 6 });
 
     SequenceStore store = new SequenceStore();
     assertEquals(0, store.size());
@@ -34,8 +34,8 @@ public class TestSequenceStore
   @Test
   public void testAlias()
   {
-    Sequence r1 = new Sequence("r1", new double[] { 1, 2, 3 });
-    Sequence r2 = new Sequence("r2", new double[] { 4, 5, 6 });
+    Sequence r1 = AllTests.buildMonthlySequence("r1", new double[] { 1, 2, 3 });
+    Sequence r2 = AllTests.buildMonthlySequence("r2", new double[] { 4, 5, 6 });
 
     SequenceStore store = new SequenceStore();
     store.add(r1);
@@ -53,9 +53,9 @@ public class TestSequenceStore
   @Test
   public void testMiscSeqs()
   {
-    Sequence r1 = new Sequence("r1", new double[] { 1, 2, 3 });
-    Sequence r2 = new Sequence("r2", new double[] { 4, 5, 6 });
-    Sequence r3 = new Sequence("r3", new double[] { 7, 8, 9 });
+    Sequence r1 = AllTests.buildMonthlySequence("r1", new double[] { 1, 2, 3 });
+    Sequence r2 = AllTests.buildMonthlySequence("r2", new double[] { 4, 5, 6 });
+    Sequence r3 = AllTests.buildMonthlySequence("r3", new double[] { 7, 8, 9 });
 
     SequenceStore store = new SequenceStore();
     assertEquals(0, store.getNumReturns());

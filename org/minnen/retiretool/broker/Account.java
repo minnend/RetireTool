@@ -61,7 +61,7 @@ public class Account
   private void payDividends(TimeInfo timeInfo, SequenceStore store)
   {
     for (Position position : positions.values()) {
-      String divName = position.name + "-Dividends";
+      String divName = position.name + "-dividends";
       if (store.hasMisc(divName)) {
         Sequence divs = store.getMisc(divName);
         int index = divs.getClosestIndex(timeInfo.time);

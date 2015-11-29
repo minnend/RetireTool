@@ -36,15 +36,28 @@ public class BrokerInfoAccess
     return broker.getPrice(name, time);
   }
 
-  public Sequence getPriceSeq(String name)
+  public boolean hasSeq(String name)
   {
     SequenceStore store = broker.store;
-    if (store.hasMisc(name)) {
-      return store.getMisc(name);
-    } else if (store.hasName(name)) {
-      return store.get(name);
-    } else {
+    return store.has(name);
+  }
+
+  public Sequence getSeq(String name)
+  {
+    Sequence seq = tryGetSeq(name);
+    if (seq == null) {
       throw new IllegalArgumentException("Can't find asset: " + name);
     }
+    return seq;
+  }
+
+  public Sequence tryGetSeq(String name)
+  {
+    SequenceStore store = broker.store;
+    Sequence seq = store.tryGetMisc(name);
+    if (seq == null) {
+      seq = store.tryGet(name);
+    }
+    return seq;
   }
 }

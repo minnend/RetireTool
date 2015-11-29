@@ -13,10 +13,12 @@ import org.minnen.retiretool.predictor.config.ConfigSMA;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.predictor.daily.SMAPredictor;
 import org.minnen.retiretool.stats.CumulativeStats;
+import org.minnen.retiretool.stats.ReturnStats;
 import org.minnen.retiretool.broker.Account;
 import org.minnen.retiretool.broker.Broker;
 import org.minnen.retiretool.broker.TimeInfo;
 import org.minnen.retiretool.data.DataIO;
+import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 
@@ -63,29 +65,27 @@ public class RetireTool
     store.addMisc(tbillData, "TBillData");
     store.alias("interest-rates", "TBillData");
 
-    // {
-    // for (int i = 1; i <= 12; ++i) {
-    // long ta = TimeLib.getTime(1, i, 1951);
-    // long tb = TimeLib.toEndOfMonth(ta);
-    // Sequence seq = stockAll.subseq(ta, tb, EndpointBehavior.Inside);
-    // double mean = seq.average(0, -1).get(0);
-    // System.out.printf("[%s] -> [%s]: %.2f\n", TimeLib.formatDate(ta), TimeLib.formatDate(tb), mean);
-    // }
-    // }
-
     // Monthly S&P dividends.
     Sequence divPayments = Shiller.getDividendPayments(shiller, DividendMethod.QUARTERLY);
-    store.addMisc(divPayments, "Stock-Dividends");
+    store.addMisc(divPayments, "stock-dividends");
 
     // Add CPI data.
     store.addMisc(Shiller.getData(Shiller.CPI, "cpi", shiller));
     store.alias("inflation", "cpi");
 
+    // Add integral sequence for stock data.
+    Sequence stockIntegral = stock.getIntegralSeq();
+    store.addMisc(stockIntegral);
+
     System.out.printf("#Store: %d  #Misc: %d\n", store.getNumReturns(), store.getNumMisc());
+    for (String name : store.getMiscNames()) {
+      System.out.println(name);
+    }
   }
 
   public static Sequence runBrokerSim(Predictor predictor, Broker broker, Sequence guideSeq)
   {
+    // TODO shouldn't need to know asset names here!
     final String riskyName = "Stock";
     final String safeName = "Cash";
 
@@ -139,7 +139,7 @@ public class RetireTool
 
     return returns;
   }
-  
+
   public static void runSweep(File dir) throws IOException
   {
     final String riskyName = "Stock";
@@ -193,47 +193,48 @@ public class RetireTool
     final String riskyName = "Stock";
     final String safeName = "Cash";
 
-    final double[] margins = new double[] { 0.1, 0.25, 0.5, 1.0, 2.0, 3.0, 5.0, 10.0 };
+    ConfigSMA config = new ConfigSMA(55, 30, 80, 70, 0.1, 0, 0L);
+    // ConfigSMA config = new ConfigSMA(50, 0, 200, 0, 0.5, 0, 0L);
 
     Sequence stock = store.getMisc(riskyName);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stock.subseq(iStart);
 
-    List<CumulativeStats> allStats = new ArrayList<CumulativeStats>();
-    int n = 0;
-    for (int i = 5; i <= 60; i += 5) {
-      for (int ii = 0; ii < i; ii += 5) {
-        for (int j = 10; j <= 250; j += 10) {
-          if (j <= i) {
-            continue;
-          }
-          int nn = 0;
-          long startMS = TimeLib.getTime();
-          for (int jj = 0; jj < j; jj += 10) {
-            for (int k = 0; k < margins.length; ++k) {
+    Sequence results = new Sequence();
+
+    long startMS = TimeLib.getTime();
+    for (int da = -2; da <= 2; da += 2) {
+      for (int db = -2; db <= 2; db += 2) {
+        for (int dc = -2; dc <= 2; dc += 2) {
+          for (int dd = -2; dd <= 2; dd += 2) {
+            for (int dm = -2; dm <= 2; dm += 2) {
               Broker broker = new Broker(store, guideSeq.getStartMS());
-              ConfigSMA config = new ConfigSMA(i, ii, j, jj, margins[k], 0, 0L);
-              Predictor predictor = new SMAPredictor(config, riskyName, safeName, broker.accessObject);
+              ConfigSMA jitteredConfig = new ConfigSMA(config.nLookbackTriggerA + da, config.nLookbackTriggerB + db,
+                  config.nLookbackBaseA + dc, config.nLookbackBaseB + dd, config.margin * (1.0 + dm / 10.0), 0, 0L);
+              if (!jitteredConfig.isValid()) {
+                continue;
+              }
+              Predictor predictor = new SMAPredictor(jitteredConfig, riskyName, safeName, broker.accessObject);
 
               Sequence returns = runBrokerSim(predictor, broker, guideSeq);
-              returns.setName(config.toString());
+              returns.setName(jitteredConfig.toString());
               CumulativeStats cstats = CumulativeStats.calc(returns);
-              allStats.add(cstats);
-              ++n;
-              ++nn;
-              // System.out.printf("%s = %s\n", config, cstats);
+              results.addData(new FeatureVec(2, cstats.cagr, cstats.drawdown));
+              // System.out.println(cstats);
             }
-          }
-          FinLib.filterStrategies(allStats);
-          Collections.sort(allStats);
-          long duration = TimeLib.getTime() - startMS;
-          System.out.printf("--- Summary (%d / %d @ %.1f/s) ------ \n", allStats.size(), n, 1000.0 * nn / duration);
-          for (CumulativeStats cstats : allStats) {
-            System.out.printf("%s\n", cstats.toRowString());
           }
         }
       }
     }
+
+    ReturnStats cagrStats = ReturnStats.calc("CAGR", results.extractDim(0));
+    ReturnStats drawdownStats = ReturnStats.calc("Drawdown", results.extractDim(1));
+
+    long duration = TimeLib.getTime() - startMS;
+    System.out.printf("Trials: %d  (%s, %.1f/s)\n", results.size(), TimeLib.formatDuration(duration),
+        1000.0 * results.size() / duration);
+    System.out.println(cagrStats);
+    System.out.println(drawdownStats);
   }
 
   public static void main(String[] args) throws IOException
@@ -244,8 +245,8 @@ public class RetireTool
     assert dir.isDirectory();
 
     setupBroker(dataDir, dir);
-    runSweep(dir);
-    //runJitterTest(dir);
+    // runSweep(dir);
+    runJitterTest(dir);
 
     // DataIO.downloadDailyDataFromYahoo(dataDir, FinLib.VANGUARD_INVESTOR_FUNDS);
     // DataIO.downloadDailyDataFromYahoo(dataDir, FinLib.STOCK_MARKET_FUNDS);
