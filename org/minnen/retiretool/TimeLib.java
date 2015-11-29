@@ -144,7 +144,7 @@ public class TimeLib
   {
     if (calendars.isEmpty()) {
       ++nCalsCreated;
-      System.out.printf("Calendars: %d (%d)\n", calendars.size(), nCalsCreated);
+      // System.out.printf("Calendars: %d (%d)\n", calendars.size(), nCalsCreated);
       return now();
     } else {
       return calendars.pop();

@@ -7,12 +7,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.minnen.retiretool.FinLib;
-import org.minnen.retiretool.FinLib.Inflation;
-import org.minnen.retiretool.Library;
 import org.minnen.retiretool.TimeLib;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.DurationalStats;

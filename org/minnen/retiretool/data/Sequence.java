@@ -310,8 +310,7 @@ public class Sequence implements Iterable<FeatureVec>
   /** @return time in ms of the given data frame */
   public long getTimeMS(int i)
   {
-    FeatureVec fv = get(i);
-    return fv.getTime();
+    return get(i).getTime();
   }
 
   public void setTime(int i, long ms)
@@ -413,6 +412,7 @@ public class Sequence implements Iterable<FeatureVec>
    */
   private int getClosestRealIndex(long ms)
   {
+
     int n = data.size();
     if (n == 0)
       return -1;
