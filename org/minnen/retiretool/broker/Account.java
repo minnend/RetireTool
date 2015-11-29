@@ -15,6 +15,7 @@ import org.minnen.retiretool.broker.transactions.TransactionDeposit;
 import org.minnen.retiretool.broker.transactions.TransactionOpen;
 import org.minnen.retiretool.broker.transactions.TransactionSell;
 import org.minnen.retiretool.broker.transactions.TransactionWithdraw;
+import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 
@@ -138,7 +139,7 @@ public class Account
 
   public long getValue(String name)
   {
-    if (name.equalsIgnoreCase("cash")) {
+    if (name.equals("cash")) {
       return getCash();
     }
     Position position = positions.getOrDefault(name, null);
@@ -314,7 +315,7 @@ public class Account
     }
   }
 
-  public void rebalance(Map<String, Double> targetDistribution)
+  public void rebalance(DiscreteDistribution targetDistribution)
   {
     final long preValue = getValue();
     // System.out.printf("Rebalance.pre: $%s (Price=$%s)\n", Fixed.formatCurrency(preValue),
@@ -324,11 +325,12 @@ public class Account
     Map<String, Long> currentValue = new TreeMap<>();
     long total = 0L;
     double targetSum = 0.0;
-    for (String name : targetDistribution.keySet()) {
-      targetSum += targetDistribution.get(name);
+    for (int i = 0; i < targetDistribution.size(); ++i) {
+      String name = targetDistribution.names[i];
+      targetSum += targetDistribution.weights[i];
 
       long value = 0L;
-      if (name.equalsIgnoreCase("Cash")) {
+      if (name.equals("cash")) {
         value = getCash();
       } else {
         Position position = positions.getOrDefault(name, null);
@@ -345,12 +347,13 @@ public class Account
     assert total == preValue;
 
     // Sell positions that are over target.
-    for (String name : targetDistribution.keySet()) {
+    for (int i = 0; i < targetDistribution.size(); ++i) {
+      String name = targetDistribution.names[i];
       // System.out.printf("Target: %s = %.1f%%\n", name, targetDistribution.get(name) * 100.0 / targetSum);
-      if (name.equalsIgnoreCase("Cash")) {
+      if (name.equals("cash")) {
         continue;
       }
-      double targetFrac = targetDistribution.get(name);
+      double targetFrac = targetDistribution.weights[i];
       long current = currentValue.get(name);
 
       // Only adjust if there is a change.
@@ -364,11 +367,12 @@ public class Account
     }
 
     // Buy positions that are under target.
-    for (String name : targetDistribution.keySet()) {
-      if (name.equalsIgnoreCase("Cash")) {
+    for (int i = 0; i < targetDistribution.size(); ++i) {
+      String name = targetDistribution.names[i];
+      if (name.equals("cash")) {
         continue;
       }
-      double targetFrac = targetDistribution.get(name);
+      double targetFrac = targetDistribution.weights[i];
       long current = currentValue.get(name);
 
       // Only adjust if there is a change.
@@ -383,9 +387,10 @@ public class Account
 
     // Make sure we adjusted correctly (debug).
     assert preValue == getValue();
-    for (String name : targetDistribution.keySet()) {
+    for (int i = 0; i < targetDistribution.size(); ++i) {
+      String name = targetDistribution.names[i];
       double actual = Fixed.toFloat(Fixed.div(getValue(name), total));
-      double target = targetDistribution.get(name);
+      double target = targetDistribution.weights[i];
       assert Math.abs(actual - target) < 0.01 : String.format("%f vs %f", actual, target);
     }
   }

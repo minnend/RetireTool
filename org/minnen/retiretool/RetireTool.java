@@ -123,11 +123,11 @@ public class RetireTool
       if (bOwnRisky != bPrevOwnRisky) {
         bPrevOwnRisky = bOwnRisky;
 
-        Map<String, Double> desiredDistribution = new TreeMap<>();
+        DiscreteDistribution desiredDistribution = new DiscreteDistribution(2);
         double fractionRisky = (bOwnRisky ? 1.0 : 0.0);
         double fractionSafe = 1.0 - fractionRisky;
-        desiredDistribution.put(riskyName, fractionRisky);
-        desiredDistribution.put(safeName, fractionSafe);
+        desiredDistribution.set(0, riskyName, fractionRisky);
+        desiredDistribution.set(1, safeName, fractionSafe);
 
         // System.out.printf("Stock: %.1f%%  Cash: %.1f%%\n", 100.0 * fractionRisky, 100.0 * fractionSafe);
         account.rebalance(desiredDistribution);

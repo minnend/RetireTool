@@ -1,6 +1,7 @@
 package org.minnen.retiretool.data;
 
 import java.util.Arrays;
+import java.util.Iterator;
 
 import org.minnen.retiretool.Library;
 
@@ -11,6 +12,7 @@ import org.minnen.retiretool.Library;
  */
 public class DiscreteDistribution
 {
+  // TODO allow iterating over name/weight pairs.
   public final double[] weights;
   public final String[] names;
 
@@ -33,6 +35,12 @@ public class DiscreteDistribution
 
     System.arraycopy(names, 0, this.names, 0, names.length);
     System.arraycopy(weights, 0, this.weights, 0, weights.length);
+  }
+
+  public void set(int i, String name, double weight)
+  {
+    names[i] = name;
+    weights[i] = weight;
   }
 
   public int size()
