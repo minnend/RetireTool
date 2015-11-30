@@ -9,9 +9,9 @@ import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 
-import org.minnen.retiretool.FinLib;
-import org.minnen.retiretool.Library;
-import org.minnen.retiretool.TimeLib;
+import org.minnen.retiretool.util.FinLib;
+import org.minnen.retiretool.util.Library;
+import org.minnen.retiretool.util.TimeLib;
 
 public class DataIO
 {

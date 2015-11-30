@@ -5,8 +5,8 @@ import java.util.Calendar;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
-import org.minnen.retiretool.TimeLib;
 import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.util.TimeLib;
 
 @RunWith(Suite.class)
 @SuiteClasses({ TestBond.class, TestInvestmentStats.class, TestLibrary.class, TestFinLib.class, TestSequence.class,

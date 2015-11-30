@@ -3,8 +3,8 @@ package org.minnen.retiretool.broker;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.minnen.retiretool.FinLib;
-import org.minnen.retiretool.Fixed;
+import org.minnen.retiretool.util.FinLib;
+import org.minnen.retiretool.util.Fixed;
 
 public class Position
 {

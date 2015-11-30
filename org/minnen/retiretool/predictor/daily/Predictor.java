@@ -1,9 +1,9 @@
 package org.minnen.retiretool.predictor.daily;
 
-import org.minnen.retiretool.Library;
-import org.minnen.retiretool.TimeLib;
 import org.minnen.retiretool.broker.BrokerInfoAccess;
 import org.minnen.retiretool.data.DiscreteDistribution;
+import org.minnen.retiretool.util.Library;
+import org.minnen.retiretool.util.TimeLib;
 
 /** Abstract parent class for all broker-based predictors. */
 public abstract class Predictor

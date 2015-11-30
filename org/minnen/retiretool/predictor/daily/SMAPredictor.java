@@ -1,9 +1,9 @@
 package org.minnen.retiretool.predictor.daily;
 
-import org.minnen.retiretool.TimeLib;
 import org.minnen.retiretool.broker.BrokerInfoAccess;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.predictor.config.ConfigSMA;
+import org.minnen.retiretool.util.TimeLib;
 
 public class SMAPredictor extends Predictor
 {

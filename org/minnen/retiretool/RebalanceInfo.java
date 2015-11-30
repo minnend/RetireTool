@@ -1,5 +1,7 @@
 package org.minnen.retiretool;
 
+import org.minnen.retiretool.util.Library;
+
 public class RebalanceInfo
 {
   public double[] targetPercents;

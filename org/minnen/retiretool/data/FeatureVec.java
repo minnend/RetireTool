@@ -2,8 +2,8 @@ package org.minnen.retiretool.data;
 
 import java.util.*;
 
-import org.minnen.retiretool.Library;
-import org.minnen.retiretool.TimeLib;
+import org.minnen.retiretool.util.Library;
+import org.minnen.retiretool.util.TimeLib;
 
 /** represents a vector in R^n */
 public class FeatureVec

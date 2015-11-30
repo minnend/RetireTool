@@ -1,7 +1,7 @@
 package org.minnen.retiretool.broker.transactions;
 
-import org.minnen.retiretool.TimeLib;
 import org.minnen.retiretool.broker.Account;
+import org.minnen.retiretool.util.TimeLib;
 
 public class TransactionOpen extends Transaction
 {

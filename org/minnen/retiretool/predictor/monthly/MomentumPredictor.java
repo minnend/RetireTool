@@ -1,8 +1,8 @@
 package org.minnen.retiretool.predictor.monthly;
 
-import org.minnen.retiretool.FinLib;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.util.FinLib;
 
 /** Single-scale momentum predictor */
 public class MomentumPredictor extends AssetPredictor

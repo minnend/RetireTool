@@ -1,6 +1,6 @@
 package org.minnen.retiretool.broker;
 
-import org.minnen.retiretool.Fixed;
+import org.minnen.retiretool.util.Fixed;
 
 public class PositionLot
 {

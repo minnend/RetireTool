@@ -2,8 +2,8 @@ package org.minnen.retiretool.data;
 
 import java.util.*;
 
-import org.minnen.retiretool.TimeLib;
 import org.minnen.retiretool.data.FeatureVec;
+import org.minnen.retiretool.util.TimeLib;
 
 /**
  * A Sequence represents a list of multidimensional feature vectors.

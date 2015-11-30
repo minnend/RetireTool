@@ -1,8 +1,8 @@
 package org.minnen.retiretool.broker.transactions;
 
-import org.minnen.retiretool.Fixed;
-import org.minnen.retiretool.TimeLib;
 import org.minnen.retiretool.broker.Account;
+import org.minnen.retiretool.util.Fixed;
+import org.minnen.retiretool.util.TimeLib;
 
 public class TransactionDeposit extends Transaction
 {

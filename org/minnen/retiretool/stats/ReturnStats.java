@@ -1,7 +1,8 @@
 package org.minnen.retiretool.stats;
 
 import java.util.Arrays;
-import org.minnen.retiretool.Library;
+
+import org.minnen.retiretool.util.Library;
 
 public class ReturnStats implements Comparable<ReturnStats>
 {

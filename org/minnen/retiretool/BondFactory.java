@@ -1,6 +1,7 @@
 package org.minnen.retiretool;
 
 import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.util.FinLib;
 
 /**
  * A BondFactory creates different kinds of bonds.

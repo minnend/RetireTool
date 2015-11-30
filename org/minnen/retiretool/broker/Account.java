@@ -5,10 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.minnen.retiretool.FinLib;
-import org.minnen.retiretool.Fixed;
-import org.minnen.retiretool.Library;
-import org.minnen.retiretool.TimeLib;
 import org.minnen.retiretool.broker.transactions.Transaction;
 import org.minnen.retiretool.broker.transactions.TransactionBuy;
 import org.minnen.retiretool.broker.transactions.TransactionDeposit;
@@ -18,6 +14,10 @@ import org.minnen.retiretool.broker.transactions.TransactionWithdraw;
 import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.util.FinLib;
+import org.minnen.retiretool.util.Fixed;
+import org.minnen.retiretool.util.Library;
+import org.minnen.retiretool.util.TimeLib;
 
 public class Account
 {

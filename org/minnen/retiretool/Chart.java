@@ -16,6 +16,8 @@ import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.DurationalStats;
 import org.minnen.retiretool.stats.ComparisonStats.Results;
+import org.minnen.retiretool.util.FinLib;
+import org.minnen.retiretool.util.TimeLib;
 
 public class Chart
 {

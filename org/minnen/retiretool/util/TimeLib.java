@@ -1,4 +1,4 @@
-package org.minnen.retiretool;
+package org.minnen.retiretool.util;
 
 import static java.util.Calendar.SUNDAY;
 

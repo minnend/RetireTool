@@ -7,7 +7,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
-import org.minnen.retiretool.FinLib.DividendMethod;
 import org.minnen.retiretool.predictor.config.ConfigSMA;
 import org.minnen.retiretool.predictor.daily.MixedPredictor;
 import org.minnen.retiretool.predictor.daily.MultiPredictor;
@@ -15,6 +14,10 @@ import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.predictor.daily.SMAPredictor;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.ReturnStats;
+import org.minnen.retiretool.util.FinLib;
+import org.minnen.retiretool.util.Fixed;
+import org.minnen.retiretool.util.TimeLib;
+import org.minnen.retiretool.util.FinLib.DividendMethod;
 import org.minnen.retiretool.broker.Account;
 import org.minnen.retiretool.broker.Broker;
 import org.minnen.retiretool.broker.TimeInfo;

@@ -3,7 +3,7 @@ package org.minnen.retiretool.tests;
 import static org.junit.Assert.*;
 
 import org.junit.Test;
-import org.minnen.retiretool.Library;
+import org.minnen.retiretool.util.Library;
 
 public class TestLibrary
 {

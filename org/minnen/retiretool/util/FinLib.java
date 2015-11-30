@@ -1,4 +1,4 @@
-package org.minnen.retiretool;
+package org.minnen.retiretool.util;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -8,6 +8,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.function.Predicate;
 
+import org.minnen.retiretool.Shiller;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
@@ -15,7 +16,6 @@ import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.DurationalStats;
 import org.minnen.retiretool.stats.RetirementStats;
-import org.minnen.retiretool.util.Random;
 
 public final class FinLib
 {

@@ -1,6 +1,6 @@
 package org.minnen.retiretool.stats;
 
-import org.minnen.retiretool.Library;
+import org.minnen.retiretool.util.Library;
 
 public class WinStats
 {

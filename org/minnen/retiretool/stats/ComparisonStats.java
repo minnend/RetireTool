@@ -4,8 +4,8 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.minnen.retiretool.FinLib;
 import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.util.FinLib;
 
 public class ComparisonStats
 {

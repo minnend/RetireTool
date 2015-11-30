@@ -5,9 +5,9 @@ import static org.junit.Assert.*;
 import java.util.Calendar;
 
 import org.junit.Test;
-import org.minnen.retiretool.TimeLib;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.stats.CumulativeStats;
+import org.minnen.retiretool.util.TimeLib;
 
 public class TestInvestmentStats
 {

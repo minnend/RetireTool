@@ -1,7 +1,7 @@
 package org.minnen.retiretool.broker.transactions;
 
-import org.minnen.retiretool.Fixed;
 import org.minnen.retiretool.broker.Account;
+import org.minnen.retiretool.util.Fixed;
 
 public class TransactionWithdraw extends Transaction
 {

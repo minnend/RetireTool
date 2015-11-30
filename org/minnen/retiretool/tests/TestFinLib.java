@@ -3,9 +3,9 @@ package org.minnen.retiretool.tests;
 import static org.junit.Assert.*;
 
 import org.junit.Test;
-import org.minnen.retiretool.FinLib;
-import org.minnen.retiretool.TimeLib;
 import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.util.FinLib;
+import org.minnen.retiretool.util.TimeLib;
 
 public class TestFinLib
 {

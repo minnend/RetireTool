@@ -9,10 +9,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import org.minnen.retiretool.FinLib;
-import org.minnen.retiretool.TimeLib;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.DurationalStats;
+import org.minnen.retiretool.util.FinLib;
+import org.minnen.retiretool.util.TimeLib;
 
 /**
  * This class stores sequences that hold cumulative returns for a particular asset / strategy. The store ensures that

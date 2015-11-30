@@ -2,9 +2,10 @@ package org.minnen.retiretool;
 
 import java.util.Calendar;
 
-import org.minnen.retiretool.FinLib.DividendMethod;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.util.TimeLib;
+import org.minnen.retiretool.util.FinLib.DividendMethod;
 
 /*
  * Functions that operate on Shiller's data (S&P price, dividends, CPI, GS10, CAPE).

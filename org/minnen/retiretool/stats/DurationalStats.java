@@ -1,7 +1,7 @@
 package org.minnen.retiretool.stats;
 
-import org.minnen.retiretool.FinLib;
 import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.util.FinLib;
 
 /**
  * Holds statistics that characterize the results of an investment strategy over a given duration.

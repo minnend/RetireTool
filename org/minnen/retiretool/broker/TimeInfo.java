@@ -1,7 +1,8 @@
 package org.minnen.retiretool.broker;
 
 import java.util.Calendar;
-import org.minnen.retiretool.TimeLib;
+
+import org.minnen.retiretool.util.TimeLib;
 
 public class TimeInfo
 {

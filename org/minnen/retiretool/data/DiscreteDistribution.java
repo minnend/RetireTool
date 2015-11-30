@@ -2,7 +2,7 @@ package org.minnen.retiretool.data;
 
 import java.util.Arrays;
 
-import org.minnen.retiretool.Library;
+import org.minnen.retiretool.util.Library;
 
 /**
  * Represents a discrete distribution (i.e. a multinomial).

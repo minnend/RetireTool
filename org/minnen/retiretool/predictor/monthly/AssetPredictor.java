@@ -2,10 +2,10 @@ package org.minnen.retiretool.predictor.monthly;
 
 import java.util.Arrays;
 
-import org.minnen.retiretool.Library;
-import org.minnen.retiretool.TimeLib;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.util.Library;
+import org.minnen.retiretool.util.TimeLib;
 
 /** Abstract base class for asset predictors. */
 public abstract class AssetPredictor
