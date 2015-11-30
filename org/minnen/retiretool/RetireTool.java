@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.TreeMap;
 
 import org.minnen.retiretool.FinLib.DividendMethod;
@@ -89,13 +90,19 @@ public class RetireTool
   public static Sequence runBrokerSim(Predictor predictor, Broker broker, Sequence guideSeq)
   {
     final int T = guideSeq.length();
+    final int maxDelay = 3;
     final long principal = Fixed.toFixed(1000.0);
+    final Random rng = new Random();
     boolean bBuyAtNextOpen = true;
     long prevTime = guideSeq.getStartMS() - TimeLib.MS_IN_DAY;
     long lastRebalance = TimeLib.TIME_BEGIN;
     boolean bNeedRebalance = false;
     DiscreteDistribution prevDistribution = null;
+    DiscreteDistribution desiredDistribution = null;
     Sequence returns = new Sequence("Returns");
+    returns.addData(1.0, guideSeq.getStartMS());
+    int rebalanceDelay = 0;
+
     Account account = broker.openAccount(Account.Type.Roth, true);
     for (int t = 0; t < T; ++t) {
       long time = guideSeq.getTimeMS(t);
@@ -109,43 +116,54 @@ public class RetireTool
       // Handle initialization issues at t==0.
       if (t == 0) {
         account.deposit(principal, "Initial Deposit");
-        returns.addData(1.0, time);
       }
 
       // Handle case where we buy at the open, not the close.
-      if (bNeedRebalance && bBuyAtNextOpen && prevDistribution != null) {
-        broker.setPriceIndex(FinLib.Open);
-        account.rebalance(prevDistribution);
-        lastRebalance = time;
+      if (bBuyAtNextOpen) {
+        if (bNeedRebalance && desiredDistribution != null && rebalanceDelay <= 0) {
+          broker.setPriceIndex(FinLib.Open);
+          account.rebalance(desiredDistribution);
+          lastRebalance = time;
+          if (prevDistribution == null) {
+            prevDistribution = new DiscreteDistribution(desiredDistribution);
+          } else {
+            prevDistribution.copyFrom(desiredDistribution);
+          }
+          broker.setPriceIndex(FinLib.Close);
+        }
       }
 
       // End of day business.
-      broker.setPriceIndex(FinLib.Close);
+      if (rebalanceDelay > 0) --rebalanceDelay;
       broker.doEndOfDayBusiness();
 
       // Time for a prediction and possible asset change.
-      DiscreteDistribution distribution = predictor.selectDistribution();
+      desiredDistribution = predictor.selectDistribution();
 
-      // Rebalance once a year.
-      bNeedRebalance = ((time - lastRebalance) / TimeLib.MS_IN_DAY > 365);
-      if (prevDistribution == null) {
-        prevDistribution = new DiscreteDistribution(distribution);
-        bNeedRebalance = true;
-      } else {
-        // Rebalance if desired distribution changes by more than 2%.
-        // Note: we're comparing the current request to the previous one, not to the actual
-        // distribution in the account, which could change due to price movement.
-        if (!bNeedRebalance && !distribution.isSimilar(prevDistribution, 0.02)) {
-          bNeedRebalance = true;
+      // Rebalance if desired distribution changes by more than 2% or if it's been more than a year.
+      // Note: we're comparing the current request to the previous one, not to the actual
+      // distribution in the account, which could change due to price movement.
+      boolean bPrevRebalance = bNeedRebalance;
+      bNeedRebalance = ((time - lastRebalance) / TimeLib.MS_IN_DAY > 365 || !desiredDistribution.isSimilar(
+          prevDistribution, 0.02));
+
+      if (maxDelay > 0) {
+        if (bNeedRebalance && !bPrevRebalance) {
+          rebalanceDelay = rng.nextInt(maxDelay + 1);
         }
-        prevDistribution.copyFrom(distribution);
       }
 
       // Update account at end of the day.
-      if (bNeedRebalance && !bBuyAtNextOpen) {
-        // System.out.printf("%s [%s]\n", distribution, TimeLib.formatDate(time));
-        account.rebalance(distribution);
-        lastRebalance = time;
+      if (!bBuyAtNextOpen) {
+        if (bNeedRebalance && rebalanceDelay <= 0) {
+          account.rebalance(desiredDistribution);
+          lastRebalance = time;
+          if (prevDistribution == null) {
+            prevDistribution = new DiscreteDistribution(desiredDistribution);
+          } else {
+            prevDistribution.copyFrom(desiredDistribution);
+          }
+        }
       }
 
       store.unlock();
