@@ -36,9 +36,9 @@ public class RetireTool
   public static int                 nMinTradeGap  = 0;
   public static double              smaMargin     = 0.0;
 
-  public static final Slippage      slippage      = Slippage.None;      // new Slippage(0.01, 0.05);
+  public static final Slippage      slippage      = new Slippage(0.01, 0.05);
   public static final int           MaxDelay      = 0;
-  public static final boolean       BuyAtNextOpen = false;
+  public static final boolean       BuyAtNextOpen = true;
 
   public static void setupBroker(File dataDir, File dir) throws IOException
   {
@@ -347,6 +347,36 @@ public class RetireTool
 
     final long gap = 2 * TimeLib.MS_IN_DAY;
     ConfigSMA[] configs = new ConfigSMA[] { new ConfigSMA(5, 0, 160, 0, 0.5, FinLib.Close, gap),
+        // new ConfigSMA(35, 0, 50, 10, 2.0, FinLib.Close, gap),
+        new ConfigSMA(15, 5, 30, 0, 2.0, FinLib.Close, gap), new ConfigSMA(55, 30, 80, 70, 0.1, FinLib.Close, gap),
+        new ConfigSMA(60, 0, 70, 10, 1.0, FinLib.Close, gap), };
+
+    Predictor[] predictors = new SMAPredictor[configs.length];
+    for (int i = 0; i < predictors.length; ++i) {
+      predictors[i] = new SMAPredictor(configs[i], riskyName, safeName, broker.accessObject);
+    }
+
+    // DiscreteDistribution distribution = DiscreteDistribution.makeUniform(predictors.length);
+    // Predictor predictor = new MixedPredictor(predictors, distribution, broker.accessObject);
+    Predictor predictor = new MultiPredictor(predictors, 39828, riskyName, safeName, broker.accessObject);
+    Sequence returns = runBrokerSim(predictor, broker, guideSeq, MaxDelay, BuyAtNextOpen);
+    CumulativeStats cstats = CumulativeStats.calc(returns);
+    System.out.println(cstats);
+  }
+
+  public static void runDelayJitterTest(File dir) throws IOException
+  {
+    final String riskyName = "stock";
+    final String safeName = "cash";
+
+    Sequence stock = store.getMisc(riskyName);
+    final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
+    Sequence guideSeq = stock.subseq(iStart);
+    Broker broker = new Broker(store, slippage, guideSeq.getStartMS());
+
+    final long gap = 2 * TimeLib.MS_IN_DAY;
+    ConfigSMA[] configs = new ConfigSMA[] {
+        // new ConfigSMA(5, 0, 160, 0, 0.5, FinLib.Close, gap),
         new ConfigSMA(35, 0, 50, 10, 2.0, FinLib.Close, gap), new ConfigSMA(15, 5, 30, 0, 2.0, FinLib.Close, gap),
         new ConfigSMA(55, 30, 80, 70, 0.1, FinLib.Close, gap), new ConfigSMA(60, 0, 70, 10, 1.0, FinLib.Close, gap), };
 
@@ -355,11 +385,33 @@ public class RetireTool
       predictors[i] = new SMAPredictor(configs[i], riskyName, safeName, broker.accessObject);
     }
 
-    DiscreteDistribution distribution = DiscreteDistribution.makeUniform(predictors.length);
-    MixedPredictor predictor = new MixedPredictor(predictors, distribution, broker.accessObject);
-    Sequence returns = runBrokerSim(predictor, broker, guideSeq, MaxDelay, BuyAtNextOpen);
-    CumulativeStats cstats = CumulativeStats.calc(returns);
-    System.out.println(cstats);
+    // DiscreteDistribution distribution = DiscreteDistribution.makeUniform(predictors.length);
+    // Predictor predictor = new MixedPredictor(predictors, distribution, broker.accessObject);
+
+    // final int assetMap = 39632;// 39824; // 39572; // 39828
+    final int assetMap = 35476;// 36496;
+    Predictor predictor = new MultiPredictor(predictors, assetMap, riskyName, safeName, broker.accessObject);
+
+    final int N = 1000;
+    double[] cagrs = new double[N];
+    double[] drawdowns = new double[N];
+    for (int i = 0; i < N; ++i) {
+      broker.reset();
+      predictor.reset();
+
+      boolean bBuyAtNextOpen = true;
+      int maxDelay = 3;
+      Sequence returns = runBrokerSim(predictor, broker, guideSeq, maxDelay, bBuyAtNextOpen);
+      CumulativeStats cstats = CumulativeStats.calc(returns);
+      System.out.printf("%d: %s\n", i + 1, cstats);
+      cagrs[i] = cstats.cagr;
+      drawdowns[i] = cstats.drawdown;
+    }
+
+    ReturnStats cagrStats = ReturnStats.calc("CAGR", cagrs);
+    ReturnStats drawdownStats = ReturnStats.calc("Drawdown", drawdowns);
+    System.out.println(cagrStats);
+    System.out.println(drawdownStats);
   }
 
   public static void main(String[] args) throws IOException
@@ -371,9 +423,10 @@ public class RetireTool
 
     setupBroker(dataDir, dir);
     // runSweep(dir);
-    // runParamJitterTest(dir);
-    runMultiSweep(dir);
+    runParamJitterTest(dir);
+    // runMultiSweep(dir);
     // runOne(dir);
+    // runDelayJitterTest(dir);
 
     // DataIO.downloadDailyDataFromYahoo(dataDir, FinLib.VANGUARD_INVESTOR_FUNDS);
     // DataIO.downloadDailyDataFromYahoo(dataDir, FinLib.STOCK_MARKET_FUNDS);
