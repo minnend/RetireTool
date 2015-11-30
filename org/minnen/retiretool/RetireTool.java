@@ -291,12 +291,9 @@ public class RetireTool
 
     final long gap = 2 * TimeLib.MS_IN_DAY;
     ConfigSMA[] configs = new ConfigSMA[] {
-        //new ConfigSMA(5, 0, 160, 0, 0.5, FinLib.Close, gap),
-        new ConfigSMA(35, 0, 50, 10, 2.0, FinLib.Close, gap),
-        new ConfigSMA(15, 5, 30, 0, 2.0, FinLib.Close, gap),
-        new ConfigSMA(55, 30, 80, 70, 0.1, FinLib.Close, gap),
-        new ConfigSMA(60, 0, 70, 10, 1.0, FinLib.Close, gap),
-        };
+        // new ConfigSMA(5, 0, 160, 0, 0.5, FinLib.Close, gap),
+        new ConfigSMA(35, 0, 50, 10, 2.0, FinLib.Close, gap), new ConfigSMA(15, 5, 30, 0, 2.0, FinLib.Close, gap),
+        new ConfigSMA(55, 30, 80, 70, 0.1, FinLib.Close, gap), new ConfigSMA(60, 0, 70, 10, 1.0, FinLib.Close, gap), };
 
     Predictor[] predictors = new SMAPredictor[configs.length];
     for (int i = 0; i < predictors.length; ++i) {
@@ -306,8 +303,9 @@ public class RetireTool
     int maxCode = (1 << predictors.length) - 1;
     long maxMap = (1 << (maxCode + 1)) - 1;
     long startCode = (1 << maxCode);
-    System.out.printf("maxCode=%d  maxMap=%d  startCode=%d\n", maxCode, maxMap, startCode);    
+    System.out.printf("maxCode=%d  maxMap=%d  startCode=%d\n", maxCode, maxMap, startCode);
     List<CumulativeStats> allStats = new ArrayList<CumulativeStats>();
+    int n = 0;
     long startTime = TimeLib.getTime();
     for (long assetMap = startCode; assetMap <= maxMap; assetMap += 2) {
       broker.reset();
@@ -317,7 +315,13 @@ public class RetireTool
       CumulativeStats cstats = CumulativeStats.calc(returns);
       allStats.add(cstats);
       // if (assetMap == 142 || assetMap == 222 || assetMap == 158)
-      System.out.println(cstats);
+      // System.out.println(cstats);
+      ++n;
+      if (n % 100 == 0) {
+        long duration = TimeLib.getTime() - startTime;
+        System.out.printf("%d in %s @ %.1f/s\n", allStats.size(), TimeLib.formatDuration(duration),
+            1000.0 * allStats.size() / duration);
+      }
     }
     long duration = TimeLib.getTime() - startTime;
 
