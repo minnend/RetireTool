@@ -9,6 +9,7 @@ import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 
+import org.minnen.retiretool.FinLib;
 import org.minnen.retiretool.Library;
 import org.minnen.retiretool.TimeLib;
 
@@ -138,6 +139,13 @@ public class DataIO
     }
     System.out.printf("Loading Yahoo data file: [%s]\n", file.getPath());
 
+    int iDate = -1;
+    int iOpen = -1;
+    int iClose = -1;
+    int iLow = -1;
+    int iHigh = -1;
+    int iAdjClose = -1;
+
     BufferedReader in = new BufferedReader(new FileReader(file));
     String name = file.getName().replaceFirst("[\\.][^\\\\/\\.]+$", "");
     Sequence data = new Sequence(name);
@@ -155,15 +163,35 @@ public class DataIO
       for (int i = 0; i < toks.length; ++i) {
         toks[i] = toks[i].trim();
       }
-      if (toks[0].toLowerCase().startsWith("date")) {
+
+      // Parse the header.
+      if (iDate < 0) {
+        for (int i = 0; i < toks.length; ++i) {
+          String field = toks[i].toLowerCase().replace(" ", "");
+          if (field.equals("date")) iDate = i;
+          else if (field.equals("open")) iOpen = i;
+          else if (field.equals("high")) iHigh = i;
+          else if (field.equals("low")) iLow = i;
+          else if (field.equals("close")) iClose = i;
+          else if (field.equals("adjclose")) iAdjClose = i;
+        }
         continue;
       }
 
       try {
-        long time = parseDate(toks[0]);
-        double close = Double.parseDouble(toks[4]);
-        double adjClose = Double.parseDouble(toks[6]);
-        data.addData(new FeatureVec(2, adjClose, close), time);
+        long time = parseDate(toks[iDate]);
+        double open = Double.parseDouble(toks[iOpen]);
+        double high = Double.parseDouble(toks[iHigh]);
+        double low = Double.parseDouble(toks[iLow]);
+        double close = Double.parseDouble(toks[iClose]);
+        double adjClose = Double.parseDouble(toks[iAdjClose]);
+        FeatureVec fv = new FeatureVec(5);
+        fv.set(FinLib.Open, open);
+        fv.set(FinLib.High, high);
+        fv.set(FinLib.Low, low);
+        fv.set(FinLib.Close, close);
+        fv.set(FinLib.AdjClose, adjClose);
+        data.addData(fv, time);
       } catch (NumberFormatException e) {
         System.err.printf("Error parsing CSV data: [%s]\n", line);
         continue;

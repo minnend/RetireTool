@@ -3,6 +3,7 @@ package org.minnen.retiretool.broker;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.minnen.retiretool.FinLib;
 import org.minnen.retiretool.Fixed;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
@@ -15,6 +16,7 @@ public class Broker
   private final long            originalTime;
 
   private TimeInfo              timeInfo;
+  private int                   iPrice       = FinLib.Close;
 
   public Broker(SequenceStore store, long time)
   {
@@ -28,6 +30,12 @@ public class Broker
     accounts.clear();
     store.unlock();
     timeInfo = new TimeInfo(originalTime);
+  }
+
+  public void setPriceIndex(int index)
+  {
+    // TODO better if price index was automatically selected based on time of day.
+    iPrice = index;
   }
 
   public void setTime(long time, long prevTime, long nextTime)
@@ -89,7 +97,7 @@ public class Broker
 
     Sequence seq = store.getMisc(name);
     int index = seq.getClosestIndex(time);
-    double floatPrice = seq.get(index, 0);
+    double floatPrice = seq.get(index, iPrice);
     long price = Fixed.round(Fixed.toFixed(floatPrice), Fixed.THOUSANDTH);
     return price;
   }

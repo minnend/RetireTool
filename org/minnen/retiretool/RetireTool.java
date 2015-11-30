@@ -90,8 +90,10 @@ public class RetireTool
   {
     final int T = guideSeq.length();
     final long principal = Fixed.toFixed(1000.0);
+    boolean bBuyAtNextOpen = true;
     long prevTime = guideSeq.getStartMS() - TimeLib.MS_IN_DAY;
     long lastRebalance = TimeLib.TIME_BEGIN;
+    boolean bNeedRebalance = false;
     DiscreteDistribution prevDistribution = null;
     Sequence returns = new Sequence("Returns");
     Account account = broker.openAccount(Account.Type.Roth, true);
@@ -110,27 +112,37 @@ public class RetireTool
         returns.addData(1.0, time);
       }
 
+      // Handle case where we buy at the open, not the close.
+      if (bNeedRebalance && bBuyAtNextOpen && prevDistribution != null) {
+        broker.setPriceIndex(FinLib.Open);
+        account.rebalance(prevDistribution);
+        lastRebalance = time;
+      }
+
       // End of day business.
+      broker.setPriceIndex(FinLib.Close);
       broker.doEndOfDayBusiness();
 
       // Time for a prediction and possible asset change.
       DiscreteDistribution distribution = predictor.selectDistribution();
 
       // Rebalance once a year.
-      boolean bNeedRebalance = ((time - lastRebalance) / TimeLib.MS_IN_DAY > 365);
+      bNeedRebalance = ((time - lastRebalance) / TimeLib.MS_IN_DAY > 365);
       if (prevDistribution == null) {
         prevDistribution = new DiscreteDistribution(distribution);
         bNeedRebalance = true;
       } else {
         // Rebalance if desired distribution changes by more than 2%.
-        // Note: we're comparing the current request to the previous one, not the current request to the actual
-        // distribution, which could change due to price movement.
+        // Note: we're comparing the current request to the previous one, not to the actual
+        // distribution in the account, which could change due to price movement.
         if (!bNeedRebalance && !distribution.isSimilar(prevDistribution, 0.02)) {
           bNeedRebalance = true;
         }
         prevDistribution.copyFrom(distribution);
       }
-      if (bNeedRebalance) {
+
+      // Update account at end of the day.
+      if (bNeedRebalance && !bBuyAtNextOpen) {
         // System.out.printf("%s [%s]\n", distribution, TimeLib.formatDate(time));
         account.rebalance(distribution);
         lastRebalance = time;
@@ -200,9 +212,9 @@ public class RetireTool
     final String safeName = "cash";
 
     final long gap = 2 * TimeLib.MS_IN_DAY;
-    // ConfigSMA config = new ConfigSMA(55, 30, 80, 70, 0.1, 0, gap);
-    // ConfigSMA config = new ConfigSMA(60, 0, 70, 10, 1.0, 0, gap);
-    ConfigSMA config = new ConfigSMA(50, 30, 80, 60, 0.25, 0, gap);
+    // ConfigSMA config = new ConfigSMA(55, 30, 80, 70, 0.1, FinLib.Close, gap);
+    // ConfigSMA config = new ConfigSMA(60, 0, 70, 10, 1.0, FinLib.Close, gap);
+    ConfigSMA config = new ConfigSMA(50, 30, 80, 60, 0.25, FinLib.Close, gap);
 
     Sequence stock = store.getMisc(riskyName);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
@@ -258,10 +270,10 @@ public class RetireTool
 
     final long gap = 2 * TimeLib.MS_IN_DAY;
     ConfigSMA[] configs = new ConfigSMA[] {
-        // new ConfigSMA(5, 0, 160, 0, 0.5, 0, gap),
-        // new ConfigSMA(35, 0, 50, 10, 2.0, 0, gap),
-        new ConfigSMA(15, 5, 30, 0, 2.0, 0, gap), new ConfigSMA(55, 30, 80, 70, 0.1, 0, gap),
-        new ConfigSMA(60, 0, 70, 10, 1.0, 0, gap), };
+        // new ConfigSMA(5, 0, 160, 0, 0.5, FinLib.Close, gap),
+        // new ConfigSMA(35, 0, 50, 10, 2.0, FinLib.Close, gap),
+        new ConfigSMA(15, 5, 30, 0, 2.0, FinLib.Close, gap), new ConfigSMA(55, 30, 80, 70, 0.1, FinLib.Close, gap),
+        new ConfigSMA(60, 0, 70, 10, 1.0, FinLib.Close, gap), };
 
     Predictor[] predictors = new SMAPredictor[configs.length];
     for (int i = 0; i < predictors.length; ++i) {
@@ -301,9 +313,9 @@ public class RetireTool
     Broker broker = new Broker(store, guideSeq.getStartMS());
 
     final long gap = 2 * TimeLib.MS_IN_DAY;
-    ConfigSMA[] configs = new ConfigSMA[] { new ConfigSMA(5, 0, 160, 0, 0.5, 0, gap),
-        new ConfigSMA(35, 0, 50, 10, 2.0, 0, gap), new ConfigSMA(15, 5, 30, 0, 2.0, 0, gap),
-        new ConfigSMA(55, 30, 80, 70, 0.1, 0, gap), new ConfigSMA(60, 0, 70, 10, 1.0, 0, gap), };
+    ConfigSMA[] configs = new ConfigSMA[] { new ConfigSMA(5, 0, 160, 0, 0.5, FinLib.Close, gap),
+        new ConfigSMA(35, 0, 50, 10, 2.0, FinLib.Close, gap), new ConfigSMA(15, 5, 30, 0, 2.0, FinLib.Close, gap),
+        new ConfigSMA(55, 30, 80, 70, 0.1, FinLib.Close, gap), new ConfigSMA(60, 0, 70, 10, 1.0, FinLib.Close, gap), };
 
     Predictor[] predictors = new SMAPredictor[configs.length];
     for (int i = 0; i < predictors.length; ++i) {

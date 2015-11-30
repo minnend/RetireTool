@@ -35,6 +35,12 @@ public final class FinLib
   public static final int      MonthlyHigh             = 3;
   public static final int      MonthlyMisc             = 4;
 
+  public static final int      Close                   = 0;
+  public static final int      Open                    = 1;
+  public static final int      Low                     = 2;
+  public static final int      High                    = 3;
+  public static final int      AdjClose                = 4;
+
   public static DecimalFormat  currencyFormatter       = new DecimalFormat("#,##0.00");
   public static DecimalFormat  dollarFormatter         = new DecimalFormat("#,##0");
 
@@ -307,8 +313,7 @@ public final class FinLib
 
   public static Sequence appendROISeq(Sequence a, Sequence b)
   {
-    if (a == null)
-      return b.extractDims(0, 3);
+    if (a == null) return b.extractDims(0, 3);
 
     final int indexDataB = 3;
     int D = a.getNumDims();
@@ -728,8 +733,7 @@ public final class FinLib
     TimeLib.returnCal(cal);
     if (month % 3 == 2) { // time for a dividend!
       for (int j = 0; j < 3; j++) {
-        if (index - j < iMinIndex)
-          break;
+        if (index - j < iMinIndex) break;
         div += snp.get(index - j, Shiller.DIV);
       }
     }
@@ -768,8 +772,8 @@ public final class FinLib
       long timeMS = snp.getTimeMS(i);
       double divReinvest = 0.0;
       if (divMethod == DividendMethod.NO_REINVEST_MONTHLY)
-        // No dividend reinvestment so all dividends go to cash.
-        divCash += shares * snp.get(i, Shiller.DIV);
+      // No dividend reinvestment so all dividends go to cash.
+      divCash += shares * snp.get(i, Shiller.DIV);
       else if (divMethod == DividendMethod.MONTHLY) {
         // Dividends at the end of every month.
         divReinvest = shares * snp.get(i, Shiller.DIV);
@@ -993,20 +997,14 @@ public final class FinLib
       @Override
       public int compare(RetirementStats a, RetirementStats b)
       {
-        if (a.principal < b.principal)
-          return -1;
-        if (a.principal > b.principal)
-          return 1;
+        if (a.principal < b.principal) return -1;
+        if (a.principal > b.principal) return 1;
 
-        if (a.percentile10 > b.percentile10)
-          return -1;
-        if (a.percentile10 > b.percentile10)
-          return 1;
+        if (a.percentile10 > b.percentile10) return -1;
+        if (a.percentile10 > b.percentile10) return 1;
 
-        if (a.percentile25 > b.percentile25)
-          return -1;
-        if (a.percentile25 > b.percentile25)
-          return 1;
+        if (a.percentile25 > b.percentile25) return -1;
+        if (a.percentile25 > b.percentile25) return 1;
 
         return a.name.compareTo(b.name);
       }
