@@ -115,8 +115,6 @@ public class RetireTool
       broker.setTime(time, prevTime, nextTime);
       TimeInfo timeInfo = broker.getTimeInfo();
 
-      // TODO support jitter for trade day.
-
       // Handle initialization issues at t==0.
       if (t == 0) {
         account.deposit(principal, "Initial Deposit");
@@ -153,7 +151,8 @@ public class RetireTool
 
       if (maxDelay > 0) {
         if (bNeedRebalance && !bPrevRebalance) {
-          rebalanceDelay = rng.nextInt(maxDelay + 1);
+          // Note: If buying at open, a one day delay is built-in.
+          rebalanceDelay = rng.nextInt(maxDelay + (bBuyAtNextOpen ? 0 : 1));
         }
       }
 
@@ -292,10 +291,12 @@ public class RetireTool
 
     final long gap = 2 * TimeLib.MS_IN_DAY;
     ConfigSMA[] configs = new ConfigSMA[] {
-        // new ConfigSMA(5, 0, 160, 0, 0.5, FinLib.Close, gap),
-        // new ConfigSMA(35, 0, 50, 10, 2.0, FinLib.Close, gap),
-        new ConfigSMA(15, 5, 30, 0, 2.0, FinLib.Close, gap), new ConfigSMA(55, 30, 80, 70, 0.1, FinLib.Close, gap),
-        new ConfigSMA(60, 0, 70, 10, 1.0, FinLib.Close, gap), };
+        //new ConfigSMA(5, 0, 160, 0, 0.5, FinLib.Close, gap),
+        new ConfigSMA(35, 0, 50, 10, 2.0, FinLib.Close, gap),
+        new ConfigSMA(15, 5, 30, 0, 2.0, FinLib.Close, gap),
+        new ConfigSMA(55, 30, 80, 70, 0.1, FinLib.Close, gap),
+        new ConfigSMA(60, 0, 70, 10, 1.0, FinLib.Close, gap),
+        };
 
     Predictor[] predictors = new SMAPredictor[configs.length];
     for (int i = 0; i < predictors.length; ++i) {
@@ -304,19 +305,25 @@ public class RetireTool
 
     int maxCode = (1 << predictors.length) - 1;
     long maxMap = (1 << (maxCode + 1)) - 1;
-    System.out.printf("maxCode=%d  maxMap=%d\n", maxCode, maxMap);
+    long startCode = (1 << maxCode);
+    System.out.printf("maxCode=%d  maxMap=%d  startCode=%d\n", maxCode, maxMap, startCode);    
     List<CumulativeStats> allStats = new ArrayList<CumulativeStats>();
-    for (long assetMap = 0; assetMap <= maxMap; assetMap += 2) {
+    long startTime = TimeLib.getTime();
+    for (long assetMap = startCode; assetMap <= maxMap; assetMap += 2) {
       broker.reset();
       MultiPredictor predictor = new MultiPredictor(predictors, assetMap, riskyName, safeName, broker.accessObject);
       Sequence returns = runBrokerSim(predictor, broker, guideSeq, MaxDelay, BuyAtNextOpen);
       returns.setName(String.format("%d", assetMap));
       CumulativeStats cstats = CumulativeStats.calc(returns);
       allStats.add(cstats);
+      // if (assetMap == 142 || assetMap == 222 || assetMap == 158)
       System.out.println(cstats);
     }
+    long duration = TimeLib.getTime() - startTime;
 
     System.out.println();
+    System.out.printf("Summary: %d runs in %s @ %.1f/s\n", allStats.size(), TimeLib.formatDuration(duration), 1000.0
+        * allStats.size() / duration);
     FinLib.filterStrategies(allStats);
     Collections.sort(allStats);
     for (CumulativeStats cstats : allStats) {
@@ -361,8 +368,8 @@ public class RetireTool
     setupBroker(dataDir, dir);
     // runSweep(dir);
     // runParamJitterTest(dir);
-    // runMultiSweep(dir);
-    runOne(dir);
+    runMultiSweep(dir);
+    // runOne(dir);
 
     // DataIO.downloadDailyDataFromYahoo(dataDir, FinLib.VANGUARD_INVESTOR_FUNDS);
     // DataIO.downloadDailyDataFromYahoo(dataDir, FinLib.STOCK_MARKET_FUNDS);
