@@ -6,7 +6,6 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Random;
 import java.util.function.Predicate;
 
 import org.minnen.retiretool.data.FeatureVec;
@@ -16,6 +15,7 @@ import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.DurationalStats;
 import org.minnen.retiretool.stats.RetirementStats;
+import org.minnen.retiretool.util.Random;
 
 public final class FinLib
 {

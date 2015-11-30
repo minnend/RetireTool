@@ -12,7 +12,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
@@ -39,6 +38,7 @@ import org.minnen.retiretool.stats.DurationalStats;
 import org.minnen.retiretool.stats.RetirementStats;
 import org.minnen.retiretool.stats.ReturnStats;
 import org.minnen.retiretool.stats.WinStats;
+import org.minnen.retiretool.util.Random;
 
 public class RetireToolMonthly
 {
@@ -520,12 +520,10 @@ public class RetireToolMonthly
       int n = 0;
       int nOK = 0;
       for (int i = 0; i < nData; i++) {
-        if (i + months >= nData)
-          break; // not enough data
+        if (i + months >= nData) break; // not enough data
         double endBalance = FinLib.calcEndBalance(cumulativeReturns, cpi, principal, salary, expenseRatio, true, 0, 0,
             0.0, i, months);
-        if (endBalance > 0.0)
-          ++nOK;
+        if (endBalance > 0.0) ++nOK;
         ++n;
       }
       System.out.printf("Withdrawal Rate: %.2f  %d / %d = %.2f%%\n", wrate, nOK, n, 100.0 * nOK / n);
@@ -1804,15 +1802,11 @@ public class RetireToolMonthly
       @Override
       public int compare(ReturnStats[] a, ReturnStats[] b)
       {
-        if (a[0].mean > b[0].mean)
-          return -1;
-        if (a[0].mean < b[0].mean)
-          return 1;
+        if (a[0].mean > b[0].mean) return -1;
+        if (a[0].mean < b[0].mean) return 1;
 
-        if (a[1].mean < b[1].mean)
-          return -1;
-        if (a[1].mean > b[1].mean)
-          return -1;
+        if (a[1].mean < b[1].mean) return -1;
+        if (a[1].mean > b[1].mean) return -1;
 
         return 0;
       }
