@@ -211,9 +211,9 @@ public class Account
     }
     assert nShares > 0;
 
-    long price = broker.getPrice(name);
+    long price = broker.getBuyPrice(name);
     assert Fixed.mul(price, nShares) <= cash;
-    TransactionBuy buy = new TransactionBuy(this, broker.getTime(), name, nShares, memo);
+    TransactionBuy buy = new TransactionBuy(this, broker.getTime(), name, nShares, price, memo);
     transactions.add(buy);
     apply(buy);
     return true;
@@ -222,7 +222,7 @@ public class Account
   public boolean buyValue(String name, long value, String memo)
   {
     assert value <= cash;
-    long price = broker.getPrice(name);
+    long price = broker.getBuyPrice(name);
     long nShares = Fixed.divTrunc(value, price);
 
     // Don't buy less than 1/10 share.
@@ -243,7 +243,7 @@ public class Account
     assert nShares > 0;
 
     long time = broker.getTime();
-    long price = broker.getPrice(name);
+    long price = broker.getSellPrice(name);
     Position position = getPosition(name);
     assert nShares <= position.getNumShares();
 
@@ -257,7 +257,7 @@ public class Account
       assert receipt.balance > 0;
     }
 
-    TransactionSell sell = new TransactionSell(this, time, name, nShares, memo);
+    TransactionSell sell = new TransactionSell(this, time, name, nShares, price, memo);
     transactions.add(sell);
     apply(sell);
     return true;
@@ -272,7 +272,7 @@ public class Account
     if (value == positionValue) {
       nShares = position.getNumShares();
     } else {
-      long price = broker.getPrice(name);
+      long price = broker.getSellPrice(name);
       nShares = Fixed.divTrunc(value, price);
     }
     return sellShares(name, nShares, memo);
@@ -362,7 +362,7 @@ public class Account
       if (sellValue > 0) {
         // System.out.printf("Sell| %s: %.3f%% => Value=$%s\n", name, targetFrac, Fixed.formatCurrency(sellValue));
         sellValue(name, sellValue, null);
-        assert preValue == getValue();
+        // assert preValue == getValue();
       }
     }
 
@@ -381,18 +381,18 @@ public class Account
       if (buyValue > 0) {
         // System.out.printf("Buy| %s: %.3f%% => Value=$%s\n", name, targetFrac, Fixed.formatCurrency(buyValue));
         buyValue(name, buyValue, null);
-        assert preValue == getValue();
+        // assert preValue == getValue();
       }
     }
 
     // Make sure we adjusted correctly (debug).
-    assert preValue == getValue();
-    for (int i = 0; i < targetDistribution.size(); ++i) {
-      String name = targetDistribution.names[i];
-      double actual = Fixed.toFloat(Fixed.div(getValue(name), total));
-      double target = targetDistribution.weights[i];
-      assert Math.abs(actual - target) < 0.01 : String.format("%f vs %f", actual, target);
-    }
+    // assert preValue == getValue();
+    // for (int i = 0; i < targetDistribution.size(); ++i) {
+    // String name = targetDistribution.names[i];
+    // double actual = Fixed.toFloat(Fixed.div(getValue(name), total));
+    // double target = targetDistribution.weights[i];
+    // assert Math.abs(actual - target) < 0.01 : String.format("%f vs %f", actual, target);
+    // }
   }
 
   public void printPositions()

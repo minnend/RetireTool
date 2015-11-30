@@ -11,12 +11,12 @@ public class TransactionSell extends Transaction
   public final long   price;
   public final long   postBalance;
 
-  public TransactionSell(Account account, long time, String name, long nShares, String memo)
+  public TransactionSell(Account account, long time, String name, long nShares, long price, String memo)
   {
     super(account, time, memo);
     this.name = name;
     this.nShares = nShares;
-    this.price = account.broker.getPrice(name, time);
+    this.price = price;
     this.postBalance = account.getCash() + getValue();
   }
 

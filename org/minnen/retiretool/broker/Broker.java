@@ -5,23 +5,27 @@ import java.util.List;
 
 import org.minnen.retiretool.FinLib;
 import org.minnen.retiretool.Fixed;
+import org.minnen.retiretool.Slippage;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 
 public class Broker
 {
   public final BrokerInfoAccess accessObject = new BrokerInfoAccess(this);
-  private final List<Account>   accounts     = new ArrayList<>();
   public final SequenceStore    store;
+  public final Slippage         slippage;
+
+  private final List<Account>   accounts     = new ArrayList<>();
   private final long            originalTime;
 
   private TimeInfo              timeInfo;
   private int                   iPrice       = FinLib.Close;
 
-  public Broker(SequenceStore store, long time)
+  public Broker(SequenceStore store, Slippage slippage, long time)
   {
     this.store = store;
     this.originalTime = time;
+    this.slippage = slippage;
     timeInfo = new TimeInfo(time);
   }
 
@@ -100,5 +104,15 @@ public class Broker
     double floatPrice = seq.get(index, iPrice);
     long price = Fixed.round(Fixed.toFixed(floatPrice), Fixed.THOUSANDTH);
     return price;
+  }
+
+  public long getBuyPrice(String name)
+  {
+    return slippage.applyToBuy(getPrice(name));
+  }
+
+  public long getSellPrice(String name)
+  {
+    return slippage.applyToSell(getPrice(name));
   }
 }

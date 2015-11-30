@@ -5,9 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
-import java.util.TreeMap;
 
 import org.minnen.retiretool.FinLib.DividendMethod;
 import org.minnen.retiretool.predictor.config.ConfigSMA;
@@ -28,15 +26,19 @@ import org.minnen.retiretool.data.SequenceStore;
 
 public class RetireTool
 {
-  public static final int           GRAPH_WIDTH  = 710;
-  public static final int           GRAPH_HEIGHT = 450;
+  public static final int           GRAPH_WIDTH   = 710;
+  public static final int           GRAPH_HEIGHT  = 450;
 
-  public final static SequenceStore store        = new SequenceStore();
+  public final static SequenceStore store         = new SequenceStore();
 
   /** Dimension to use in the price sequence for SMA predictions. */
-  public static int                 iPriceSMA    = 0;
-  public static int                 nMinTradeGap = 0;
-  public static double              smaMargin    = 0.0;
+  public static int                 iPriceSMA     = 0;
+  public static int                 nMinTradeGap  = 0;
+  public static double              smaMargin     = 0.0;
+
+  public static final Slippage      slippage      = Slippage.None;      // new Slippage(0.01, 0.05);
+  public static final int           MaxDelay      = 0;
+  public static final boolean       BuyAtNextOpen = false;
 
   public static void setupBroker(File dataDir, File dir) throws IOException
   {
@@ -87,13 +89,15 @@ public class RetireTool
     // }
   }
 
-  public static Sequence runBrokerSim(Predictor predictor, Broker broker, Sequence guideSeq)
+  public static Sequence runBrokerSim(Predictor predictor, Broker broker, Sequence guideSeq, int maxDelay,
+      boolean bBuyAtNextOpen)
   {
-    final int T = guideSeq.length();
-    final int maxDelay = 3;
-    final long principal = Fixed.toFixed(1000.0);
+    final double DistributionEPS = 0.02;
+
     final Random rng = new Random();
-    boolean bBuyAtNextOpen = true;
+    final int T = guideSeq.length();
+    final long principal = Fixed.toFixed(1000.0);
+
     long prevTime = guideSeq.getStartMS() - TimeLib.MS_IN_DAY;
     long lastRebalance = TimeLib.TIME_BEGIN;
     boolean bNeedRebalance = false;
@@ -145,7 +149,7 @@ public class RetireTool
       // distribution in the account, which could change due to price movement.
       boolean bPrevRebalance = bNeedRebalance;
       bNeedRebalance = ((time - lastRebalance) / TimeLib.MS_IN_DAY > 365 || !desiredDistribution.isSimilar(
-          prevDistribution, 0.02));
+          prevDistribution, DistributionEPS));
 
       if (maxDelay > 0) {
         if (bNeedRebalance && !bPrevRebalance) {
@@ -200,11 +204,11 @@ public class RetireTool
         // for (int jj = 0; jj + 20 <= j; jj += 10) {
         int jj = 0;
         for (int k = 0; k < margins.length; ++k) {
-          Broker broker = new Broker(store, guideSeq.getStartMS());
+          Broker broker = new Broker(store, slippage, guideSeq.getStartMS());
           ConfigSMA config = new ConfigSMA(i, ii, j, jj, margins[k], 0, 0L);
           Predictor predictor = new SMAPredictor(config, riskyName, safeName, broker.accessObject);
 
-          Sequence returns = runBrokerSim(predictor, broker, guideSeq);
+          Sequence returns = runBrokerSim(predictor, broker, guideSeq, MaxDelay, BuyAtNextOpen);
           returns.setName(config.toString());
           CumulativeStats cstats = CumulativeStats.calc(returns);
           allStats.add(cstats);
@@ -237,7 +241,7 @@ public class RetireTool
     Sequence stock = store.getMisc(riskyName);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stock.subseq(iStart);
-    Broker broker = new Broker(store, guideSeq.getStartMS());
+    Broker broker = new Broker(store, slippage, guideSeq.getStartMS());
 
     Sequence results = new Sequence();
     long startMS = TimeLib.getTime();
@@ -255,7 +259,7 @@ public class RetireTool
               broker.reset();
               Predictor predictor = new SMAPredictor(jitteredConfig, riskyName, safeName, broker.accessObject);
 
-              Sequence returns = runBrokerSim(predictor, broker, guideSeq);
+              Sequence returns = runBrokerSim(predictor, broker, guideSeq, MaxDelay, BuyAtNextOpen);
               returns.setName(jitteredConfig.toString());
               CumulativeStats cstats = CumulativeStats.calc(returns);
               results.addData(new FeatureVec(2, cstats.cagr, cstats.drawdown));
@@ -284,7 +288,7 @@ public class RetireTool
     Sequence stock = store.getMisc(riskyName);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stock.subseq(iStart);
-    Broker broker = new Broker(store, guideSeq.getStartMS());
+    Broker broker = new Broker(store, slippage, guideSeq.getStartMS());
 
     final long gap = 2 * TimeLib.MS_IN_DAY;
     ConfigSMA[] configs = new ConfigSMA[] {
@@ -305,7 +309,7 @@ public class RetireTool
     for (long assetMap = 0; assetMap <= maxMap; assetMap += 2) {
       broker.reset();
       MultiPredictor predictor = new MultiPredictor(predictors, assetMap, riskyName, safeName, broker.accessObject);
-      Sequence returns = runBrokerSim(predictor, broker, guideSeq);
+      Sequence returns = runBrokerSim(predictor, broker, guideSeq, MaxDelay, BuyAtNextOpen);
       returns.setName(String.format("%d", assetMap));
       CumulativeStats cstats = CumulativeStats.calc(returns);
       allStats.add(cstats);
@@ -328,7 +332,7 @@ public class RetireTool
     Sequence stock = store.getMisc(riskyName);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stock.subseq(iStart);
-    Broker broker = new Broker(store, guideSeq.getStartMS());
+    Broker broker = new Broker(store, slippage, guideSeq.getStartMS());
 
     final long gap = 2 * TimeLib.MS_IN_DAY;
     ConfigSMA[] configs = new ConfigSMA[] { new ConfigSMA(5, 0, 160, 0, 0.5, FinLib.Close, gap),
@@ -342,7 +346,7 @@ public class RetireTool
 
     DiscreteDistribution distribution = DiscreteDistribution.makeUniform(predictors.length);
     MixedPredictor predictor = new MixedPredictor(predictors, distribution, broker.accessObject);
-    Sequence returns = runBrokerSim(predictor, broker, guideSeq);
+    Sequence returns = runBrokerSim(predictor, broker, guideSeq, MaxDelay, BuyAtNextOpen);
     CumulativeStats cstats = CumulativeStats.calc(returns);
     System.out.println(cstats);
   }

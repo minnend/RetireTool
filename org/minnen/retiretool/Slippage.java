@@ -10,35 +10,52 @@ import org.minnen.retiretool.data.Sequence;
 public class Slippage
 {
   /** Fixed amount of slippage (in dollars) for each trade. */
-  public final double          fixed;
+  public final double          constSlip;
 
   /** Percent of trade price to slip (1.0 = 1%). */
-  public final double          percent;
+  public final double          percentSlip;
+
+  public final long            fixedConstSlip;
+  public final long            fixedPercentSlip;
 
   public static final Slippage None = new Slippage(0.0, 0.0);
 
   /**
    * Construct a new slippage model.
    * 
-   * @param fixed fixed amount added or subtracted from the price (0.1 = 10 cents).
-   * @param percent percent of trade price to add/subtract (1.0 = 1%).
+   * @param constSlip fixed amount added or subtracted from the price (0.1 = 10 cents).
+   * @param percentSlip percent of trade price to add/subtract (1.0 = 1%).
    */
-  public Slippage(double fixed, double percent)
+  public Slippage(double constSlip, double percentSlip)
   {
-    this.fixed = fixed;
-    this.percent = percent;
+    this.constSlip = constSlip;
+    this.percentSlip = percentSlip / 100.0;
+    this.fixedConstSlip = Fixed.toFixed(this.constSlip);
+    this.fixedPercentSlip = Fixed.toFixed(this.percentSlip);
   }
 
   public double applyToBuy(double price)
   {
     // Price goes up when buying.
-    return price * (1.0 + percent / 100.0) + fixed;
+    return price * (1.0 + percentSlip) + constSlip;
   }
 
   public double applyToSell(double price)
   {
     // Price goes down when selling.
-    return price * (1.0 - percent / 100.0) - fixed;
+    return price * (1.0 - percentSlip) - constSlip;
+  }
+
+  public long applyToBuy(long price)
+  {
+    // Price goes up when buying.
+    return Fixed.mul(price, Fixed.ONE + fixedPercentSlip) + fixedConstSlip;
+  }
+
+  public long applyToSell(long price)
+  {
+    // Price goes down when selling.
+    return Fixed.mul(price, Fixed.ONE - fixedPercentSlip) - fixedConstSlip;
   }
 
   public double adjustForAssetChange(double balance, int index, Sequence currentAsset, Sequence nextAsset)

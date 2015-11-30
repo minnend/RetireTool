@@ -11,12 +11,12 @@ public class TransactionBuy extends Transaction
   public final long   price;
   public final long   postBalance;
 
-  public TransactionBuy(Account account, long time, String name, long nShares, String memo)
+  public TransactionBuy(Account account, long time, String name, long nShares, long price, String memo)
   {
     super(account, time, memo);
     this.name = name;
     this.nShares = nShares;
-    this.price = account.broker.getPrice(name, time);
+    this.price = price;
     this.postBalance = account.getCash() - getValue();
   }
 
@@ -28,8 +28,7 @@ public class TransactionBuy extends Transaction
   @Override
   public String toString()
   {
-    return String.format("%11s| Buy: %s %.2f @ $%s ($%s)%s", TimeLib.formatDate(time), name,
-        Fixed.toFloat(nShares), Fixed.formatCurrency(price), Fixed.formatCurrency(getValue()),
-        getMemoString());
+    return String.format("%11s| Buy: %s %.2f @ $%s ($%s)%s", TimeLib.formatDate(time), name, Fixed.toFloat(nShares),
+        Fixed.formatCurrency(price), Fixed.formatCurrency(getValue()), getMemoString());
   }
 }
