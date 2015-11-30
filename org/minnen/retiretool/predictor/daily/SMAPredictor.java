@@ -13,13 +13,17 @@ public class SMAPredictor extends Predictor
   private int             reloc        = 0;
   private long            timeLastFlip = TimeLib.TIME_ERROR;
   private final String    integralName;
+  private final int       assetID;
+  private final int       integralID;
 
   public SMAPredictor(ConfigSMA config, String assetName, String alternativeAsset, BrokerInfoAccess brokerAccess)
   {
     super("SMA", brokerAccess, new String[] { assetName, alternativeAsset });
     this.predictorType = PredictorType.InOut;
     this.config = config;
+    this.assetID = brokerAccess.getID(assetName);
     this.integralName = assetName + "-integral";
+    this.integralID = brokerAccess.getID(integralName);
   }
 
   @Override
@@ -33,8 +37,8 @@ public class SMAPredictor extends Predictor
     }
 
     // Get either the price sequence or the integral sequence.
-    final Sequence integral = brokerAccess.tryGetSeq(integralName);
-    final Sequence seq = (integral != null ? null : brokerAccess.getSeq(assetChoices[0]));
+    final Sequence integral = (integralID >= 0 ? brokerAccess.getSeq(integralID) : null);
+    final Sequence seq = (integral != null ? null : brokerAccess.getSeq(assetID));
 
     final int iLast = (integral != null ? integral.length() : seq.length()) - 1;
     final int iBaseA = iLast - config.nLookbackBaseA;

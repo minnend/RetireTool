@@ -74,9 +74,21 @@ public class SequenceStore implements Iterable<Sequence>
     return lastStatsDuration;
   }
 
-  public void alias(String from, String to)
+  public int alias(String from, String to)
   {
     aliasMap.put(from, to);
+
+    if (hasName(to)) {
+      int index = nameToIndex.get(to);
+      nameToIndex.put(from, index);
+      return index;
+    } else if (hasMisc(to)) {
+      int index = miscNameToIndex.get(to);
+      miscNameToIndex.put(from, index);
+      return index;
+    } else {
+      throw new RuntimeException(String.format("Can't find target sequence name (%s)", to));
+    }
   }
 
   /**
@@ -237,9 +249,9 @@ public class SequenceStore implements Iterable<Sequence>
     return hasName(name) || hasMisc(name);
   }
 
-  private int getIndex(String name)
+  public int getIndex(String name)
   {
-    name = aliasMap.getOrDefault(name, name);
+    // name = aliasMap.getOrDefault(name, name);
     int index = nameToIndex.getOrDefault(name, -1);
     if (index < 0) {
       String s = FinLib.getBaseName(name);
@@ -265,6 +277,11 @@ public class SequenceStore implements Iterable<Sequence>
     return (index < 0 ? null : nominalReturns.get(index));
   }
 
+  public Sequence tryGet(int id)
+  {
+    return (id < 0 ? null : nominalReturns.get(id));
+  }
+
   public Sequence getReal(String name)
   {
     int index = getIndex(name);
@@ -272,9 +289,9 @@ public class SequenceStore implements Iterable<Sequence>
     return realReturns.get(index);
   }
 
-  private int getMiscIndex(String name)
+  public int getMiscIndex(String name)
   {
-    name = aliasMap.getOrDefault(name, name);
+    // name = aliasMap.getOrDefault(name, name);
     int index = miscNameToIndex.getOrDefault(name, -1);
     if (index < 0) {
       String s = FinLib.getBaseName(name);
@@ -298,6 +315,11 @@ public class SequenceStore implements Iterable<Sequence>
   {
     int index = getMiscIndex(name);
     return (index < 0 ? null : miscSeqs.get(index));
+  }
+
+  public Sequence tryGetMisc(int id)
+  {
+    return (id < 0 ? null : miscSeqs.get(id));
   }
 
   public CumulativeStats getCumulativeStats(int i)

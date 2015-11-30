@@ -42,21 +42,32 @@ public class BrokerInfoAccess
     return store.has(name);
   }
 
-  public Sequence getSeq(String name)
+  public int getID(String name)
   {
-    Sequence seq = tryGetSeq(name);
-    if (seq == null) {
-      throw new IllegalArgumentException("Can't find asset: " + name);
+    SequenceStore store = broker.store;
+    int id = store.getMiscIndex(name);
+    if (id < 0) {
+      id = store.getIndex(name);
     }
-    return seq;
+    return id;
   }
 
-  public Sequence tryGetSeq(String name)
+  public Sequence getSeq(String name)
   {
     SequenceStore store = broker.store;
     Sequence seq = store.tryGetMisc(name);
     if (seq == null) {
       seq = store.tryGet(name);
+    }
+    return seq;
+  }
+
+  public Sequence getSeq(int id)
+  {
+    SequenceStore store = broker.store;
+    Sequence seq = store.tryGetMisc(id);
+    if (seq == null) {
+      seq = store.tryGet(id);
     }
     return seq;
   }
