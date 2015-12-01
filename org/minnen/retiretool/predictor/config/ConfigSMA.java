@@ -1,18 +1,18 @@
 package org.minnen.retiretool.predictor.config;
 
-import org.minnen.retiretool.util.Random;
+import org.minnen.retiretool.broker.BrokerInfoAccess;
+import org.minnen.retiretool.predictor.daily.Predictor;
+import org.minnen.retiretool.predictor.daily.SMAPredictor;
 
-public class ConfigSMA
+public class ConfigSMA extends PredictorConfig
 {
-  public static final Random rng = new Random();
-
-  public final double        margin;
-  public final int           nLookbackBaseA;
-  public final int           nLookbackBaseB;
-  public final int           nLookbackTriggerA;
-  public final int           nLookbackTriggerB;
-  public final int           iPrice;
-  public final long          minTimeBetweenFlips;
+  public final double margin;
+  public final int    nLookbackBaseA;
+  public final int    nLookbackBaseB;
+  public final int    nLookbackTriggerA;
+  public final int    nLookbackTriggerB;
+  public final int    iPrice;
+  public final long   minTimeBetweenFlips;
 
   public ConfigSMA(int nLookbackTriggerA, int nLookbackTriggerB, int nLookbackBaseA, int nLookbackBaseB, double margin,
       int iPrice, long minTimeBetweenFlips)
@@ -26,14 +26,21 @@ public class ConfigSMA
     this.minTimeBetweenFlips = minTimeBetweenFlips;
   }
 
+  @Override
+  public Predictor build(BrokerInfoAccess brokerAccess, String... assetNames)
+  {
+    return new SMAPredictor(this, assetNames[0], assetNames[1], brokerAccess);
+  }
+
+  @Override
   public boolean isValid()
   {
     return nLookbackTriggerA >= 0 && nLookbackTriggerB >= 0 && nLookbackBaseA >= 0 && nLookbackBaseB >= 0
         && nLookbackTriggerA >= nLookbackTriggerB && nLookbackBaseA >= nLookbackBaseB && margin >= 0.0;
   }
 
-  /** @return a perturbed version of this configuration. */
-  public ConfigSMA genPerturbed()
+  @Override
+  public PredictorConfig genPerturbed()
   {
     final int N = 1000;
     for (int i = 0; i < N; ++i) {
@@ -52,7 +59,7 @@ public class ConfigSMA
 
   private static int perturbLookback(int x)
   {
-    int halfWidth = Math.max(2, (int) Math.ceil(Math.abs(x) * 0.05));
+    int halfWidth = Math.max(1, (int) Math.round(Math.abs(x) * 0.05));
     int xmin = Math.max(x - halfWidth, 0);
     assert xmin >= 0;
     int xmax = x + halfWidth;
@@ -65,10 +72,10 @@ public class ConfigSMA
   private static double perturbMargin(double x)
   {
     assert x >= 0.0;
-    double halfWidth = Math.max(0.05, x * 0.1);
+    double halfWidth = Math.max(0.01, x * 0.1);
     double xmin = Math.max(x - halfWidth, 0.0);
     double xmax = x + halfWidth;
-    assert xmin <= x && xmax > x && xmax > xmin;
+    assert xmin <= x && xmax >= x && xmax >= xmin;
     double range = xmax - xmin;
     double px = rng.nextDouble(true, true) * range + xmin;
     assert px >= xmin && px <= xmax;
@@ -78,7 +85,7 @@ public class ConfigSMA
   @Override
   public String toString()
   {
-    return String.format("[%d,%d] / [%d,%d] m=%.2f%%", nLookbackTriggerA, nLookbackTriggerB, nLookbackBaseA,
+    return String.format("[%d,%d] / [%d,%d] m=%.3f%%", nLookbackTriggerA, nLookbackTriggerB, nLookbackBaseA,
         nLookbackBaseB, margin);
   }
 }

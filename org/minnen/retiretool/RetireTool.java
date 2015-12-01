@@ -7,12 +7,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
+import org.minnen.retiretool.predictor.config.ConfigMulti;
 import org.minnen.retiretool.predictor.config.ConfigSMA;
+import org.minnen.retiretool.predictor.config.PredictorConfig;
 import org.minnen.retiretool.predictor.daily.MixedPredictor;
 import org.minnen.retiretool.predictor.daily.MultiPredictor;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.predictor.daily.SMAPredictor;
 import org.minnen.retiretool.stats.CumulativeStats;
+import org.minnen.retiretool.stats.JitterStats;
 import org.minnen.retiretool.stats.ReturnStats;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Fixed;
@@ -155,7 +158,7 @@ public class RetireTool
       if (maxDelay > 0) {
         if (bNeedRebalance && !bPrevRebalance) {
           // Note: If buying at open, a one day delay is built-in.
-          rebalanceDelay = rng.nextInt(maxDelay + (bBuyAtNextOpen ? 0 : 1));
+          rebalanceDelay = rng.nextInt(maxDelay + 1);
         }
       }
 
@@ -230,10 +233,45 @@ public class RetireTool
     // System.out.printf("n=%d\n", n);
   }
 
+  public static JitterStats collectJitterStats(int N, PredictorConfig config, String[] assetNames, Slippage slippage,
+      int maxDelay, boolean buyAtNextOpen)
+  {
+    Sequence stock = store.getMisc(assetNames[0]);
+    final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
+    Sequence guideSeq = stock.subseq(iStart);
+    Broker broker = new Broker(store, slippage, guideSeq.getStartMS());
+
+    double[] cagrs = new double[N];
+    double[] drawdowns = new double[N];
+    long startMS = TimeLib.getTime();
+    for (int iter = 0; iter < N; ++iter) {
+      // Build new predictor.
+      PredictorConfig perturbed = config.genPerturbed();
+      Predictor predictor = perturbed.build(broker.accessObject, assetNames);
+
+      // Run simulation.
+      broker.reset();
+      Sequence returns = runBrokerSim(predictor, broker, guideSeq, maxDelay, buyAtNextOpen);
+      CumulativeStats cstats = CumulativeStats.calc(returns);
+      cagrs[iter] = cstats.cagr;
+      drawdowns[iter] = cstats.drawdown;
+
+      if (iter % 50 == 49) {
+        long duration = TimeLib.getTime() - startMS;
+        System.out.printf("Trials: %d [%s @ %.1f/s]\n", iter + 1, TimeLib.formatDuration(duration), 1000.0 * (iter + 1)
+            / duration);
+      }
+    }
+    ReturnStats cagrStats = ReturnStats.calc("CAGR", cagrs);
+    ReturnStats drawdownStats = ReturnStats.calc("Drawdown", drawdowns);
+    return new JitterStats(cagrStats, drawdownStats);
+  }
+
   public static void runJitterTest(File dir) throws IOException
   {
     final String riskyName = "stock";
     final String safeName = "cash";
+    final String[] assetNames = new String[] { riskyName, safeName };
 
     final long gap = 2 * TimeLib.MS_IN_DAY;
     // ConfigSMA config = new ConfigSMA(55, 30, 80, 70, 0.1, FinLib.Close, gap);
@@ -242,52 +280,21 @@ public class RetireTool
 
     final Slippage slippage = new Slippage(0.01, 0.05);
     final long assetMap = 35476L;
-    final int maxDelay = 3;
+    final int maxDelay = 0;
     final boolean buyAtNextOpen = true;
-    ConfigSMA[] configs = new ConfigSMA[] {
+
+    PredictorConfig[] configsSMA = new PredictorConfig[] {
         // new ConfigSMA(5, 0, 160, 0, 0.5, FinLib.Close, gap),
         new ConfigSMA(35, 0, 50, 10, 2.0, FinLib.Close, gap), new ConfigSMA(15, 5, 30, 0, 2.0, FinLib.Close, gap),
         new ConfigSMA(55, 30, 80, 70, 0.1, FinLib.Close, gap), new ConfigSMA(60, 0, 70, 10, 1.0, FinLib.Close, gap), };
-    ConfigSMA[] perturbed = new ConfigSMA[configs.length];
-    Predictor[] predictors = new SMAPredictor[configs.length];
+    PredictorConfig config = new ConfigMulti(assetMap, configsSMA);
 
-    Sequence stock = store.getMisc(riskyName);
-    final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
-    Sequence guideSeq = stock.subseq(iStart);
-    Broker broker = new Broker(store, slippage, guideSeq.getStartMS());
+    System.out.println(config);
 
-    Sequence results = new Sequence();
-    final int N = 500;
-    long startMS = TimeLib.getTime();
-    for (int iter = 0; iter < N; ++iter) {
-      // Build new predictor.
-      for (int i = 0; i < configs.length; ++i) {
-        perturbed[i] = configs[i].genPerturbed();
-        assert perturbed[i].isValid();
-      }
-      for (int i = 0; i < predictors.length; ++i) {
-        predictors[i] = new SMAPredictor(perturbed[i], riskyName, safeName, broker.accessObject);
-      }
-      MultiPredictor predictor = new MultiPredictor(predictors, assetMap, riskyName, safeName, broker.accessObject);
-
-      // Run simulation.
-      broker.reset();
-      Sequence returns = runBrokerSim(predictor, broker, guideSeq, maxDelay, buyAtNextOpen);
-      CumulativeStats cstats = CumulativeStats.calc(returns);
-      results.addData(new FeatureVec(2, cstats.cagr, cstats.drawdown));
-
-      if (iter % 100 == 99) {
-        long duration = TimeLib.getTime() - startMS;
-        System.out.printf("Trials: %d [%s @ %.1f/s]\n", results.size(), TimeLib.formatDuration(duration), 1000.0
-            * results.size() / duration);
-      }
-    }
-
-    ReturnStats cagrStats = ReturnStats.calc("CAGR", results.extractDim(0));
-    ReturnStats drawdownStats = ReturnStats.calc("Drawdown", results.extractDim(1));
-
-    System.out.println(cagrStats);
-    System.out.println(drawdownStats);
+    final int N = 300;
+    JitterStats jitterStats = collectJitterStats(N, config, assetNames, slippage, maxDelay, buyAtNextOpen);
+    System.out.println(jitterStats);
+    jitterStats.print();
   }
 
   public static void runMultiSweep(File dir) throws IOException
