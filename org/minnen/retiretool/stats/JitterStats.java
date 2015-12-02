@@ -8,26 +8,43 @@ import org.minnen.retiretool.predictor.config.PredictorConfig;
 public class JitterStats implements Comparable<JitterStats>
 {
   public final PredictorConfig config;
-  public final ReturnStats     cagr;
-  public final ReturnStats     drawdown;
+  public final ReturnStats     cagrStats;
+  public final ReturnStats     drawdownStats;
+  public final double          cagr;
+  public final double          drawdown;
 
   public JitterStats(PredictorConfig config, ReturnStats cagr, ReturnStats drawdown)
   {
     this.config = config;
+    this.cagrStats = cagr;
+    this.drawdownStats = drawdown;
+    this.cagr = cagrStats.percentile10;
+    this.drawdown = drawdownStats.percentile90;
+  }
+
+  public JitterStats(PredictorConfig config, double cagr, double drawdown)
+  {
+    this.config = config;
     this.cagr = cagr;
     this.drawdown = drawdown;
+    this.cagrStats = null;
+    this.drawdownStats = null;
   }
 
   public void print()
   {
-    System.out.println(cagr);
-    System.out.println(drawdown);
+    if (cagrStats == null) {
+      System.out.println(this);
+    } else {
+      System.out.println(cagrStats);
+      System.out.println(drawdownStats);
+    }
   }
 
   @Override
   public String toString()
   {
-    return String.format("[%.2f, %.2f]", cagr.percentile10, drawdown.percentile90);
+    return String.format("[%.2f, %.2f]", cagr, drawdown);
   }
 
   public boolean dominates(JitterStats stats)
@@ -35,20 +52,27 @@ public class JitterStats implements Comparable<JitterStats>
     final double epsCAGR = 0.008;
     final double epsDrawdown = 0.4;
 
-    return (cagr.percentile10 > stats.cagr.percentile10 - epsCAGR)
-        && (drawdown.percentile90 < stats.drawdown.percentile90 + epsDrawdown);
+    return (cagr > stats.cagr - epsCAGR) && (drawdown < stats.drawdown + epsDrawdown);
   }
 
   @Override
   public int compareTo(JitterStats stats)
   {
-    if (cagr.percentile10 > stats.cagr.percentile10) return 1;
-    if (cagr.percentile10 < stats.cagr.percentile10) return -1;
+    // if (cagr > stats.cagr) return 1;
+    // if (cagr < stats.cagr) return -1;
+    //
+    // if (drawdown < stats.drawdown) return 1;
+    // if (drawdown > stats.drawdown) return -1;
 
-    if (drawdown.percentile90 < stats.drawdown.percentile90) return 1;
-    if (drawdown.percentile90 > stats.drawdown.percentile90) return -1;
-
+    // return 0;
+    if (score() > stats.score()) return 1;
+    if (score() < stats.score()) return -1;
     return 0;
+  }
+
+  public double score()
+  {
+    return cagr - drawdown / 20.0;
   }
 
   public static void filter(List<JitterStats> stats)

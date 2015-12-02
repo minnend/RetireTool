@@ -1,13 +1,17 @@
 package org.minnen.retiretool;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.minnen.retiretool.predictor.config.ConfigConst;
 import org.minnen.retiretool.predictor.config.ConfigMulti;
@@ -44,6 +48,7 @@ public class RetireTool
   public static final Slippage      GlobalSlippage = new Slippage(0.01, 0.05);
   public static final int           MaxDelay       = 0;
   public static final boolean       BuyAtNextOpen  = true;
+  public static final long          gap            = 2 * TimeLib.MS_IN_DAY;
 
   public static final String        riskyName      = "stock";
   public static final String        safeName       = "cash";
@@ -192,7 +197,6 @@ public class RetireTool
   {
     // final double[] margins = new double[] { 0.1, 0.25, 0.5, 1.0, 2.0, 3.0, 5.0, 10.0 };
     final double[] margins = new double[] { 0.25, 1.0, 2.0, 5.0 };
-    final long gap = 2 * TimeLib.MS_IN_DAY;
 
     // Build list of configs.
     List<PredictorConfig> configs = new ArrayList<PredictorConfig>();
@@ -226,17 +230,17 @@ public class RetireTool
       System.out.printf("%s -> %s\n", config, jitterStats);
 
       if (iConfig % 10 == 9 || iConfig >= configs.size() - 1) {
+        Collections.sort(filteredStats, Collections.reverseOrder());
         JitterStats.filter(filteredStats);
-        Collections.sort(filteredStats);
         long duration = TimeLib.getTime() - startMS;
         double perSec = 1000.0 * allStats.size() / duration;
         int nLeft = configs.size() - (iConfig + 1);
         System.out.printf("--- Summary (%d / %d, %s @ %.2f/s => %s left) ------ \n", filteredStats.size(),
             allStats.size(), TimeLib.formatDuration(duration), perSec,
             TimeLib.formatDuration(Math.round(1000 * nLeft / perSec)));
-        for (int i = Math.max(0, filteredStats.size() - 20); i < filteredStats.size(); ++i) {
+        for (int i = Math.min(19, filteredStats.size() - 1); i >= 0; --i) {
           JitterStats jstats = filteredStats.get(i);
-          System.out.printf("%s <- [%s]  %s\n", jstats, jstats.config, jstats.cagr);
+          System.out.printf("%s <- [%s]  %s\n", jstats, jstats.config, jstats.cagrStats);
         }
         System.out.println();
 
@@ -246,7 +250,8 @@ public class RetireTool
         writer.write(String.format("--- Summary (%d / %d, %s @ %.2f/s) ------ \n", allStats.size(), configs.size(),
             TimeLib.formatDuration(duration), perSec));
         for (JitterStats jstats : allStats) {
-          writer.write(String.format("%s <- [%s]  %s  %s\n", jstats, jstats.config, jstats.cagr, jstats.drawdown));
+          writer.write(String.format("%s <- [%s]  %s  %s\n", jstats, jstats.config, jstats.cagrStats,
+              jstats.drawdownStats));
         }
         writer.close();
       }
@@ -289,7 +294,6 @@ public class RetireTool
 
   public static void runJitterTest(File dir) throws IOException
   {
-    final long gap = 2 * TimeLib.MS_IN_DAY;
     // ConfigSMA config = new ConfigSMA(55, 30, 80, 70, 0.1, FinLib.Close, gap);
     // ConfigSMA config = new ConfigSMA(60, 0, 70, 10, 1.0, FinLib.Close, gap);
     // ConfigSMA config = new ConfigSMA(50, 30, 80, 60, 0.25, FinLib.Close, gap);
@@ -322,6 +326,31 @@ public class RetireTool
     jitterStats.print();
   }
 
+  public static long findBestAssetMap(ConfigMulti config, int nJitterRuns, int maxDelay)
+  {
+    int maxCode = (1 << config.size()) - 1;
+    long maxMap = (1 << (maxCode + 1)) - 1;
+    long startCode = (1 << maxCode);
+    // System.out.printf("maxCode=%d  maxMap=%d  startCode=%d\n", maxCode, maxMap, startCode);
+    long bestAssetMap = -1;
+    JitterStats bestStats = null;
+    for (long assetMap = startCode; assetMap <= maxMap; assetMap += 2) {
+      config.assetMap = assetMap;
+      JitterStats jitterStats = collectJitterStats(nJitterRuns, config, assetNames, GlobalSlippage, maxDelay, true, 0);
+      if (bestStats == null || jitterStats.score() > bestStats.score()) {
+        bestAssetMap = assetMap;
+        bestStats = jitterStats;
+      }
+
+      if (jitterStats == bestStats || assetMap == maxCode) {
+        System.out.printf(" %d: %s (%.3f)\n", assetMap, jitterStats, jitterStats.score());
+        // bestStats == jitterStats ? " *" : "");
+      }
+    }
+    config.assetMap = bestAssetMap;
+    return bestAssetMap;
+  }
+
   public static void runMultiSweep(File dir) throws IOException
   {
     Sequence stock = store.getMisc(riskyName);
@@ -329,7 +358,6 @@ public class RetireTool
     Sequence guideSeq = stock.subseq(iStart);
     Broker broker = new Broker(store, GlobalSlippage, guideSeq.getStartMS());
 
-    final long gap = 2 * TimeLib.MS_IN_DAY;
     // ConfigSMA[] configs = new ConfigSMA[] {
     // // new ConfigSMA(5, 0, 160, 0, 0.5, FinLib.Close, gap),
     // new ConfigSMA(35, 0, 50, 10, 2.0, FinLib.Close, gap), new ConfigSMA(15, 5, 30, 0, 2.0, FinLib.Close, gap),
@@ -384,7 +412,6 @@ public class RetireTool
     Sequence guideSeq = stock.subseq(iStart);
     Broker broker = new Broker(store, GlobalSlippage, guideSeq.getStartMS());
 
-    final long gap = 2 * TimeLib.MS_IN_DAY;
     // ConfigSMA[] configs = new ConfigSMA[] { new ConfigSMA(5, 0, 160, 0, 0.5, FinLib.Close, gap),
     // // new ConfigSMA(35, 0, 50, 10, 2.0, FinLib.Close, gap),
     // new ConfigSMA(15, 5, 30, 0, 2.0, FinLib.Close, gap), new ConfigSMA(55, 30, 80, 70, 0.1, FinLib.Close, gap),
@@ -402,11 +429,11 @@ public class RetireTool
     // PredictorConfig config = new ConfigSMA(10, 0, 230, 40, 2.0, FinLib.Close, gap);
     // Predictor predictor = config.build(broker.accessObject, assetNames);
 
-//    final long assetMap = 63412;// 254;
-//    PredictorConfig[] configs = new PredictorConfig[] { new ConfigSMA(10, 0, 240, 0, 2.0, FinLib.Close, gap),
-//        new ConfigSMA(30, 0, 250, 40, 0.25, FinLib.Close, gap), new ConfigSMA(20, 0, 240, 130, 1.0, FinLib.Close, gap),
-//        new ConfigSMA(50, 0, 180, 30, 0.25, FinLib.Close, gap), };
-//    PredictorConfig config = new ConfigMulti(assetMap, configs);
+    // final long assetMap = 63412;// 254;
+    // PredictorConfig[] configs = new PredictorConfig[] { new ConfigSMA(10, 0, 240, 0, 2.0, FinLib.Close, gap),
+    // new ConfigSMA(30, 0, 250, 40, 0.25, FinLib.Close, gap), new ConfigSMA(20, 0, 240, 130, 1.0, FinLib.Close, gap),
+    // new ConfigSMA(50, 0, 180, 30, 0.25, FinLib.Close, gap), };
+    // PredictorConfig config = new ConfigMulti(assetMap, configs);
     PredictorConfig config = new ConfigConst(1);
     Predictor predictor = config.build(broker.accessObject, assetNames);
 
@@ -414,6 +441,102 @@ public class RetireTool
     returns.setName(config.toString());
     CumulativeStats cstats = CumulativeStats.calc(returns);
     System.out.println(cstats);
+  }
+
+  public static List<JitterStats> loadResultsSMA(File file) throws IOException
+  {
+    Pattern patternStats = Pattern.compile("^\\[([\\.\\d]+)\\W*,\\W*([\\.\\d]+)\\]");
+    Pattern patternSMA = Pattern.compile("\\[\\[(\\d+),(\\d+)\\] / \\[(\\d+),(\\d+)\\] m=([\\d\\.]+)\\%\\]");
+
+    List<JitterStats> allStats = new ArrayList<JitterStats>();
+    BufferedReader reader = new BufferedReader(new FileReader(file));
+    String line;
+    while ((line = reader.readLine()) != null) {
+      line = line.trim();
+      Matcher m = patternStats.matcher(line);
+      if (!m.find()) continue;
+
+      double cagr = Double.parseDouble(m.group(1));
+      double drawdown = Double.parseDouble(m.group(2));
+
+      if (cagr < 9.0 || drawdown >= 40.0) continue;
+      if (cagr < 10.0 && drawdown >= 30.0) continue;
+
+      m = patternSMA.matcher(line);
+      if (!m.find()) {
+        System.err.printf("No SMA on line: [%s]\n", line);
+        continue;
+      }
+
+      int triggerA = Integer.parseInt(m.group(1));
+      int triggerB = Integer.parseInt(m.group(2));
+      int baseA = Integer.parseInt(m.group(3));
+      int baseB = Integer.parseInt(m.group(4));
+      double margin = Double.parseDouble(m.group(5));
+
+      PredictorConfig config = new ConfigSMA(triggerA, triggerB, baseA, baseB, margin, FinLib.Close, gap);
+      JitterStats stats = new JitterStats(config, cagr, drawdown);
+      allStats.add(stats);
+    }
+    reader.close();
+    System.out.printf("SMA Configurations: %d\n", allStats.size());
+    return allStats;
+  }
+
+  public static void searchPredictors(File dataDir, File dir) throws IOException
+  {
+    List<JitterStats> allStats = loadResultsSMA(new File(dataDir, "results-sma-jittered.txt"));
+    Collections.sort(allStats, Collections.reverseOrder());
+
+    List<JitterStats> baseStats = new ArrayList<JitterStats>(allStats);
+    JitterStats.filter(baseStats);
+    for (JitterStats stats : baseStats) {
+      System.out.printf("%s (%.3f) <- [%s]\n", stats, stats.score(), stats.config);
+    }
+    List<JitterStats> bestStats = new ArrayList<JitterStats>(baseStats);
+
+    // Try all triplets from the dominating configs.
+    List<JitterStats> triplets = new ArrayList<JitterStats>();
+    long startMS = TimeLib.getTime();
+    final int maxDelay = 1;
+    final int nJitterRuns = 50;
+    PredictorConfig[] configs = new PredictorConfig[3];
+    for (int i = 0; i < baseStats.size(); ++i) {
+      configs[0] = baseStats.get(i).config;
+      for (int j = i + 1; j < baseStats.size(); ++j) {
+        configs[1] = baseStats.get(j).config;
+        for (int k = j + 1; k < baseStats.size(); ++k) {
+          configs[2] = baseStats.get(k).config;
+
+          System.out.printf("Analyze: [%d,%d,%d]\n", i, j, k);
+          ConfigMulti config = new ConfigMulti(0L, configs);
+          long assetMap = findBestAssetMap(config, nJitterRuns, maxDelay);
+          assert config.assetMap == assetMap;
+
+          JitterStats jitterStats = collectJitterStats(nJitterRuns * 2, config, assetNames, GlobalSlippage, maxDelay,
+              true, 0);
+          allStats.add(jitterStats);
+          bestStats.add(jitterStats);
+          triplets.add(jitterStats);
+
+          System.out.println("--- Best So Far ---");
+          Collections.sort(bestStats, Collections.reverseOrder());
+          JitterStats.filter(bestStats);
+          for (JitterStats stats : bestStats) {
+            System.out.printf("%s (%.3f)\n", stats, stats.score());
+            System.out.printf(" %s\n", stats.config);
+          }
+          System.out.println("-------------------");
+        }
+      }
+    }
+    long duration = TimeLib.getTime() - startMS;
+    System.out.printf("Triplets: %s\n", TimeLib.formatDuration(duration));
+
+    for (JitterStats stats : triplets) {
+      System.out.printf("%s (%.3f)\n", stats, stats.score());
+      System.out.printf(" %s\n", stats.config);
+    }
   }
 
   public static void main(String[] args) throws IOException
@@ -425,7 +548,8 @@ public class RetireTool
 
     setupBroker(dataDir, dir);
 
-    runOne(dir);
+    searchPredictors(dataDir, dir);
+    // runOne(dir);
     // runSweep(dir);
     // runJitterTest(dir);
     // runMultiSweep(dir);

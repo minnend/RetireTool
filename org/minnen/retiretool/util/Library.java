@@ -10,32 +10,31 @@ import static java.util.Calendar.*;
 
 public final class Library
 {
-  public final static long             LNAN         = Long.MIN_VALUE;
-  public final static int              INDEX_ERROR  = Integer.MIN_VALUE;
+  public final static long          LNAN         = Long.MIN_VALUE;
+  public final static int           INDEX_ERROR  = Integer.MIN_VALUE;
 
-  public final static double           FPMIN        = Double.MIN_VALUE;
-  public final static double           INF          = Double.POSITIVE_INFINITY;
-  public final static double           NEGINF       = Double.NEGATIVE_INFINITY;
+  public final static double        FPMIN        = Double.MIN_VALUE;
+  public final static double        INF          = Double.POSITIVE_INFINITY;
+  public final static double        NEGINF       = Double.NEGATIVE_INFINITY;
 
   /** log(0.0) = -infinity */
-  public final static double           LOG_ZERO     = NEGINF;
+  public final static double        LOG_ZERO     = NEGINF;
 
   /** log(1.0) = 0.0 */
-  public final static double           LOG_ONE      = 0.0;
+  public final static double        LOG_ONE      = 0.0;
 
-  public final static double           LOG_TWO      = Math.log(2.0);
-  public final static double           MINV_ABS     = 1.0e-9;
-  public final static double           TWO_PI       = 2.0 * Math.PI;
-  public final static double           PI_OVER_TWO  = Math.PI / 2.0;
-  public final static double           SQRT_2PI     = Math.sqrt(TWO_PI);
-  public final static double           SQRT_2       = Math.sqrt(2.0);
-  public static final double           ONE_TWELFTH  = 1.0 / 12.0;
+  public final static double        LOG_TWO      = Math.log(2.0);
+  public final static double        MINV_ABS     = 1.0e-9;
+  public final static double        TWO_PI       = 2.0 * Math.PI;
+  public final static double        PI_OVER_TWO  = Math.PI / 2.0;
+  public final static double        SQRT_2PI     = Math.sqrt(TWO_PI);
+  public final static double        SQRT_2       = Math.sqrt(2.0);
+  public static final double        ONE_TWELFTH  = 1.0 / 12.0;
 
-  
-  public final static DecimalFormat    df           = new DecimalFormat();
-  public final static long             AppStartTime = TimeLib.getTime();
-  public static final String           os           = System.getProperty("os.name");
-  public static final boolean          bWindows     = os.startsWith("Win");
+  public final static DecimalFormat df           = new DecimalFormat();
+  public final static long          AppStartTime = TimeLib.getTime();
+  public static final String        os           = System.getProperty("os.name");
+  public static final boolean       bWindows     = os.startsWith("Win");
 
   public static enum MatrixOrder {
     RowMajor, ColumnMajor
@@ -281,5 +280,19 @@ public final class Library
       }
     }
     return true;
+  }
+
+  public static long numBits(long x)
+  {
+    x = x - ((x >>> 1) & 0x55555555);
+    x = (x & 0x33333333) + ((x >>> 2) & 0x33333333);
+    return (((x + (x >>> 4)) & 0x0F0F0F0F) * 0x01010101) >>> 24;
+  }
+
+  public static int numBits(int x)
+  {
+    x = x - ((x >>> 1) & 0x55555555);
+    x = (x & 0x33333333) + ((x >>> 2) & 0x33333333);
+    return (((x + (x >>> 4)) & 0x0F0F0F0F) * 0x01010101) >>> 24;
   }
 }

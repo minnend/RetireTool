@@ -3,7 +3,6 @@ package org.minnen.retiretool.predictor.config;
 import org.minnen.retiretool.broker.BrokerInfoAccess;
 import org.minnen.retiretool.predictor.daily.ConstPredictor;
 import org.minnen.retiretool.predictor.daily.Predictor;
-import org.minnen.retiretool.predictor.monthly.AssetPredictor;
 
 public class ConfigConst extends PredictorConfig
 {
