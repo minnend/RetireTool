@@ -1084,43 +1084,6 @@ public final class FinLib
     });
   }
 
-  public static void filterStrategies(List<CumulativeStats> cstats)
-  {
-    final int N = cstats.size();
-    for (int i = 0; i < N; ++i) {
-      CumulativeStats cstats1 = cstats.get(i);
-      if (cstats1 == null) {
-        continue;
-      }
-      for (int j = i + 1; j < N; ++j) {
-        CumulativeStats cstats2 = cstats.get(j);
-        if (cstats2 == null) {
-          continue;
-        }
-
-        if (cstats1.dominates(cstats2) || cstats1.compareTo(cstats2) == 0) {
-          cstats.set(j, null);
-          continue;
-        }
-
-        if (cstats2.dominates(cstats1)) {
-          cstats.set(i, null);
-          break;
-        }
-      }
-    }
-
-    // Remove all null entries.
-    cstats.removeIf(new Predicate<CumulativeStats>()
-    {
-      @Override
-      public boolean test(CumulativeStats cstats)
-      {
-        return (cstats == null);
-      }
-    });
-  }
-
   public static Sequence daily2monthly(Sequence daily)
   {
     return daily2monthly(daily, 0, 0);

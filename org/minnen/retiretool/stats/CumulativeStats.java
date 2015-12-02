@@ -2,6 +2,7 @@ package org.minnen.retiretool.stats;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.WeightedValue;
@@ -176,29 +177,57 @@ public class CumulativeStats implements Comparable<CumulativeStats>
   public int compareTo(CumulativeStats other)
   {
     assert other != null && other instanceof CumulativeStats;
-    if (this == other)
-      return 0;
+    if (this == other) return 0;
 
-    if (cagr > other.cagr)
-      return 1;
-    if (other.cagr > cagr)
-      return -1;
+    if (cagr > other.cagr) return 1;
+    if (other.cagr > cagr) return -1;
 
-    if (drawdown > other.drawdown)
-      return -1;
-    if (other.drawdown > drawdown)
-      return 1;
+    if (drawdown > other.drawdown) return -1;
+    if (other.drawdown > drawdown) return 1;
 
-    if (annualPercentiles[2] > other.annualPercentiles[2])
-      return 1;
-    if (other.annualPercentiles[2] > annualPercentiles[2])
-      return -1;
+    if (annualPercentiles[2] > other.annualPercentiles[2]) return 1;
+    if (other.annualPercentiles[2] > annualPercentiles[2]) return -1;
 
-    if (percentDown10 > other.percentDown10)
-      return -1;
-    if (other.percentDown10 > percentDown10)
-      return 1;
+    if (percentDown10 > other.percentDown10) return -1;
+    if (other.percentDown10 > percentDown10) return 1;
 
     return 0;
+  }
+
+  public static void filter(List<CumulativeStats> stats)
+  {
+    final int N = stats.size();
+    for (int i = 0; i < N; ++i) {
+      CumulativeStats stats1 = stats.get(i);
+      if (stats1 == null) {
+        continue;
+      }
+      for (int j = i + 1; j < N; ++j) {
+        CumulativeStats stats2 = stats.get(j);
+        if (stats2 == null) {
+          continue;
+        }
+
+        if (stats1.dominates(stats2) || stats1.compareTo(stats2) == 0) {
+          stats.set(j, null);
+          continue;
+        }
+
+        if (stats2.dominates(stats1)) {
+          stats.set(i, null);
+          break;
+        }
+      }
+    }
+
+    // Remove all null entries.
+    stats.removeIf(new Predicate<CumulativeStats>()
+    {
+      @Override
+      public boolean test(CumulativeStats cstats)
+      {
+        return (cstats == null);
+      }
+    });
   }
 }

@@ -13,7 +13,7 @@ public class MultiPredictor extends Predictor
     this.predictorType = PredictorType.InOut;
     this.predictors = predictors;
     this.assetMap = assetMap;
-    reset();  // child predictors may have already been used. 
+    reset(); // child predictors may have already been used.
   }
 
   @Override

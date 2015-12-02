@@ -1,12 +1,19 @@
 package org.minnen.retiretool.stats;
 
+import java.util.List;
+import java.util.function.Predicate;
+
+import org.minnen.retiretool.predictor.config.PredictorConfig;
+
 public class JitterStats implements Comparable<JitterStats>
 {
-  public ReturnStats cagr;
-  public ReturnStats drawdown;
+  public final PredictorConfig config;
+  public final ReturnStats     cagr;
+  public final ReturnStats     drawdown;
 
-  public JitterStats(ReturnStats cagr, ReturnStats drawdown)
+  public JitterStats(PredictorConfig config, ReturnStats cagr, ReturnStats drawdown)
   {
+    this.config = config;
     this.cagr = cagr;
     this.drawdown = drawdown;
   }
@@ -42,5 +49,42 @@ public class JitterStats implements Comparable<JitterStats>
     if (drawdown.percentile90 > stats.drawdown.percentile90) return -1;
 
     return 0;
+  }
+
+  public static void filter(List<JitterStats> stats)
+  {
+    final int N = stats.size();
+    for (int i = 0; i < N; ++i) {
+      JitterStats stats1 = stats.get(i);
+      if (stats1 == null) {
+        continue;
+      }
+      for (int j = i + 1; j < N; ++j) {
+        JitterStats stats2 = stats.get(j);
+        if (stats2 == null) {
+          continue;
+        }
+
+        if (stats1.dominates(stats2) || stats1.compareTo(stats2) == 0) {
+          stats.set(j, null);
+          continue;
+        }
+
+        if (stats2.dominates(stats1)) {
+          stats.set(i, null);
+          break;
+        }
+      }
+    }
+
+    // Remove all null entries.
+    stats.removeIf(new Predicate<JitterStats>()
+    {
+      @Override
+      public boolean test(JitterStats cstats)
+      {
+        return (cstats == null);
+      }
+    });
   }
 }
