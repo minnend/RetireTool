@@ -112,9 +112,9 @@ public class DiscreteDistribution
   @Override
   public String toString()
   {
-    StringBuilder sb = new StringBuilder(String.format("[%.1f", weights[0]));
+    StringBuilder sb = new StringBuilder(String.format("[%.1f", weights[0] * 100));
     for (int i = 1; i < weights.length; ++i) {
-      sb.append(String.format(",%.1f", weights[i]));
+      sb.append(String.format(",%.1f", weights[i] * 100));
     }
     sb.append("]");
     return sb.toString();

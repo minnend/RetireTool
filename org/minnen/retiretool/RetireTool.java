@@ -14,6 +14,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.minnen.retiretool.predictor.config.ConfigConst;
+import org.minnen.retiretool.predictor.config.ConfigMixed;
 import org.minnen.retiretool.predictor.config.ConfigMulti;
 import org.minnen.retiretool.predictor.config.ConfigSMA;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
@@ -23,6 +24,7 @@ import org.minnen.retiretool.stats.JitterStats;
 import org.minnen.retiretool.stats.ReturnStats;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Fixed;
+import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.util.FinLib.DividendMethod;
 import org.minnen.retiretool.broker.Account;
@@ -328,6 +330,7 @@ public class RetireTool
 
   public static long findBestAssetMap(ConfigMulti config, int nJitterRuns, int maxDelay)
   {
+    // TODO return all dominating assetMap values
     int maxCode = (1 << config.size()) - 1;
     long maxMap = (1 << (maxCode + 1)) - 1;
     long startCode = (1 << maxCode);
@@ -363,9 +366,14 @@ public class RetireTool
     // new ConfigSMA(35, 0, 50, 10, 2.0, FinLib.Close, gap), new ConfigSMA(15, 5, 30, 0, 2.0, FinLib.Close, gap),
     // new ConfigSMA(55, 30, 80, 70, 0.1, FinLib.Close, gap), new ConfigSMA(60, 0, 70, 10, 1.0, FinLib.Close, gap), };
 
-    PredictorConfig[] configs = new PredictorConfig[] { new ConfigSMA(10, 0, 240, 0, 2.0, FinLib.Close, gap),
-        new ConfigSMA(30, 0, 250, 40, 0.25, FinLib.Close, gap), new ConfigSMA(20, 0, 240, 130, 1.0, FinLib.Close, gap),
-        new ConfigSMA(50, 0, 180, 30, 0.25, FinLib.Close, gap), };
+    // PredictorConfig[] configs = new PredictorConfig[] {
+    // new ConfigSMA(10, 0, 240, 0, 2.0, FinLib.Close, gap),
+    // new ConfigSMA(30, 0, 250, 40, 0.25, FinLib.Close, gap),
+    // new ConfigSMA(20, 0, 240, 130, 1.0, FinLib.Close, gap),
+    // new ConfigSMA(50, 0, 180, 30, 0.25, FinLib.Close, gap), };
+
+    PredictorConfig[] configs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap),
+        new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap), new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap), };
 
     int maxCode = (1 << configs.length) - 1;
     long maxMap = (1 << (maxCode + 1)) - 1;
@@ -373,8 +381,12 @@ public class RetireTool
     System.out.printf("maxCode=%d  maxMap=%d  startCode=%d\n", maxCode, maxMap, startCode);
     List<CumulativeStats> allStats = new ArrayList<CumulativeStats>();
     int n = 0;
+    // long[] maps = new long[] { 0, 128, 254, 255 };
     long startTime = TimeLib.getTime();
+    // for (long assetMap : maps) {
     for (long assetMap = startCode; assetMap <= maxMap; assetMap += 2) {
+      // int nBits = Library.numBits(assetMap);
+      // if (nBits < 6) continue;
       broker.reset();
       PredictorConfig config = new ConfigMulti(assetMap, configs);
       Predictor predictor = config.build(broker.accessObject, assetNames);
@@ -385,7 +397,7 @@ public class RetireTool
 
       CumulativeStats cstats = CumulativeStats.calc(returns);
       allStats.add(cstats);
-      // System.out.println(cstats);
+      System.out.println(cstats);
       ++n;
       if (n % 50 == 0) {
         long duration = TimeLib.getTime() - startTime;
@@ -434,13 +446,27 @@ public class RetireTool
     // new ConfigSMA(30, 0, 250, 40, 0.25, FinLib.Close, gap), new ConfigSMA(20, 0, 240, 130, 1.0, FinLib.Close, gap),
     // new ConfigSMA(50, 0, 180, 30, 0.25, FinLib.Close, gap), };
     // PredictorConfig config = new ConfigMulti(assetMap, configs);
-    PredictorConfig config = new ConfigConst(1);
-    Predictor predictor = config.build(broker.accessObject, assetNames);
 
-    Sequence returns = runBrokerSim(predictor, broker, guideSeq, MaxDelay, BuyAtNextOpen);
-    returns.setName(config.toString());
-    CumulativeStats cstats = CumulativeStats.calc(returns);
-    System.out.println(cstats);
+    final long assetMap = 254;
+    PredictorConfig[] configs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap),
+        new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap), new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap), };
+    PredictorConfig configRisky = new ConfigMulti(assetMap, configs);
+
+    // PredictorConfig configRisky = new ConfigConst(0);
+
+    PredictorConfig configSafe = new ConfigConst(1);
+    for (int i = 0; i <= 100; i += 10) {
+      broker.reset();
+      double mix2 = i / 100.0;
+      double mix1 = 1.0 - mix2;
+      DiscreteDistribution mix = new DiscreteDistribution(assetNames, new double[] { mix1, mix2 });
+      PredictorConfig config = new ConfigMixed(mix, configRisky, configSafe);
+      Predictor predictor = config.build(broker.accessObject, assetNames);
+      Sequence returns = runBrokerSim(predictor, broker, guideSeq, MaxDelay, BuyAtNextOpen);
+      returns.setName(config.toString());
+      CumulativeStats cstats = CumulativeStats.calc(returns);
+      System.out.printf("%s\n", cstats);
+    }
   }
 
   public static List<JitterStats> loadResultsSMA(File file) throws IOException
@@ -548,8 +574,8 @@ public class RetireTool
 
     setupBroker(dataDir, dir);
 
-    searchPredictors(dataDir, dir);
-    // runOne(dir);
+    // searchPredictors(dataDir, dir);
+    runOne(dir);
     // runSweep(dir);
     // runJitterTest(dir);
     // runMultiSweep(dir);

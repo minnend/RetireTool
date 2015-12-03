@@ -85,7 +85,7 @@ public class ConfigSMA extends PredictorConfig
   @Override
   public String toString()
   {
-    return String.format("[%d,%d] / [%d,%d] m=%.3f%%", nLookbackTriggerA, nLookbackTriggerB, nLookbackBaseA,
+    return String.format("[%d,%d] / [%d,%d] m=%.2f%%", nLookbackTriggerA, nLookbackTriggerB, nLookbackBaseA,
         nLookbackBaseB, margin);
   }
 }
