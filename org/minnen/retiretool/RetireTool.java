@@ -418,6 +418,59 @@ public class RetireTool
     }
   }
 
+  public static void runMixSweep(File dir) throws IOException
+  {
+    PredictorConfig[] singleConfigs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap),
+        new ConfigSMA(20, 0, 250, 50, 1.0, FinLib.Close, gap), new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap),
+        new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap), new ConfigSMA(10, 0, 230, 40, 2.0, FinLib.Close, gap), };
+
+    final int nSingle = singleConfigs.length;
+    final int nMulti = (nSingle * (nSingle - 1)) / 2;
+    System.out.printf("#single=%d  #multi=%d\n", nSingle, nMulti);
+    PredictorConfig[] multiConfigs = new PredictorConfig[nMulti];
+
+    int iMulti = 0;
+    for (int i = 0; i < nSingle; ++i) {
+      for (int j = i + 1; j < nSingle; ++j) {
+        for (int k = j + 1; k < nSingle; ++k) {
+          multiConfigs[iMulti++] = new ConfigMulti(254, new PredictorConfig[] { singleConfigs[i], singleConfigs[j],
+              singleConfigs[k] });
+        }
+      }
+    }
+    assert iMulti == nMulti;
+
+    List<JitterStats> allStats = new ArrayList<JitterStats>();
+    long startTime = TimeLib.getTime();
+    // for (int i = 0; i < nMulti; ++i) {
+    // for (int j = i + 1; j < nMulti; ++j) {
+    int i = 3, j = 4;
+    {
+      {
+        for (int p = 0; p <= 10; ++p) {
+          if (p != 3) continue;
+          double p2 = p / 10.0;
+          double p1 = 1.0 - p2;
+          DiscreteDistribution mix = new DiscreteDistribution(p1, p2);
+          PredictorConfig config = new ConfigMixed(mix, multiConfigs[i], multiConfigs[j]);
+          JitterStats stats = collectJitterStats(1000, config, assetNames, GlobalSlippage, 1, true, 0);
+          allStats.add(stats);
+          System.out.printf("%d.%d [%.1f,%.1f]:  %s  (%.2f)\n", i, j, p1 * 100.0, p2 * 100.0, stats, stats.score());
+        }
+      }
+    }
+    long duration = TimeLib.getTime() - startTime;
+    System.out.println();
+    System.out.printf("Summary: %d runs in %s @ %.1f/s\n", allStats.size(), TimeLib.formatDuration(duration), 1000.0
+        * allStats.size() / duration);
+    JitterStats.filter(allStats);
+    Collections.sort(allStats);
+    for (JitterStats stats : allStats) {
+      System.out.printf("%s (%.2f)\n", stats, stats.score());
+      stats.print();
+    }
+  }
+
   public static void runOne(File dir) throws IOException
   {
     Sequence stock = store.getMisc(riskyName);
@@ -468,7 +521,7 @@ public class RetireTool
     CumulativeStats cstats = CumulativeStats.calc(returns);
     System.out.printf("%s (sharpe=%.2f, score=%.2f)\n", cstats, sharpe, cstats.scoreSimple());
 
-    final int code = 0;
+    final int code = 7;
     List<Sequence> seqs = new ArrayList<Sequence>();
     List<MultiPredictor.TimeCode> timeCodes = ((MultiPredictor) predictor).timeCodes;
     for (int i = 0; i < timeCodes.size(); ++i) {
@@ -594,10 +647,11 @@ public class RetireTool
     setupBroker(dataDir, dir);
 
     // searchPredictors(dataDir, dir);
-    runOne(dir);
+    // runOne(dir);
     // runSweep(dir);
     // runJitterTest(dir);
     // runMultiSweep(dir);
+    runMixSweep(dir);
 
     // DataIO.downloadDailyDataFromYahoo(dataDir, FinLib.VANGUARD_INVESTOR_FUNDS);
     // DataIO.downloadDailyDataFromYahoo(dataDir, FinLib.STOCK_MARKET_FUNDS);

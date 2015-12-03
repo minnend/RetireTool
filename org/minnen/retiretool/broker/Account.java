@@ -280,7 +280,8 @@ public class Account
       nShares = position.getNumShares();
     } else {
       long price = broker.getSellPrice(name);
-      nShares = Fixed.divTrunc(value, price);
+      // TODO how would we get to too many shares? 
+      nShares = Math.min(Fixed.divTrunc(value, price), position.getNumShares());
     }
     return sellShares(name, nShares, memo);
   }
