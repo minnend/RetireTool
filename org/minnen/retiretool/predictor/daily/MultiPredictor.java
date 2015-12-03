@@ -1,10 +1,33 @@
 package org.minnen.retiretool.predictor.daily;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.minnen.retiretool.broker.BrokerInfoAccess;
+import org.minnen.retiretool.util.TimeLib;
 
 public class MultiPredictor extends Predictor
 {
-  private final long assetMap;
+  public static class TimeCode
+  {
+    public long time;
+    public int  code;
+
+    public TimeCode(long time, int code)
+    {
+      this.time = time;
+      this.code = code;
+    }
+
+    @Override
+    public String toString()
+    {
+      return String.format("[%s]: %d", TimeLib.formatDate(time), code);
+    }
+  }
+
+  private final long          assetMap;
+  public final List<TimeCode> timeCodes = new ArrayList<>();
 
   public MultiPredictor(Predictor[] predictors, long assetMap, String assetName, String alternativeAsset,
       BrokerInfoAccess brokerAccess)
@@ -27,6 +50,11 @@ public class MultiPredictor extends Predictor
         ++code;
         ++nIn;
       }
+    }
+
+    int prevCode = (timeCodes.isEmpty() ? -1 : timeCodes.get(timeCodes.size() - 1).code);
+    if (code != prevCode) {
+      timeCodes.add(new TimeCode(brokerAccess.getTime(), code));
     }
 
     if (assetMap < 0) {

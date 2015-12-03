@@ -36,6 +36,16 @@ public class Broker
     timeInfo = new TimeInfo(originalTime);
   }
 
+  public int numAccounts()
+  {
+    return accounts.size();
+  }
+
+  public Account getAccount(int i)
+  {
+    return accounts.get(i);
+  }
+
   public void setPriceIndex(int index)
   {
     // TODO better if price index was automatically selected based on time of day.

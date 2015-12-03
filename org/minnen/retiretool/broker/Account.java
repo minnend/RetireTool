@@ -32,6 +32,7 @@ public class Account
   private final Map<String, Position> positions    = new TreeMap<>();
   private final List<Receipt>         receipts     = new ArrayList<>();
   private final Map<String, Long>     lastDivPaid  = new TreeMap<>();
+  private final Map<Long, Long>       valueAtTime  = new TreeMap<>();
 
   private long                        cash;
 
@@ -49,6 +50,7 @@ public class Account
   public void doEndOfDayBusiness(TimeInfo timeInfo, SequenceStore store)
   {
     payDividends(timeInfo, store);
+    valueAtTime.put(timeInfo.time, getValue());
 
     cashSumForMonth += cash;
     ++numDaysInMonth;
@@ -135,6 +137,11 @@ public class Account
       value += position.getValue();
     }
     return value;
+  }
+
+  public long getValue(long time)
+  {
+    return valueAtTime.get(time);
   }
 
   public long getValue(String name)

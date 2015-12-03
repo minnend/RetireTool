@@ -787,7 +787,7 @@ public class RetireToolMonthly
 
     Sequence scatter = new Sequence("Returns vs. Volatility");
     for (int i = 0; i < names.length; ++i) {
-      scores[i] = cstats.get(i).calcScore();
+      scores[i] = cstats.get(i).scoreComplex();
       scatter.addData(new FeatureVec(all.get(i).getName(), 2, rstats.get(i).mean, rstats.get(i).sdev));
     }
 

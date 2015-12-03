@@ -18,6 +18,7 @@ import org.minnen.retiretool.predictor.config.ConfigMixed;
 import org.minnen.retiretool.predictor.config.ConfigMulti;
 import org.minnen.retiretool.predictor.config.ConfigSMA;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
+import org.minnen.retiretool.predictor.daily.MultiPredictor;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.JitterStats;
@@ -450,23 +451,41 @@ public class RetireTool
     final long assetMap = 254;
     PredictorConfig[] configs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap),
         new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap), new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap), };
-    PredictorConfig configRisky = new ConfigMulti(assetMap, configs);
+    PredictorConfig config = new ConfigMulti(assetMap, configs);
 
-    // PredictorConfig configRisky = new ConfigConst(0);
-
+    // PredictorConfig configStock = new ConfigConst(0);
     PredictorConfig configSafe = new ConfigConst(1);
-    for (int i = 0; i <= 100; i += 10) {
-      broker.reset();
-      double mix2 = i / 100.0;
-      double mix1 = 1.0 - mix2;
-      DiscreteDistribution mix = new DiscreteDistribution(assetNames, new double[] { mix1, mix2 });
-      PredictorConfig config = new ConfigMixed(mix, configRisky, configSafe);
-      Predictor predictor = config.build(broker.accessObject, assetNames);
-      Sequence returns = runBrokerSim(predictor, broker, guideSeq, MaxDelay, BuyAtNextOpen);
-      returns.setName(config.toString());
-      CumulativeStats cstats = CumulativeStats.calc(returns);
-      System.out.printf("%s\n", cstats);
+
+    // Predictor predictorStock = configStock.build(broker.accessObject, assetNames);
+    // Sequence stockReturns = runBrokerSim(predictorStock, broker, guideSeq, MaxDelay, BuyAtNextOpen);
+    Predictor predictorSafe = configSafe.build(broker.accessObject, assetNames);
+    Sequence safeReturns = runBrokerSim(predictorSafe, broker, guideSeq, MaxDelay, BuyAtNextOpen);
+
+    Predictor predictor = config.build(broker.accessObject, assetNames);
+    Sequence returns = runBrokerSim(predictor, broker, guideSeq, MaxDelay, BuyAtNextOpen);
+    returns.setName(config.toString());
+    double sharpe = FinLib.sharpeDaily(returns, safeReturns);
+    CumulativeStats cstats = CumulativeStats.calc(returns);
+    System.out.printf("%s (sharpe=%.2f, score=%.2f)\n", cstats, sharpe, cstats.scoreSimple());
+
+    final int code = 0;
+    List<Sequence> seqs = new ArrayList<Sequence>();
+    List<MultiPredictor.TimeCode> timeCodes = ((MultiPredictor) predictor).timeCodes;
+    for (int i = 0; i < timeCodes.size(); ++i) {
+      MultiPredictor.TimeCode timeCode = timeCodes.get(i);
+      if (timeCode.code == code) {
+        double va = Fixed.toFloat(broker.getPrice(riskyName, timeCode.time));
+        long nextTime = (i < timeCodes.size() - 1 ? timeCodes.get(i + 1).time : broker.getTime());
+        double vb = Fixed.toFloat(broker.getPrice(riskyName, nextTime));
+        System.out.printf("%d   %.3f  [%s] -> [%s]\n", timeCode.code, FinLib.mul2ret(vb / va),
+            TimeLib.formatDate(timeCode.time), TimeLib.formatDate(nextTime));
+
+        Sequence seq = stock.subseq(timeCode.time, nextTime);
+        seqs.add(seq._div(seq.getFirst(0)));
+      }
     }
+    Chart.saveLineChart(new File(dir, "code.html"), String.format("After Code %d", code), GRAPH_WIDTH, GRAPH_HEIGHT,
+        false, seqs);
   }
 
   public static List<JitterStats> loadResultsSMA(File file) throws IOException

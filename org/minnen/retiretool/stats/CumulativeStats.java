@@ -100,7 +100,12 @@ public class CumulativeStats implements Comparable<CumulativeStats>
     }
   }
 
-  public double calcScore()
+  public double scoreSimple()
+  {
+    return cagr - drawdown / 20.0;
+  }
+
+  public double scoreComplex()
   {
     List<WeightedValue> terms = new ArrayList<WeightedValue>();
     double multiYearReturn = FinLib.mul2ret(Math.pow(FinLib.ret2mul(cagr), 10));

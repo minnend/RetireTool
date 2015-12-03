@@ -16,6 +16,7 @@ import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.DurationalStats;
 import org.minnen.retiretool.stats.RetirementStats;
+import org.minnen.retiretool.stats.ReturnStats;
 
 public final class FinLib
 {
@@ -1320,5 +1321,31 @@ public final class FinLib
     long x = Math.round(a * 1000.0);
     long y = Math.round(b * 1000.0);
     return x - y;
+  }
+
+  public static double sharpeDaily(Sequence returns, Sequence benchmark)
+  {
+    final int N = returns.length();
+    assert benchmark == null || benchmark.length() == N;
+
+    double[] excess = new double[N];
+    for (int i = 1; i < N; ++i) {
+      double a = returns.get(i - 1, 0);
+      double b = returns.get(i, 0);
+      excess[i] = (b - a) / a;
+    }
+    if (benchmark != null) {
+      for (int i = 1; i < N; ++i) {
+        double a = benchmark.get(i - 1, 0);
+        double b = benchmark.get(i, 0);
+        excess[i] -= (b - a) / a;
+      }
+    }
+
+    double mean = Library.mean(excess);
+    double sdev = Library.stdev(excess);
+    if (Math.abs(sdev) < 1e-8) return 0.0;
+
+    return Math.sqrt(252) * mean / sdev;
   }
 }

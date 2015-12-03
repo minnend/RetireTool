@@ -169,7 +169,7 @@ public class Chart
         Sequence seq = seqs[i];
         writer.write("  { name: '" + seq.getName() + "',\n");
         writer.write("    data: [");
-        for (int t = 0; t < seqs[0].length(); ++t) {
+        for (int t = 0; t < seqs[i].length(); ++t) {
           writer.write(String.format("%.4f%s", seqs[i].get(t, dim), t == seqs[i].size() - 1 ? "" : ", "));
         }
         writer.write("] }");
@@ -632,7 +632,7 @@ public class Chart
             double speedup = FinLib.speedup(stats.cagr, baseReturn);
             writer.write(String.format("<td>%.1f%%</td>\n", speedup * 100.0));
           }
-          writer.write(String.format("<td>%.2f</td>\n", stats.calcScore()));
+          writer.write(String.format("<td>%.2f</td>\n", stats.scoreComplex()));
         }
 
         writer.write("</tr>\n");
