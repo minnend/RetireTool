@@ -2,12 +2,13 @@ package org.minnen.retiretool.predictor.monthly;
 
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.data.SequenceStoreV1;
 
 public class NewHighPredictor extends AssetPredictor
 {
   protected final int nMonths;
 
-  public NewHighPredictor(int nMonths, SequenceStore store)
+  public NewHighPredictor(int nMonths, SequenceStoreV1 store)
   {
     super(String.format("NewHigh[%d]", nMonths), store);
     assert nMonths >= 1;

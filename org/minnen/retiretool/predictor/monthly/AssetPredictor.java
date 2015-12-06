@@ -4,29 +4,30 @@ import java.util.Arrays;
 
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.data.SequenceStoreV1;
 import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.TimeLib;
 
 /** Abstract base class for asset predictors. */
 public abstract class AssetPredictor
 {
-  public final String        name;
-  public final SequenceStore store;
+  public final String          name;
+  public final SequenceStoreV1 store;
 
-  public AssetPredictor[]    predictors;
+  public AssetPredictor[]      predictors;
 
-  protected long             lastFeedbackMS = TimeLib.TIME_BEGIN;
+  protected long               lastFeedbackMS = TimeLib.TIME_BEGIN;
 
   /** True for predictors with no state or memory. */
-  protected boolean          bAllowReuse    = false;
+  protected boolean            bAllowReuse    = false;
 
   /** True for predictors that select one asset (vs. a distribution over assets). */
-  protected boolean          bPredictOne    = true;
+  protected boolean            bPredictOne    = true;
 
   /** Reusable distribution array to reduce object creation. */
-  private double[]           distribution;
+  private double[]             distribution;
 
-  public AssetPredictor(String name, SequenceStore store)
+  public AssetPredictor(String name, SequenceStoreV1 store)
   {
     this.name = name;
     this.store = store;

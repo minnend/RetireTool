@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -25,7 +24,7 @@ import org.minnen.retiretool.stats.JitterStats;
 import org.minnen.retiretool.stats.ReturnStats;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Fixed;
-import org.minnen.retiretool.util.Library;
+import org.minnen.retiretool.util.Random;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.util.FinLib.DividendMethod;
 import org.minnen.retiretool.broker.Account;
@@ -33,6 +32,7 @@ import org.minnen.retiretool.broker.Broker;
 import org.minnen.retiretool.broker.TimeInfo;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.DiscreteDistribution;
+import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 
@@ -49,6 +49,8 @@ public class RetireTool
   public static double              smaMargin      = 0.0;
 
   public static final Slippage      GlobalSlippage = new Slippage(0.01, 0.05);
+  public static final LinearFunc    PriceSDev      = LinearFunc.Zero;
+  // public static final LinearFunc PriceSDev = new LinearFunc(0.004, 0.01);
   public static final int           MaxDelay       = 0;
   public static final boolean       BuyAtNextOpen  = true;
   public static final long          gap            = 2 * TimeLib.MS_IN_DAY;
@@ -227,7 +229,8 @@ public class RetireTool
     long startMS = TimeLib.getTime();
     for (int iConfig = 0; iConfig < configs.size(); ++iConfig) {
       PredictorConfig config = configs.get(iConfig);
-      JitterStats jitterStats = collectJitterStats(N, config, assetNames, GlobalSlippage, 1, true, nSummaryTicks);
+      JitterStats jitterStats = collectJitterStats(N, config, assetNames, GlobalSlippage, PriceSDev, MaxDelay,
+          BuyAtNextOpen, nSummaryTicks);
       allStats.add(jitterStats);
       filteredStats.add(jitterStats);
       System.out.printf("%s -> %s\n", config, jitterStats);
@@ -262,13 +265,14 @@ public class RetireTool
   }
 
   public static JitterStats collectJitterStats(int N, PredictorConfig config, String[] assetNames, Slippage slippage,
-      int maxDelay, boolean buyAtNextOpen, int nSummaryTick)
+      LinearFunc priceSDev, int maxDelay, boolean buyAtNextOpen, int nSummaryTick)
   {
     Sequence stock = store.get(assetNames[0]);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stock.subseq(iStart);
     Broker broker = new Broker(store, slippage, guideSeq.getStartMS());
 
+    final Random rng = new Random();
     double[] cagrs = new double[N];
     double[] drawdowns = new double[N];
     long startMS = TimeLib.getTime();
@@ -277,12 +281,58 @@ public class RetireTool
       PredictorConfig perturbed = (iter == 0 ? config : config.genPerturbed());
       Predictor predictor = perturbed.build(broker.accessObject, assetNames);
 
+      // Generate noisy price data if requested.
+      if (priceSDev != LinearFunc.Zero) {
+        for (String name : assetNames) {
+          if (name.equals("cash")) continue;
+
+          Sequence seq = null;
+          String nameOrig = name + "-orig";
+          if (store.hasName(nameOrig)) {
+            seq = store.get(nameOrig);
+          } else {
+            seq = store.get(name);
+            store.add(seq, nameOrig);
+          }
+
+          Sequence noisySeq = new Sequence(name + "-noisy");
+          for (FeatureVec x : seq) {
+            x = new FeatureVec(x);
+            double price = x.get(iPriceSMA);
+            double sdev = priceSDev.calc(price);
+            double noisy = price + rng.nextGaussian() * sdev;
+            if (noisy <= 0.0) {
+              noisy = price * (0.01 + rng.nextDouble() * 0.2);
+            }
+
+            // Price should always be a whole number of pennies.
+            noisy = Math.round(noisy * 100.0) / 100.0;
+
+            x.set(iPriceSMA, noisy);
+            noisySeq.addData(x);
+          }
+          store.add(noisySeq);
+          store.alias(name, noisySeq.getName());
+        }
+      }
+
       // Run simulation.
       broker.reset();
       Sequence returns = runBrokerSim(predictor, broker, guideSeq, maxDelay, buyAtNextOpen);
       CumulativeStats cstats = CumulativeStats.calc(returns);
       cagrs[iter] = cstats.cagr;
       drawdowns[iter] = cstats.drawdown;
+
+      // Remove noisy price data.
+      if (priceSDev != LinearFunc.Zero) {
+        for (String name : assetNames) {
+          if (name.equals("cash")) continue;
+
+          String noisyName = name + "-noisy";
+          store.remove(noisyName);
+          store.removeAlias(name);
+        }
+      }
 
       if (nSummaryTick > 0 && iter % nSummaryTick == (nSummaryTick - 1)) {
         long duration = TimeLib.getTime() - startMS;
@@ -302,8 +352,6 @@ public class RetireTool
     // ConfigSMA config = new ConfigSMA(50, 30, 80, 60, 0.25, FinLib.Close, gap);
 
     final long assetMap = 63412;// 254;
-    final int maxDelay = 2;
-    final boolean buyAtNextOpen = true;
 
     // Search without jitter.
     // PredictorConfig[] configsSMA = new PredictorConfig[] {
@@ -323,8 +371,8 @@ public class RetireTool
 
     final int nSummaryTicks = 50;
     final int N = 500;
-    JitterStats jitterStats = collectJitterStats(N, config, assetNames, GlobalSlippage, maxDelay, buyAtNextOpen,
-        nSummaryTicks);
+    JitterStats jitterStats = collectJitterStats(N, config, assetNames, GlobalSlippage, PriceSDev, MaxDelay,
+        BuyAtNextOpen, nSummaryTicks);
     System.out.println(jitterStats);
     jitterStats.print();
   }
@@ -340,7 +388,8 @@ public class RetireTool
     JitterStats bestStats = null;
     for (long assetMap = startCode; assetMap <= maxMap; assetMap += 2) {
       config.assetMap = assetMap;
-      JitterStats jitterStats = collectJitterStats(nJitterRuns, config, assetNames, GlobalSlippage, maxDelay, true, 0);
+      JitterStats jitterStats = collectJitterStats(nJitterRuns, config, assetNames, GlobalSlippage, PriceSDev,
+          maxDelay, BuyAtNextOpen, 0);
       if (bestStats == null || jitterStats.score() > bestStats.score()) {
         bestAssetMap = assetMap;
         bestStats = jitterStats;
@@ -453,7 +502,8 @@ public class RetireTool
           double p1 = 1.0 - p2;
           DiscreteDistribution mix = new DiscreteDistribution(p1, p2);
           PredictorConfig config = new ConfigMixed(mix, multiConfigs[i], multiConfigs[j]);
-          JitterStats stats = collectJitterStats(300, config, assetNames, GlobalSlippage, 1, true, 50);
+          JitterStats stats = collectJitterStats(100, config, assetNames, GlobalSlippage, PriceSDev, MaxDelay,
+              BuyAtNextOpen, 50);
           allStats.add(stats);
           System.out.printf("%d.%d [%.1f,%.1f]:  %s  (%.2f)\n", i, j, p1 * 100.0, p2 * 100.0, stats, stats.score());
         }
@@ -596,7 +646,6 @@ public class RetireTool
     // Try all triplets from the dominating configs.
     List<JitterStats> triplets = new ArrayList<JitterStats>();
     long startMS = TimeLib.getTime();
-    final int maxDelay = 1;
     final int nJitterRuns = 50;
     PredictorConfig[] configs = new PredictorConfig[3];
     for (int i = 0; i < baseStats.size(); ++i) {
@@ -608,11 +657,11 @@ public class RetireTool
 
           System.out.printf("Analyze: [%d,%d,%d]\n", i, j, k);
           ConfigMulti config = new ConfigMulti(0L, configs);
-          long assetMap = findBestAssetMap(config, nJitterRuns, maxDelay);
+          long assetMap = findBestAssetMap(config, nJitterRuns, MaxDelay);
           assert config.assetMap == assetMap;
 
-          JitterStats jitterStats = collectJitterStats(nJitterRuns * 2, config, assetNames, GlobalSlippage, maxDelay,
-              true, 0);
+          JitterStats jitterStats = collectJitterStats(nJitterRuns * 2, config, assetNames, GlobalSlippage, PriceSDev,
+              MaxDelay, BuyAtNextOpen, 0);
           allStats.add(jitterStats);
           bestStats.add(jitterStats);
           triplets.add(jitterStats);

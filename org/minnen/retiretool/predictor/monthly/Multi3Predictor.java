@@ -2,6 +2,7 @@ package org.minnen.retiretool.predictor.monthly;
 
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.data.SequenceStoreV1;
 
 /** Meta-Predictor that combines three base predictors. */
 public class Multi3Predictor extends AssetPredictor
@@ -14,7 +15,7 @@ public class Multi3Predictor extends AssetPredictor
   private final int         assetMap;
 
   private Multi3Predictor(String name, AssetPredictor[] basePredictors, Disposition disposition, int assetMap,
-      SequenceStore store)
+      SequenceStoreV1 store)
   {
     super(name, store);
     assert basePredictors.length == 3;
@@ -25,12 +26,12 @@ public class Multi3Predictor extends AssetPredictor
     this.bPredictOne = true;
   }
 
-  public Multi3Predictor(String name, AssetPredictor[] basePredictors, Disposition disposition, SequenceStore store)
+  public Multi3Predictor(String name, AssetPredictor[] basePredictors, Disposition disposition, SequenceStoreV1 store)
   {
     this(name, basePredictors, disposition, -1, store);
   }
 
-  public Multi3Predictor(String name, AssetPredictor[] basePredictors, int assetMap, SequenceStore store)
+  public Multi3Predictor(String name, AssetPredictor[] basePredictors, int assetMap, SequenceStoreV1 store)
   {
     this(name, basePredictors, Disposition.Defensive, assetMap, store);
   }

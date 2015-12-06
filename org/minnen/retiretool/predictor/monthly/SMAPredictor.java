@@ -2,6 +2,7 @@ package org.minnen.retiretool.predictor.monthly;
 
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.data.SequenceStoreV1;
 
 /** Single-scale Simple Moving Average (SMA) predictor. */
 public class SMAPredictor extends AssetPredictor
@@ -13,12 +14,12 @@ public class SMAPredictor extends AssetPredictor
 
   protected int          reloc = 0;   // below/at/above = -1/0/1
 
-  public SMAPredictor(int nMonths, String priceSeqName, int iPrice, SequenceStore store)
+  public SMAPredictor(int nMonths, String priceSeqName, int iPrice, SequenceStoreV1 store)
   {
     this(nMonths, 0.0, priceSeqName, iPrice, store);
   }
 
-  public SMAPredictor(int nLookback, double margin, String priceSeqName, int iPrice, SequenceStore store)
+  public SMAPredictor(int nLookback, double margin, String priceSeqName, int iPrice, SequenceStoreV1 store)
   {
     super(buildName(nLookback, margin), store);
 

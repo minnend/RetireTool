@@ -4,6 +4,7 @@ import java.util.Arrays;
 
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.data.SequenceStoreV1;
 
 /** Weighted Majority Algorithm Predictor */
 public class WMAPredictor extends AssetPredictor
@@ -13,12 +14,12 @@ public class WMAPredictor extends AssetPredictor
   private final double   alpha;
   private final double   beta;
 
-  public WMAPredictor(String name, AssetPredictor[] predictors, SequenceStore store)
+  public WMAPredictor(String name, AssetPredictor[] predictors, SequenceStoreV1 store)
   {
     this(name, predictors, 0.5, 0.01, store);
   }
 
-  public WMAPredictor(String name, AssetPredictor[] predictors, double alpha, double beta, SequenceStore store)
+  public WMAPredictor(String name, AssetPredictor[] predictors, double alpha, double beta, SequenceStoreV1 store)
   {
     super(name, store);
     this.predictors = predictors;

@@ -10,7 +10,7 @@ import org.minnen.retiretool.util.TimeLib;
 
 @RunWith(Suite.class)
 @SuiteClasses({ TestBond.class, TestInvestmentStats.class, TestLibrary.class, TestFinLib.class, TestSequence.class,
-    TestSequenceStore.class, TestSlippage.class, TestFixedPoint.class, TestTimeLib.class })
+    TestSequenceStore.class, TestSequenceStoreV1.class, TestSlippage.class, TestFixedPoint.class, TestTimeLib.class })
 public class AllTests
 {
   public static Sequence buildMonthlySequence(double[] data)

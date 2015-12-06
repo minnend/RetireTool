@@ -2,6 +2,7 @@ package org.minnen.retiretool.predictor.monthly;
 
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.data.SequenceStoreV1;
 import org.minnen.retiretool.util.FinLib;
 
 /** Single-scale momentum predictor */
@@ -10,7 +11,7 @@ public class MomentumPredictor extends AssetPredictor
   public final int nLookback;
   public final int nSkipRecent;
 
-  public MomentumPredictor(int nLookback, int nSkipRecent, SequenceStore store)
+  public MomentumPredictor(int nLookback, int nSkipRecent, SequenceStoreV1 store)
   {
     super(buildName(nLookback, nSkipRecent), store);
     assert nSkipRecent < nLookback;
@@ -20,7 +21,7 @@ public class MomentumPredictor extends AssetPredictor
     this.bPredictOne = true;
   }
 
-  public MomentumPredictor(int nLookback, SequenceStore store)
+  public MomentumPredictor(int nLookback, SequenceStoreV1 store)
   {
     this(nLookback, 0, store);
   }

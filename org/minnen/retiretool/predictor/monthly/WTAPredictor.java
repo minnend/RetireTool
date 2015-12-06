@@ -4,6 +4,7 @@ import java.util.Arrays;
 
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.data.SequenceStoreV1;
 
 /** Winner Take All Predictor */
 public class WTAPredictor extends AssetPredictor
@@ -13,12 +14,12 @@ public class WTAPredictor extends AssetPredictor
   private final double   alpha;
   private final double   beta;
 
-  public WTAPredictor(String name, AssetPredictor[] predictors, SequenceStore store)
+  public WTAPredictor(String name, AssetPredictor[] predictors, SequenceStoreV1 store)
   {
     this(name, predictors, 0.9, 0.1, store);
   }
 
-  public WTAPredictor(String name, AssetPredictor[] predictors, double alpha, double beta, SequenceStore store)
+  public WTAPredictor(String name, AssetPredictor[] predictors, double alpha, double beta, SequenceStoreV1 store)
   {
     super(name, store);
     this.predictors = predictors;

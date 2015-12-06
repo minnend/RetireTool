@@ -11,12 +11,11 @@ import java.util.function.Predicate;
 import org.minnen.retiretool.Shiller;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
-import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.data.SequenceStoreV1;
 import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.DurationalStats;
 import org.minnen.retiretool.stats.RetirementStats;
-import org.minnen.retiretool.stats.ReturnStats;
 
 public final class FinLib
 {
@@ -1028,7 +1027,7 @@ public final class FinLib
   }
 
   /** Filter a list of strategies so that only "dominating" ones remain. */
-  public static void filterStrategies(List<String> candidates, SequenceStore store)
+  public static void filterStrategies(List<String> candidates, SequenceStoreV1 store)
   {
     final double diffMargin = 0.01;
     final int N = candidates.size();

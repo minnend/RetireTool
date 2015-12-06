@@ -49,6 +49,14 @@ public class SequenceStore implements Iterable<Sequence>
     }
   }
 
+  public String removeAlias(String alias)
+  {
+    String target = aliasMap.get(alias);
+    aliasMap.remove(alias);
+    nameToIndex.remove(alias);
+    return target;
+  }
+
   /**
    * Add the given sequence using its internal name.
    *
@@ -63,25 +71,41 @@ public class SequenceStore implements Iterable<Sequence>
   /**
    * Add the given sequence using its internal name.
    *
-   * @param seq cumulative returns sequence to add
-   * @param name new name for the cumulative returns sequence
-   * @param normalizeStartValue if true, adjust the sequence so that the first value matches the store's start value
+   * @param seq sequence to add
+   * @param name new name for the sequence
    * @return index in the store
    */
   public int add(Sequence seq, String name)
   {
-    assert !nameToIndex.containsKey(name) : name;
-
-    // Add the new sequence to the store.
-    final int index = seqs.size();
     seq.setName(name);
-    seqs.add(seq);
-    nameToIndex.put(name, index);
-    nameToOrig.put(name, name);
-    assert get(name) == seq;
+    int index = getIndex(name);
+    if (index < 0) {
+      assert !nameToIndex.containsKey(name) : name;
 
-    // System.out.printf("Added: \"%s\"\n", name);
+      // Add the new sequence to the store.
+      index = seqs.size();
+      seqs.add(seq);
+      nameToIndex.put(name, index);
+      nameToOrig.put(name, name);
+    } else {
+      assert nameToIndex.containsKey(name) : name;
+
+      // Update sequence.
+      seqs.set(index, seq);
+    }
+
+    assert get(name) == seq;
     return index;
+  }
+
+  public boolean remove(String name)
+  {
+    int index = getIndex(name);
+    if (index < 0) return false;
+    seqs.remove(index);
+    nameToIndex.remove(name);
+    nameToOrig.remove(name);
+    return true;
   }
 
   public int size()

@@ -8,6 +8,7 @@ import java.util.TreeMap;
 
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.data.SequenceStoreV1;
 import org.minnen.retiretool.predictor.monthly.AssetPredictor;
 import org.minnen.retiretool.predictor.monthly.SMAPredictor;
 import org.minnen.retiretool.predictor.monthly.Multi3Predictor.Disposition;
@@ -223,10 +224,8 @@ public class Strategy
       double eb = other.expectedReturn();
       // double ea = this.winRate();
       // double eb = other.winRate();
-      if (ea > eb)
-        return 1;
-      if (ea < eb)
-        return -1;
+      if (ea > eb) return 1;
+      if (ea < eb) return -1;
       return 0;
     }
   };
@@ -340,7 +339,7 @@ public class Strategy
     printStats("SMA Statistics:", map);
   }
 
-  public static void calcSmaStats(Sequence prices, Sequence risky, Sequence safe, SequenceStore store)
+  public static void calcSmaStats(Sequence prices, Sequence risky, Sequence safe, SequenceStoreV1 store)
   {
     int N = risky.length();
     assert safe.matches(risky);

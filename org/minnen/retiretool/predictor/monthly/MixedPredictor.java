@@ -2,6 +2,7 @@ package org.minnen.retiretool.predictor.monthly;
 
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.data.SequenceStoreV1;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Library;
 
@@ -12,13 +13,13 @@ public class MixedPredictor extends AssetPredictor
 
   private double[]       prevDist;
 
-  public MixedPredictor(String name, AssetPredictor[] basePredictors, int[] percents, SequenceStore store)
+  public MixedPredictor(String name, AssetPredictor[] basePredictors, int[] percents, SequenceStoreV1 store)
   {
     this(name, basePredictors, percents, 0.0, store);
   }
 
   public MixedPredictor(String name, AssetPredictor[] basePredictors, int[] percents, double blendWeight,
-      SequenceStore store)
+      SequenceStoreV1 store)
   {
     super(buildName(name, basePredictors, percents), store);
     assert basePredictors.length == percents.length;

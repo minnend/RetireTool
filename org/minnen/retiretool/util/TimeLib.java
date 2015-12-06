@@ -3,10 +3,8 @@ package org.minnen.retiretool.util;
 import static java.util.Calendar.SUNDAY;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
 import java.util.Stack;
 import java.util.TimeZone;
 
@@ -14,20 +12,19 @@ import org.minnen.retiretool.data.Sequence;
 
 public class TimeLib
 {
-  public final static long             TIME_ERROR   = Library.LNAN;
-  public final static long             TIME_BEGIN   = Long.MIN_VALUE + 1;
-  public final static long             TIME_END     = Long.MAX_VALUE - 1;
-  public final static long             MS_IN_HOUR   = 60 * 60 * 1000L;
-  public final static long             MS_IN_DAY    = 24 * MS_IN_HOUR;
+  public final static long             TIME_ERROR = Library.LNAN;
+  public final static long             TIME_BEGIN = Long.MIN_VALUE + 1;
+  public final static long             TIME_END   = Long.MAX_VALUE - 1;
+  public final static long             MS_IN_HOUR = 60 * 60 * 1000L;
+  public final static long             MS_IN_DAY  = 24 * MS_IN_HOUR;
 
-  public static TimeZone               utc          = TimeZone.getTimeZone("GMT");
-  public final static SimpleDateFormat sdfTime      = getSDF("yyyy MMM d HH:mm:ss");
-  public final static SimpleDateFormat sdfDate      = getSDF("d MMM yyyy");
-  public final static SimpleDateFormat sdfMonth     = getSDF("MMM yyyy");
-  public final static SimpleDateFormat sdfYMD       = getSDF("yyyy-MM-dd");
+  public static TimeZone               utc        = TimeZone.getTimeZone("GMT");
+  public final static SimpleDateFormat sdfTime    = getSDF("yyyy MMM d HH:mm:ss");
+  public final static SimpleDateFormat sdfDate    = getSDF("d MMM yyyy");
+  public final static SimpleDateFormat sdfMonth   = getSDF("MMM yyyy");
+  public final static SimpleDateFormat sdfYMD     = getSDF("yyyy-MM-dd");
 
-  public final static Stack<Calendar>  calendars    = new Stack<Calendar>();
-  private static int                   nCalsCreated = 0;
+  public final static Stack<Calendar>  calendars  = new Stack<Calendar>();
 
   /**
    * Return the current time in milliseconds. This function just forwards the request to System.currentTimeMillis();
@@ -143,8 +140,6 @@ public class TimeLib
   public static Calendar borrowCal()
   {
     if (calendars.isEmpty()) {
-      ++nCalsCreated;
-      // System.out.printf("Calendars: %d (%d)\n", calendars.size(), nCalsCreated);
       return now();
     } else {
       return calendars.pop();
@@ -280,24 +275,21 @@ public class TimeLib
   /** @return string representation of the given day (year, month, date) */
   public static String formatDate(long ms)
   {
-    if (ms == TIME_ERROR || ms == Long.MAX_VALUE)
-      return null;
+    if (ms == TIME_ERROR || ms == Long.MAX_VALUE) return null;
     return sdfDate.format(new Date(ms));
   }
 
   /** @return string representation of the given month (year, month) */
   public static String formatMonth(long ms)
   {
-    if (ms == TIME_ERROR || ms == Long.MAX_VALUE)
-      return null;
+    if (ms == TIME_ERROR || ms == Long.MAX_VALUE) return null;
     return sdfMonth.format(new Date(ms));
   }
 
   /** @return string representation of the given time as year-month-day */
   public static String formatYMD(long ms)
   {
-    if (ms == TIME_ERROR || ms == Long.MAX_VALUE)
-      return null;
+    if (ms == TIME_ERROR || ms == Long.MAX_VALUE) return null;
     return sdfYMD.format(new Date(ms));
   }
 
@@ -307,8 +299,7 @@ public class TimeLib
     assert ms != TIME_ERROR;
     long days = ms / MS_IN_DAY;
     // if data is before 1970, ms is neg and floor does the wrong thing
-    if (ms < 0)
-      days -= 1;
+    if (ms < 0) days -= 1;
     return days * MS_IN_DAY;
   }
 
@@ -353,16 +344,14 @@ public class TimeLib
   /** @return string representation of the given time (year, month, date, hour, minute, second) */
   public static String formatTime(Date date)
   {
-    if (date == null)
-      return "null";
+    if (date == null) return "null";
     return sdfTime.format(date);
   }
 
   /** @return string representation of the given time (year, month, date, hour, minute, second) */
   public static String formatTime(long ms)
   {
-    if (ms == TIME_ERROR || ms == Long.MAX_VALUE)
-      return null;
+    if (ms == TIME_ERROR || ms == Long.MAX_VALUE) return null;
     return sdfTime.format(new Date(ms));
   }
 
@@ -388,25 +377,16 @@ public class TimeLib
 
     String sNum = String.format("%%.%df", nSigDig);
     String sRet;
-    if (ms > 18 * month)
-      sRet = String.format(sNum + " years", ms / year);
-    else if (ms > 6 * week)
-      sRet = String.format(sNum + " months", ms / month);
-    else if (ms > 10 * day)
-      sRet = String.format(sNum + " weeks", ms / week);
-    else if (ms > day)
-      sRet = String.format(sNum + " days", ms / day);
-    else if (ms > hour)
-      sRet = String.format(sNum + " hours", ms / hour);
-    else if (ms > minute)
-      sRet = String.format(sNum + " min", ms / minute);
-    else if (ms > second)
-      sRet = String.format(sNum + "s", ms / second);
-    else
-      sRet = String.format("%dms", ms);
+    if (ms > 18 * month) sRet = String.format(sNum + " years", ms / year);
+    else if (ms > 6 * week) sRet = String.format(sNum + " months", ms / month);
+    else if (ms > 10 * day) sRet = String.format(sNum + " weeks", ms / week);
+    else if (ms > day) sRet = String.format(sNum + " days", ms / day);
+    else if (ms > hour) sRet = String.format(sNum + " hours", ms / hour);
+    else if (ms > minute) sRet = String.format(sNum + " min", ms / minute);
+    else if (ms > second) sRet = String.format(sNum + "s", ms / second);
+    else sRet = String.format("%dms", ms);
 
-    if (bNeg)
-      sRet = "-" + sRet;
+    if (bNeg) sRet = "-" + sRet;
 
     return sRet;
   }
