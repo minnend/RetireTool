@@ -31,6 +31,7 @@ import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.data.Sequence.EndpointBehavior;
+import org.minnen.retiretool.data.SequenceStoreV1;
 import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.DurationalStats;
@@ -45,17 +46,17 @@ import org.minnen.retiretool.util.FinLib.DividendMethod;
 
 public class RetireToolMonthly
 {
-  public static final int           GRAPH_WIDTH  = 710;
-  public static final int           GRAPH_HEIGHT = 450;
+  public static final int             GRAPH_WIDTH  = 710;
+  public static final int             GRAPH_HEIGHT = 450;
 
-  public final static SequenceStore store        = new SequenceStore();
+  public final static SequenceStoreV1 store        = new SequenceStoreV1();
 
-  public static final Disposition[] dispositions = Disposition.values();
+  public static final Disposition[]   dispositions = Disposition.values();
 
   /** Dimension to use in the price sequence for SMA predictions. */
-  public static int                 iPriceSMA    = 0;
-  public static int                 nMinTradeGap = 0;
-  public static double              smaMargin    = 0.0;
+  public static int                   iPriceSMA    = 0;
+  public static int                   nMinTradeGap = 0;
+  public static double                smaMargin    = 0.0;
 
   public static void setupShillerData(File dataDir, File dir, boolean buildComplexStrategies) throws IOException
   {

@@ -65,8 +65,8 @@ public class Account
   {
     for (Position position : positions.values()) {
       String divName = position.name + "-dividends";
-      if (store.hasMisc(divName)) {
-        Sequence divs = store.getMisc(divName);
+      Sequence divs = store.tryGet(divName);
+      if (divs != null) {
         int index = divs.getClosestIndex(timeInfo.time);
         long divTime = divs.getTimeMS(index);
         if (timeInfo.time >= divTime && TimeLib.isSameMonth(timeInfo.time, divTime)) {
@@ -88,20 +88,16 @@ public class Account
     }
   }
 
-  private void payInterest(TimeInfo timeInfo, SequenceStore store)
+  private boolean payInterest(TimeInfo timeInfo, SequenceStore store)
   {
     // No cash => no interest payment.
     assert cashSumForMonth >= 0;
-    if (cashSumForMonth < 0) {
-      return;
-    }
+    if (cashSumForMonth <= 0) return true;
 
     // Make sure we have interest rate data.
-    if (!store.hasMisc("interest-rates")) {
-      return;
-    }
+    Sequence rates = store.get("interest-rates");
+    if (rates == null) return false;
 
-    Sequence rates = store.getMisc("interest-rates");
     int index = rates.getIndexAtOrBefore(timeInfo.time);
     double annualRate = rates.get(index, 0);
     double mul = FinLib.ret2mul(annualRate);
@@ -118,6 +114,7 @@ public class Account
     // Reset accumulators.
     cashSumForMonth = 0;
     numDaysInMonth = 0;
+    return true;
   }
 
   public long getCash()
@@ -280,7 +277,7 @@ public class Account
       nShares = position.getNumShares();
     } else {
       long price = broker.getSellPrice(name);
-      // TODO how would we get to too many shares? 
+      // TODO how would we get to too many shares?
       nShares = Math.min(Fixed.divTrunc(value, price), position.getNumShares());
     }
     return sellShares(name, nShares, memo);

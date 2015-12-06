@@ -39,36 +39,24 @@ public class BrokerInfoAccess
   public boolean hasSeq(String name)
   {
     SequenceStore store = broker.store;
-    return store.has(name);
+    return store.hasName(name);
   }
 
   public int getID(String name)
   {
     SequenceStore store = broker.store;
-    int id = store.getMiscIndex(name);
-    if (id < 0) {
-      id = store.getIndex(name);
-    }
-    return id;
+    return store.getIndex(name);
   }
 
   public Sequence getSeq(String name)
   {
     SequenceStore store = broker.store;
-    Sequence seq = store.tryGetMisc(name);
-    if (seq == null) {
-      seq = store.tryGet(name);
-    }
-    return seq;
+    return store.tryGet(name);
   }
 
   public Sequence getSeq(int id)
   {
     SequenceStore store = broker.store;
-    Sequence seq = store.tryGetMisc(id);
-    if (seq == null) {
-      seq = store.tryGet(id);
-    }
-    return seq;
+    return store.tryGet(id);
   }
 }

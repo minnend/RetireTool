@@ -109,7 +109,7 @@ public class Broker
   {
     assert time <= getTime(); // No peeking into the future.
 
-    Sequence seq = store.getMisc(name);
+    Sequence seq = store.get(name);
     int index = seq.getClosestIndex(time);
     double floatPrice = seq.get(index, iPrice);
     long price = Fixed.round(Fixed.toFixed(floatPrice), Fixed.THOUSANDTH);

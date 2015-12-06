@@ -25,7 +25,7 @@ public class Strategy
     for (int i = 0; i < seqs.length; ++i) {
       assert seqs[i].length() == N;
       assert seqs[i].getStartMS() == seqs[0].getStartMS();
-      assert predictor.store.has(seqs[0].getName());
+      assert predictor.store.hasName(seqs[0].getName());
     }
     N = 24; // TODO for debug
     System.out.printf("Predictor: %s\n", predictor.name);

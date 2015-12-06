@@ -83,22 +83,22 @@ public class RetireTool
     shiller = shiller.subseq(commonStart, commonEnd);
     tbillData = tbillData.subseq(commonStart, commonEnd);
 
-    store.addMisc(stock, "stock");
-    store.addMisc(shiller, "shiller");
-    store.addMisc(tbillData, "tbilldata");
+    store.add(stock, "stock");
+    store.add(shiller, "shiller");
+    store.add(tbillData, "tbilldata");
     store.alias("interest-rates", "tbilldata");
 
     // Monthly S&P dividends.
     Sequence divPayments = Shiller.getDividendPayments(shiller, DividendMethod.QUARTERLY);
-    store.addMisc(divPayments, "stock-dividends");
+    store.add(divPayments, "stock-dividends");
 
     // Add CPI data.
-    store.addMisc(Shiller.getData(Shiller.CPI, "cpi", shiller));
+    store.add(Shiller.getData(Shiller.CPI, "cpi", shiller));
     store.alias("inflation", "cpi");
 
     // Add integral sequence for stock data.
     Sequence stockIntegral = stock.getIntegralSeq();
-    store.addMisc(stockIntegral);
+    store.add(stockIntegral);
 
     // System.out.printf("#Store: %d  #Misc: %d\n", store.getNumReturns(), store.getNumMisc());
     // for (String name : store.getMiscNames()) {
@@ -264,7 +264,7 @@ public class RetireTool
   public static JitterStats collectJitterStats(int N, PredictorConfig config, String[] assetNames, Slippage slippage,
       int maxDelay, boolean buyAtNextOpen, int nSummaryTick)
   {
-    Sequence stock = store.getMisc(assetNames[0]);
+    Sequence stock = store.get(assetNames[0]);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stock.subseq(iStart);
     Broker broker = new Broker(store, slippage, guideSeq.getStartMS());
@@ -357,7 +357,7 @@ public class RetireTool
 
   public static void runMultiSweep(File dir) throws IOException
   {
-    Sequence stock = store.getMisc(riskyName);
+    Sequence stock = store.get(riskyName);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stock.subseq(iStart);
     Broker broker = new Broker(store, GlobalSlippage, guideSeq.getStartMS());
@@ -453,7 +453,7 @@ public class RetireTool
           double p1 = 1.0 - p2;
           DiscreteDistribution mix = new DiscreteDistribution(p1, p2);
           PredictorConfig config = new ConfigMixed(mix, multiConfigs[i], multiConfigs[j]);
-          JitterStats stats = collectJitterStats(1000, config, assetNames, GlobalSlippage, 1, true, 0);
+          JitterStats stats = collectJitterStats(300, config, assetNames, GlobalSlippage, 1, true, 50);
           allStats.add(stats);
           System.out.printf("%d.%d [%.1f,%.1f]:  %s  (%.2f)\n", i, j, p1 * 100.0, p2 * 100.0, stats, stats.score());
         }
@@ -473,7 +473,7 @@ public class RetireTool
 
   public static void runOne(File dir) throws IOException
   {
-    Sequence stock = store.getMisc(riskyName);
+    Sequence stock = store.get(riskyName);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stock.subseq(iStart);
     Broker broker = new Broker(store, GlobalSlippage, guideSeq.getStartMS());
