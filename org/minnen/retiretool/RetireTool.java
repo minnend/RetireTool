@@ -32,7 +32,6 @@ import org.minnen.retiretool.broker.Broker;
 import org.minnen.retiretool.broker.TimeInfo;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.DiscreteDistribution;
-import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 
@@ -51,7 +50,7 @@ public class RetireTool
   public static final Slippage      GlobalSlippage = new Slippage(0.01, 0.05);
   public static final LinearFunc    PriceSDev      = LinearFunc.Zero;
   // public static final LinearFunc PriceSDev = new LinearFunc(0.004, 0.01);
-  public static final int           MaxDelay       = 0;
+  public static final int           MaxDelay       = 2;
   public static final boolean       BuyAtNextOpen  = true;
   public static final long          gap            = 2 * TimeLib.MS_IN_DAY;
 
@@ -272,7 +271,6 @@ public class RetireTool
     Sequence guideSeq = stock.subseq(iStart);
     Broker broker = new Broker(store, slippage, guideSeq.getStartMS());
 
-    final Random rng = new Random();
     double[] cagrs = new double[N];
     double[] drawdowns = new double[N];
     long startMS = TimeLib.getTime();
@@ -285,34 +283,7 @@ public class RetireTool
       if (priceSDev != LinearFunc.Zero) {
         for (String name : assetNames) {
           if (name.equals("cash")) continue;
-
-          Sequence seq = null;
-          String nameOrig = name + "-orig";
-          if (store.hasName(nameOrig)) {
-            seq = store.get(nameOrig);
-          } else {
-            seq = store.get(name);
-            store.add(seq, nameOrig);
-          }
-
-          Sequence noisySeq = new Sequence(name + "-noisy");
-          for (FeatureVec x : seq) {
-            x = new FeatureVec(x);
-            double price = x.get(iPriceSMA);
-            double sdev = priceSDev.calc(price);
-            double noisy = price + rng.nextGaussian() * sdev;
-            if (noisy <= 0.0) {
-              noisy = price * (0.01 + rng.nextDouble() * 0.2);
-            }
-
-            // Price should always be a whole number of pennies.
-            noisy = Math.round(noisy * 100.0) / 100.0;
-
-            x.set(iPriceSMA, noisy);
-            noisySeq.addData(x);
-          }
-          store.add(noisySeq);
-          store.alias(name, noisySeq.getName());
+          store.genNoisy(name, priceSDev, iPriceSMA);
         }
       }
 
@@ -327,10 +298,7 @@ public class RetireTool
       if (priceSDev != LinearFunc.Zero) {
         for (String name : assetNames) {
           if (name.equals("cash")) continue;
-
-          String noisyName = name + "-noisy";
-          store.remove(noisyName);
-          store.removeAlias(name);
+          store.removeNoisy(name);
         }
       }
 
@@ -502,7 +470,7 @@ public class RetireTool
           double p1 = 1.0 - p2;
           DiscreteDistribution mix = new DiscreteDistribution(p1, p2);
           PredictorConfig config = new ConfigMixed(mix, multiConfigs[i], multiConfigs[j]);
-          JitterStats stats = collectJitterStats(100, config, assetNames, GlobalSlippage, PriceSDev, MaxDelay,
+          JitterStats stats = collectJitterStats(1000, config, assetNames, GlobalSlippage, PriceSDev, MaxDelay,
               BuyAtNextOpen, 50);
           allStats.add(stats);
           System.out.printf("%d.%d [%.1f,%.1f]:  %s  (%.2f)\n", i, j, p1 * 100.0, p2 * 100.0, stats, stats.score());

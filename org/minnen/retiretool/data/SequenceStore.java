@@ -9,7 +9,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import org.minnen.retiretool.LinearFunc;
 import org.minnen.retiretool.util.FinLib;
+import org.minnen.retiretool.util.Random;
 import org.minnen.retiretool.util.TimeLib;
 
 /**
@@ -23,6 +25,8 @@ import org.minnen.retiretool.util.TimeLib;
  */
 public class SequenceStore implements Iterable<Sequence>
 {
+  public static final Random         rng         = new Random();
+
   private final List<Sequence>       seqs        = new ArrayList<>();
   private final Map<String, Integer> nameToIndex = new HashMap<>();
   private final Map<String, String>  aliasMap    = new HashMap<>();
@@ -199,6 +203,47 @@ public class SequenceStore implements Iterable<Sequence>
     for (Sequence seq : seqs) {
       seq.unlock();
     }
+  }
+
+  public Sequence genNoisy(String name, LinearFunc priceSDev, int iDim)
+  {
+    Sequence seq = null;
+    String nameOrig = name + "-orig";
+    if (hasName(nameOrig)) {
+      seq = get(nameOrig);
+    } else {
+      seq = get(name);
+      add(seq, nameOrig);
+    }
+
+    Sequence noisySeq = new Sequence(seq.getName() + "-noisy");
+    for (FeatureVec x : seq) {
+      x = new FeatureVec(x);
+      double price = x.get(iDim);
+      double sdev = priceSDev.calc(price);
+      double noisy = price + rng.nextGaussian() * sdev;
+      if (noisy <= 0.0) {
+        noisy = price * (0.01 + rng.nextDouble() * 0.2);
+      }
+
+      // Price should always be a whole number of pennies.
+      noisy = Math.round(noisy * 100.0) / 100.0;
+
+      x.set(iDim, noisy);
+      noisySeq.addData(x);
+    }
+
+    add(noisySeq);
+    alias(name, noisySeq.getName());
+
+    return noisySeq;
+  }
+
+  public void removeNoisy(String name)
+  {
+    String noisyName = name + "-noisy";
+    remove(noisyName);
+    removeAlias(name);
   }
 
   @Override
