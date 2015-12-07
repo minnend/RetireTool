@@ -95,7 +95,7 @@ public class Account
     if (cashSumForMonth <= 0) return true;
 
     // Make sure we have interest rate data.
-    Sequence rates = store.get("interest-rates");
+    Sequence rates = store.tryGet("interest-rates");
     if (rates == null) return false;
 
     int index = rates.getIndexAtOrBefore(timeInfo.time);

@@ -44,7 +44,7 @@ public class DataIO
       }
 
       // Skip missing data.
-      if (toks[1].equals(".")) {
+      if (toks[1].equals(".") || toks[1].equals("ND")) {
         continue;
       }
 

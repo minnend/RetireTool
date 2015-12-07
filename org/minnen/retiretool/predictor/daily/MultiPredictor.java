@@ -4,28 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.minnen.retiretool.broker.BrokerInfoAccess;
-import org.minnen.retiretool.util.TimeLib;
 
 public class MultiPredictor extends Predictor
 {
-  public static class TimeCode
-  {
-    public long time;
-    public int  code;
-
-    public TimeCode(long time, int code)
-    {
-      this.time = time;
-      this.code = code;
-    }
-
-    @Override
-    public String toString()
-    {
-      return String.format("[%s]: %d", TimeLib.formatDate(time), code);
-    }
-  }
-
   private final long          assetMap;
   public final List<TimeCode> timeCodes = new ArrayList<>();
 

@@ -19,6 +19,7 @@ import org.minnen.retiretool.predictor.config.ConfigSMA;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
 import org.minnen.retiretool.predictor.daily.MultiPredictor;
 import org.minnen.retiretool.predictor.daily.Predictor;
+import org.minnen.retiretool.predictor.daily.TimeCode;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.JitterStats;
 import org.minnen.retiretool.stats.ReturnStats;
@@ -50,7 +51,7 @@ public class RetireTool
   public static final Slippage      GlobalSlippage = new Slippage(0.01, 0.05);
   public static final LinearFunc    PriceSDev      = LinearFunc.Zero;
   // public static final LinearFunc PriceSDev = new LinearFunc(0.004, 0.01);
-  public static final int           MaxDelay       = 2;
+  public static final int           MaxDelay       = 1;
   public static final boolean       BuyAtNextOpen  = true;
   public static final long          gap            = 2 * TimeLib.MS_IN_DAY;
 
@@ -61,6 +62,7 @@ public class RetireTool
   public static void setupBroker(File dataDir, File dir) throws IOException
   {
     Sequence stock = DataIO.loadYahooData(new File(dataDir, "^GSPC.csv"));
+    Sequence bondRate = DataIO.loadDateValueCSV(new File(dataDir, "treasury-10year-daily.csv"));
     Sequence shiller = DataIO.loadShillerData(new File(dataDir, "shiller.csv"));
     shiller.adjustDatesToEndOfMonth();
     Sequence tbillData = DataIO.loadDateValueCSV(new File(dataDir, "treasury-bills-3-month.csv"));
@@ -74,10 +76,12 @@ public class RetireTool
         TimeLib.formatMonth(shiller.getEndMS()));
     System.out.printf("TBills: [%s] -> [%s]\n", TimeLib.formatMonth(tbillData.getStartMS()),
         TimeLib.formatMonth(tbillData.getEndMS()));
+    System.out.printf("Notes: [%s] -> [%s]\n", TimeLib.formatMonth(bondRate.getStartMS()),
+        TimeLib.formatMonth(bondRate.getEndMS()));
 
-    long commonStart = TimeLib.calcCommonStart(shiller, tbillData, stock);
+    long commonStart = TimeLib.calcCommonStart(shiller, tbillData, stock, bondRate);
     commonStart = TimeLib.toFirstOfMonth(commonStart);
-    long commonEnd = TimeLib.calcCommonEnd(shiller, tbillData, stock);
+    long commonEnd = TimeLib.calcCommonEnd(shiller, tbillData, stock, bondRate);
     System.out.printf("Common: [%s] -> [%s]\n", TimeLib.formatDate(commonStart), TimeLib.formatDate(commonEnd));
 
     stock = stock.subseq(commonStart, commonEnd);
@@ -96,6 +100,9 @@ public class RetireTool
     // Add CPI data.
     store.add(Shiller.getData(Shiller.CPI, "cpi", shiller));
     store.alias("inflation", "cpi");
+
+    // Daily bond data.
+    // TODO
 
     // Add integral sequence for stock data.
     Sequence stockIntegral = stock.getIntegralSeq();
@@ -450,6 +457,7 @@ public class RetireTool
     for (int i = 0; i < nSingle; ++i) {
       for (int j = i + 1; j < nSingle; ++j) {
         for (int k = j + 1; k < nSingle; ++k) {
+          System.out.printf("%d: (%d,%d,%d)\n", iMulti, i, j, k);
           multiConfigs[iMulti++] = new ConfigMulti(254, new PredictorConfig[] { singleConfigs[i], singleConfigs[j],
               singleConfigs[k] });
         }
@@ -465,13 +473,13 @@ public class RetireTool
     {
       {
         for (int p = 0; p <= 10; ++p) {
-          if (p != 3) continue;
+          // if (p != 3) continue;
           double p2 = p / 10.0;
           double p1 = 1.0 - p2;
           DiscreteDistribution mix = new DiscreteDistribution(p1, p2);
           PredictorConfig config = new ConfigMixed(mix, multiConfigs[i], multiConfigs[j]);
-          JitterStats stats = collectJitterStats(1000, config, assetNames, GlobalSlippage, PriceSDev, MaxDelay,
-              BuyAtNextOpen, 50);
+          JitterStats stats = collectJitterStats(200, config, assetNames, GlobalSlippage, PriceSDev, MaxDelay,
+              BuyAtNextOpen, 0);
           allStats.add(stats);
           System.out.printf("%d.%d [%.1f,%.1f]:  %s  (%.2f)\n", i, j, p1 * 100.0, p2 * 100.0, stats, stats.score());
         }
@@ -520,8 +528,10 @@ public class RetireTool
     // PredictorConfig config = new ConfigMulti(assetMap, configs);
 
     final long assetMap = 254;
-    PredictorConfig[] configs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap),
-        new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap), new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap), };
+    PredictorConfig[] configs = new PredictorConfig[] {
+        new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap),
+        new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap),
+        new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap), };
     PredictorConfig config = new ConfigMulti(assetMap, configs);
 
     // PredictorConfig configStock = new ConfigConst(0);
@@ -539,24 +549,24 @@ public class RetireTool
     CumulativeStats cstats = CumulativeStats.calc(returns);
     System.out.printf("%s (sharpe=%.2f, score=%.2f)\n", cstats, sharpe, cstats.scoreSimple());
 
-    final int code = 7;
-    List<Sequence> seqs = new ArrayList<Sequence>();
-    List<MultiPredictor.TimeCode> timeCodes = ((MultiPredictor) predictor).timeCodes;
-    for (int i = 0; i < timeCodes.size(); ++i) {
-      MultiPredictor.TimeCode timeCode = timeCodes.get(i);
-      if (timeCode.code == code) {
-        double va = Fixed.toFloat(broker.getPrice(riskyName, timeCode.time));
-        long nextTime = (i < timeCodes.size() - 1 ? timeCodes.get(i + 1).time : broker.getTime());
-        double vb = Fixed.toFloat(broker.getPrice(riskyName, nextTime));
-        System.out.printf("%d   %.3f  [%s] -> [%s]\n", timeCode.code, FinLib.mul2ret(vb / va),
-            TimeLib.formatDate(timeCode.time), TimeLib.formatDate(nextTime));
-
-        Sequence seq = stock.subseq(timeCode.time, nextTime);
-        seqs.add(seq._div(seq.getFirst(0)));
-      }
-    }
-    Chart.saveLineChart(new File(dir, "code.html"), String.format("After Code %d", code), GRAPH_WIDTH, GRAPH_HEIGHT,
-        false, seqs);
+//    final int code = 7;
+//    List<Sequence> seqs = new ArrayList<Sequence>();
+//    List<TimeCode> timeCodes = ((MultiPredictor) predictor).timeCodes;
+//    for (int i = 0; i < timeCodes.size(); ++i) {
+//      TimeCode timeCode = timeCodes.get(i);
+//      if (timeCode.code == code) {
+//        double va = Fixed.toFloat(broker.getPrice(riskyName, timeCode.time));
+//        long nextTime = (i < timeCodes.size() - 1 ? timeCodes.get(i + 1).time : broker.getTime());
+//        double vb = Fixed.toFloat(broker.getPrice(riskyName, nextTime));
+//        System.out.printf("%d   %.3f  [%s] -> [%s]\n", timeCode.code, FinLib.mul2ret(vb / va),
+//            TimeLib.formatDate(timeCode.time), TimeLib.formatDate(nextTime));
+//
+//        Sequence seq = stock.subseq(timeCode.time, nextTime);
+//        seqs.add(seq._div(seq.getFirst(0)));
+//      }
+//    }
+//    Chart.saveLineChart(new File(dir, "code.html"), String.format("After Code %d", code), GRAPH_WIDTH, GRAPH_HEIGHT,
+//        false, seqs);
   }
 
   public static List<JitterStats> loadResultsSMA(File file) throws IOException
@@ -664,11 +674,11 @@ public class RetireTool
     setupBroker(dataDir, dir);
 
     // searchPredictors(dataDir, dir);
-    // runOne(dir);
+    runOne(dir);
     // runSweep(dir);
     // runJitterTest(dir);
     // runMultiSweep(dir);
-    runMixSweep(dir);
+    //runMixSweep(dir);
 
     // DataIO.downloadDailyDataFromYahoo(dataDir, FinLib.VANGUARD_INVESTOR_FUNDS);
     // DataIO.downloadDailyDataFromYahoo(dataDir, FinLib.STOCK_MARKET_FUNDS);

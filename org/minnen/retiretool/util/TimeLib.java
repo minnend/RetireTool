@@ -109,6 +109,7 @@ public class TimeLib
   {
     long last = seqs[0].getStartMS();
     for (Sequence seq : seqs) {
+      if (seq == null) continue;
       if (seq.getStartMS() > last) {
         last = seq.getStartMS();
       }
@@ -120,6 +121,7 @@ public class TimeLib
   {
     long last = seqs[0].getEndMS();
     for (Sequence seq : seqs) {
+      if (seq == null) continue;
       if (seq.getEndMS() < last) {
         last = seq.getEndMS();
       }
