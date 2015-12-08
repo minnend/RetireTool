@@ -2,8 +2,7 @@ package org.minnen.retiretool;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.TimeZone;
 
 import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.DataIO;
@@ -18,12 +17,10 @@ import org.minnen.retiretool.predictor.config.PredictorConfig;
 import org.minnen.retiretool.predictor.daily.ConstPredictor;
 import org.minnen.retiretool.predictor.daily.MixedPredictor;
 import org.minnen.retiretool.predictor.daily.MultiPredictor;
-import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.predictor.daily.TimeCode;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
-import org.minnen.retiretool.util.FinLib.DividendMethod;
 
 public class Dashboard
 {
@@ -43,40 +40,15 @@ public class Dashboard
   public static final String        safeName       = "cash";
   public static final String[]      assetNames     = new String[] { riskyName, safeName };
 
-  public static void setupSeqStore(File dataDir, File dir) throws IOException
+  public static void setupData() throws IOException
   {
-    Sequence stock = DataIO.loadYahooData(new File(dataDir, "^GSPC.csv"));
-    Sequence shiller = DataIO.loadShillerData(new File(dataDir, "shiller.csv"));
-    shiller.adjustDatesToEndOfMonth();
-    Sequence tbillData = DataIO.loadDateValueCSV(new File(dataDir, "treasury-bills-3-month.csv"));
-    tbillData.setName("3-Month Treasury Bills");
-    tbillData.adjustDatesToEndOfMonth();
-    tbillData = FinLib.pad(tbillData, shiller, 0.0);
+    File file = new File("f:/tmp/snp.csv");
+    file = DataIO.downloadDailyDataFromYahoo(file, "^GSPC", TimeLib.MS_IN_HOUR * 12);
 
+    Sequence stock = DataIO.loadYahooData(file);
     System.out.printf("S&P (Daily): [%s] -> [%s]\n", TimeLib.formatDate(stock.getStartMS()),
         TimeLib.formatDate(stock.getEndMS()));
-    System.out.printf("Shiller: [%s] -> [%s]\n", TimeLib.formatMonth(shiller.getStartMS()),
-        TimeLib.formatMonth(shiller.getEndMS()));
-    System.out.printf("TBills: [%s] -> [%s]\n", TimeLib.formatMonth(tbillData.getStartMS()),
-        TimeLib.formatMonth(tbillData.getEndMS()));
-
-    long commonStart = TimeLib.calcCommonStart(shiller, tbillData, stock);
-    commonStart = TimeLib.toFirstOfMonth(commonStart);
-    long commonEnd = TimeLib.calcCommonEnd(shiller, tbillData, stock);
-    System.out.printf("Common: [%s] -> [%s]\n", TimeLib.formatDate(commonStart), TimeLib.formatDate(commonEnd));
-
-    stock = stock.subseq(commonStart, commonEnd);
-    shiller = shiller.subseq(commonStart, commonEnd);
-    tbillData = tbillData.subseq(commonStart, commonEnd);
-
     store.add(stock, "stock");
-    store.add(shiller, "shiller");
-    store.add(tbillData, "tbilldata");
-    store.alias("interest-rates", "tbilldata");
-
-    // Monthly S&P dividends.
-    Sequence divPayments = Shiller.getDividendPayments(shiller, DividendMethod.QUARTERLY);
-    store.add(divPayments, "stock-dividends");
 
     // Add integral sequence for stock data.
     Sequence stockIntegral = stock.getIntegralSeq();
@@ -262,10 +234,10 @@ public class Dashboard
       f.write("<script src=\"http://code.jquery.com/jquery.min.js\"></script>\n");
       f.write("<link rel=\"stylesheet\" href=\"dashboard.css\">\n");
       f.write("</head><body>\n");
-      f.write("<p>[%s] -> [%s]</p>\n", TimeLib.formatDate(sim.getStartMS()), TimeLib.formatDate(sim.getEndMS()));
 
+      // Table is Column 1.
+      f.write("<div class=\"column\">\n");
       f.write("<table cellspacing=\"0\">\n");
-
       for (int iCode = predStrategy.timeCodes.size() - 1; iCode >= 0; --iCode) {
         TimeCode timeCodeSingles = predStrategy.timeCodes.get(iCode);
 
@@ -325,29 +297,42 @@ public class Dashboard
         f.write("<td>%s</td>", bTopChange ? String.format("%.2f", FinLib.mul2ret(totalMul)) : "");
 
         // Value of S&P and Strategy
-        f.write(sRowGap);
-        f.write("<td>%s</td>", FinLib.currencyFormatter.format(baselineReturns.get(index1, 0)));
-        f.write(sRowGap);
-        f.write("<td>%s</td>", FinLib.currencyFormatter.format(strategyReturns.get(index1, 0)));
+        // f.write(sRowGap);
+        // double baselineTR = baselineReturns.get(index1, 0);
+        // double strategyTR = strategyReturns.get(index1, 0);
+        // f.write("<td>%.1f%%</td>", FinLib.mul2ret(strategyTR / baselineTR));
 
         f.write(sRowGap);
         f.write("</tr>\n");
       }
-      f.write("</table>\n");
+      f.write("</table></div>\n");
+
+      // Start Column 2.
+      f.write("<div class=\"column\">\n");
+      f.write("<b>Dates Covered:</b> [%s] &rarr; [%s]<br/><br/>\n", TimeLib.formatDate(sim.getStartMS()),
+          TimeLib.formatDate(sim.getEndMS()));
+      f.write("<b>Last Updated:</b> %s<br/><br/>\n", TimeLib.formatTime(TimeLib.getTime(), TimeZone.getDefault()));
+      f.write("<b>Column Legend</b><br/>\n");
+      f.write("<ol style=\"margin-top: 4px\">\n");
+      f.write("<li>Date of event\n");
+      f.write("<li>Vote for each of the three SMA predictors\n");
+      f.write("<li>Trade decision (combined vote; <font color=\"#%s\">"
+          + "Green</font>=S&amp;P, <font color=\"#%s\">Red</font>=Cash)\n", green, red);
+      f.write("<li>Price change between events\n");
+      f.write("<li>Price change between trades\n");
+      f.write("</ol>\n");
+      f.write("</div>\n");
+
       f.write("</body></html>\n");
     }
   }
 
   public static void main(String[] args) throws IOException
   {
-    //DataIO.downloadDailyDataFromYahoo(new File("f:/tmp"), "^GSPC");
-
-    File dataDir = new File("g:/research/finance");
     File dir = new File("g:/web/");
-    assert dataDir.isDirectory();
     assert dir.isDirectory();
 
-    setupSeqStore(dataDir, dir);
+    setupData();
 
     Sequence stock = store.get(riskyName);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);

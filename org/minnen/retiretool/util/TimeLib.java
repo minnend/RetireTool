@@ -19,7 +19,7 @@ public class TimeLib
   public final static long             MS_IN_DAY  = 24 * MS_IN_HOUR;
 
   public static TimeZone               utc        = TimeZone.getTimeZone("GMT");
-  public final static SimpleDateFormat sdfTime    = getSDF("yyyy MMM d HH:mm:ss");
+  public final static SimpleDateFormat sdfTime    = getSDF("yyyy MMM d hh:mm:ss a");
   public final static SimpleDateFormat sdfDate    = getSDF("d MMM yyyy");
   public final static SimpleDateFormat sdfMonth   = getSDF("MMM yyyy");
   public final static SimpleDateFormat sdfYMD     = getSDF("yyyy-MM-dd");
@@ -351,10 +351,19 @@ public class TimeLib
   }
 
   /** @return string representation of the given time (year, month, date, hour, minute, second) */
-  public static String formatTime(long ms)
+  public static String formatTime(long ms, TimeZone tz)
   {
     if (ms == TIME_ERROR || ms == Long.MAX_VALUE) return null;
-    return sdfTime.format(new Date(ms));
+    Date date = new Date(ms);
+    if (tz == null) {
+      return sdfTime.format(date);
+    } else {
+      TimeZone oldTZ = sdfTime.getTimeZone();
+      sdfTime.setTimeZone(TimeZone.getDefault());
+      String s = sdfTime.format(date);
+      sdfTime.setTimeZone(oldTZ);
+      return s;
+    }
   }
 
   /** @return human readable string representing the given amount of time */

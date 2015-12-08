@@ -84,8 +84,8 @@ public class Sequence implements Iterable<FeatureVec>
 
   public String toString()
   {
-    return String.format("[Seq: len=%d, %dD  [%s]->[%s]]", length(), getNumDims(), TimeLib.formatTime(getStartMS()),
-        TimeLib.formatTime(getEndMS()));
+    return String.format("[Seq: len=%d, %dD  [%s]->[%s]]", length(), getNumDims(),
+        TimeLib.formatTime(getStartMS(), null), TimeLib.formatTime(getEndMS(), null));
   }
 
   /**
@@ -94,8 +94,7 @@ public class Sequence implements Iterable<FeatureVec>
    */
   public int getNumDims()
   {
-    if (data.isEmpty())
-      return 0;
+    if (data.isEmpty()) return 0;
     return get(0).getNumDims();
   }
 
@@ -416,33 +415,25 @@ public class Sequence implements Iterable<FeatureVec>
   {
 
     int n = data.size();
-    if (n == 0)
-      return -1;
+    if (n == 0) return -1;
     int a = 0;
     long ta = data.get(a).getTime();
     int b = n - 1;
     long tb = data.get(b).getTime();
-    if (ms <= ta)
-      return a;
-    if (ms >= tb)
-      return b;
+    if (ms <= ta) return a;
+    if (ms >= tb) return b;
     while (a + 1 < b) {
       int m = (a + b) / 2;
       long tm = data.get(m).getTime();
-      if (tm == ms)
-        return m;
-      if (ms < tm)
-        b = m;
-      else
-        a = m;
+      if (tm == ms) return m;
+      if (ms < tm) b = m;
+      else a = m;
     }
 
     long da = Math.abs(ms - data.get(a).getTime());
     long dap1 = (a + 1 < n ? Math.abs(ms - data.get(a + 1).getTime()) : Long.MAX_VALUE);
-    if (da <= dap1)
-      return a;
-    else
-      return a + 1;
+    if (da <= dap1) return a;
+    else return a + 1;
   }
 
   /**

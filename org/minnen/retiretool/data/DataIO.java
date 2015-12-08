@@ -2,13 +2,15 @@ package org.minnen.retiretool.data;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 
+import org.apache.commons.io.IOUtils;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.TimeLib;
@@ -254,30 +256,59 @@ public class DataIO
     return data;
   }
 
-  public static String buildYahooURL(String symbol)
-  {
-    return String.format("http://ichart.yahoo.com/table.csv?s=%s&a=0&b=1&c=1900&d=11&e=31&f=2050&g=d&ignore=.csv",
-        symbol);
-  }
-
-  public static boolean downloadDailyDataFromYahoo(File dir, String... symbols)
+  public static URL buildYahooURL(String symbol)
   {
     try {
-      for (String symbol : symbols) {
-        System.out.printf("Download data: %s\n", symbol);
-        String address = buildYahooURL(symbol);
-        File file = new File(dir, symbol + ".csv");
-        URL url = new URL(address);
-        ReadableByteChannel rbc = Channels.newChannel(url.openStream());
-        FileOutputStream fos = new FileOutputStream(file);
-        fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
-        fos.close(); // TODO properly close resource even if there's an exception
-      }
-    } catch (Exception e) {
-      System.err.printf("Failed to download yahoo data (%s)\n", e);
-      return false;
+      String address = String.format(
+          "http://ichart.yahoo.com/table.csv?s=%s&a=0&b=1&c=1900&d=11&e=31&f=2050&g=d&ignore=.csv", symbol);
+      return new URL(address);
+    } catch (MalformedURLException e) {
+      e.printStackTrace();
+      return null;
     }
-    return true;
+  }
+
+  public static String downloadDailyDataFromYahoo(String symbol)
+  {
+    System.out.printf("Download data: %s\n", symbol);
+    try {
+      URL url = buildYahooURL(symbol);
+      return IOUtils.toString(url);
+    } catch (IOException e) {
+      e.printStackTrace();
+      return null;
+    }
+  }
+
+  public static File downloadDailyDataFromYahoo(File path, String symbol, long replaceAge)
+  {
+    try {
+      if (path.isDirectory()) {
+        path = new File(path, symbol + ".csv");
+      }
+      if (path.exists()) {
+        if (!path.isFile() || !path.canWrite()) {
+          System.err.printf("Path is not a writeable file (%s).\n", path.getPath());
+          return null;
+        }
+        if (replaceAge > 0L) {
+          long age = TimeLib.getTime() - path.lastModified();
+          if (age < replaceAge) {
+            System.out.printf("Recent file already exists (%s @ %s).\n", path.getName(), TimeLib.formatDuration(age));
+            return path;
+          }
+        }
+      }
+      System.out.printf("Download data: %s\n", symbol);
+      URL url = buildYahooURL(symbol);
+      try (InputStream input = url.openStream()) {
+        Files.copy(input, path.toPath(), StandardCopyOption.REPLACE_EXISTING);
+      }
+      return path;
+    } catch (IOException e) {
+      e.printStackTrace();
+      return null;
+    }
   }
 
   private static long parseDate(String date) throws NumberFormatException
