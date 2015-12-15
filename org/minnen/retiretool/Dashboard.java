@@ -211,8 +211,12 @@ public class Dashboard
     System.out.println(stats);
 
     // List of all single-SMA configs.
+    // PredictorConfig[] singleConfigs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close,
+    // gap),
+    // new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap), new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap) };
+
     PredictorConfig[] singleConfigs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap),
-        new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap), new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap) };
+        new ConfigSMA(25, 0, 155, 125, 0.75, FinLib.Close, gap), new ConfigSMA(5, 0, 165, 5, 0.5, FinLib.Close, gap) };
 
     // Multi-predictor to make final decisions.
     PredictorConfig configStrategy = new ConfigMulti(254, singleConfigs);

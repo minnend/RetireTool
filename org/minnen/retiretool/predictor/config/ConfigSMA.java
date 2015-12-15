@@ -3,16 +3,19 @@ package org.minnen.retiretool.predictor.config;
 import org.minnen.retiretool.broker.BrokerInfoAccess;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.predictor.daily.SMAPredictor;
+import org.minnen.retiretool.util.Random;
 
 public class ConfigSMA extends PredictorConfig
 {
-  public final double margin;
-  public final int    nLookbackBaseA;
-  public final int    nLookbackBaseB;
-  public final int    nLookbackTriggerA;
-  public final int    nLookbackTriggerB;
-  public final int    iPrice;
-  public final long   minTimeBetweenFlips;
+  public static final Random rng = new Random();
+
+  public final double        margin;
+  public final int           nLookbackBaseA;
+  public final int           nLookbackBaseB;
+  public final int           nLookbackTriggerA;
+  public final int           nLookbackTriggerB;
+  public final int           iPrice;
+  public final long          minTimeBetweenFlips;
 
   public ConfigSMA(int nLookbackTriggerA, int nLookbackTriggerB, int nLookbackBaseA, int nLookbackBaseB, double margin,
       int iPrice, long minTimeBetweenFlips)
@@ -24,6 +27,19 @@ public class ConfigSMA extends PredictorConfig
     this.margin = margin;
     this.iPrice = iPrice;
     this.minTimeBetweenFlips = minTimeBetweenFlips;
+  }
+
+  public static ConfigSMA genRandom(int iPrice, long minTimeBetweenFlips)
+  {
+    while (true) {
+      int nTriggerA = 5 * rng.nextInt(1, 12);
+      int nTriggerB = 0;
+      int nBaseA = 5 * rng.nextInt(1, 50);
+      int nBaseB = Math.max(0, nBaseA - 10 * rng.nextInt(1, Math.max(1, nBaseA / 10)));
+      double margin = rng.nextInt(1, 12) * 0.25;
+      ConfigSMA config = new ConfigSMA(nTriggerA, nTriggerB, nBaseA, nBaseB, margin, iPrice, minTimeBetweenFlips);
+      if (config.isValid()) return config;
+    }
   }
 
   @Override

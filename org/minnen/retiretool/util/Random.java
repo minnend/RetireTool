@@ -1121,6 +1121,13 @@ public strictfp class Random implements Serializable, Cloneable
     return d;
   }
 
+  /** @return integer drawn uniformly from [a, b]. */
+  public int nextInt(int a, int b)
+  {
+    if (b < a) throw new IllegalArgumentException(String.format("b can't be smaller than a (a=%d, b=%d)", a, b));
+    return a + nextInt(b - a + 1);
+  }
+
   /**
    * Returns an integer drawn uniformly from 0 to n-1. Suffice it to say, n must be &gt; 0, or an
    * IllegalArgumentException is raised.

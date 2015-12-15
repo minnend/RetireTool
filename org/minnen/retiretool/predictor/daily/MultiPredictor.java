@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.minnen.retiretool.broker.BrokerInfoAccess;
+import org.minnen.retiretool.util.Library;
 
 public class MultiPredictor extends Predictor
 {
@@ -39,7 +40,11 @@ public class MultiPredictor extends Predictor
     }
 
     if (assetMap < 0) {
-      return (nIn > predictors.length / 2);
+      int nYes = Library.numBits(code);
+      int nNo = predictors.length - nYes;
+      // System.out.printf("code=%d (%d)  #yes=%d  #no=%d  vote=%b\n", code, predictors.length, nYes, nNo,
+      // nNo <= Math.abs(assetMap));
+      return nNo <= Math.abs(assetMap);
     } else {
       return ((assetMap >> code) & 1L) > 0;
     }
