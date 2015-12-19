@@ -1,30 +1,35 @@
 package org.minnen.retiretool.util;
 
-import static java.util.Calendar.SUNDAY;
-
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.Stack;
-import java.util.TimeZone;
+import java.time.DayOfWeek;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.Month;
+import java.time.Period;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAdjusters;
 
 import org.minnen.retiretool.data.Sequence;
 
 public class TimeLib
 {
-  public final static long             TIME_ERROR = Library.LNAN;
-  public final static long             TIME_BEGIN = Long.MIN_VALUE + 1;
-  public final static long             TIME_END   = Long.MAX_VALUE - 1;
-  public final static long             MS_IN_HOUR = 60 * 60 * 1000L;
-  public final static long             MS_IN_DAY  = 24 * MS_IN_HOUR;
+  public final static long              TIME_ERROR = Library.LNAN;
+  public final static long              TIME_BEGIN = Long.MIN_VALUE + 1;
+  public final static long              TIME_END   = Long.MAX_VALUE - 1;
+  public final static long              MS_IN_HOUR = 60 * 60 * 1000L;
+  public final static long              MS_IN_DAY  = 24 * MS_IN_HOUR;
 
-  public static TimeZone               utc        = TimeZone.getTimeZone("GMT");
-  public final static SimpleDateFormat sdfTime    = getSDF("yyyy MMM d hh:mm:ss a");
-  public final static SimpleDateFormat sdfDate    = getSDF("d MMM yyyy");
-  public final static SimpleDateFormat sdfMonth   = getSDF("MMM yyyy");
-  public final static SimpleDateFormat sdfYMD     = getSDF("yyyy-MM-dd");
+  public final static ZoneOffset        ZeroOffset = ZoneOffset.ofTotalSeconds(0);
 
-  public final static Stack<Calendar>  calendars  = new Stack<Calendar>();
+  public final static DateTimeFormatter dtfTime    = DateTimeFormatter.ofPattern("yyyy MMM d hh:mm:ss a");
+  public final static DateTimeFormatter dtfDate    = DateTimeFormatter.ofPattern("d MMM yyyy");
+  public final static DateTimeFormatter dtfMonth   = DateTimeFormatter.ofPattern("MMM yyyy");
+  public final static DateTimeFormatter dtfYMD     = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
   /**
    * Return the current time in milliseconds. This function just forwards the request to System.currentTimeMillis();
@@ -39,49 +44,57 @@ public class TimeLib
   /**
    * @return current time (UTC) with first day of week set to sunday
    */
-  public static Calendar now()
+  public static Instant now()
   {
-    Calendar cal = Calendar.getInstance(utc);
-    cal.setLenient(true);
-    cal.setFirstDayOfWeek(SUNDAY);
-    return cal;
+    return Instant.ofEpochMilli(getTime());
   }
 
-  public static Calendar ms2cal(long timeMS)
+  public static Instant ms2instance(long ms)
   {
-    Calendar cal = now();
-    cal.setTimeInMillis(timeMS);
-    return cal;
+    return Instant.ofEpochMilli(ms);
   }
 
-  public static double fractionalMonthsBetween(long from, long to)
+  public static LocalDateTime ms2time(long ms)
   {
-    Calendar cal = borrowCal(from);
-    int year1 = cal.get(Calendar.YEAR);
-    int month1 = cal.get(Calendar.MONTH);
-    int day1 = cal.get(Calendar.DAY_OF_MONTH);
-
-    cal.setTimeInMillis(to);
-    int year2 = cal.get(Calendar.YEAR);
-    int month2 = cal.get(Calendar.MONTH);
-    int day2 = cal.get(Calendar.DAY_OF_MONTH);
-    returnCal(cal);
-
-    return (year2 - year1) * 12 + (month2 - month1) + (day2 - day1) / 30.0;
+    return ms2time(ms, ZeroOffset);
   }
 
-  public static int monthsBetween(long from, long to)
+  public static LocalDateTime ms2time(long ms, ZoneId zone)
   {
-    Calendar cal = borrowCal(from);
-    int year1 = cal.get(Calendar.YEAR);
-    int month1 = cal.get(Calendar.MONTH);
+    return LocalDateTime.ofInstant(ms2instance(ms), zone == null ? ZeroOffset : zone);
+  }
 
-    cal.setTimeInMillis(to);
-    int year2 = cal.get(Calendar.YEAR);
-    int month2 = cal.get(Calendar.MONTH);
-    returnCal(cal);
+  public static LocalDate ms2date(long ms)
+  {
+    return LocalDate.from(ms2time(ms));
+  }
 
-    return Math.abs((year2 - year1) * 12 + (month2 - month1));
+  public static long toMs(LocalDate date)
+  {
+    return toMs(LocalDateTime.of(date, LocalTime.NOON));
+  }
+
+  public static long toMs(LocalDateTime time)
+  {
+    return time.toInstant(ZeroOffset).toEpochMilli();
+  }
+
+  public static long toMs(int year, int month, int day)
+  {
+    return toMs(LocalDate.of(year, month, day));
+  }
+
+  public static long toMs(int year, Month month, int day)
+  {
+    return toMs(LocalDate.of(year, month, day));
+  }
+
+  /** @return whole number of months between the times (partial month is ignored). */
+  public static int monthsBetween(long t1, long t2)
+  {
+    LocalDate d1 = ms2date(t1);
+    LocalDate d2 = ms2date(t2);
+    return (int) ChronoUnit.MONTHS.between(d1, d2);
   }
 
   /**
@@ -93,11 +106,10 @@ public class TimeLib
   public static int findStartofFirstDecade(Sequence seq)
   {
     // Find start of decade.
-    Calendar cal = now();
     int iStart = -1;
     for (int i = 0; i < seq.length(); ++i) {
-      cal.setTimeInMillis(seq.getTimeMS(i));
-      if (cal.get(Calendar.MONTH) == 0 && cal.get(Calendar.YEAR) % 10 == 0) {
+      LocalDate date = ms2date(seq.getTimeMS(i));
+      if (date.getMonth() == Month.JANUARY && date.getYear() % 10 == 0) {
         iStart = i;
         break;
       }
@@ -129,241 +141,50 @@ public class TimeLib
     return last;
   }
 
-  /** Borrow a Calendar set to the given time (ms since epoch). */
-  public static Calendar borrowCal(long timeMS)
+  public static boolean isSameMonth(LocalDate d1, LocalDate d2)
   {
-    assert timeMS != TIME_ERROR;
-    Calendar cal = borrowCal();
-    cal.setTimeInMillis(timeMS);
-    return cal;
+    return d1.getYear() == d2.getYear() && d1.getMonth() == d2.getMonth();
   }
 
-  /** Borrow a Calendar set to an arbitrary time. */
-  public static Calendar borrowCal()
+  /** @return string representation of the given day (year, month, date) */
+  public static String formatTime(long ms)
   {
-    if (calendars.isEmpty()) {
-      return now();
-    } else {
-      return calendars.pop();
-    }
+    return formatTime(ms, null);
   }
 
-  public static long returnCal(Calendar cal)
+  /** @return string representation of the given day (year, month, date) */
+  public static String formatTime(long ms, ZoneId zone)
   {
-    assert cal != null;
-    calendars.push(cal);
-    return cal.getTimeInMillis();
-  }
-
-  public static void returnCals(Calendar... cals)
-  {
-    for (Calendar cal : cals) {
-      returnCal(cal);
-    }
-  }
-
-  public static boolean isSameDay(long time1, long time2)
-  {
-    Calendar cal1 = borrowCal(time1);
-    Calendar cal2 = borrowCal(time2);
-
-    boolean bSame = (cal1.get(Calendar.DAY_OF_MONTH) == cal2.get(Calendar.DAY_OF_MONTH)
-        && cal1.get(Calendar.MONTH) == cal2.get(Calendar.MONTH) && cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR));
-
-    returnCals(cal1, cal2);
-    return bSame;
-  }
-
-  public static boolean isSameMonth(long time1, long time2)
-  {
-    Calendar cal1 = borrowCal(time1);
-    Calendar cal2 = borrowCal(time2);
-
-    boolean bSame = (cal1.get(Calendar.MONTH) == cal2.get(Calendar.MONTH) && cal1.get(Calendar.YEAR) == cal2
-        .get(Calendar.YEAR));
-
-    returnCals(cal1, cal2);
-    return bSame;
-  }
-
-  /**
-   * @return calendar object representing the given date
-   */
-  public static Calendar date2cal(Date date)
-  {
-    Calendar cal = now();
-    cal.setTimeInMillis(date.getTime());
-    return cal;
-  }
-
-  public static String getDayOfWeekName(int dow)
-  {
-    switch (dow) {
-    case Calendar.SUNDAY:
-      return "Sunday";
-    case Calendar.MONDAY:
-      return "Monday";
-    case Calendar.TUESDAY:
-      return "Tuesday";
-    case Calendar.WEDNESDAY:
-      return "Wednesday";
-    case Calendar.THURSDAY:
-      return "Thursday";
-    case Calendar.FRIDAY:
-      return "Friday";
-    case Calendar.SATURDAY:
-      return "Saturday";
-    }
-    return null;
-  }
-
-  /**
-   * @param day day of month
-   * @param month month of year (January = 1)
-   * @param year Gregorian year
-   * @return milliseconds since the epoch for midnight on the specified date (midnight = start of day, not end of day)
-   */
-  public static long getTime(int day, int month, int year)
-  {
-    Calendar cal = borrowCal(0L);
-    setTime(cal, day, month, year);
-    return returnCal(cal);
-  }
-
-  /**
-   * @param day day of month
-   * @param month month of year (January = 1)
-   * @param year Gregorian year
-   * @return milliseconds since the epoch for midnight on the specified date (midnight = start of day, not end of day)
-   */
-  public static Calendar setTime(Calendar cal, int day, int month, int year)
-  {
-    assert day >= 1 && day <= 31;
-    assert month >= 1 && month <= 12;
-    cal.set(Calendar.DATE, day);
-    cal.set(Calendar.MONTH, month - 1);
-    cal.set(Calendar.YEAR, year);
-    cal.set(Calendar.HOUR_OF_DAY, 8);
-    cal.set(Calendar.MINUTE, 0);
-    cal.set(Calendar.SECOND, 0);
-    cal.set(Calendar.MILLISECOND, 0);
-    return cal;
-  }
-
-  /** @return milliseconds since start of the day for the given time (specified in ms since epoch) */
-  public static long getMillisSinceStartOfDay(long ms)
-  {
-    Calendar cal = borrowCal();
-    cal.setTimeInMillis(ms);
-    int day = cal.get(Calendar.DAY_OF_MONTH);
-    int month = cal.get(Calendar.MONTH) + 1;
-    int year = cal.get(Calendar.YEAR);
-    returnCal(cal);
-    long startOfDay = getTime(day, month, year);
-    return ms - startOfDay;
-  }
-
-  /**
-   * @param day day of month
-   * @param month month of year (January = 1)
-   * @param year Gregorian year
-   * @return milliseconds since the epoch for the last moment on the specified date (i.e., end of day)
-   */
-  public static long getEOD(int day, int month, int year)
-  {
-    return getTime(day, month, year) + (24 * 60 * 60 * 1000 - 1);
+    if (ms == TIME_ERROR || ms == Long.MAX_VALUE) return null;
+    return ms2time(ms, zone).format(dtfTime);
   }
 
   /** @return string representation of the given day (year, month, date) */
   public static String formatDate(long ms)
   {
     if (ms == TIME_ERROR || ms == Long.MAX_VALUE) return null;
-    return sdfDate.format(new Date(ms));
+    return ms2date(ms).format(dtfDate);
   }
 
   /** @return string representation of the given month (year, month) */
   public static String formatMonth(long ms)
   {
     if (ms == TIME_ERROR || ms == Long.MAX_VALUE) return null;
-    return sdfMonth.format(new Date(ms));
+    return ms2date(ms).format(dtfMonth);
   }
 
   /** @return string representation of the given time as year-month-day */
   public static String formatYMD(long ms)
   {
     if (ms == TIME_ERROR || ms == Long.MAX_VALUE) return null;
-    return sdfYMD.format(new Date(ms));
+    return ms2date(ms).format(dtfYMD);
   }
 
-  /** @return ms since epoch at midnight that starts the day of the given time */
-  public static long toMidnight(long ms)
+  /** @return LocalDate for the given date moved to the last business day of the month. */
+  public static LocalDate toLastBusinessDayOfMonth(LocalDate date)
   {
-    assert ms != TIME_ERROR;
-    long days = ms / MS_IN_DAY;
-    // if data is before 1970, ms is neg and floor does the wrong thing
-    if (ms < 0) days -= 1;
-    return days * MS_IN_DAY;
-  }
-
-  /** @return ms for the given time moved to the first day of the month */
-  public static long toFirstOfMonth(long ms)
-  {
-    Calendar cal = borrowCal(ms);
-    cal.set(Calendar.DATE, 1);
-    return returnCal(cal);
-  }
-
-  /** @return ms for the given time moved to the last day of the month */
-  public static long toEndOfMonth(long ms)
-  {
-    // Move to next month.
-    Calendar cal = borrowCal(ms);
-    cal.add(Calendar.MONTH, 1);
-
-    // Move to first day of next month.
-    cal.setTimeInMillis(toFirstOfMonth(cal.getTimeInMillis()));
-
-    // Move one day back, which is the last day of the original month.
-    cal.add(Calendar.DATE, -1);
-    return returnCal(cal);
-  }
-
-  /** @return ms for the given time moved to the last business day of the month */
-  public static long toLastBusinessDayOfMonth(long ms)
-  {
-    // Move to next month.
-    Calendar cal = borrowCal(ms);
-    cal.add(Calendar.MONTH, 1);
-
-    // Move to first day of next month.
-    ms = toFirstOfMonth(cal.getTimeInMillis());
-    returnCal(cal);
-
-    // Return previous business day.
-    return toPreviousBusinessDay(ms);
-  }
-
-  /** @return string representation of the given time (year, month, date, hour, minute, second) */
-  public static String formatTime(Date date)
-  {
-    if (date == null) return "null";
-    return sdfTime.format(date);
-  }
-
-  /** @return string representation of the given time (year, month, date, hour, minute, second) */
-  public static String formatTime(long ms, TimeZone tz)
-  {
-    if (ms == TIME_ERROR || ms == Long.MAX_VALUE) return null;
-    Date date = new Date(ms);
-    if (tz == null) {
-      return sdfTime.format(date);
-    } else {
-      TimeZone oldTZ = sdfTime.getTimeZone();
-      sdfTime.setTimeZone(TimeZone.getDefault());
-      String s = sdfTime.format(date);
-      sdfTime.setTimeZone(oldTZ);
-      return s;
-    }
+    LocalDate firstOfNextMonth = date.with(TemporalAdjusters.firstDayOfNextMonth());
+    return toPreviousBusinessDay(firstOfNextMonth);
   }
 
   /** @return human readable string representing the given amount of time */
@@ -416,80 +237,59 @@ public class TimeLib
     return String.format("%.1f years", nMonths / 12.0);
   }
 
-  /** @return sdf for the given format set to UTC */
-  public static SimpleDateFormat getSDF(String sFormat)
+  public static boolean isBusinessDay(LocalDate date)
   {
-    SimpleDateFormat sdf = new SimpleDateFormat(sFormat);
-    sdf.setTimeZone(utc);
-    return sdf;
+    DayOfWeek day = date.getDayOfWeek();
+    return (day != DayOfWeek.SATURDAY && day != DayOfWeek.SUNDAY);
   }
 
-  public static long toPreviousBusinessDay(long time)
+  public static LocalDate toPreviousBusinessDay(LocalDate date)
   {
-    Calendar cal = TimeLib.borrowCal(time);
     while (true) {
-      cal.add(Calendar.DAY_OF_YEAR, -1);
-      int day = cal.get(Calendar.DAY_OF_WEEK);
-      if (day != Calendar.SATURDAY && day != Calendar.SUNDAY) {
-        break;
-      }
+      date = date.minusDays(1);
+      if (isBusinessDay(date)) break;
     }
-    return returnCal(cal);
+    return date;
   }
 
-  public static long toNextBusinessDay(long time)
+  public static LocalDate toNextBusinessDay(LocalDate date)
   {
-    Calendar cal = TimeLib.borrowCal(time);
     while (true) {
-      cal.add(Calendar.DAY_OF_YEAR, 1);
-      int day = cal.get(Calendar.DAY_OF_WEEK);
-      if (day != Calendar.SATURDAY && day != Calendar.SUNDAY) {
-        break;
-      }
+      date = date.plusDays(1);
+      if (isBusinessDay(date)) break;
     }
-    return returnCal(cal);
+    return date;
   }
 
   /**
-   * Return time for closest business day for the given month and day.
-   * 
-   * @param timeInMonth Specify the month using any time in that month.
-   * @param dayOfMonth We want the equivalent time on this day (or closest business day).
-   * @param bAcceptDifferentMonth if false only days in the same month are considered.
-   * @return time (in ms) of the closest business day on the requested day.
+   * @return date of the closest business day on the requested day.
    */
-  public static long getClosestBusinessDay(long timeInMonth, int dayOfMonth, boolean bAcceptDifferentMonth)
+  public static LocalDate getClosestBusinessDay(LocalDate date, boolean bAcceptDifferentMonth)
   {
-    Calendar cal = TimeLib.borrowCal(timeInMonth);
-    long baseTime = TimeLib.getTime(dayOfMonth, cal.get(Calendar.MONTH) + 1, cal.get(Calendar.YEAR));
-
     // If base is a business day, we're done.
-    int day = cal.get(Calendar.DAY_OF_WEEK);
-    if (day != Calendar.SATURDAY && day != Calendar.SUNDAY) {
-      TimeLib.returnCal(cal);
-      return baseTime;
+    DayOfWeek day = date.getDayOfWeek();
+    if (day != DayOfWeek.SATURDAY && day != DayOfWeek.SUNDAY) {
+      return date;
     }
 
-    long prevTime = toPreviousBusinessDay(baseTime);
-    long nextTime = toNextBusinessDay(baseTime);
-    assert prevTime < baseTime;
-    assert nextTime > baseTime;
+    // Find closest business day forward and backward.
+    LocalDate prevDate = toPreviousBusinessDay(date);
+    LocalDate nextDate = toNextBusinessDay(date);
 
-    if (!bAcceptDifferentMonth) {
-      Calendar calPrev = TimeLib.borrowCal(prevTime);
-      if (calPrev.get(Calendar.MONTH) != cal.get(Calendar.MONTH)) {
-        TimeLib.returnCals(cal, calPrev);
-        return nextTime;
-      }
+    // Figure out which is closer.
 
-      Calendar calNext = TimeLib.borrowCal(nextTime);
-      if (calNext.get(Calendar.MONTH) != cal.get(Calendar.MONTH)) {
-        TimeLib.returnCals(cal, calNext);
-        return prevTime;
-      }
-    }
+    long daysPrev = ChronoUnit.DAYS.between(prevDate, date);
+    long daysNext = ChronoUnit.DAYS.between(date, nextDate);
+    LocalDate closestDate = (daysPrev <= daysNext ? prevDate : nextDate);
 
-    TimeLib.returnCal(cal);
-    return (baseTime - prevTime < nextTime - baseTime ? prevTime : nextTime);
+    // If month doesn't matter, return closest date.
+    if (bAcceptDifferentMonth) return closestDate;
+
+    // Month does matter so check to see if closest date has the same month.
+    if (isSameMonth(date, closestDate)) return closestDate;
+    LocalDate fartherDate = (daysPrev <= daysNext ? nextDate : prevDate);
+    assert fartherDate != closestDate;
+    assert isSameMonth(date, fartherDate);
+    return fartherDate;
   }
 }

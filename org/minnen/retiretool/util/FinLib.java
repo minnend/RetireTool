@@ -1,6 +1,11 @@
 package org.minnen.retiretool.util;
 
 import java.text.DecimalFormat;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.Month;
+import java.time.Period;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -553,14 +558,13 @@ public final class FinLib
     final int nData = cumulativeReturns.size();
     assert (iStart >= 0 && nMonths >= 1 && iStart + nMonths < nData);
 
-    Calendar cal = TimeLib.now();
     final double monthlyExpenseRatio = (expenseRatio / 100.0) / 12.0;
     double balance = principal;
     double totalDeposit = principal;
     for (int i = iStart; i < iStart + nMonths; ++i) {
       // Make deposit at start of year.
-      cal.setTimeInMillis(cumulativeReturns.getTimeMS(i));
-      if (cal.get(Calendar.MONTH) == 0) {
+      LocalDate date = TimeLib.ms2date(cumulativeReturns.getTimeMS(i));
+      if (date.getMonth() == Month.JANUARY) {
         balance += depStartOfYear;
         totalDeposit += depStartOfYear;
       }
@@ -728,10 +732,10 @@ public final class FinLib
     double div = 0.0;
 
     // Dividends at the end of every quarter (march, june, september, december).
-    Calendar cal = TimeLib.borrowCal(snp.getTimeMS(index));
-    int month = cal.get(Calendar.MONTH);
-    TimeLib.returnCal(cal);
-    if (month % 3 == 2) { // time for a dividend!
+    LocalDate date = TimeLib.ms2date(snp.getTimeMS(index));
+    Month month = date.getMonth();
+    if (month == Month.MARCH || month == Month.JUNE || month == Month.SEPTEMBER || month == Month.DECEMBER) {
+      // time for a dividend!
       for (int j = 0; j < 3; j++) {
         if (index - j < iMinIndex) break;
         div += snp.get(index - j, Shiller.DIV);
@@ -1094,23 +1098,22 @@ public final class FinLib
     // TODO verify that we don't miss/skip any months.
     final int minDaysData = 12;
     final int N = daily.length();
-    Calendar cal = TimeLib.now();
     List<Integer> monthEnds = new ArrayList<>();
 
     Sequence monthly = new Sequence(daily.getName());
     int i = 0;
     while (i < N) {
       FeatureVec v = daily.get(i);
-      cal.setTimeInMillis(v.getTime());
-      int month = cal.get(Calendar.MONTH);
+      LocalDate date = TimeLib.ms2date(v.getTime());
+      int month = date.getMonthValue();
       FeatureVec m = new FeatureVec(5);
       m.fill(v.get(0));
       int nn = 1;
       int j = i + 1;
       for (; j < N; ++j) {
         FeatureVec w = daily.get(j);
-        cal.setTimeInMillis(w.getTime());
-        if (cal.get(Calendar.MONTH) == month) {
+        date = TimeLib.ms2date(w.getTime());
+        if (date.getMonthValue() == month) {
           double x = w.get(dim);
           m.set(MonthlyClose, x);
           m.set(MonthlyAverage, m.get(MonthlyAverage) + x);
@@ -1132,10 +1135,9 @@ public final class FinLib
       if (n >= minDaysData) {
         monthEnds.add(j - 1);
         m.set(MonthlyAverage, m.get(MonthlyAverage) / n);
-        cal.setTimeInMillis(v.getTime());
-        cal.set(Calendar.DATE, 1); // Monthly data is always first of month
-        cal.set(Calendar.MILLISECOND, 0);
-        monthly.addData(m, cal.getTimeInMillis());
+        date = TimeLib.ms2date(v.getTime()).withDayOfMonth(1);
+        date = TimeLib.getClosestBusinessDay(date, false);
+        monthly.addData(m, TimeLib.toMs(date));
       }
 
       i = j;
@@ -1266,53 +1268,21 @@ public final class FinLib
     return Math.abs(a - b) < 1e-4;
   }
 
-  public static boolean isLTG(long buy, long sell)
+  public static boolean isLTG(LocalDate buyDate, LocalDate sellDate)
   {
-    if (sell <= buy) { // handle nonsense case of sell before buy
+    if (sellDate.isBefore(buyDate)) { // handle nonsense case of sell before buy
       return false;
     }
 
-    Calendar cbuy = TimeLib.borrowCal(buy);
-    Calendar csell = TimeLib.borrowCal(sell);
+    Period period = Period.between(buyDate, sellDate);
+    assert period.getMonths() < 12;
+    if (period.getYears() < 1) return false;
+    if (period.getYears() > 1) return true;
+    assert period.getYears() == 1;
 
-    // May be able to determine from year alone.
-    int year1 = cbuy.get(Calendar.YEAR);
-    int year2 = csell.get(Calendar.YEAR);
-    if (year2 <= year1) { // same year => stg
-      TimeLib.returnCals(cbuy, csell);
-      return false;
-    }
-    if (year2 > year1 + 1) { // more than one year => ltg
-      TimeLib.returnCals(cbuy, csell);
-      return true;
-    }
-    assert year2 == year1 + 1;
-
-    // Next year so month may be enough.
-    int month1 = cbuy.get(Calendar.MONTH);
-    int month2 = csell.get(Calendar.MONTH);
-    if (month2 < month1) {
-      TimeLib.returnCals(cbuy, csell);
-      return false;
-    }
-    if (month2 > month1) {
-      TimeLib.returnCals(cbuy, csell);
-      return true;
-    }
-    assert month1 == month2;
-
-    // Next year and same month so check day.
-    int day1 = cbuy.get(Calendar.DAY_OF_MONTH);
-    int day2 = csell.get(Calendar.DAY_OF_MONTH);
-
-    // Special case for Feb 28: sell on following Feb 29 is still STG.
-    if (month1 == 1 && day1 == 28) {
-      TimeLib.returnCals(cbuy, csell);
-      return false;
-    }
-
-    TimeLib.returnCals(cbuy, csell);
-    return day2 > day1;
+    // If sell date is Feb 29, must hold one extra day.
+    int nMinDays = (sellDate.getMonth() == Month.FEBRUARY && sellDate.getDayOfMonth() == 29 ? 2 : 1);
+    return period.getMonths() > 0 || period.getDays() >= nMinDays;
   }
 
   public static long compareCash(double a, double b)

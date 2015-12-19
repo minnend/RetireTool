@@ -1,6 +1,7 @@
 package org.minnen.retiretool;
 
-import java.util.Calendar;
+import java.time.LocalDate;
+import java.time.Month;
 
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
@@ -72,16 +73,16 @@ public class Shiller
 
       // Dividends at the end of every quarter (march, june, september, december).
       Sequence seq = new Sequence("Dividends");
-      Calendar cal = TimeLib.now();
       double div = 0.0;
       for (int i = 0; i < shiller.length(); ++i) {
         div += shiller.get(i, Shiller.DIV);
-        long timeMS = shiller.getTimeMS(i);
-        cal.setTimeInMillis(timeMS);
-        int month = cal.get(Calendar.MONTH);
-        if (month % 3 == 2) { // time for a dividend!
-          timeMS = TimeLib.getClosestBusinessDay(timeMS, 23, false);
-          seq.addData(div, timeMS);
+        LocalDate date = TimeLib.ms2date(shiller.getTimeMS(i));
+        Month month = date.getMonth();
+        if (month == Month.MARCH || month == Month.JUNE || month == Month.SEPTEMBER || month == Month.DECEMBER) {
+          // Time for a dividend!
+          date = date.withDayOfMonth(23);
+          date = TimeLib.getClosestBusinessDay(date, false);
+          seq.addData(div, TimeLib.toMs(date));
           div = 0.0;
         }
       }

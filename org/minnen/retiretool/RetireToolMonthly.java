@@ -4,6 +4,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -80,8 +81,8 @@ public class RetireToolMonthly
 
     // long commonStart = TimeLib.getTime(1, 1, 1872);
     // long commonEnd = TimeLib.getTime(31, 12, 2014);
-    long commonStart = TimeLib.getTime(1, 1, 1950);
-    long commonEnd = TimeLib.getTime(31, 9, 2015);
+    long commonStart = TimeLib.toMs(1950, 1, 1);
+    long commonEnd = TimeLib.toMs(2015, 9, 31);
     shiller = shiller.subseq(commonStart, commonEnd);
     tbillData = tbillData.subseq(commonStart, commonEnd);
     // nikkei = nikkei.subseq(commonStart, commonEnd);
@@ -1037,16 +1038,15 @@ public class RetireToolMonthly
     int[] durations = new int[] { 1, 5, 10, 15, 20, 30 };
 
     // Generate curve for each decade.
-    Calendar cal = TimeLib.now();
     List<Sequence> decades = new ArrayList<Sequence>();
     int iDecadeStart = TimeLib.findStartofFirstDecade(stockData);
     for (int i = iDecadeStart; i + 120 < stockData.length(); i += 120) {
-      cal.setTimeInMillis(stockData.getTimeMS(i));
+      LocalDate date = TimeLib.ms2date(stockData.getTimeMS(i));
       Sequence decadeStock = FinLib.calcSnpReturns(stockData, i, 120, DividendMethod.MONTHLY);
       Sequence decadeBonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, i, i + 120);
       assert decadeStock.length() == decadeBonds.length();
 
-      Sequence decade = new Sequence(String.format("%ss", cal.get(Calendar.YEAR)));
+      Sequence decade = new Sequence(String.format("%ss", date.getYear()));
       for (int j = 0; j < percentStock.length; ++j) {
         int pctStock = percentStock[j];
         int pctBonds = 100 - percentStock[j];
@@ -1312,12 +1312,13 @@ public class RetireToolMonthly
 
   public static void genChartsForDifficultTimePeriods(File dir) throws IOException
   {
-    final long[][] timePeriods = new long[][] { { TimeLib.getTime(31, 12, 1924), TimeLib.getTime(31, 12, 1934) },
-        { TimeLib.getTime(31, 12, 1994), TimeLib.getTime(31, 12, 2004) },
-        { TimeLib.getTime(31, 12, 2004), TimeLib.getTime(31, 12, 2014) },
-        { TimeLib.getTime(31, 12, 1999), TimeLib.getTime(31, 12, 2009) },
-        { TimeLib.getTime(31, 12, 1999), TimeLib.getTime(30, 8, 2015) },
-        { TimeLib.getTime(1, 1, 1994), TimeLib.getTime(31, 12, 2013) } };
+    final long[][] timePeriods = new long[][] {
+        { TimeLib.toMs(1924, 12, 31), TimeLib.toMs(1934, 12, 31) },
+        { TimeLib.toMs(1994, 12, 31), TimeLib.toMs(2004, 12, 31) },
+        { TimeLib.toMs(2004, 12, 31), TimeLib.toMs(2014, 12, 31) },
+        { TimeLib.toMs(1999,12, 31), TimeLib.toMs(2009, 12, 31) },
+        { TimeLib.toMs(1999, 12, 31), TimeLib.toMs(2015, 8, 30) },
+        { TimeLib.toMs(1994, 1, 1), TimeLib.toMs(2013, 12, 31) } };
 
     // String[] names = new String[] { "stock", "bonds", "60/40", "80/20",
     // "sma[1,2,9].cautious/sma[1,3,10].moderate-50/50", "SMA[1,2,9].Moderate/SMA[1,3,10].Aggressive-50/50",
@@ -1485,7 +1486,6 @@ public class RetireToolMonthly
     }
 
     // Extend synthetic data by sampling from historical data.
-    Calendar cal = TimeLib.now();
     double[] dValues = new double[derivs.length];
     int[] offsets = new int[4];
     while (synth.length() < duration) {
@@ -1522,9 +1522,9 @@ public class RetireToolMonthly
         FeatureVec m = new FeatureVec(dValues);
         FeatureVec v = synth.getLast().mul(m);
         v._div(mCPI);
-        cal.setTimeInMillis(v.getTime());
-        cal.add(Calendar.MONTH, 1);
-        synth.addData(v, cal.getTimeInMillis());
+        LocalDate date = TimeLib.ms2date(v.getTime());
+        date = date.plusMonths(1);
+        synth.addData(v, TimeLib.toMs(date));
         source.add(dRisky.getName());
       }
     }

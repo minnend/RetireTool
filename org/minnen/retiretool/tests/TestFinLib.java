@@ -2,10 +2,11 @@ package org.minnen.retiretool.tests;
 
 import static org.junit.Assert.*;
 
+import java.time.LocalDate;
+
 import org.junit.Test;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.util.FinLib;
-import org.minnen.retiretool.util.TimeLib;
 
 public class TestFinLib
 {
@@ -173,38 +174,38 @@ public class TestFinLib
   @Test
   public void testIsLTG()
   {
-    long a, b;
+    LocalDate d1, d2;
 
-    a = TimeLib.getTime(1, 1, 2000);
-    b = TimeLib.getTime(1, 1, 1999);
-    assertFalse(FinLib.isLTG(a, b));
+    d1 = LocalDate.of(2000, 1, 1);
+    d2 = LocalDate.of(1999, 1, 1);
+    assertFalse(FinLib.isLTG(d1, d2));
 
-    a = TimeLib.getTime(1, 1, 2000);
-    b = TimeLib.getTime(1, 1, 2000);
-    assertFalse(FinLib.isLTG(a, b));
+    d1 = LocalDate.of(2000, 1, 1);
+    d2 = LocalDate.of(2000, 1, 1);
+    assertFalse(FinLib.isLTG(d1, d2));
 
-    a = TimeLib.getTime(1, 1, 2000);
-    b = TimeLib.getTime(1, 1, 2001);
-    assertFalse(FinLib.isLTG(a, b));
+    d1 = LocalDate.of(2000, 1, 1);
+    d2 = LocalDate.of(2001, 1, 1);
+    assertFalse(FinLib.isLTG(d1, d2));
 
-    a = TimeLib.getTime(1, 1, 2000);
-    b = TimeLib.getTime(2, 1, 2001);
-    assertTrue(FinLib.isLTG(a, b));
+    d1 = LocalDate.of(2000, 1, 1);
+    d2 = LocalDate.of(2001, 1, 2);
+    assertTrue(FinLib.isLTG(d1, d2));
 
-    a = TimeLib.getTime(1, 1, 2000);
-    b = TimeLib.getTime(1, 2, 2001);
-    assertTrue(FinLib.isLTG(a, b));
+    d1 = LocalDate.of(2000, 1, 1);
+    d2 = LocalDate.of(2001, 2, 1);
+    assertTrue(FinLib.isLTG(d1, d2));
 
-    a = TimeLib.getTime(1, 1, 2000);
-    b = TimeLib.getTime(1, 1, 2002);
-    assertTrue(FinLib.isLTG(a, b));
+    d1 = LocalDate.of(2000, 1, 1);
+    d2 = LocalDate.of(2002, 1, 1);
+    assertTrue(FinLib.isLTG(d1, d2));
 
-    a = TimeLib.getTime(28, 2, 1999);
-    b = TimeLib.getTime(29, 2, 2000);
-    assertFalse(FinLib.isLTG(a, b));
+    d1 = LocalDate.of(1999, 2, 28);
+    d2 = LocalDate.of(2000, 2, 29);
+    assertFalse(FinLib.isLTG(d1, d2));
 
-    a = TimeLib.getTime(28, 2, 1999);
-    b = TimeLib.getTime(1, 3, 2000);
-    assertTrue(FinLib.isLTG(a, b));
+    d1 = LocalDate.of(1999, 2, 28);
+    d2 = LocalDate.of(2000, 3, 1);
+    assertTrue(FinLib.isLTG(d1, d2));
   }
 }

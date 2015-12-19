@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Fixed;
+import org.minnen.retiretool.util.TimeLib;
 
 public class Position
 {
@@ -69,7 +70,8 @@ public class Position
     long longPL = 0L;
     long shortPL = 0L;
 
-    // TODO smarter share matching.
+    // TODO smarter share matching, e.g. minimize tax based on p/l.
+    // TODO could have different matching algo for tax-deferred account.
 
     // First match with long-term lots.
     long nSharesLeft = lot.getNumShares();
@@ -77,14 +79,14 @@ public class Position
       PositionLot src = lots.get(0);
 
       // We only want LTCG here.
-      if (!FinLib.isLTG(src.purchaseTime, lot.purchaseTime)) {
+      if (!FinLib.isLTG(TimeLib.ms2date(src.purchaseTime), TimeLib.ms2date(lot.purchaseTime))) {
         break;
       }
 
       long n = Math.min(src.getNumShares(), nSharesLeft);
       nSharesLeft -= n;
       src.sell(n);
-      if (src.getNumShares() < 1e-4) {
+      if (src.getNumShares() == 0) {
         lots.remove(0);
       }
 
@@ -92,25 +94,26 @@ public class Position
       longPL += gain;
     }
     assert nSharesLeft >= 0;
-    assert nSharesLeft == 0 || !FinLib.isLTG(lots.get(0).purchaseTime, lot.purchaseTime);
+    assert nSharesLeft == 0
+        || !FinLib.isLTG(TimeLib.ms2date(lots.get(0).purchaseTime), TimeLib.ms2date(lot.purchaseTime));
 
-    // First match with long-term lots.
-    while (nSharesLeft > 1e-4) {
+    // Now match youngest positions.
+    while (nSharesLeft > 0) {
       int iSrc = lots.size() - 1;
       PositionLot src = lots.get(iSrc);
-      assert !FinLib.isLTG(src.purchaseTime, lot.purchaseTime);
+      assert !FinLib.isLTG(TimeLib.ms2date(src.purchaseTime), TimeLib.ms2date(lot.purchaseTime));
 
       long n = Math.min(src.getNumShares(), nSharesLeft);
       nSharesLeft -= n;
       src.sell(n);
-      if (src.getNumShares() < 1e-4) {
+      if (src.getNumShares() == 0) {
         lots.remove(iSrc);
       }
 
       long gain = lot.purchasePrice - src.purchasePrice;
       shortPL += gain;
     }
-    assert nSharesLeft < 1e-4;
+    assert nSharesLeft == 0;
 
     nShares -= lot.getNumShares();
     long balance = getValue();

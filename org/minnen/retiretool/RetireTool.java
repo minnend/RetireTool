@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -80,7 +81,7 @@ public class RetireTool
         TimeLib.formatMonth(bondRate.getEndMS()));
 
     long commonStart = TimeLib.calcCommonStart(shiller, tbillData, stock, bondRate);
-    commonStart = TimeLib.toFirstOfMonth(commonStart);
+    commonStart = TimeLib.toMs(TimeLib.ms2date(commonStart).with(TemporalAdjusters.firstDayOfMonth()));
     long commonEnd = TimeLib.calcCommonEnd(shiller, tbillData, stock, bondRate);
     System.out.printf("Common: [%s] -> [%s]\n", TimeLib.formatDate(commonStart), TimeLib.formatDate(commonEnd));
 
@@ -136,7 +137,7 @@ public class RetireTool
     for (int t = 0; t < T; ++t) {
       long time = guideSeq.getTimeMS(t);
       store.lock(TimeLib.TIME_BEGIN, time);
-      long nextTime = (t == T - 1 ? TimeLib.toNextBusinessDay(time) : guideSeq.getTimeMS(t + 1));
+      long nextTime = (t == T - 1 ? TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(time))) : guideSeq.getTimeMS(t + 1));
       broker.setTime(time, prevTime, nextTime);
       TimeInfo timeInfo = broker.getTimeInfo();
 

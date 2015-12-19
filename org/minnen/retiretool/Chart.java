@@ -4,6 +4,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map.Entry;
@@ -870,14 +871,12 @@ public class Chart
         .printf("<tr><th>Decade</th><th>CAGR</th><th>Dev</th><th>Drawdown</th><th>Down 10%%</th><th>Total<br/>Return</th></tr>\n");
     System.out.printf("</thead><tbody>\n");
 
-    Calendar cal = TimeLib.now();
     for (int i = iStart; i + 120 < cumulativeReturns.length(); i += 120) {
-      cal.setTimeInMillis(cumulativeReturns.getTimeMS(i));
+      LocalDate date = TimeLib.ms2date(cumulativeReturns.getTimeMS(i));
       Sequence decade = cumulativeReturns.subseq(i, 121);
       CumulativeStats stats = CumulativeStats.calc(decade);
       System.out.printf(" <tr><td>%ds</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2fx</td></tr>\n",
-          cal.get(Calendar.YEAR), stats.cagr, stats.devAnnualReturn, stats.drawdown, stats.percentDown10,
-          stats.totalReturn);
+          date.getYear(), stats.cagr, stats.devAnnualReturn, stats.drawdown, stats.percentDown10, stats.totalReturn);
     }
     System.out.printf("</tbody>\n</table>\n");
   }
@@ -904,10 +903,9 @@ public class Chart
     System.out.printf("</thead><tbody>\n");
 
     final double eps = 0.01; // epsilon for larger cagr
-    Calendar cal = TimeLib.now();
     for (int i = iStart; i + 120 < returns1.length(); i += 120) {
       assert returns1.getTimeMS(i) == returns2.getTimeMS(i);
-      cal.setTimeInMillis(returns1.getTimeMS(i));
+      LocalDate date = TimeLib.ms2date(returns1.getTimeMS(i));
       Sequence decade1 = returns1.subseq(i, 121);
       Sequence decade2 = returns2.subseq(i, 121);
       CumulativeStats stats1 = CumulativeStats.calc(decade1);
@@ -920,7 +918,7 @@ public class Chart
         excess = "<font color=\"#700\">" + excess + "</font>";
       }
       System.out.printf(" <tr><td>%ds</td><td>%.2f</td><td>%.2f</td><td>%s</td><td>%.2f</td><td>%.2f</td></tr>\n",
-          cal.get(Calendar.YEAR), stats1.cagr, stats2.cagr, excess, stats1.devAnnualReturn, stats2.devAnnualReturn);
+          date.getYear(), stats1.cagr, stats2.cagr, excess, stats1.devAnnualReturn, stats2.devAnnualReturn);
     }
     System.out.printf("</tbody>\n</table>\n");
   }

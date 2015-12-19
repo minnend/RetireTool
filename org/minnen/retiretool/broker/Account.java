@@ -69,7 +69,7 @@ public class Account
       if (divs != null) {
         int index = divs.getClosestIndex(timeInfo.time);
         long divTime = divs.getTimeMS(index);
-        if (timeInfo.time >= divTime && TimeLib.isSameMonth(timeInfo.time, divTime)) {
+        if (timeInfo.time >= divTime && TimeLib.isSameMonth(TimeLib.ms2date(timeInfo.time), TimeLib.ms2date(divTime))) {
           // Did we already pay this dividend?
           long lastDivTime = lastDivPaid.getOrDefault(position.name, TimeLib.TIME_ERROR);
           if (divTime > lastDivTime) {
@@ -250,6 +250,8 @@ public class Account
     long price = broker.getSellPrice(name);
     Position position = getPosition(name);
     assert nShares <= position.getNumShares();
+    // System.out.printf("Sell %.2f @ $%s = $%s\n", Fixed.toFloat(nShares), Fixed.formatCurrency(price),
+    // Fixed.formatCurrency(Fixed.mul(nShares, price)));
 
     Receipt receipt = position.sub(new PositionLot(name, time, nShares, price));
     receipts.add(receipt);
@@ -280,6 +282,8 @@ public class Account
       nShares = Fixed.divTrunc(value, price);
     }
     assert nShares <= position.getNumShares();
+    // System.out.printf("shares: %.2f / %.2f  value=$%s\n", Fixed.toFloat(nShares),
+    // Fixed.toFloat(position.getNumShares()), Fixed.formatCurrency(value));
     return sellShares(name, nShares, memo);
   }
 
@@ -323,10 +327,11 @@ public class Account
   public void rebalance(DiscreteDistribution targetDistribution)
   {
     final long preValue = getValue();
+    // System.out.printf("Rebalance: %s\n", targetDistribution);
     // System.out.printf("Rebalance.pre: $%s (Price=$%s)\n", Fixed.formatCurrency(preValue),
     // Fixed.formatCurrency(broker.getPrice("Stock")));
 
-    // Figure out how much money is currently invested.
+    // Figure out how much money is currently invested in each asset.
     Map<String, Long> currentValue = new TreeMap<>();
     long total = 0L;
     double targetSum = 0.0;
@@ -354,12 +359,12 @@ public class Account
     // Sell positions that are over target.
     for (int i = 0; i < targetDistribution.size(); ++i) {
       String name = targetDistribution.names[i];
-      // System.out.printf("Target: %s = %.1f%%\n", name, targetDistribution.get(name) * 100.0 / targetSum);
-      if (name.equals("cash")) {
+      double targetFrac = targetDistribution.weights[i] / targetSum;
+      long current = currentValue.get(name);
+      // System.out.printf("Target: %s = %.1f%% ($%s)\n", name, targetFrac * 100.0, Fixed.formatCurrency(current));
+      if (name.equals("cash")) { // You don't "sell" cash.
         continue;
       }
-      double targetFrac = targetDistribution.weights[i];
-      long current = currentValue.get(name);
 
       // Only adjust if there is a change.
       long targetValue = Math.round(total * targetFrac);

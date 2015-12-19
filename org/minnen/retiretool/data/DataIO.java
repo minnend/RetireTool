@@ -56,7 +56,7 @@ public class DataIO
         int month = Integer.parseInt(dateFields[1]);
         double rate = Double.parseDouble(toks[1]);
 
-        data.addData(rate, TimeLib.getTime(1, month, year));
+        data.addData(rate, TimeLib.toMs(year, month, 1));
       } catch (NumberFormatException e) {
         System.err.printf("Error parsing CSV data: [%s]\n", line);
         continue;
@@ -109,7 +109,7 @@ public class DataIO
           // CAPE
           double cape = Library.tryParse(toks[10], 0.0);
 
-          long timeMS = TimeLib.getTime(1, month, year);
+          long timeMS = TimeLib.toMs(year, month, 1);
           seq.addData(new FeatureVec(5, price, div, cpi, gs10, cape), timeMS);
 
           // System.out.printf("%d/%d:  $%.2f  $%.2f  $%.2f\n", year,
@@ -315,10 +315,11 @@ public class DataIO
   {
     String[] dateFields = date.split("-");
 
+    // TODO use java.time parser.
     int year = Integer.parseInt(dateFields[0]);
     int month = Integer.parseInt(dateFields[1]);
     int day = Integer.parseInt(dateFields[2]);
 
-    return TimeLib.getTime(day, month, year);
+    return TimeLib.toMs(year, month, day);
   }
 }

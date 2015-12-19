@@ -73,7 +73,8 @@ public class Simulation
     for (int t = 0; t < T; ++t) {
       long time = guideSeq.getTimeMS(t);
       store.lock(TimeLib.TIME_BEGIN, time);
-      long nextTime = (t == T - 1 ? TimeLib.toNextBusinessDay(time) : guideSeq.getTimeMS(t + 1));
+      long nextTime = (t == T - 1 ? TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(time))) : guideSeq
+          .getTimeMS(t + 1));
       broker.setTime(time, prevTime, nextTime);
       TimeInfo timeInfo = broker.getTimeInfo();
 

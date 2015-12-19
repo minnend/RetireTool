@@ -1,6 +1,7 @@
 package org.minnen.retiretool.tests;
 
-import java.util.Calendar;
+import java.time.LocalDate;
+import java.time.Month;
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -21,10 +22,10 @@ public class AllTests
   public static Sequence buildMonthlySequence(String name, double[] data)
   {
     Sequence seq = new Sequence(name);
-    Calendar cal = TimeLib.setTime(TimeLib.now(), 1, 1, 2000);
+    LocalDate date = LocalDate.of(2000, Month.JANUARY, 1);
     for (double x : data) {
-      seq.addData(x, cal.getTimeInMillis());
-      cal.add(Calendar.MONTH, 1);
+      seq.addData(x, TimeLib.toMs(date));
+      date = date.plusMonths(1);
     }
     return seq;
   }

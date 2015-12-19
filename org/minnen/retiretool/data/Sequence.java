@@ -1,5 +1,6 @@
 package org.minnen.retiretool.data;
 
+import java.time.LocalDate;
 import java.util.*;
 
 import org.minnen.retiretool.data.FeatureVec;
@@ -85,7 +86,7 @@ public class Sequence implements Iterable<FeatureVec>
   public String toString()
   {
     return String.format("[Seq: len=%d, %dD  [%s]->[%s]]", length(), getNumDims(),
-        TimeLib.formatTime(getStartMS(), null), TimeLib.formatTime(getEndMS(), null));
+        TimeLib.formatTime(getStartMS()), TimeLib.formatTime(getEndMS()));
   }
 
   /**
@@ -377,6 +378,12 @@ public class Sequence implements Iterable<FeatureVec>
     return ix;
   }
 
+  /** add a time stamped feature vector to the end of this sequence */
+  public int addData(double x, LocalDate date)
+  {
+    return addData(x, TimeLib.toMs(date));
+  }
+
   /**
    * Multiply each element of each frame by the given value.
    * 
@@ -587,7 +594,7 @@ public class Sequence implements Iterable<FeatureVec>
   /** @return closest index in data sequence for the given year and month (January == 1). */
   public int getIndexForDate(int year, int month)
   {
-    long ms = TimeLib.getTime(1, month, year);
+    long ms = TimeLib.toMs(year, month, 1);
     return getClosestIndex(ms);
   }
 
@@ -819,7 +826,9 @@ public class Sequence implements Iterable<FeatureVec>
   public void adjustDatesToEndOfMonth()
   {
     for (FeatureVec v : data) {
-      v.setTime(TimeLib.toLastBusinessDayOfMonth(v.getTime()));
+      LocalDate date = TimeLib.ms2date(v.getTime());
+      date = TimeLib.toLastBusinessDayOfMonth(date);
+      v.setTime(TimeLib.toMs(date));
     }
   }
 

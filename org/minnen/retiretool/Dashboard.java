@@ -2,7 +2,7 @@ package org.minnen.retiretool;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.TimeZone;
+import java.time.ZoneId;
 
 import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.DataIO;
@@ -315,7 +315,7 @@ public class Dashboard
       f.write("<div class=\"column\">\n");
       f.write("<b>Dates Covered:</b> [%s] &rarr; [%s]<br/><br/>\n", TimeLib.formatDate(sim.getStartMS()),
           TimeLib.formatDate(sim.getEndMS()));
-      f.write("<b>Last Updated:</b> %s<br/><br/>\n", TimeLib.formatTime(TimeLib.getTime(), TimeZone.getDefault()));
+      f.write("<b>Last Updated:</b> %s<br/><br/>\n", TimeLib.formatTime(TimeLib.getTime(), ZoneId.systemDefault()));
       f.write("<b>Column Legend</b><br/>\n");
       f.write("<ol style=\"margin-top: 4px\">\n");
       f.write("<li>Date of event\n");
