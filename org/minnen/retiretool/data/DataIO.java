@@ -1,14 +1,18 @@
 package org.minnen.retiretool.data;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDate;
+import java.time.Month;
 
 import org.apache.commons.io.IOUtils;
 import org.minnen.retiretool.util.FinLib;
@@ -146,6 +150,7 @@ public class DataIO
     int iClose = -1;
     int iLow = -1;
     int iHigh = -1;
+    int iVolume = -1;
     int iAdjClose = -1;
 
     BufferedReader in = new BufferedReader(new FileReader(file));
@@ -175,6 +180,7 @@ public class DataIO
           else if (field.equals("high")) iHigh = i;
           else if (field.equals("low")) iLow = i;
           else if (field.equals("close")) iClose = i;
+          else if (field.equals("volume")) iVolume = i;
           else if (field.equals("adjclose")) iAdjClose = i;
         }
         continue;
@@ -186,12 +192,14 @@ public class DataIO
         double high = Double.parseDouble(toks[iHigh]);
         double low = Double.parseDouble(toks[iLow]);
         double close = Double.parseDouble(toks[iClose]);
+        double volume = Double.parseDouble(toks[iVolume]);
         double adjClose = Double.parseDouble(toks[iAdjClose]);
-        FeatureVec fv = new FeatureVec(5);
+        FeatureVec fv = new FeatureVec(6);
         fv.set(FinLib.Open, open);
         fv.set(FinLib.High, high);
         fv.set(FinLib.Low, low);
         fv.set(FinLib.Close, close);
+        fv.set(FinLib.Volume, volume);
         fv.set(FinLib.AdjClose, adjClose);
         data.addData(fv, time);
       } catch (NumberFormatException e) {
@@ -204,6 +212,24 @@ public class DataIO
       data.reverse();
     }
     return data;
+  }
+
+  public static void saveYahooData(Sequence seq, File file) throws IOException
+  {
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+      writer.write("Date,Open,High,Low,Close,Volume,Adj Close\n");
+      String[] fields = new String[7];
+      for (FeatureVec v : seq) {
+        fields[0] = TimeLib.formatYMD(v.getTime());
+        fields[1] = String.format("%.4f", v.get(FinLib.Open));
+        fields[2] = String.format("%.4f", v.get(FinLib.High));
+        fields[3] = String.format("%.4f", v.get(FinLib.Low));
+        fields[4] = String.format("%.4f", v.get(FinLib.Close));
+        fields[5] = String.format("%.0f", v.get(FinLib.Volume));
+        fields[6] = String.format("%.4f", v.get(FinLib.AdjClose));
+        writer.write(String.join(",", fields) + "\n");
+      }
+    }
   }
 
   /**
@@ -258,9 +284,15 @@ public class DataIO
 
   public static URL buildYahooURL(String symbol)
   {
+    return buildYahooURL(symbol, LocalDate.of(1900, Month.JANUARY, 1));
+  }
+
+  public static URL buildYahooURL(String symbol, LocalDate startDate)
+  {
     try {
       String address = String.format(
-          "http://ichart.yahoo.com/table.csv?s=%s&a=0&b=1&c=1900&d=11&e=31&f=2050&g=d&ignore=.csv", symbol);
+          "http://ichart.yahoo.com/table.csv?s=%s&a=%d&b=%d&c=%d&d=11&e=31&f=2050&g=d&ignore=.csv", symbol,
+          startDate.getMonthValue() - 1, startDate.getDayOfMonth(), startDate.getYear());
       return new URL(address);
     } catch (MalformedURLException e) {
       e.printStackTrace();
@@ -280,10 +312,67 @@ public class DataIO
     }
   }
 
-  public static boolean updateDailyDataFromYahoo(File file, String symbol)
+  public static boolean updateDailyDataFromYahoo(File file, String symbol, long replaceAgeMs)
   {
-    // TODO
-    return false;
+    // No file => download all data.
+    if (!file.exists()) {
+      file = downloadDailyDataFromYahoo(file, symbol, 0);
+      return (file != null);
+    }
+
+    if (!isFileOlder(file, replaceAgeMs)) {
+      // System.out.printf("Recent file already exists (%s).\n", file.getName());
+      return false;
+    }
+
+    // File exists so try to load it.
+    Sequence seqOld = null;
+    try {
+      seqOld = loadYahooData(file);
+    } catch (IOException e) {
+      e.printStackTrace();
+      return false;
+    }
+    if (seqOld == null || seqOld.getEndMS() == TimeLib.TIME_ERROR) return false;
+
+    // Download new data.
+    LocalDate startDate = TimeLib.ms2date(seqOld.getEndMS());
+    System.out.printf("Update data: %s [%s]\n", symbol, startDate);
+    try {
+      URL url = buildYahooURL(symbol, startDate);
+      File tmpFile = File.createTempFile(String.format("yahoo-%s-", symbol), null);
+      try (InputStream input = url.openStream()) {
+        Files.copy(input, tmpFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+      }
+      Sequence seqNew = loadYahooData(tmpFile);
+      assert seqNew.getStartMS() == seqOld.getEndMS();
+
+      // Add new data to old sequence.
+      for (int i = 1; i < seqNew.length(); ++i) {
+        seqOld.addData(seqNew.get(i));
+      }
+
+      tmpFile.delete();
+    } catch (IOException e) {
+      e.printStackTrace();
+      return false;
+    }
+
+    // Write new file.
+    try {
+      seqOld.reverse(); // Yahoo data has newest days first
+      File newFile = new File(file.getAbsolutePath() + ".new");
+      saveYahooData(seqOld, newFile);
+
+      // We have the new file so delete old and rename.
+      file.delete();
+      newFile.renameTo(file);
+    } catch (IOException e) {
+      e.printStackTrace();
+      return false;
+    }
+
+    return true;
   }
 
   /**
@@ -298,20 +387,15 @@ public class DataIO
   public static File downloadDailyDataFromYahoo(File path, String symbol, long replaceAgeMs)
   {
     try {
-      if (path.isDirectory()) {
-        path = new File(path, symbol + ".csv");
-      }
+      path = getYahooFile(path, symbol);
       if (path.exists()) {
         if (!path.isFile() || !path.canWrite()) {
           System.err.printf("Path is not a writeable file (%s).\n", path.getPath());
           return null;
         }
-        if (replaceAgeMs > 0L) {
-          long age = TimeLib.getTime() - path.lastModified();
-          if (age < replaceAgeMs) {
-            System.out.printf("Recent file already exists (%s @ %s).\n", path.getName(), TimeLib.formatDuration(age));
-            return path;
-          }
+        if (!isFileOlder(path, replaceAgeMs)) {
+          System.out.printf("Recent file already exists (%s).\n", path.getName());
+          return path;
         }
       }
       System.out.printf("Download data: %s\n", symbol);
@@ -324,6 +408,23 @@ public class DataIO
       e.printStackTrace();
       return null;
     }
+  }
+
+  public static File getYahooFile(File path, String symbol)
+  {
+    if (path.isDirectory()) {
+      return new File(path, symbol + ".csv");
+    }
+    return path;
+  }
+
+  public static boolean isFileOlder(File file, long ms)
+  {
+    if (ms > 0L) {
+      long age = TimeLib.getTime() - file.lastModified();
+      if (age < ms) return false;
+    }
+    return true;
   }
 
   private static long parseDate(String date) throws NumberFormatException

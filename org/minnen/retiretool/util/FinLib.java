@@ -2,16 +2,13 @@ package org.minnen.retiretool.util;
 
 import java.text.DecimalFormat;
 import java.time.DayOfWeek;
-import java.time.Duration;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.MonthDay;
 import java.time.Period;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Predicate;
@@ -47,7 +44,8 @@ public final class FinLib
   public static final int      Open                    = 1;
   public static final int      Low                     = 2;
   public static final int      High                    = 3;
-  public static final int      AdjClose                = 4;
+  public static final int      Volume                  = 4;
+  public static final int      AdjClose                = 5;
 
   public static DecimalFormat  currencyFormatter       = new DecimalFormat("#,##0.00");
   public static DecimalFormat  dollarFormatter         = new DecimalFormat("#,##0");
