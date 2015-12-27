@@ -18,9 +18,7 @@ import org.minnen.retiretool.predictor.config.ConfigMixed;
 import org.minnen.retiretool.predictor.config.ConfigMulti;
 import org.minnen.retiretool.predictor.config.ConfigSMA;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
-import org.minnen.retiretool.predictor.daily.MultiPredictor;
 import org.minnen.retiretool.predictor.daily.Predictor;
-import org.minnen.retiretool.predictor.daily.TimeCode;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.JitterStats;
 import org.minnen.retiretool.stats.ReturnStats;
@@ -781,7 +779,7 @@ public class RetireTool
 
   public static void main(String[] args) throws IOException
   {
-    File dataDir = new File("g:/research/finance");
+    File dataDir = new File("g:/research/finance/");
     File dir = new File("g:/web/");
     assert dataDir.isDirectory();
     assert dir.isDirectory();

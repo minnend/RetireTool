@@ -280,7 +280,22 @@ public class DataIO
     }
   }
 
-  public static File downloadDailyDataFromYahoo(File path, String symbol, long replaceAge)
+  public static boolean updateDailyDataFromYahoo(File file, String symbol)
+  {
+    // TODO
+    return false;
+  }
+
+  /**
+   * Download Yahoo financial data into the given file, or create a file if the path is a directory.
+   * 
+   * @param path File or directory in which to store data.
+   * @param symbol symbol to download
+   * @param replaceAgeMs If the file exists and is older than this value (in ms), replace it; otherwise, don't download
+   *          new data.
+   * @return File in which that data is stored or null if there was an error.
+   */
+  public static File downloadDailyDataFromYahoo(File path, String symbol, long replaceAgeMs)
   {
     try {
       if (path.isDirectory()) {
@@ -291,9 +306,9 @@ public class DataIO
           System.err.printf("Path is not a writeable file (%s).\n", path.getPath());
           return null;
         }
-        if (replaceAge > 0L) {
+        if (replaceAgeMs > 0L) {
           long age = TimeLib.getTime() - path.lastModified();
-          if (age < replaceAge) {
+          if (age < replaceAgeMs) {
             System.out.printf("Recent file already exists (%s @ %s).\n", path.getName(), TimeLib.formatDuration(age));
             return path;
           }

@@ -1,11 +1,14 @@
 package org.minnen.retiretool.util;
 
 import java.text.DecimalFormat;
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Month;
+import java.time.MonthDay;
 import java.time.Period;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -1316,5 +1319,53 @@ public final class FinLib
     if (Math.abs(sdev) < 1e-8) return 0.0;
 
     return Math.sqrt(252) * mean / sdev;
+  }
+
+  public static boolean isMarketHoliday(LocalDate date)
+  {
+    // Weekends are always "holidays".
+    DayOfWeek day = date.getDayOfWeek();
+    if (day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY) return true;
+
+    MonthDay md = MonthDay.from(date);
+
+    // New Years.
+    if (md.equals(MonthDay.of(1, 1))) return true;
+
+    // MLK Day (first observed in 1986).
+    if (date.getYear() >= 1986) {
+      LocalDate mlk = TimeLib.getNthDayOfWeek(date.getYear(), Month.JANUARY, 3, DayOfWeek.MONDAY);
+      if (date.equals(mlk)) return true;
+    }
+
+    // Washington's Birthday.
+    LocalDate washington = TimeLib.getNthDayOfWeek(date.getYear(), Month.FEBRUARY, 3, DayOfWeek.MONDAY);
+    if (date.equals(washington)) return true;
+
+    // Good Friday.
+    LocalDate easter = TimeLib.getEaster(date.getYear());
+    LocalDate goodFriday = easter.with(TemporalAdjusters.previous(DayOfWeek.FRIDAY));
+    assert goodFriday.getDayOfWeek() == DayOfWeek.FRIDAY;
+    if (date.equals(goodFriday)) return true;
+
+    // Memorial Day
+    LocalDate memorial = TimeLib.getNthDayOfWeek(date.getYear(), Month.MAY, -1, DayOfWeek.MONDAY);
+    if (date.equals(memorial)) return true;
+
+    // Independence Day.
+    if (md.equals(MonthDay.of(7, 4))) return true;
+
+    // Labor Day.
+    LocalDate labor = TimeLib.getNthDayOfWeek(date.getYear(), Month.SEPTEMBER, 1, DayOfWeek.MONDAY);
+    if (date.equals(labor)) return true;
+
+    // Thanksgiving.
+    LocalDate thanksgiving = TimeLib.getNthDayOfWeek(date.getYear(), Month.NOVEMBER, 4, DayOfWeek.THURSDAY);
+    if (date.equals(thanksgiving)) return true;
+
+    // Christmas.
+    if (md.equals(MonthDay.of(12, 25))) return true;
+
+    return false;
   }
 }

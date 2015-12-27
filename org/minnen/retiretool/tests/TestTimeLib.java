@@ -2,6 +2,7 @@ package org.minnen.retiretool.tests;
 
 import static org.junit.Assert.*;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.Month;
 
@@ -197,5 +198,86 @@ public class TestTimeLib
     assertEquals(2015, d2.getYear());
     assertEquals(Month.AUGUST, d2.getMonth());
     assertEquals(3, d2.getDayOfMonth());
+  }
+
+  @Test
+  public void testGetNthDayOfWeek()
+  {
+    LocalDate date;
+
+    // Thanksgiving = Fourth Thursday of November.
+    date = TimeLib.getNthDayOfWeek(2015, Month.NOVEMBER, 4, DayOfWeek.THURSDAY);
+    assertEquals(LocalDate.of(2015, 11, 26), date);
+
+    date = TimeLib.getNthDayOfWeek(2016, Month.NOVEMBER, 4, DayOfWeek.THURSDAY);
+    assertEquals(LocalDate.of(2016, 11, 24), date);
+
+    date = TimeLib.getNthDayOfWeek(1990, Month.NOVEMBER, 4, DayOfWeek.THURSDAY);
+    assertEquals(LocalDate.of(1990, 11, 22), date);
+
+    date = TimeLib.getNthDayOfWeek(1900, Month.NOVEMBER, 4, DayOfWeek.THURSDAY);
+    assertEquals(LocalDate.of(1900, 11, 22), date);
+
+    // Memorial Day = Last Monday of May.
+    date = TimeLib.getNthDayOfWeek(2015, Month.MAY, -1, DayOfWeek.MONDAY);
+    assertEquals(LocalDate.of(2015, 5, 25), date);
+
+    date = TimeLib.getNthDayOfWeek(2014, Month.MAY, -1, DayOfWeek.MONDAY);
+    assertEquals(LocalDate.of(2014, 5, 26), date);
+
+    date = TimeLib.getNthDayOfWeek(2016, Month.MAY, -1, DayOfWeek.MONDAY);
+    assertEquals(LocalDate.of(2016, 5, 30), date);
+
+    // MLK Day = Third Monday of January.
+    date = TimeLib.getNthDayOfWeek(2016, Month.JANUARY, 3, DayOfWeek.MONDAY);
+    assertEquals(LocalDate.of(2016, 1, 18), date);
+
+    date = TimeLib.getNthDayOfWeek(2015, Month.JANUARY, 3, DayOfWeek.MONDAY);
+    assertEquals(LocalDate.of(2015, 1, 19), date);
+
+    date = TimeLib.getNthDayOfWeek(2014, Month.JANUARY, 3, DayOfWeek.MONDAY);
+    assertEquals(LocalDate.of(2014, 1, 20), date);
+  }
+
+  @Test
+  public void testGetEaster()
+  {
+    // https://en.wikipedia.org/wiki/List_of_dates_for_Easter
+
+    int year = 2015;
+    LocalDate date = TimeLib.getEaster(year);
+    assertEquals(LocalDate.of(year, 4, 5), date);
+
+    year = 2016;
+    date = TimeLib.getEaster(year);
+    assertEquals(LocalDate.of(year, 3, 27), date);
+
+    year = 2014;
+    date = TimeLib.getEaster(year);
+    assertEquals(LocalDate.of(year, 4, 20), date);
+
+    year = 2013;
+    date = TimeLib.getEaster(year);
+    assertEquals(LocalDate.of(year, 3, 31), date);
+
+    year = 2012;
+    date = TimeLib.getEaster(year);
+    assertEquals(LocalDate.of(year, 4, 8), date);
+
+    year = 2011;
+    date = TimeLib.getEaster(year);
+    assertEquals(LocalDate.of(year, 4, 24), date);
+
+    year = 2000;
+    date = TimeLib.getEaster(year);
+    assertEquals(LocalDate.of(year, 4, 23), date);
+
+    year = 1995;
+    date = TimeLib.getEaster(year);
+    assertEquals(LocalDate.of(year, 4, 16), date);
+
+    year = 2035;
+    date = TimeLib.getEaster(year);
+    assertEquals(LocalDate.of(year, 3, 25), date);
   }
 }

@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.Month;
+import java.time.MonthDay;
 import java.time.Period;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
@@ -291,5 +292,58 @@ public class TimeLib
     assert fartherDate != closestDate;
     assert isSameMonth(date, fartherDate);
     return fartherDate;
+  }
+
+  public static LocalDate getNthDayOfWeek(int year, Month month, int nth, DayOfWeek dow)
+  {
+    assert nth != 0;
+
+    LocalDate date;
+    if (nth > 0) {
+      // Counting forward, e.g. 2nd Monday of month.
+      date = LocalDate.of(year, month, 1).with(TemporalAdjusters.firstInMonth(dow));
+      if (nth > 1) {
+        date = date.plusDays(7 * (nth - 1));
+      }
+    } else {
+      // Counting backward, e.g. 2nd to last Monday of month.
+      assert nth < 0;
+      date = LocalDate.of(year, month, 1).with(TemporalAdjusters.lastInMonth(dow));
+      if (nth < -1) {
+        date = date.minusDays(7 * (nth + 1));
+      }
+    }
+    assert date.getDayOfWeek() == dow;
+    assert date.getMonth() == month;
+    assert date.getYear() == year;
+    return date;
+  }
+
+  /**
+   * Calculate date of Easter in the given year.
+   * 
+   * Only valid for Gregorian Years. More info here: https://en.wikipedia.org/wiki/Computus#Other_algorithms
+   * 
+   * @return Date of Easter in the given year.
+   */
+  public static LocalDate getEaster(int year)
+  {
+    int a = year % 19;
+    int b = year / 100;
+    int c = year % 100;
+    int d = b / 4;
+    int e = b % 4;
+    int f = (b + 8) / 25;
+    int g = (b - f + 1) / 3;
+    int h = (19 * a + b - d - g + 15) % 30;
+    int i = c / 4;
+    int k = c % 4;
+    int l = (32 + 2 * e + 2 * i - h - k) % 7;
+    int m = (a + 11 * h + 22 * l) / 451;
+    int n = (h + l - 7 * m + 114) / 31;
+    int p = (h + l - 7 * m + 114) % 31;
+    LocalDate date = LocalDate.of(year, n, p + 1);
+    assert date.getDayOfWeek() == DayOfWeek.SUNDAY;
+    return date;
   }
 }
