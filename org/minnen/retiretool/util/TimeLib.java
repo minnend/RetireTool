@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.Month;
+import java.time.MonthDay;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -132,7 +133,7 @@ public class TimeLib
     }
     return last;
   }
-  
+
   public static long calcCommonEnd(List<Sequence> seqs)
   {
     return calcCommonEnd(seqs.toArray(new Sequence[seqs.size()]));
@@ -148,6 +149,34 @@ public class TimeLib
       }
     }
     return last;
+  }
+
+  /**
+   * Determines if the two dates are part of the same week.
+   * 
+   * A week runs from Monday to Sunday without regard for month or year changes.
+   * 
+   * @param d1 first day
+   * @param d2 second day
+   * @return True if the two dates are from the same week.
+   */
+  public static boolean isSameWeek(LocalDate d1, LocalDate d2)
+  {
+    if (d1.equals(d2)) return true;
+    if (d1.isAfter(d2)) {
+      LocalDate tmp = d1;
+      d1 = d2;
+      d2 = tmp;
+    }
+    assert d1.isBefore(d2);
+
+    long nDaysBetween = ChronoUnit.DAYS.between(d1, d2);
+    if (nDaysBetween >= 7) return false;
+
+    int day1 = d1.getDayOfWeek().getValue();
+    int day2 = d2.getDayOfWeek().getValue();
+    assert day1 != day2;
+    return day1 < day2;
   }
 
   public static boolean isSameMonth(LocalDate d1, LocalDate d2)
@@ -246,10 +275,64 @@ public class TimeLib
     return String.format("%.1f years", nMonths / 12.0);
   }
 
-  public static boolean isBusinessDay(LocalDate date)
+  public static boolean isWeekend(LocalDate date)
   {
     DayOfWeek day = date.getDayOfWeek();
-    return (day != DayOfWeek.SATURDAY && day != DayOfWeek.SUNDAY);
+    return (day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY);
+  }
+
+  public static boolean isHoliday(LocalDate date)
+  {
+    MonthDay md = MonthDay.from(date);
+
+    // New Years.
+    if (md.equals(MonthDay.of(1, 1))) return true;
+
+    // MLK Day (first observed in 1986).
+    if (date.getYear() >= 1986) {
+      LocalDate mlk = TimeLib.getNthDayOfWeek(date.getYear(), Month.JANUARY, 3, DayOfWeek.MONDAY);
+      if (date.equals(mlk)) return true;
+    }
+
+    // Washington's Birthday.
+    LocalDate washington = TimeLib.getNthDayOfWeek(date.getYear(), Month.FEBRUARY, 3, DayOfWeek.MONDAY);
+    if (date.equals(washington)) return true;
+
+    // Good Friday.
+    LocalDate easter = TimeLib.getEaster(date.getYear());
+    LocalDate goodFriday = easter.with(TemporalAdjusters.previous(DayOfWeek.FRIDAY));
+    assert goodFriday.getDayOfWeek() == DayOfWeek.FRIDAY;
+    if (date.equals(goodFriday)) return true;
+
+    // Memorial Day
+    LocalDate memorial = TimeLib.getNthDayOfWeek(date.getYear(), Month.MAY, -1, DayOfWeek.MONDAY);
+    if (date.equals(memorial)) return true;
+
+    // Independence Day.
+    if (md.equals(MonthDay.of(7, 4))) return true;
+
+    // Labor Day.
+    LocalDate labor = TimeLib.getNthDayOfWeek(date.getYear(), Month.SEPTEMBER, 1, DayOfWeek.MONDAY);
+    if (date.equals(labor)) return true;
+
+    // Thanksgiving.
+    LocalDate thanksgiving = TimeLib.getNthDayOfWeek(date.getYear(), Month.NOVEMBER, 4, DayOfWeek.THURSDAY);
+    if (date.equals(thanksgiving)) return true;
+
+    // Christmas.
+    if (md.equals(MonthDay.of(12, 25))) return true;
+
+    return false;
+  }
+
+  public static boolean isBusinessDay(LocalDate date)
+  {
+    return !isWeekend(date) && !isHoliday(date);
+  }
+
+  public static long toPreviousBusinessDay(long ms)
+  {
+    return toMs(toPreviousBusinessDay(ms2date(ms)));
   }
 
   public static LocalDate toPreviousBusinessDay(LocalDate date)
@@ -259,6 +342,11 @@ public class TimeLib
       if (isBusinessDay(date)) break;
     }
     return date;
+  }
+
+  public static long toNextBusinessDay(long ms)
+  {
+    return toMs(toNextBusinessDay(ms2date(ms)));
   }
 
   public static LocalDate toNextBusinessDay(LocalDate date)

@@ -32,7 +32,7 @@ public class Simulation
     this.slippage = slippage;
     this.bBuyAtNextOpen = bBuyAtNextOpen;
     this.maxDelay = maxDelay;
-    this.broker = new Broker(store, slippage, guideSeq.getStartMS());
+    this.broker = new Broker(store, slippage, guideSeq);
   }
 
   public Sequence run(Predictor predictor)

@@ -29,7 +29,7 @@ public class AdaptiveAlloc
 
     for (String symbol : fundSymbols) {
       File file = DataIO.getYahooFile(dataDir, symbol);
-      DataIO.updateDailyDataFromYahoo(file, symbol, 2 * TimeLib.MS_IN_HOUR);
+      DataIO.updateDailyDataFromYahoo(file, symbol, 8 * TimeLib.MS_IN_HOUR);
     }
 
     // Load data and trim to same time period.
@@ -55,14 +55,14 @@ public class AdaptiveAlloc
 
     for (int i = 0; i < seqs.size(); ++i) {
       Sequence seq = seqs.get(i);
-      seq = seq.extractDims(0);
+      seq = seq.extractDims(FinLib.AdjClose);
       seq = seq.subseq(commonStart, commonEnd, EndpointBehavior.Closest);
       seqs.set(i, seq);
       store.add(seq);
 
-      double tr = FinLib.getTotalReturn(seq, seq.getClosestIndex(simStart), -1, FinLib.AdjClose);
+      double tr = FinLib.getTotalReturn(seq, seq.getClosestIndex(simStart), -1, 0);
       double ar = FinLib.getAnnualReturn(tr, nSimMonths);
-      System.out.printf("%s: %.2fx  %s%.2f%%\n", seq.getName(), tr, ar < 0 ? "" : " ", ar);
+      System.out.printf("%s: %5.2f%%  (%.2fx)\n", seq.getName(), ar, tr);
     }
 
   }

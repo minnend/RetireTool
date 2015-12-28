@@ -276,7 +276,7 @@ public class RetireTool
     Sequence stock = store.get(assetNames[0]);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stock.subseq(iStart);
-    Broker broker = new Broker(store, slippage, guideSeq.getStartMS());
+    Broker broker = new Broker(store, slippage, guideSeq);
 
     double[] cagrs = new double[N];
     double[] drawdowns = new double[N];
@@ -402,7 +402,7 @@ public class RetireTool
     Sequence stock = store.get(riskyName);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stock.subseq(iStart);
-    Broker broker = new Broker(store, GlobalSlippage, guideSeq.getStartMS());
+    Broker broker = new Broker(store, GlobalSlippage, guideSeq);
 
     // ConfigSMA[] configs = new ConfigSMA[] {
     // // new ConfigSMA(5, 0, 160, 0, 0.5, FinLib.Close, gap),
@@ -520,7 +520,7 @@ public class RetireTool
     Sequence stock = store.get(riskyName);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stock.subseq(iStart);
-    Broker broker = new Broker(store, GlobalSlippage, guideSeq.getStartMS());
+    Broker broker = new Broker(store, GlobalSlippage, guideSeq);
 
     // ConfigSMA[] configs = new ConfigSMA[] { new ConfigSMA(5, 0, 160, 0, 0.5, FinLib.Close, gap),
     // // new ConfigSMA(35, 0, 50, 10, 2.0, FinLib.Close, gap),

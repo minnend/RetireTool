@@ -16,24 +16,25 @@ public class Broker
   public final Slippage         slippage;
 
   private final List<Account>   accounts     = new ArrayList<>();
-  private final long            originalTime;
+  private final TimeInfo        origTimeInfo;
 
   private TimeInfo              timeInfo;
+
   private int                   iPrice       = FinLib.Close;
 
-  public Broker(SequenceStore store, Slippage slippage, long time)
+  public Broker(SequenceStore store, Slippage slippage, Sequence guideSeq)
   {
     this.store = store;
-    this.originalTime = time;
     this.slippage = slippage;
-    timeInfo = new TimeInfo(time);
+    this.origTimeInfo = new TimeInfo(guideSeq);
+    this.timeInfo = origTimeInfo;
   }
 
   public void reset()
   {
     accounts.clear();
     store.unlock();
-    timeInfo = new TimeInfo(originalTime);
+    timeInfo = origTimeInfo;
   }
 
   public int numAccounts()

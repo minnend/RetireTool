@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.Month;
 
 import org.junit.Test;
+import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
 
 public class TestTimeLib
@@ -43,6 +44,77 @@ public class TestTimeLib
     t1 = TimeLib.toMs(2013, Month.NOVEMBER, 1);
     t2 = TimeLib.toMs(2015, Month.DECEMBER, 30);
     assertEquals(25, TimeLib.monthsBetween(t1, t2));
+  }
+
+  @Test
+  public void testIsSameWeek()
+  {
+    LocalDate d1, d2;
+
+    d1 = LocalDate.of(2015, Month.DECEMBER, 21);
+    d2 = LocalDate.of(2015, Month.DECEMBER, 21);
+    assertTrue(TimeLib.isSameWeek(d1, d2));
+
+    d1 = LocalDate.of(2015, Month.DECEMBER, 21);
+    d2 = LocalDate.of(2015, Month.DECEMBER, 22);
+    assertTrue(TimeLib.isSameWeek(d1, d2));
+    assertTrue(TimeLib.isSameWeek(d2, d1));
+
+    d1 = LocalDate.of(2015, Month.DECEMBER, 21);
+    d2 = LocalDate.of(2015, Month.DECEMBER, 23);
+    assertTrue(TimeLib.isSameWeek(d1, d2));
+    assertTrue(TimeLib.isSameWeek(d2, d1));
+
+    d1 = LocalDate.of(2015, Month.DECEMBER, 21);
+    d2 = LocalDate.of(2015, Month.DECEMBER, 25);
+    assertTrue(TimeLib.isSameWeek(d1, d2));
+    assertTrue(TimeLib.isSameWeek(d2, d1));
+
+    d1 = LocalDate.of(2015, Month.DECEMBER, 21);
+    d2 = LocalDate.of(2015, Month.DECEMBER, 27);
+    assertTrue(TimeLib.isSameWeek(d1, d2));
+    assertTrue(TimeLib.isSameWeek(d2, d1));
+
+    d1 = LocalDate.of(2015, Month.DECEMBER, 21);
+    d2 = LocalDate.of(2015, Month.DECEMBER, 28);
+    assertFalse(TimeLib.isSameWeek(d1, d2));
+    assertFalse(TimeLib.isSameWeek(d2, d1));
+
+    d1 = LocalDate.of(2015, Month.DECEMBER, 18);
+    d2 = LocalDate.of(2015, Month.DECEMBER, 21);
+    assertFalse(TimeLib.isSameWeek(d1, d2));
+    assertFalse(TimeLib.isSameWeek(d2, d1));
+
+    d1 = LocalDate.of(2015, Month.DECEMBER, 20);
+    d2 = LocalDate.of(2015, Month.DECEMBER, 27);
+    assertFalse(TimeLib.isSameWeek(d1, d2));
+    assertFalse(TimeLib.isSameWeek(d2, d1));
+
+    d1 = LocalDate.of(2015, Month.DECEMBER, 31);
+    d2 = LocalDate.of(2016, Month.JANUARY, 1);
+    assertTrue(TimeLib.isSameWeek(d1, d2));
+    assertTrue(TimeLib.isSameWeek(d2, d1));
+
+    d1 = LocalDate.of(2015, Month.DECEMBER, 31);
+    d2 = LocalDate.of(2016, Month.JANUARY, 4);
+    assertFalse(TimeLib.isSameWeek(d1, d2));
+    assertFalse(TimeLib.isSameWeek(d2, d1));
+
+    d1 = LocalDate.of(2015, Month.DECEMBER, 31);
+    d2 = LocalDate.of(2016, Month.JANUARY, 4);
+    assertFalse(TimeLib.isSameWeek(d1, d2));
+    assertFalse(TimeLib.isSameWeek(d2, d1));
+
+    // Leap year.
+    d1 = LocalDate.of(2016, Month.FEBRUARY, 28);
+    d2 = LocalDate.of(2016, Month.FEBRUARY, 29);
+    assertFalse(TimeLib.isSameWeek(d1, d2));
+    assertFalse(TimeLib.isSameWeek(d2, d1));
+
+    d1 = LocalDate.of(2016, Month.FEBRUARY, 29);
+    d2 = LocalDate.of(2016, Month.MARCH, 1);
+    assertTrue(TimeLib.isSameWeek(d1, d2));
+    assertTrue(TimeLib.isSameWeek(d2, d1));
   }
 
   @Test
@@ -279,5 +351,54 @@ public class TestTimeLib
     year = 2035;
     date = TimeLib.getEaster(year);
     assertEquals(LocalDate.of(year, 3, 25), date);
+  }
+
+  @Test
+  public void testisHoliday()
+  {
+    // https://www.nyse.com/markets/hours-calendars
+
+    // New Years Day.
+    LocalDate date = LocalDate.of(2015, 1, 1);
+    assertTrue(TimeLib.isHoliday(date));
+
+    // MLK Day.
+    date = LocalDate.of(2015, 1, 19);
+    assertTrue(TimeLib.isHoliday(date));
+
+    // Washington's Birthday.
+    date = LocalDate.of(2015, 2, 16);
+    assertTrue(TimeLib.isHoliday(date));
+
+    // Good Friday.
+    date = LocalDate.of(2015, 4, 3);
+    assertTrue(TimeLib.isHoliday(date));
+
+    // Memorial Day.
+    date = LocalDate.of(2015, 5, 25);
+    assertTrue(TimeLib.isHoliday(date));
+
+    // Independence Day.
+    date = LocalDate.of(2015, 7, 4);
+    assertTrue(TimeLib.isHoliday(date));
+
+    // Labor Day.
+    date = LocalDate.of(2015, 9, 7);
+    assertTrue(TimeLib.isHoliday(date));
+
+    // Thanksgiving.
+    date = LocalDate.of(2015, 11, 26);
+    assertTrue(TimeLib.isHoliday(date));
+
+    // Christmas.
+    date = LocalDate.of(2015, 12, 25);
+    assertTrue(TimeLib.isHoliday(date));
+
+    // Not holidays.
+    date = LocalDate.of(2015, 1, 2);
+    assertFalse(TimeLib.isHoliday(date));
+
+    date = LocalDate.of(2015, 12, 31);
+    assertFalse(TimeLib.isHoliday(date));
   }
 }

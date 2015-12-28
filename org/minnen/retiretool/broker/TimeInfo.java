@@ -2,29 +2,40 @@ package org.minnen.retiretool.broker;
 
 import java.time.LocalDate;
 
+import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
 
 public class TimeInfo
 {
   public final long      time;
   public final LocalDate date;
+  public final LocalDate prevDate;
+  public final LocalDate nextDate;
   public final boolean   isFirstDayOfYear;
   public final boolean   isLastDayOfYear;
   public final boolean   isFirstDayOfMonth;
   public final boolean   isLastDayOfMonth;
+  public final boolean   isFirstDayOfWeek;
+  public final boolean   isLastDayOfWeek;
 
-  public TimeInfo(long time)
+  public TimeInfo(Sequence guideSeq)
   {
-    this(time, time, time);
+    this(guideSeq.getStartMS(), TimeLib.toPreviousBusinessDay(guideSeq.getStartMS()), guideSeq.length() > 1 ? guideSeq
+        .getTimeMS(1) : TimeLib.toNextBusinessDay(guideSeq.getStartMS()));
   }
 
   public TimeInfo(long time, long prevTime, long nextTime)
   {
+    assert time != prevTime;
+    assert time != nextTime;
+    assert prevTime != nextTime;
+
     this.time = time;
 
-    date = TimeLib.ms2date(time);
-    LocalDate prevDate = TimeLib.ms2date(prevTime);
-    LocalDate nextDate = TimeLib.ms2date(nextTime);
+    this.date = TimeLib.ms2date(time);
+    this.prevDate = TimeLib.ms2date(prevTime);
+    this.nextDate = TimeLib.ms2date(nextTime);
 
     // Month values are in [1, 12].
     int month = date.getMonthValue();
@@ -46,5 +57,8 @@ public class TimeInfo
 
     assert (month == monthNext) || (month < 12 && month + 1 == monthNext) || (month == 12 && monthNext == 1);
     isLastDayOfMonth = (month != monthNext);
+
+    isFirstDayOfWeek = !TimeLib.isSameWeek(prevDate, date);
+    isLastDayOfWeek = !TimeLib.isSameWeek(date, nextDate);
   }
 }
