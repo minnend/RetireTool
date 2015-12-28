@@ -43,7 +43,7 @@ public class MomentumPredictor extends AssetPredictor
     for (int iSeq = 0; iSeq < seqs.length; ++iSeq) {
       Sequence seq = seqs[iSeq];
       int iLast = seq.length() - 1;
-      double r = FinLib.getReturn(seq, iLast - nLookback, iLast - nSkipRecent);
+      double r = FinLib.getTotalReturn(seq, iLast - nLookback, iLast - nSkipRecent);
       if (r > bestReturn) {
         iSelected = iSeq;
         bestReturn = r;

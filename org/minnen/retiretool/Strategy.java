@@ -63,7 +63,7 @@ public class Strategy
       int iCorrect = -1;
       for (int iSeq = 0; iSeq < seqs.length; ++iSeq) {
         Sequence seq = seqs[iSeq];
-        double r = FinLib.getReturn(seq, t - 1, t);
+        double r = FinLib.getTotalReturn(seq, t - 1, t);
         realizedReturn += distribution[iSeq] * r;
         if (r > correctReturn) {
           correctReturn = r;
@@ -105,7 +105,7 @@ public class Strategy
     for (int i = iStart + 1; i < seqs[0].length(); ++i) {
       double bestReturn = 1.0; // can always hold cash
       for (Sequence seq : seqs) {
-        double r = FinLib.getReturn(seq, i - 1, i);
+        double r = FinLib.getTotalReturn(seq, i - 1, i);
         if (r > bestReturn) {
           bestReturn = r;
         }
@@ -148,7 +148,7 @@ public class Strategy
     for (int index = 1; index < N; ++index) {
       double balance = 0.0;
       for (int i = 0; i < numAssets; ++i) {
-        value[i] *= FinLib.getReturn(assets[i], index - 1, index);
+        value[i] *= FinLib.getTotalReturn(assets[i], index - 1, index);
         balance += value[i];
       }
       returns.addData(balance, assets[0].getTimeMS(index));
@@ -250,8 +250,8 @@ public class Strategy
         sc = new SeqCount(String.format("Code=%d", code));
         map.put(code, sc);
       }
-      double r1 = FinLib.getReturn(risky, i - 1, i);
-      double r2 = FinLib.getReturn(safe, i - 1, i);
+      double r1 = FinLib.getTotalReturn(risky, i - 1, i);
+      double r2 = FinLib.getTotalReturn(safe, i - 1, i);
       sc.update(r1, r2);
     }
 
@@ -275,7 +275,7 @@ public class Strategy
       Sequence bestSeq = null;
       double bestReturn = 0.0;
       for (Sequence seq : seqs) {
-        double r = FinLib.getReturn(seq, a, index);
+        double r = FinLib.getTotalReturn(seq, a, index);
         if (bestSeq == null || r > bestReturn) {
           bestSeq = seq;
           bestReturn = r;
@@ -331,8 +331,8 @@ public class Strategy
         sc = new SeqCount(String.format("Code=%d", code));
         map.put(code, sc);
       }
-      double r1 = FinLib.getReturn(risky, i - 1, i);
-      double r2 = FinLib.getReturn(safe, i - 1, i);
+      double r1 = FinLib.getTotalReturn(risky, i - 1, i);
+      double r2 = FinLib.getTotalReturn(safe, i - 1, i);
       sc.update(r1, r2);
     }
 

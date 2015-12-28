@@ -11,6 +11,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
+import java.util.List;
 
 import org.minnen.retiretool.data.Sequence;
 
@@ -115,6 +116,11 @@ public class TimeLib
     return iStart;
   }
 
+  public static long calcCommonStart(List<Sequence> seqs)
+  {
+    return calcCommonStart(seqs.toArray(new Sequence[seqs.size()]));
+  }
+
   public static long calcCommonStart(Sequence... seqs)
   {
     long last = seqs[0].getStartMS();
@@ -125,6 +131,11 @@ public class TimeLib
       }
     }
     return last;
+  }
+  
+  public static long calcCommonEnd(List<Sequence> seqs)
+  {
+    return calcCommonEnd(seqs.toArray(new Sequence[seqs.size()]));
   }
 
   public static long calcCommonEnd(Sequence... seqs)

@@ -1531,9 +1531,9 @@ public class RetireToolMonthly
 
     System.out.printf("%d, %d, %d, %d (%d)\n", counts[0], counts[1], counts[2], counts[3], Library.sum(counts));
     System.out.printf("Inflation: %.3f\n",
-        FinLib.getAnnualReturn(FinLib.getReturn(cpi, 0, cpi.length() - 1), cpi.length() - 1));
+        FinLib.getAnnualReturn(FinLib.getTotalReturn(cpi, 0, cpi.length() - 1), cpi.length() - 1));
     System.out.printf("CAGR: %.3f\n",
-        FinLib.getAnnualReturn(FinLib.getReturn(synth, 0, synth.length() - 1), synth.length() - 1));
+        FinLib.getAnnualReturn(FinLib.getTotalReturn(synth, 0, synth.length() - 1), synth.length() - 1));
 
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(new File(dir, "synth.csv")))) {
       writer.write("Date,Stock,Bonds,TBills,Source\n");

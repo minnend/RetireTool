@@ -106,46 +106,6 @@ public class FeatureVec
     return ret;
   }
 
-  /** rotate this vector around the given axis (angle given in radians) */
-  public FeatureVec rotate(final FeatureVec axis, final double angle_rad)
-  {
-    if (getNumDims() != 3 || axis.getNumDims() != 3) {
-      assert false : "can only rotate 3D vectors";
-      return null;
-    }
-
-    double s = Math.sin(angle_rad);
-    double c = Math.cos(angle_rad);
-    double t = 1.0f - c;
-
-    double ax = axis.get(0);
-    double ay = axis.get(1);
-    double az = axis.get(2);
-
-    double tx = t * ax;
-    double ty = t * ay;
-    double txx = tx * ax;
-    double txy = tx * ay;
-    double txz = tx * az;
-    double tyy = ty * ay;
-    double tyz = ty * az;
-    double tzz = t * az * az;
-
-    double sx = s * ax;
-    double sy = s * ay;
-    double sz = s * az;
-
-    double x = get(0);
-    double y = get(1);
-    double z = get(2);
-
-    double fx = (txx + c) * x + (txy - sz) * y + (txz + sy) * z;
-    double fy = (txy + sz) * x + (tyy + c) * y + (tyz - sx) * z;
-    double fz = (txz - sy) * x + (tyz + sx) * y + (tzz + c) * z;
-
-    return new FeatureVec(3, fx, fy, fz);
-  }
-
   /** set the time stamp of this point (ms) */
   public void setTime(long ms)
   {
@@ -167,11 +127,9 @@ public class FeatureVec
   /** @return true if no dimensions are NaN */
   public boolean isValid()
   {
-    if (vec == null)
-      return false;
+    if (vec == null) return false;
     for (int i = 0; i < vec.length; i++)
-      if (Double.isNaN(vec[i]))
-        return false;
+      if (Double.isNaN(vec[i])) return false;
     return true;
   }
 
@@ -218,8 +176,7 @@ public class FeatureVec
   {
     int n = fv.getNumDims();
     name = fv.name;
-    if (vec == null || getNumDims() != n)
-      vec = new double[n];
+    if (vec == null || getNumDims() != n) vec = new double[n];
     for (int i = 0; i < n; i++)
       vec[i] = fv.get(i);
     timestamp = fv.timestamp;
@@ -233,6 +190,7 @@ public class FeatureVec
     int nd = dims.length;
     FeatureVec ret = new FeatureVec(nd);
     ret.setTime(getTime());
+    ret.setName(getName());
     for (int i = 0; i < nd; i++)
       ret.set(i, get(dims[i]));
     return ret;
@@ -699,8 +657,7 @@ public class FeatureVec
   public boolean lessThan(FeatureVec fv)
   {
     for (int d = 0; d < vec.length; d++)
-      if (vec[d] >= fv.get(d))
-        return false;
+      if (vec[d] >= fv.get(d)) return false;
     return true;
   }
 
@@ -708,8 +665,7 @@ public class FeatureVec
   public boolean leqThan(FeatureVec fv)
   {
     for (int d = 0; d < vec.length; d++)
-      if (vec[d] > fv.get(d))
-        return false;
+      if (vec[d] > fv.get(d)) return false;
     return true;
   }
 
@@ -717,8 +673,7 @@ public class FeatureVec
   public boolean geqThan(FeatureVec fv)
   {
     for (int d = 0; d < vec.length; d++)
-      if (vec[d] < fv.get(d))
-        return false;
+      if (vec[d] < fv.get(d)) return false;
     return true;
   }
 
@@ -726,8 +681,7 @@ public class FeatureVec
   public boolean greaterThan(FeatureVec fv)
   {
     for (int d = 0; d < vec.length; d++)
-      if (vec[d] <= fv.get(d))
-        return false;
+      if (vec[d] <= fv.get(d)) return false;
     return true;
   }
 
@@ -735,8 +689,7 @@ public class FeatureVec
   public boolean lessThan(double x)
   {
     for (int d = 0; d < vec.length; d++)
-      if (vec[d] >= x)
-        return false;
+      if (vec[d] >= x) return false;
     return true;
   }
 
@@ -744,8 +697,7 @@ public class FeatureVec
   public boolean leqThan(double x)
   {
     for (int d = 0; d < vec.length; d++)
-      if (vec[d] > x)
-        return false;
+      if (vec[d] > x) return false;
     return true;
   }
 
@@ -753,8 +705,7 @@ public class FeatureVec
   public boolean geqThan(double x)
   {
     for (int d = 0; d < vec.length; d++)
-      if (vec[d] < x)
-        return false;
+      if (vec[d] < x) return false;
     return true;
   }
 
@@ -762,8 +713,7 @@ public class FeatureVec
   public boolean greaterThan(double x)
   {
     for (int d = 0; d < vec.length; d++)
-      if (vec[d] <= x)
-        return false;
+      if (vec[d] <= x) return false;
     return true;
   }
 

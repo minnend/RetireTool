@@ -40,7 +40,7 @@ public class RetireTool
   public static final int           GRAPH_WIDTH    = 710;
   public static final int           GRAPH_HEIGHT   = 450;
 
-  public final static SequenceStore store          = new SequenceStore();
+  public static final SequenceStore store          = new SequenceStore();
 
   /** Dimension to use in the price sequence for SMA predictions. */
   public static int                 iPriceSMA      = 0;
@@ -135,7 +135,8 @@ public class RetireTool
     for (int t = 0; t < T; ++t) {
       long time = guideSeq.getTimeMS(t);
       store.lock(TimeLib.TIME_BEGIN, time);
-      long nextTime = (t == T - 1 ? TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(time))) : guideSeq.getTimeMS(t + 1));
+      long nextTime = (t == T - 1 ? TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(time))) : guideSeq
+          .getTimeMS(t + 1));
       broker.setTime(time, prevTime, nextTime);
       TimeInfo timeInfo = broker.getTimeInfo();
 
@@ -325,7 +326,7 @@ public class RetireTool
     // ConfigSMA config = new ConfigSMA(60, 0, 70, 10, 1.0, FinLib.Close, gap);
     // ConfigSMA config = new ConfigSMA(50, 30, 80, 60, 0.25, FinLib.Close, gap);
 
-    //final long assetMap = 63412;// 254;
+    // final long assetMap = 63412;// 254;
 
     // Search without jitter.
     // PredictorConfig[] configsSMA = new PredictorConfig[] {
@@ -335,25 +336,23 @@ public class RetireTool
     // PredictorConfig config = new ConfigMulti(assetMap, configsSMA);
 
     // Search with jitter.
-//    PredictorConfig[] configs = new PredictorConfig[] { new ConfigSMA(10, 0, 240, 0, 2.0, FinLib.Close, gap),
-//        new ConfigSMA(30, 0, 250, 40, 0.25, FinLib.Close, gap), new ConfigSMA(20, 0, 240, 130, 1.0, FinLib.Close, gap),
-//        new ConfigSMA(50, 0, 180, 30, 0.25, FinLib.Close, gap), };
-//    PredictorConfig config = new ConfigMulti(assetMap, configs);
-    
-//    PredictorConfig[] singleConfigs = new PredictorConfig[] {
-//        new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap),
-//        new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap),
-//        new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap) };
-    
-//    PredictorConfig[] singleConfigs = new PredictorConfig[] {
-//        new ConfigSMA(30, 0, 220, 170, 3.0, FinLib.Close, gap),
-//        new ConfigSMA(5, 0, 165, 5, 0.5, FinLib.Close, gap),
-//        new ConfigSMA(5, 0, 145, 135, 1.0, FinLib.Close, gap) };
-    
-    PredictorConfig[] singleConfigs = new PredictorConfig[] {
-      new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap),
-      new ConfigSMA(25, 0, 155, 125, 0.75, FinLib.Close, gap),
-      new ConfigSMA(5, 0, 165, 5, 0.5, FinLib.Close, gap) };
+    // PredictorConfig[] configs = new PredictorConfig[] { new ConfigSMA(10, 0, 240, 0, 2.0, FinLib.Close, gap),
+    // new ConfigSMA(30, 0, 250, 40, 0.25, FinLib.Close, gap), new ConfigSMA(20, 0, 240, 130, 1.0, FinLib.Close, gap),
+    // new ConfigSMA(50, 0, 180, 30, 0.25, FinLib.Close, gap), };
+    // PredictorConfig config = new ConfigMulti(assetMap, configs);
+
+    // PredictorConfig[] singleConfigs = new PredictorConfig[] {
+    // new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap),
+    // new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap),
+    // new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap) };
+
+    // PredictorConfig[] singleConfigs = new PredictorConfig[] {
+    // new ConfigSMA(30, 0, 220, 170, 3.0, FinLib.Close, gap),
+    // new ConfigSMA(5, 0, 165, 5, 0.5, FinLib.Close, gap),
+    // new ConfigSMA(5, 0, 145, 135, 1.0, FinLib.Close, gap) };
+
+    PredictorConfig[] singleConfigs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap),
+        new ConfigSMA(25, 0, 155, 125, 0.75, FinLib.Close, gap), new ConfigSMA(5, 0, 165, 5, 0.5, FinLib.Close, gap) };
 
     // Multi-predictor to make final decisions.
     PredictorConfig config = new ConfigMulti(254, singleConfigs);

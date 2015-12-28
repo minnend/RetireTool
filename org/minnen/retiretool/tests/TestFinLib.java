@@ -27,12 +27,12 @@ public class TestFinLib
   public void testGetReturn()
   {
     Sequence cumulativeReturns = new Sequence(new double[] { 1.0, 1.2, 1.44, 1.296 });
-    assertEquals(1.2, FinLib.getReturn(cumulativeReturns, 0, 1), 1e-6);
-    assertEquals(1.2, FinLib.getReturn(cumulativeReturns, 1, 2), 1e-6);
-    assertEquals(0.9, FinLib.getReturn(cumulativeReturns, 2, 3), 1e-6);
-    assertEquals(1.44, FinLib.getReturn(cumulativeReturns, 0, 2), 1e-6);
-    assertEquals(1.08, FinLib.getReturn(cumulativeReturns, 1, 3), 1e-6);
-    assertEquals(1.296, FinLib.getReturn(cumulativeReturns, 0, 3), 1e-6);
+    assertEquals(1.2, FinLib.getTotalReturn(cumulativeReturns, 0, 1), 1e-6);
+    assertEquals(1.2, FinLib.getTotalReturn(cumulativeReturns, 1, 2), 1e-6);
+    assertEquals(0.9, FinLib.getTotalReturn(cumulativeReturns, 2, 3), 1e-6);
+    assertEquals(1.44, FinLib.getTotalReturn(cumulativeReturns, 0, 2), 1e-6);
+    assertEquals(1.08, FinLib.getTotalReturn(cumulativeReturns, 1, 3), 1e-6);
+    assertEquals(1.296, FinLib.getTotalReturn(cumulativeReturns, 0, 3), 1e-6);
   }
 
   @Test

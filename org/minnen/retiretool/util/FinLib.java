@@ -136,8 +136,8 @@ public final class FinLib
     Sequence seq = new Sequence(cumulativeReturns.getName() + " (real)");
     seq.addData(1.0, cumulativeReturns.getStartMS());
     for (int i = 1; i < cumulativeReturns.length(); ++i) {
-      double growth = getReturn(cumulativeReturns, i - 1, i);
-      double inflation = getReturn(cpi, i - 1, i);
+      double growth = getTotalReturn(cumulativeReturns, i - 1, i);
+      double inflation = getTotalReturn(cpi, i - 1, i);
       double real = seq.getLast(0) * growth / inflation;
       seq.addData(real, cumulativeReturns.getTimeMS(i));
     }
@@ -411,12 +411,12 @@ public final class FinLib
     String name = String.format("%s (%s)", cumulativeReturns.getName(), TimeLib.formatDurationMonths(nMonths));
     Sequence rois = new Sequence(name);
     if (N <= nMonths) {
-      double growth = FinLib.getReturn(cumulativeReturns, 0, N - 1);
+      double growth = FinLib.getTotalReturn(cumulativeReturns, 0, N - 1);
       double roi = FinLib.getAnnualReturn(growth, nMonths);
       rois.addData(roi, cumulativeReturns.getStartMS());
     } else {
       for (int i = 0; i + nMonths < N; i++) {
-        double roi = getReturn(cumulativeReturns, i, i + nMonths);
+        double roi = getTotalReturn(cumulativeReturns, i, i + nMonths);
         if (nMonths >= 12) {
           roi = getAnnualReturn(roi, nMonths);
         } else {
@@ -447,11 +447,22 @@ public final class FinLib
    * @param cumulativeReturns sequence of cumulative returns for the investment strategy
    * @param iFrom index of starting point for calculation
    * @param iTo index of ending point for calculation (inclusive)
+   * @param iDim dimension to use for price data.
    * @return total return from iFrom to iTo.
    */
-  public static double getReturn(Sequence cumulativeReturns, int iFrom, int iTo)
+  public static double getTotalReturn(Sequence cumulativeReturns, int iFrom, int iTo, int iDim)
   {
-    return cumulativeReturns.get(iTo, 0) / cumulativeReturns.get(iFrom, 0);
+    return cumulativeReturns.get(iTo, iDim) / cumulativeReturns.get(iFrom, iDim);
+  }
+
+  public static double getTotalReturn(Sequence cumulativeReturns, int iFrom, int iTo)
+  {
+    return getTotalReturn(cumulativeReturns, iFrom, iTo, 0);
+  }
+
+  public static double getTotalReturn(Sequence cumulativeReturns)
+  {
+    return getTotalReturn(cumulativeReturns, 0, -1);
   }
 
   /**
@@ -503,7 +514,7 @@ public final class FinLib
       }
 
       // Update balance based on investment returns.
-      balance *= getReturn(cumulativeReturns, i, i + 1);
+      balance *= getTotalReturn(cumulativeReturns, i, i + 1);
 
       // Broker gets their cut.
       balance *= (1.0 - monthlyExpenseRatio);
@@ -532,7 +543,7 @@ public final class FinLib
       }
 
       // Update balance based on investment returns.
-      balance *= getReturn(inflationAdjustedReturns, i, i + 1);
+      balance *= getTotalReturn(inflationAdjustedReturns, i, i + 1);
 
       // Broker gets their cut.
       balance *= (1.0 - monthlyExpenseRatio);
@@ -571,7 +582,7 @@ public final class FinLib
       }
 
       // Update balance based on investment returns.
-      balance *= getReturn(cumulativeReturns, i, i + 1);
+      balance *= getTotalReturn(cumulativeReturns, i, i + 1);
 
       // Broker gets their cut.
       balance *= (1.0 - monthlyExpenseRatio);
@@ -834,7 +845,7 @@ public final class FinLib
     Sequence leveraged = new Sequence(String.format("%s (L=%.3f)", cumulativeReturns.getName(), leverage));
     leveraged.addData(new FeatureVec(1, cumulativeReturns.get(0, 0)), cumulativeReturns.getTimeMS(0));
     for (int i = 1; i < cumulativeReturns.size(); ++i) {
-      double r = getReturn(cumulativeReturns, i - 1, i);
+      double r = getTotalReturn(cumulativeReturns, i - 1, i);
       double lr = leverage * (r - 1.0) + 1.0;
       double v = Math.max(0.0, lr * leveraged.get(i - 1, 0));
       leveraged.addData(new FeatureVec(1, v), cumulativeReturns.getTimeMS(i));

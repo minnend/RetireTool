@@ -169,7 +169,7 @@ public class Dashboard
         // Return for this time period (single change).
         int index1 = baselineReturns.getClosestIndex(timeCodeSingles.time);
         int index2 = baselineReturns.getClosestIndex(nextTime);
-        double totalMul = FinLib.getReturn(baselineReturns, index1, index2);
+        double totalMul = FinLib.getTotalReturn(baselineReturns, index1, index2);
         f.write("<td>%.2f</td>", FinLib.mul2ret(totalMul));
 
         // Return for this time period (top-level change).
@@ -179,7 +179,7 @@ public class Dashboard
           nextTopTime = predMultis.timeCodes.get(iTopCode + 1).time;
         }
         index2 = baselineReturns.getClosestIndex(nextTopTime);
-        totalMul = FinLib.getReturn(baselineReturns, index1, index2);
+        totalMul = FinLib.getTotalReturn(baselineReturns, index1, index2);
         f.write(sRowGap);
         f.write("<td>%s</td>", bTopChange ? String.format("%.2f", FinLib.mul2ret(totalMul)) : "");
 
@@ -279,7 +279,7 @@ public class Dashboard
         // Return for this time period (single change).
         int index1 = baselineReturns.getClosestIndex(timeCodeSingles.time);
         int index2 = baselineReturns.getClosestIndex(nextTime);
-        double totalMul = FinLib.getReturn(baselineReturns, index1, index2);
+        double totalMul = FinLib.getTotalReturn(baselineReturns, index1, index2);
         f.write("<td>%.2f</td>", FinLib.mul2ret(totalMul));
 
         // Return for this time period (top-level change).
@@ -296,7 +296,7 @@ public class Dashboard
         long nextTopTime = (iNextTop >= predStrategy.timeCodes.size() ? baselineReturns.getEndMS()
             : predStrategy.timeCodes.get(iNextTop).time);
         index2 = baselineReturns.getClosestIndex(nextTopTime);
-        totalMul = FinLib.getReturn(baselineReturns, index1, index2);
+        totalMul = FinLib.getTotalReturn(baselineReturns, index1, index2);
         f.write(sRowGap);
         f.write("<td>%s</td>", bTopChange ? String.format("%.2f", FinLib.mul2ret(totalMul)) : "");
 
