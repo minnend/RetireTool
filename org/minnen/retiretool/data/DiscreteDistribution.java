@@ -62,10 +62,24 @@ public class DiscreteDistribution
     return this;
   }
 
+  /** Update the name and weight of the i^th entry. */
   public void set(int i, String name, double weight)
   {
     names[i] = name;
     weights[i] = weight;
+  }
+
+  public void set(String name, double weight)
+  {
+    weights[find(name)] = weight;
+  }
+
+  public int find(String name)
+  {
+    for (int i = 0; i < names.length; ++i) {
+      if (names[i].equals(name)) return i;
+    }
+    return -1;
   }
 
   public int size()

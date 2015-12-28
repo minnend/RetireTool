@@ -722,6 +722,9 @@ public class Sequence implements Iterable<FeatureVec>
    */
   public FeatureVec average(int iStart, int iEnd)
   {
+    if (iStart < 0) {
+      iStart += length();
+    }
     if (iEnd < 0) {
       iEnd += length();
     }
@@ -745,6 +748,9 @@ public class Sequence implements Iterable<FeatureVec>
    */
   public double average(int iStart, int iEnd, int iDim)
   {
+    if (iStart < 0) {
+      iStart += length();
+    }
     if (iEnd < 0) {
       iEnd += length();
     }

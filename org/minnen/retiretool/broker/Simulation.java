@@ -74,6 +74,8 @@ public class Simulation
 
     int rebalanceDelay = 0;
 
+    // TODO support prediction at start instead of on second tick
+
     broker.reset();
     broker.setPriceIndex(bPriceIndexAlwaysZero ? 0 : FinLib.Close);
     Account account = broker.openAccount(Account.Type.Roth, true);

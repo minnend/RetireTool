@@ -16,6 +16,7 @@ import org.minnen.retiretool.data.Sequence.EndpointBehavior;
 import org.minnen.retiretool.predictor.config.ConfigConst;
 import org.minnen.retiretool.predictor.config.ConfigMixed;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
+import org.minnen.retiretool.predictor.daily.AdaptivePredictor;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.util.FinLib;
@@ -24,7 +25,9 @@ import org.minnen.retiretool.util.TimeLib;
 public class AdaptiveAlloc
 {
   public static final SequenceStore store        = new SequenceStore();
-  public static final String[]      fundSymbols  = new String[] { "SPY", "QQQ", "EWU", "EWG", "EWJ", "XLK", "XLE" }; ;
+  public static final String[]      fundSymbols  = new String[] { "SPY", "EWU", "EWG", "EWJ", "VGENX", "WHOSX",
+      "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX", "SGGDX", "VGPMX", "USAGX", "FSPCX", "FSRBX", "FPBFX", "ETGIX" };
+  // QQQ, XLK, AAPL, MSFT
   public static final String[]      assetSymbols = new String[fundSymbols.length + 1];
 
   static {
@@ -57,7 +60,8 @@ public class AdaptiveAlloc
           TimeLib.formatDate(seq.getEndMS()));
     }
     long commonStart = TimeLib.calcCommonStart(seqs);
-    long commonEnd = TimeLib.toMs(2013, Month.DECEMBER, 31); // TimeLib.calcCommonEnd(seqs);
+    // long commonEnd = TimeLib.calcCommonEnd(seqs);
+    long commonEnd = TimeLib.toMs(2012, Month.DECEMBER, 31); // TODO
     System.out.printf("Common: [%s] -> [%s]\n", TimeLib.formatDate(commonStart), TimeLib.formatDate(commonEnd));
 
     long simStartMs = TimeLib
@@ -74,24 +78,34 @@ public class AdaptiveAlloc
       seqs.set(i, seq);
       store.add(seq);
 
-      double tr = FinLib.getTotalReturn(seq, seq.getClosestIndex(simStartMs), -1, 0);
-      double ar = FinLib.getAnnualReturn(tr, nSimMonths);
-      System.out.printf("%s: %5.2f%%  (%.2fx)\n", seq.getName(), ar, tr);
+      // double tr = FinLib.getTotalReturn(seq, seq.getClosestIndex(simStartMs), -1, 0);
+      // double ar = FinLib.getAnnualReturn(tr, nSimMonths);
+      // System.out.printf("%s: %5.2f%%  (%.2fx)\n", seq.getName(), ar, tr);
     }
 
-    // Run simulation.
-    Sequence spy = store.get("SPY");
+    // Setup simulation.
+    Sequence spy = store.get(fundSymbols[0]);
     Sequence guideSeq = spy.subseq(simStartMs, spy.getEndMS(), EndpointBehavior.Closest);
     Simulation sim = new Simulation(store, guideSeq);
-    // PredictorConfig config = new ConfigConst(0);
+
+    // Run simulation for buy-and-hold of individual assets.
     PredictorConfig[] constConfigs = new PredictorConfig[fundSymbols.length];
     for (int i = 0; i < constConfigs.length; ++i) {
       constConfigs[i] = new ConfigConst(i);
+      Predictor predictor = constConfigs[i].build(sim.broker.accessObject, assetSymbols);
+      Sequence returns = sim.run(predictor, fundSymbols[i]);
+      System.out.println(CumulativeStats.calc(returns));
     }
+
+    // Run simulation for fixed mix of assets.
     PredictorConfig config = new ConfigMixed(DiscreteDistribution.uniform(fundSymbols), constConfigs);
     Predictor predictor = config.build(sim.broker.accessObject, assetSymbols);
-    Sequence returns = sim.run(predictor);
-    CumulativeStats cstats = CumulativeStats.calc(returns);
-    System.out.println(cstats);
+    Sequence returns = sim.run(predictor, "Mix");
+    System.out.println(CumulativeStats.calc(returns));
+
+    // Run adaptive asset allocation.
+    predictor = new AdaptivePredictor(sim.broker.accessObject, assetSymbols);
+    returns = sim.run(predictor, "AAA");
+    System.out.println(CumulativeStats.calc(returns));
   }
 }

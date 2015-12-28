@@ -139,8 +139,10 @@ public class CumulativeStats implements Comparable<CumulativeStats>
     // FinLib.getBaseName(name()), cagr, drawdown, devAnnualReturn, annualPercentiles[0], annualPercentiles[1],
     // annualPercentiles[2], annualPercentiles[3], annualPercentiles[4], percentDown10);
 
-    return String.format("[%s: CAGR=%.2f  DD=%.1f  Down10=%.1f]", FinLib.getBaseName(name()), cagr, drawdown,
-        percentDown10);
+    // return String.format("[%s: CAGR=%.2f  DD=%.1f  Down10=%.1f]", FinLib.getBaseName(name()), cagr, drawdown,
+    // percentDown10);
+
+    return String.format("[%s: %5.2f, %4.1f]", FinLib.getBaseName(name()), cagr, drawdown);
   }
 
   public String toRowString()
