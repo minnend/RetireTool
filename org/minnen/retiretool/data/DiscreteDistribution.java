@@ -33,6 +33,13 @@ public class DiscreteDistribution
     System.arraycopy(weights, 0, this.weights, 0, weights.length);
   }
 
+  public DiscreteDistribution(String name)
+  {
+    this(1);
+    names[0] = name;
+    weights[0] = 1.0;
+  }
+
   public DiscreteDistribution(String[] names, double[] weights)
   {
     this(names.length);
@@ -90,11 +97,21 @@ public class DiscreteDistribution
     Arrays.fill(weights, 0.0);
   }
 
-  public static DiscreteDistribution makeUniform(int n)
+  public static DiscreteDistribution uniform(int n)
   {
     DiscreteDistribution distribution = new DiscreteDistribution(n);
     double w = 1.0 / n;
     for (int i = 0; i < n; ++i) {
+      distribution.weights[i] = w;
+    }
+    return distribution;
+  }
+
+  public static DiscreteDistribution uniform(String[] names)
+  {
+    DiscreteDistribution distribution = new DiscreteDistribution(names);
+    double w = 1.0 / names.length;
+    for (int i = 0; i < names.length; ++i) {
       distribution.weights[i] = w;
     }
     return distribution;

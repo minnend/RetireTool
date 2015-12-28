@@ -25,12 +25,10 @@ public class MultiPredictor extends Predictor
   protected boolean calcInOut()
   {
     int code = 0;
-    int nIn = 0;
     for (int i = 0; i < predictors.length; i++) {
       code <<= 1;
       if (predictors[i].calcInOut()) {
         ++code;
-        ++nIn;
       }
     }
 

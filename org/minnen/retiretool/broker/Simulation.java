@@ -25,6 +25,11 @@ public class Simulation
   public Sequence            returnsDaily;
   public Sequence            returnsMonthly;
 
+  public Simulation(SequenceStore store, Sequence guideSeq)
+  {
+    this(store, guideSeq, Slippage.None, 0, true);
+  }
+
   public Simulation(SequenceStore store, Sequence guideSeq, Slippage slippage, int maxDelay, boolean bBuyAtNextOpen)
   {
     this.store = store;
@@ -33,11 +38,6 @@ public class Simulation
     this.bBuyAtNextOpen = bBuyAtNextOpen;
     this.maxDelay = maxDelay;
     this.broker = new Broker(store, slippage, guideSeq);
-  }
-
-  public Sequence run(Predictor predictor)
-  {
-    return run(predictor, "Returns");
   }
 
   public long getStartMS()
@@ -50,15 +50,21 @@ public class Simulation
     return guideSeq.getEndMS();
   }
 
+  public Sequence run(Predictor predictor)
+  {
+    return run(predictor, "Returns");
+  }
+
   public Sequence run(Predictor predictor, String name)
   {
     final int T = guideSeq.length();
     final long principal = Fixed.toFixed(1000.0);
+    final boolean bPriceIndexAlwaysZero = (guideSeq.getNumDims() == 1);
 
     long prevTime = guideSeq.getStartMS() - TimeLib.MS_IN_DAY;
     long lastRebalance = TimeLib.TIME_BEGIN;
     boolean bNeedRebalance = false;
-    DiscreteDistribution prevDistribution = null;
+    DiscreteDistribution prevDistribution = new DiscreteDistribution("cash");
     DiscreteDistribution desiredDistribution = null;
 
     returnsMonthly = new Sequence(name);
@@ -69,14 +75,16 @@ public class Simulation
     int rebalanceDelay = 0;
 
     broker.reset();
+    broker.setPriceIndex(bPriceIndexAlwaysZero ? 0 : FinLib.Close);
     Account account = broker.openAccount(Account.Type.Roth, true);
     for (int t = 0; t < T; ++t) {
-      long time = guideSeq.getTimeMS(t);
+      final long time = guideSeq.getTimeMS(t);
       store.lock(TimeLib.TIME_BEGIN, time);
-      long nextTime = (t == T - 1 ? TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(time))) : guideSeq
+      final long nextTime = (t == T - 1 ? TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(time))) : guideSeq
           .getTimeMS(t + 1));
       broker.setTime(time, prevTime, nextTime);
-      TimeInfo timeInfo = broker.getTimeInfo();
+      final TimeInfo timeInfo = broker.getTimeInfo();
+      // System.out.println(timeInfo);
 
       // Handle initialization issues at t==0.
       if (t == 0) {
@@ -86,15 +94,15 @@ public class Simulation
       // Handle case where we buy at the open, not the close.
       if (bBuyAtNextOpen) {
         if (bNeedRebalance && desiredDistribution != null && rebalanceDelay <= 0) {
-          broker.setPriceIndex(FinLib.Open);
+          if (!bPriceIndexAlwaysZero) {
+            broker.setPriceIndex(FinLib.Open);
+          }
           account.rebalance(desiredDistribution);
           lastRebalance = time;
-          if (prevDistribution == null) {
-            prevDistribution = new DiscreteDistribution(desiredDistribution);
-          } else {
-            prevDistribution.copyFrom(desiredDistribution);
+          prevDistribution = new DiscreteDistribution(desiredDistribution);
+          if (!bPriceIndexAlwaysZero) {
+            broker.setPriceIndex(FinLib.Close);
           }
-          broker.setPriceIndex(FinLib.Close);
         }
       }
 
@@ -124,11 +132,7 @@ public class Simulation
         if (bNeedRebalance && rebalanceDelay <= 0) {
           account.rebalance(desiredDistribution);
           lastRebalance = time;
-          if (prevDistribution == null) {
-            prevDistribution = new DiscreteDistribution(desiredDistribution);
-          } else {
-            prevDistribution.copyFrom(desiredDistribution);
-          }
+          prevDistribution = new DiscreteDistribution(desiredDistribution);
         }
       }
 

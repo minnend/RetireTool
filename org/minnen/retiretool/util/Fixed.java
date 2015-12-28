@@ -3,14 +3,14 @@ package org.minnen.retiretool.util;
 /**
  * Provides fixed-point arithmetic.
  * 
+ * Rounding is "away from zero".
+ * 
  * @author David Minnen
- *
- *         Rounding is "away from zero".
  */
 public class Fixed
 {
   /** Basic unit: 1 => dollars, 10 = > dimes, 100 => cents, etc. */
-  public static final long SCALE      = 10000;
+  public static final long SCALE      = 100000;
   public static final long HALF_SCALE = SCALE / 2L;
 
   public static final long ONE        = SCALE;

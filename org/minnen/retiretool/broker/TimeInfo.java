@@ -3,12 +3,13 @@ package org.minnen.retiretool.broker;
 import java.time.LocalDate;
 
 import org.minnen.retiretool.data.Sequence;
-import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
 
 public class TimeInfo
 {
   public final long      time;
+  public final long      prevTime;
+  public final long      nextTime;
   public final LocalDate date;
   public final LocalDate prevDate;
   public final LocalDate nextDate;
@@ -32,6 +33,8 @@ public class TimeInfo
     assert prevTime != nextTime;
 
     this.time = time;
+    this.prevTime = prevTime;
+    this.nextTime = nextTime;
 
     this.date = TimeLib.ms2date(time);
     this.prevDate = TimeLib.ms2date(prevTime);
@@ -60,5 +63,11 @@ public class TimeInfo
 
     isFirstDayOfWeek = !TimeLib.isSameWeek(prevDate, date);
     isLastDayOfWeek = !TimeLib.isSameWeek(date, nextDate);
+  }
+
+  public String toString()
+  {
+    return String.format("[%s|%s|%s]", TimeLib.formatDate(prevTime), TimeLib.formatDate(time),
+        TimeLib.formatDate(nextTime));
   }
 }

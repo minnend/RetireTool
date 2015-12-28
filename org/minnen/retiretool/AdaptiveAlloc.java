@@ -7,17 +7,30 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.DataIO;
+import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.data.Sequence.EndpointBehavior;
+import org.minnen.retiretool.predictor.config.ConfigConst;
+import org.minnen.retiretool.predictor.config.ConfigMixed;
+import org.minnen.retiretool.predictor.config.PredictorConfig;
+import org.minnen.retiretool.predictor.daily.Predictor;
+import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
 
 public class AdaptiveAlloc
 {
-  public static final SequenceStore store       = new SequenceStore();
-  public static final String[]      fundSymbols = new String[] { "SPY", "QQQ", "EWU", "EWG", "EWJ", "XLK", "XLE" };
+  public static final SequenceStore store        = new SequenceStore();
+  public static final String[]      fundSymbols  = new String[] { "SPY", "QQQ", "EWU", "EWG", "EWJ", "XLK", "XLE" }; ;
+  public static final String[]      assetSymbols = new String[fundSymbols.length + 1];
+
+  static {
+    System.arraycopy(fundSymbols, 0, assetSymbols, 0, fundSymbols.length);
+    assetSymbols[assetSymbols.length - 1] = "cash";
+  }
 
   public static void main(String[] args) throws IOException
   {
@@ -47,23 +60,38 @@ public class AdaptiveAlloc
     long commonEnd = TimeLib.toMs(2013, Month.DECEMBER, 31); // TimeLib.calcCommonEnd(seqs);
     System.out.printf("Common: [%s] -> [%s]\n", TimeLib.formatDate(commonStart), TimeLib.formatDate(commonEnd));
 
-    long simStart = TimeLib.toMs(TimeLib.ms2date(commonStart).plusMonths(7).with(TemporalAdjusters.firstDayOfMonth()));
-    double nSimMonths = TimeLib.monthsBetween(simStart, commonEnd);
-    System.out.printf("Simulation Start: [%s] (%.1f months)\n", TimeLib.formatDate(simStart), nSimMonths);
-
-    // TODO need to incorporate dividend payments explicitly.
+    long simStartMs = TimeLib
+        .toMs(TimeLib.ms2date(commonStart).plusMonths(7).with(TemporalAdjusters.firstDayOfMonth()));
+    double nSimMonths = TimeLib.monthsBetween(simStartMs, commonEnd);
+    System.out.printf("Simulation Start: [%s] (%.1f months)\n", TimeLib.formatDate(simStartMs), nSimMonths);
 
     for (int i = 0; i < seqs.size(); ++i) {
       Sequence seq = seqs.get(i);
+      // TODO need to incorporate dividend payments explicitly.
+      // Currently extracting adjusted close that implicitly incorporates dividends.
       seq = seq.extractDims(FinLib.AdjClose);
       seq = seq.subseq(commonStart, commonEnd, EndpointBehavior.Closest);
       seqs.set(i, seq);
       store.add(seq);
 
-      double tr = FinLib.getTotalReturn(seq, seq.getClosestIndex(simStart), -1, 0);
+      double tr = FinLib.getTotalReturn(seq, seq.getClosestIndex(simStartMs), -1, 0);
       double ar = FinLib.getAnnualReturn(tr, nSimMonths);
       System.out.printf("%s: %5.2f%%  (%.2fx)\n", seq.getName(), ar, tr);
     }
 
+    // Run simulation.
+    Sequence spy = store.get("SPY");
+    Sequence guideSeq = spy.subseq(simStartMs, spy.getEndMS(), EndpointBehavior.Closest);
+    Simulation sim = new Simulation(store, guideSeq);
+    // PredictorConfig config = new ConfigConst(0);
+    PredictorConfig[] constConfigs = new PredictorConfig[fundSymbols.length];
+    for (int i = 0; i < constConfigs.length; ++i) {
+      constConfigs[i] = new ConfigConst(i);
+    }
+    PredictorConfig config = new ConfigMixed(DiscreteDistribution.uniform(fundSymbols), constConfigs);
+    Predictor predictor = config.build(sim.broker.accessObject, assetSymbols);
+    Sequence returns = sim.run(predictor);
+    CumulativeStats cstats = CumulativeStats.calc(returns);
+    System.out.println(cstats);
   }
 }
