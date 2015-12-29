@@ -37,21 +37,30 @@ public class AdaptiveAlloc
 
   public static void main(String[] args) throws IOException
   {
-    // Make sure we have the latest data.
-    File dataDir = new File("g:/research/finance/yahoo/");
-    if (!dataDir.exists()) {
-      dataDir.mkdirs();
-    }
+    File dataDir = new File("g:/research/finance/");
+    assert dataDir.isDirectory();
 
+    File yahooDir = new File(dataDir, "yahoo/");
+    if (!yahooDir.exists()) yahooDir.mkdirs();
+
+    Sequence tbillData = DataIO.loadDateValueCSV(new File(dataDir, "treasury-bills-3-month.csv"));
+    tbillData.setName("3-Month Treasury Bills");
+    tbillData.adjustDatesToEndOfMonth();
+    System.out.printf("TBills: [%s] -> [%s]\n", TimeLib.formatMonth(tbillData.getStartMS()),
+        TimeLib.formatMonth(tbillData.getEndMS()));
+    store.add(tbillData, "tbilldata");
+    store.alias("interest-rates", "tbilldata");
+
+    // Make sure we have the latest data.
     for (String symbol : fundSymbols) {
-      File file = DataIO.getYahooFile(dataDir, symbol);
+      File file = DataIO.getYahooFile(yahooDir, symbol);
       DataIO.updateDailyDataFromYahoo(file, symbol, 8 * TimeLib.MS_IN_HOUR);
     }
 
     // Load data and trim to same time period.
     List<Sequence> seqs = new ArrayList<>();
     for (String symbol : fundSymbols) {
-      File file = DataIO.getYahooFile(dataDir, symbol);
+      File file = DataIO.getYahooFile(yahooDir, symbol);
       Sequence seq = DataIO.loadYahooData(file);
       seqs.add(seq);
     }

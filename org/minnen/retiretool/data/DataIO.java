@@ -45,7 +45,7 @@ public class DataIO
       }
       String[] toks = line.trim().split("[,\\s]+");
       if (toks == null || toks.length != 2) {
-        System.err.printf("Error parsing CSV data: [%s]\n", line);
+        // System.err.printf("Error parsing CSV data: [%s]\n", line);
         continue;
       }
 
@@ -58,11 +58,15 @@ public class DataIO
       try {
         int year = Integer.parseInt(dateFields[0]);
         int month = Integer.parseInt(dateFields[1]);
+        int day = 1;
+        if (dateFields.length > 2) {
+          day = Integer.parseInt(dateFields[2]);
+        }
         double rate = Double.parseDouble(toks[1]);
 
-        data.addData(rate, TimeLib.toMs(year, month, 1));
+        data.addData(rate, TimeLib.toMs(year, month, day));
       } catch (NumberFormatException e) {
-        System.err.printf("Error parsing CSV data: [%s]\n", line);
+        // System.err.printf("Error parsing CSV data: [%s]\n", line);
         continue;
       }
     }

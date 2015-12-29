@@ -42,8 +42,14 @@ public class Dashboard
 
   public static void setupData() throws IOException
   {
-    File file = new File("f:/tmp/snp.csv");
-    file = DataIO.downloadDailyDataFromYahoo(file, "^GSPC", TimeLib.MS_IN_HOUR * 12);
+    File dataDir = new File("g:/research/finance/yahoo/");
+    if (!dataDir.exists()) {
+      dataDir.mkdirs();
+    }
+
+    String symbol = "^GSPC";
+    File file = DataIO.getYahooFile(dataDir, symbol);
+    DataIO.updateDailyDataFromYahoo(file, symbol, 8 * TimeLib.MS_IN_HOUR);
 
     Sequence stock = DataIO.loadYahooData(file);
     System.out.printf("S&P (Daily): [%s] -> [%s]\n", TimeLib.formatDate(stock.getStartMS()),
