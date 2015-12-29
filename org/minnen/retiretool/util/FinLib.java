@@ -817,9 +817,10 @@ public final class FinLib
 
   public static Sequence calcCorrelation(Sequence returns1, Sequence returns2, int window)
   {
-    double[] r1 = new double[returns1.length() - 1];
-    double[] r2 = new double[r1.length];
-    for (int i = 1; i <= r1.length; ++i) {
+    final int n = returns1.length() - 1;
+    double[] r1 = new double[n];
+    double[] r2 = new double[n];
+    for (int i = 1; i <= n; ++i) {
       r1[i - 1] = returns1.get(i, 0) / returns1.get(i - 1, 0);
       r2[i - 1] = returns2.get(i, 0) / returns2.get(i - 1, 0);
     }
@@ -834,6 +835,40 @@ public final class FinLib
       corr.addData(Library.correlation(a, b), returns1.getTimeMS(i - window / 2));
     }
     return corr;
+  }
+
+  public static double calcCorrelation(Sequence prices1, Sequence prices2, int iStart, int iEnd, int iDim)
+  {
+    double[] r1 = getReturns(prices1, iStart, iEnd, iDim);
+    double[] r2 = getReturns(prices2, iStart, iEnd, iDim);
+    return Library.correlation(r1, r2);
+  }
+
+  /**
+   * Calculate the tick-by-tick returns from the given sequence of prices.
+   * 
+   * There will be N = iEnd - iStart returns. The first one is from (iStart) to (iStart+1).
+   * 
+   * @param prices sequence of prices
+   * @param iStart first index to include
+   * @param iEnd last index to include
+   * @param iDim dimension of <code>prices</code> to extract
+   * @return array containing per-tick returns (1.2 = 1.2% return)
+   */
+  public static double[] getReturns(Sequence prices, int iStart, int iEnd, int iDim)
+  {
+    if (iStart < 0) iStart += prices.length();
+    if (iEnd < 0) iEnd += prices.length();
+    assert iEnd > iStart;
+    final int N = iEnd - iStart;
+    double[] r = new double[N];
+    int ir = 0;
+    for (int i = iStart + 1; i <= iEnd; ++i) {
+      double mul = prices.get(i, iDim) / prices.get(i - 1, iDim);
+      r[ir++] = FinLib.mul2ret(mul);
+    }
+    assert ir == N;
+    return r;
   }
 
   public static Sequence calcLeveragedReturns(Sequence cumulativeReturns, double leverage)

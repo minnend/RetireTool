@@ -92,6 +92,7 @@ public class TimeLib
   /** @return whole number of months between the times (partial month is ignored). */
   public static int monthsBetween(long t1, long t2)
   {
+    assert t1 != TimeLib.TIME_ERROR && t2 != TimeLib.TIME_ERROR;
     LocalDate d1 = ms2date(t1);
     LocalDate d2 = ms2date(t2);
     return (int) ChronoUnit.MONTHS.between(d1, d2);

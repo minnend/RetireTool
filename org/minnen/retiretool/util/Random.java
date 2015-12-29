@@ -1,6 +1,7 @@
 package org.minnen.retiretool.util;
 
 import java.io.*;
+import java.util.Arrays;
 
 /**
  * http://cs.gmu.edu/~sean/research/mersenne/MersenneTwisterFast.java
@@ -913,6 +914,29 @@ public strictfp class Random implements Serializable, Cloneable
   public void clearGaussian()
   {
     __haveNextNextGaussian = false;
+  }
+
+  public double[] nextSimplex(int D)
+  {
+    assert D > 1;
+
+    // Generate D numbers in [0,1].
+    double[] a = new double[D];
+    for (int i = 0; i < D - 1; ++i) {
+      a[i] = nextDouble(true, true);
+    }
+    a[D - 1] = 1.0;
+    Arrays.sort(a);
+
+    // Uniform sample on the unit simplex is found from differences of sorted points.
+    double prev = 0.0;
+    for (int i = 0; i < D; ++i) {
+      double diff = a[i] - prev;
+      prev = a[i];
+      a[i] = diff;
+    }
+
+    return a;
   }
 
   public double nextGaussian()

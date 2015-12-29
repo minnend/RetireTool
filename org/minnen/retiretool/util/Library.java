@@ -41,6 +41,7 @@ public final class Library
 
   public static void copy(double from[], double[] to)
   {
+    // TODO use System.arraycopy.
     int n = Math.min(from.length, to.length);
     for (int i = 0; i < n; i++)
       to[i] = from[i];
@@ -48,6 +49,7 @@ public final class Library
 
   public static void copy(double from[], double[] to, int iStartFrom, int iStartTo, int len)
   {
+    // TODO use System.arraycopy.
     for (int i = 0; i < len; i++)
       to[i + iStartTo] = from[i + iStartFrom];
   }

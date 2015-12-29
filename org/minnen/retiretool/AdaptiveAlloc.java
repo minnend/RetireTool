@@ -101,9 +101,9 @@ public class AdaptiveAlloc
     PredictorConfig[] constConfigs = new PredictorConfig[fundSymbols.length];
     for (int i = 0; i < constConfigs.length; ++i) {
       constConfigs[i] = new ConfigConst(i);
-      Predictor predictor = constConfigs[i].build(sim.broker.accessObject, assetSymbols);
-      Sequence returns = sim.run(predictor, fundSymbols[i]);
-      System.out.println(CumulativeStats.calc(returns));
+      // Predictor predictor = constConfigs[i].build(sim.broker.accessObject, assetSymbols);
+      // Sequence returns = sim.run(predictor, fundSymbols[i]);
+      // System.out.println(CumulativeStats.calc(returns));
     }
 
     // Run simulation for fixed mix of assets.

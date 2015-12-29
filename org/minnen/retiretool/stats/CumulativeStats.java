@@ -36,6 +36,7 @@ public class CumulativeStats implements Comparable<CumulativeStats>
     stats.cumulativeReturns = cumulativeReturns;
 
     if (cumulativeReturns != null && !cumulativeReturns.isEmpty()) {
+      // TODO use fractional months.
       int nMonths = TimeLib.monthsBetween(cumulativeReturns.getStartMS(), cumulativeReturns.getEndMS());
       stats.totalReturn = cumulativeReturns.getLast(0) / cumulativeReturns.getFirst(0);
       stats.cagr = FinLib.getAnnualReturn(stats.totalReturn, nMonths);
@@ -102,7 +103,7 @@ public class CumulativeStats implements Comparable<CumulativeStats>
 
   public double scoreSimple()
   {
-    return cagr - drawdown / 20.0;
+    return cagr - drawdown / 10.0; // TODO divide by 20.0?
   }
 
   public double scoreComplex()
@@ -142,6 +143,7 @@ public class CumulativeStats implements Comparable<CumulativeStats>
     // return String.format("[%s: CAGR=%.2f  DD=%.1f  Down10=%.1f]", FinLib.getBaseName(name()), cagr, drawdown,
     // percentDown10);
 
+    //return String.format("[%s: %5.2f, %4.1f |%.2f]", FinLib.getBaseName(name()), cagr, drawdown, scoreSimple());
     return String.format("[%s: %5.2f, %4.1f]", FinLib.getBaseName(name()), cagr, drawdown);
   }
 
