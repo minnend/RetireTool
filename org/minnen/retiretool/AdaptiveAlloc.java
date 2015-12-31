@@ -25,8 +25,16 @@ import org.minnen.retiretool.util.TimeLib;
 public class AdaptiveAlloc
 {
   public static final SequenceStore store        = new SequenceStore();
-  public static final String[]      fundSymbols  = new String[] { "SPY", "EWU", "EWG", "EWJ", "VGENX", "WHOSX",
-      "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX", "SGGDX", "VGPMX", "USAGX", "FSPCX", "FSRBX", "FPBFX", "ETGIX" };
+
+  // These symbols go back to 1 April 1996.
+  public static final String[]      fundSymbols  = new String[] { "SPY", "VTSMX", "VBMFX", "VGSIX", "VGTSX", "EWU",
+      "EWG", "EWJ", "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX", "SGGDX", "VGPMX", "USAGX", "FSPCX",
+      "FSRBX", "FPBFX", "ETGIX"                 };
+
+  // These symbols go back to 28 Jan 1993.
+  // public static final String[] fundSymbols = new String[] { "VTSMX", "VBMFX", "VGENX", "WHOSX", "FAGIX", "DFGBX",
+  // "VGPMX", "USAGX", "FSPCX", "FSRBX", "FPBFX" };
+
   // QQQ, XLK, AAPL, MSFT
   public static final String[]      assetSymbols = new String[fundSymbols.length + 1];
 
@@ -37,6 +45,7 @@ public class AdaptiveAlloc
 
   public static void main(String[] args) throws IOException
   {
+    File outputDir = new File("g:/web");
     File dataDir = new File("g:/research/finance/");
     assert dataDir.isDirectory();
 
@@ -64,14 +73,15 @@ public class AdaptiveAlloc
       Sequence seq = DataIO.loadYahooData(file);
       seqs.add(seq);
     }
-    for (Sequence seq : seqs) {
-      System.out.printf("%s: [%s] -> [%s]\n", seq.getName(), TimeLib.formatDate(seq.getStartMS()),
-          TimeLib.formatDate(seq.getEndMS()));
-    }
+    // for (Sequence seq : seqs) {
+    // System.out.printf("%s: [%s] -> [%s]\n", seq.getName(), TimeLib.formatDate(seq.getStartMS()),
+    // TimeLib.formatDate(seq.getEndMS()));
+    // }
     long commonStart = TimeLib.calcCommonStart(seqs);
     // long commonEnd = TimeLib.calcCommonEnd(seqs);
     long commonEnd = TimeLib.toMs(2012, Month.DECEMBER, 31); // TODO
-    System.out.printf("Common: [%s] -> [%s]\n", TimeLib.formatDate(commonStart), TimeLib.formatDate(commonEnd));
+    System.out.printf("Common[%d]: [%s] -> [%s]\n", seqs.size(), TimeLib.formatDate(commonStart),
+        TimeLib.formatDate(commonEnd));
 
     long simStartMs = TimeLib
         .toMs(TimeLib.ms2date(commonStart).plusMonths(7).with(TemporalAdjusters.firstDayOfMonth()));
@@ -93,8 +103,8 @@ public class AdaptiveAlloc
     }
 
     // Setup simulation.
-    Sequence spy = store.get(fundSymbols[0]);
-    Sequence guideSeq = spy.subseq(simStartMs, spy.getEndMS(), EndpointBehavior.Closest);
+    Sequence guideSeq = store.get(fundSymbols[0]);
+    guideSeq = guideSeq.subseq(simStartMs, guideSeq.getEndMS(), EndpointBehavior.Closest);
     Simulation sim = new Simulation(store, guideSeq);
 
     // Run simulation for buy-and-hold of individual assets.
@@ -106,15 +116,33 @@ public class AdaptiveAlloc
       // System.out.println(CumulativeStats.calc(returns));
     }
 
+    // Lazy 3-fund portfolio.
+    String[] lazy3 = new String[] { "VTSMX", "VBMFX", "VGTSX", "cash" };
+    PredictorConfig config = new ConfigMixed(new DiscreteDistribution(lazy3, new double[] { 0.34, 0.33, 0.33, 0.0 }),
+        new PredictorConfig[] { constConfigs[0], constConfigs[1], constConfigs[2], constConfigs[3] });
+    Predictor predictor = config.build(sim.broker.accessObject, lazy3);
+    Sequence returnsLazy3 = sim.run(predictor, "Lazy3");
+    System.out.println(CumulativeStats.calc(returnsLazy3));
+
+    // Lazy 4-fund portfolio.
+    String[] lazy4 = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX", "cash" };
+    config = new ConfigMixed(new DiscreteDistribution(lazy4, new double[] { 0.4, 0.2, 0.1, 0.3, 0.0 }),
+        new PredictorConfig[] { constConfigs[0], constConfigs[1], constConfigs[2], constConfigs[3], constConfigs[4] });
+    predictor = config.build(sim.broker.accessObject, lazy4);
+    Sequence returnsLazy4 = sim.run(predictor, "Lazy4");
+    System.out.println(CumulativeStats.calc(returnsLazy4));
+
     // Run simulation for fixed mix of assets.
-    PredictorConfig config = new ConfigMixed(DiscreteDistribution.uniform(fundSymbols), constConfigs);
-    Predictor predictor = config.build(sim.broker.accessObject, assetSymbols);
-    Sequence returns = sim.run(predictor, "Mix");
-    System.out.println(CumulativeStats.calc(returns));
+    config = new ConfigMixed(DiscreteDistribution.uniform(fundSymbols), constConfigs);
+    predictor = config.build(sim.broker.accessObject, assetSymbols);
+    Sequence returnsMix = sim.run(predictor, "Equal Mix");
+    System.out.println(CumulativeStats.calc(returnsMix));
 
     // Run adaptive asset allocation.
     predictor = new AdaptivePredictor(sim.broker.accessObject, assetSymbols);
-    returns = sim.run(predictor, "AAA");
-    System.out.println(CumulativeStats.calc(returns));
+    Sequence returnsAAA = sim.run(predictor, "Adaptive");
+    System.out.println(CumulativeStats.calc(returnsAAA));
+    Chart.saveLineChart(new File(outputDir, "returns.html"), "AAA Returns", 1000, 640, true, returnsAAA, returnsLazy3,
+        returnsLazy4, returnsMix);
   }
 }

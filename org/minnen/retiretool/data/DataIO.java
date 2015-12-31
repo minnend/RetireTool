@@ -147,7 +147,7 @@ public class DataIO
     if (!file.canRead()) {
       throw new IOException(String.format("Can't read Yahoo CSV file (%s)", file.getPath()));
     }
-    System.out.printf("Loading Yahoo data file: [%s]\n", file.getPath());
+    // System.out.printf("Loading Yahoo data file: [%s]\n", file.getPath());
 
     int iDate = -1;
     int iOpen = -1;

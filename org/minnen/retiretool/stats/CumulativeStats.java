@@ -41,15 +41,15 @@ public class CumulativeStats implements Comparable<CumulativeStats>
       stats.totalReturn = cumulativeReturns.getLast(0) / cumulativeReturns.getFirst(0);
       stats.cagr = FinLib.getAnnualReturn(stats.totalReturn, nMonths);
 
-      // DurationalStats rstats = DurationalStats.calc(cumulativeReturns, 12);
-      // stats.meanAnnualReturn = rstats.mean;
-      // stats.devAnnualReturn = rstats.sdev;
-      //
-      // stats.annualPercentiles[0] = rstats.min;
-      // stats.annualPercentiles[1] = rstats.percentile25;
-      // stats.annualPercentiles[2] = rstats.median;
-      // stats.annualPercentiles[3] = rstats.percentile75;
-      // stats.annualPercentiles[4] = rstats.max;
+      DurationalStats rstats = DurationalStats.calc(cumulativeReturns, 12);
+      stats.meanAnnualReturn = rstats.mean;
+      stats.devAnnualReturn = rstats.sdev;
+
+      stats.annualPercentiles[0] = rstats.min;
+      stats.annualPercentiles[1] = rstats.percentile25;
+      stats.annualPercentiles[2] = rstats.median;
+      stats.annualPercentiles[3] = rstats.percentile75;
+      stats.annualPercentiles[4] = rstats.max;
 
       stats.calcDrawdownStats();
     }
@@ -143,7 +143,7 @@ public class CumulativeStats implements Comparable<CumulativeStats>
     // return String.format("[%s: CAGR=%.2f  DD=%.1f  Down10=%.1f]", FinLib.getBaseName(name()), cagr, drawdown,
     // percentDown10);
 
-    //return String.format("[%s: %5.2f, %4.1f |%.2f]", FinLib.getBaseName(name()), cagr, drawdown, scoreSimple());
+    // return String.format("[%s: %5.2f, %4.1f |%.2f]", FinLib.getBaseName(name()), cagr, drawdown, scoreSimple());
     return String.format("[%s: %5.2f, %4.1f]", FinLib.getBaseName(name()), cagr, drawdown);
   }
 
