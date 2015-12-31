@@ -54,14 +54,14 @@ public class TestFixedPoint
     fy = Fixed.toFixed(y);
     assertEquals(Fixed.toFixed(x * y), Fixed.mul(fx, fy));
 
-    x = 302971;
-    y = 43092;
+    x = 30297;
+    y = 4309;
     fx = Fixed.toFixed(x);
     fy = Fixed.toFixed(y);
     assertEquals(Fixed.toFixed(x * y), Fixed.mul(fx, fy));
 
-    x = 312131;
-    y = -49898;
+    x = 31213;
+    y = -4989;
     fx = Fixed.toFixed(x);
     fy = Fixed.toFixed(y);
     assertEquals(Fixed.toFixed(x * y), Fixed.mul(fx, fy));
@@ -75,21 +75,21 @@ public class TestFixedPoint
     assertEquals(Fixed.toFixed(-0.005), Fixed.mul(fx, fy));
 
     // Note: the following cases test rounding, which depends on Fixed.SCALE.
-    fx = Fixed.toFixed(0.002);
+    fx = Fixed.toFixed(0.0002);
     fy = Fixed.toFixed(0.075);
-    assertEquals(Fixed.toFixed(0.0002), Fixed.mul(fx, fy));
+    assertEquals(Fixed.toFixed(0.00002), Fixed.mul(fx, fy));
 
-    fx = Fixed.toFixed(-0.002);
+    fx = Fixed.toFixed(-0.0002);
     fy = Fixed.toFixed(0.075);
-    assertEquals(Fixed.toFixed(-0.0002), Fixed.mul(fx, fy));
+    assertEquals(Fixed.toFixed(-0.00002), Fixed.mul(fx, fy));
 
-    fx = Fixed.toFixed(0.002);
+    fx = Fixed.toFixed(0.0002);
     fy = Fixed.toFixed(-0.075);
-    assertEquals(Fixed.toFixed(-0.0002), Fixed.mul(fx, fy));
+    assertEquals(Fixed.toFixed(-0.00002), Fixed.mul(fx, fy));
 
-    fx = Fixed.toFixed(-0.002);
+    fx = Fixed.toFixed(-0.0002);
     fy = Fixed.toFixed(-0.075);
-    assertEquals(Fixed.toFixed(0.0002), Fixed.mul(fx, fy));
+    assertEquals(Fixed.toFixed(0.00002), Fixed.mul(fx, fy));
   }
 
   @Test
@@ -139,24 +139,24 @@ public class TestFixedPoint
 
     // Note: the following cases test rounding, which depends on Fixed.SCALE.
     fx = Fixed.toFixed(14);
-    fy = Fixed.toFixed(100000);
-    assertEquals(Fixed.toFixed(0.0001), Fixed.div(fx, fy));
+    fy = Fixed.toFixed(1000000);
+    assertEquals(Fixed.toFixed(0.00001), Fixed.div(fx, fy));
 
     fx = Fixed.toFixed(16);
-    fy = Fixed.toFixed(100000);
-    assertEquals(Fixed.toFixed(0.0002), Fixed.div(fx, fy));
+    fy = Fixed.toFixed(1000000);
+    assertEquals(Fixed.toFixed(0.00002), Fixed.div(fx, fy));
 
     fx = Fixed.toFixed(15);
-    fy = Fixed.toFixed(100000);
-    assertEquals(Fixed.toFixed(0.0002), Fixed.div(fx, fy));
+    fy = Fixed.toFixed(1000000);
+    assertEquals(Fixed.toFixed(0.00002), Fixed.div(fx, fy));
 
     fx = Fixed.toFixed(-16);
-    fy = Fixed.toFixed(100000);
-    assertEquals(Fixed.toFixed(-0.0002), Fixed.div(fx, fy));
+    fy = Fixed.toFixed(1000000);
+    assertEquals(Fixed.toFixed(-0.00002), Fixed.div(fx, fy));
 
     fx = Fixed.toFixed(15);
-    fy = Fixed.toFixed(-100000);
-    assertEquals(Fixed.toFixed(-0.0002), Fixed.div(fx, fy));
+    fy = Fixed.toFixed(-1000000);
+    assertEquals(Fixed.toFixed(-0.00002), Fixed.div(fx, fy));
   }
 
   @Test
@@ -204,25 +204,26 @@ public class TestFixedPoint
     fy = Fixed.toFixed(1000);
     assertEquals(Fixed.toFixed(0.001), Fixed.divTrunc(fx, fy));
 
+    // Note: the following cases depend on Fixed.SCALE.
     fx = Fixed.toFixed(14);
     fy = Fixed.toFixed(Fixed.SCALE * 10);
-    assertEquals(Fixed.toFixed(0.0001), Fixed.divTrunc(fx, fy));
+    assertEquals(Fixed.toFixed(0.00001), Fixed.divTrunc(fx, fy));
 
     fx = Fixed.toFixed(16);
     fy = Fixed.toFixed(Fixed.SCALE * 10);
-    assertEquals(Fixed.toFixed(0.0001), Fixed.divTrunc(fx, fy));
+    assertEquals(Fixed.toFixed(0.00001), Fixed.divTrunc(fx, fy));
 
     fx = Fixed.toFixed(15);
     fy = Fixed.toFixed(Fixed.SCALE * 10);
-    assertEquals(Fixed.toFixed(0.0001), Fixed.divTrunc(fx, fy));
+    assertEquals(Fixed.toFixed(0.00001), Fixed.divTrunc(fx, fy));
 
     fx = Fixed.toFixed(-16);
     fy = Fixed.toFixed(Fixed.SCALE * 10);
-    assertEquals(Fixed.toFixed(-0.0001), Fixed.divTrunc(fx, fy));
+    assertEquals(Fixed.toFixed(-0.00001), Fixed.divTrunc(fx, fy));
 
     fx = Fixed.toFixed(15);
     fy = Fixed.toFixed(-Fixed.SCALE * 10);
-    assertEquals(Fixed.toFixed(-0.0001), Fixed.divTrunc(fx, fy));
+    assertEquals(Fixed.toFixed(-0.00001), Fixed.divTrunc(fx, fy));
   }
 
   @Test

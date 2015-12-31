@@ -117,9 +117,9 @@ public class AdaptiveAlloc
     }
 
     // Lazy 3-fund portfolio.
-    String[] lazy3 = new String[] { "VTSMX", "VBMFX", "VGTSX", "cash" };
-    PredictorConfig config = new ConfigMixed(new DiscreteDistribution(lazy3, new double[] { 0.34, 0.33, 0.33, 0.0 }),
-        new PredictorConfig[] { constConfigs[0], constConfigs[1], constConfigs[2], constConfigs[3] });
+    String[] lazy3 = new String[] { "VTSMX", "VBMFX", "VGTSX" };
+    PredictorConfig config = new ConfigMixed(new DiscreteDistribution(lazy3, new double[] { 0.34, 0.33, 0.33 }),
+        new PredictorConfig[] { constConfigs[0], constConfigs[1], constConfigs[2] });
     Predictor predictor = config.build(sim.broker.accessObject, lazy3);
     Sequence returnsLazy3 = sim.run(predictor, "Lazy3");
     System.out.println(CumulativeStats.calc(returnsLazy3));

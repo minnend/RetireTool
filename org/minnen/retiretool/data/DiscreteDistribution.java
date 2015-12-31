@@ -82,6 +82,12 @@ public class DiscreteDistribution
     return -1;
   }
 
+  public double weight(String name)
+  {
+    int index = find(name);
+    return (index < 0 ? 0.0 : weights[index]);
+  }
+
   public int size()
   {
     return weights.length;

@@ -3,6 +3,7 @@ package org.minnen.retiretool.broker;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import org.minnen.retiretool.broker.transactions.Transaction;
@@ -148,6 +149,11 @@ public class Account
     }
     Position position = positions.getOrDefault(name, null);
     return (position == null ? 0L : position.getValue());
+  }
+
+  public String[] getPositionNames()
+  {
+    return positions.keySet().toArray(new String[positions.size()]);
   }
 
   private Position getPosition(String name)
@@ -326,83 +332,45 @@ public class Account
 
   public void rebalance(DiscreteDistribution targetDistribution)
   {
-    final long preValue = getValue();
+    assert targetDistribution.isNormalized();
+
+    final long totalValue = getValue();
     // System.out.printf("Rebalance: %s\n", targetDistribution);
-    // System.out.printf("Rebalance.pre: $%s (Price=$%s)\n", Fixed.formatCurrency(preValue),
-    // Fixed.formatCurrency(broker.getPrice("Stock")));
-
-    // Figure out how much money is currently invested in each asset.
-    Map<String, Long> currentValue = new TreeMap<>();
-    long total = 0L;
-    double targetSum = 0.0;
-    for (int i = 0; i < targetDistribution.size(); ++i) {
-      String name = targetDistribution.names[i];
-      targetSum += targetDistribution.weights[i];
-
-      long value = 0L;
-      if (name.equals("cash")) {
-        value = getCash();
-      } else {
-        Position position = positions.getOrDefault(name, null);
-        if (position != null) {
-          value = position.getValue();
-        }
-      }
-      total += value;
-      currentValue.put(name, value);
-    }
-    assert Math.abs(targetSum - 1.0) < 1e-8;
-    assert total > 0;
-    assert currentValue.size() == targetDistribution.size();
-    assert total == preValue;
 
     // Sell positions that are over target.
-    for (int i = 0; i < targetDistribution.size(); ++i) {
-      String name = targetDistribution.names[i];
-      double targetFrac = targetDistribution.weights[i] / targetSum;
-      long current = currentValue.get(name);
+    for (String name : getPositionNames()) {
+      double targetFrac = targetDistribution.weight(name);
+      long currentValue = getValue(name);
       // System.out.printf("Target: %s = %.1f%% ($%s)\n", name, targetFrac * 100.0, Fixed.formatCurrency(current));
-      if (name.equals("cash")) { // You don't "sell" cash.
-        continue;
-      }
 
       // Only adjust if there is a change.
-      long targetValue = Math.round(total * targetFrac);
-      long sellValue = Math.min(getValue(name), current - targetValue);
+      long targetValue = Math.round(totalValue * targetFrac);
+      long sellValue = Math.min(currentValue, currentValue - targetValue);
       if (sellValue > 0) {
         // System.out.printf("Sell| %s: %.3f%% => Value=$%s\n", name, targetFrac, Fixed.formatCurrency(sellValue));
         sellValue(name, sellValue, null);
-        // assert preValue == getValue();
+        assert totalValue == getValue();
       }
     }
 
     // Buy positions that are under target.
     for (int i = 0; i < targetDistribution.size(); ++i) {
       String name = targetDistribution.names[i];
-      if (name.equals("cash")) {
-        continue;
-      }
+      if (name.equals("cash")) continue;
+
       double targetFrac = targetDistribution.weights[i];
-      long current = currentValue.get(name);
+      long currentValue = getValue(name);
 
       // Only adjust if there is a change.
-      long targetValue = Math.round(total * targetFrac);
-      long buyValue = Math.min(getCash(), targetValue - current);
+      long targetValue = Math.round(totalValue * targetFrac);
+      long buyValue = Math.min(getCash(), targetValue - currentValue);
       if (buyValue > 0) {
         // System.out.printf("Buy| %s: %.3f%% => Value=$%s\n", name, targetFrac, Fixed.formatCurrency(buyValue));
         buyValue(name, buyValue, null);
-        // assert preValue == getValue();
+        assert totalValue == getValue();
       }
     }
-
-    // Make sure we adjusted correctly (debug).
-    // assert preValue == getValue();
-    // for (int i = 0; i < targetDistribution.size(); ++i) {
-    // String name = targetDistribution.names[i];
-    // double actual = Fixed.toFloat(Fixed.div(getValue(name), total));
-    // double target = targetDistribution.weights[i];
-    // assert Math.abs(actual - target) < 0.01 : String.format("%f vs %f", actual, target);
-    // }
+    assert totalValue == getValue();
   }
 
   public void printPositions()
