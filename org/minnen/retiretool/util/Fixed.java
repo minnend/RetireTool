@@ -9,7 +9,7 @@ package org.minnen.retiretool.util;
  */
 public class Fixed
 {
-  /** Basic unit: 1 => dollars, 10 = > dimes, 100 => cents, etc. */
+  /** SCALE => Base Unit: 1 = dollars, 10 = dimes, 100 = cents, etc. */
   public static final long SCALE      = 100000;
   public static final long HALF_SCALE = SCALE / 2L;
 
@@ -62,7 +62,7 @@ public class Fixed
     }
 
     // Check for overflow.
-    assert Long.MAX_VALUE / x >= y;
+    assert Long.MAX_VALUE / x >= y : String.format("Fixed-Point Overflow: %d x %d", x, y);
     // TODO use BigInteger to handle case where result fits but intermediate value overflows.
 
     return sign * ((x * y + HALF_SCALE) / SCALE);

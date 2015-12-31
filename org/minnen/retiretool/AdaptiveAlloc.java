@@ -7,6 +7,7 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.minnen.retiretool.broker.Account;
 import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.DiscreteDistribution;
@@ -25,6 +26,8 @@ import org.minnen.retiretool.util.TimeLib;
 public class AdaptiveAlloc
 {
   public static final SequenceStore store        = new SequenceStore();
+
+  public static final Slippage      slippage     = new Slippage(0.0, 0.0);
 
   // These symbols go back to 1 April 1996.
   public static final String[]      fundSymbols  = new String[] { "SPY", "VTSMX", "VBMFX", "VGSIX", "VGTSX", "EWU",
@@ -79,7 +82,7 @@ public class AdaptiveAlloc
     // }
     long commonStart = TimeLib.calcCommonStart(seqs);
     // long commonEnd = TimeLib.calcCommonEnd(seqs);
-    long commonEnd = TimeLib.toMs(2012, Month.DECEMBER, 31); // TODO
+    long commonEnd = TimeLib.toMs(2012, Month.DECEMBER, 31); // TODO 2012
     System.out.printf("Common[%d]: [%s] -> [%s]\n", seqs.size(), TimeLib.formatDate(commonStart),
         TimeLib.formatDate(commonEnd));
 
@@ -105,7 +108,7 @@ public class AdaptiveAlloc
     // Setup simulation.
     Sequence guideSeq = store.get(fundSymbols[0]);
     guideSeq = guideSeq.subseq(simStartMs, guideSeq.getEndMS(), EndpointBehavior.Closest);
-    Simulation sim = new Simulation(store, guideSeq);
+    Simulation sim = new Simulation(store, guideSeq, slippage, 0, true);
 
     // Run simulation for buy-and-hold of individual assets.
     PredictorConfig[] constConfigs = new PredictorConfig[fundSymbols.length];
@@ -116,11 +119,14 @@ public class AdaptiveAlloc
       // System.out.println(CumulativeStats.calc(returns));
     }
 
+    PredictorConfig config;
+    Predictor predictor;
+
     // Lazy 3-fund portfolio.
     String[] lazy3 = new String[] { "VTSMX", "VBMFX", "VGTSX" };
-    PredictorConfig config = new ConfigMixed(new DiscreteDistribution(lazy3, new double[] { 0.34, 0.33, 0.33 }),
-        new PredictorConfig[] { constConfigs[0], constConfigs[1], constConfigs[2] });
-    Predictor predictor = config.build(sim.broker.accessObject, lazy3);
+    config = new ConfigMixed(new DiscreteDistribution(lazy3, new double[] { 0.34, 0.33, 0.33 }), new PredictorConfig[] {
+        constConfigs[0], constConfigs[1], constConfigs[2] });
+    predictor = config.build(sim.broker.accessObject, lazy3);
     Sequence returnsLazy3 = sim.run(predictor, "Lazy3");
     System.out.println(CumulativeStats.calc(returnsLazy3));
 
@@ -144,5 +150,8 @@ public class AdaptiveAlloc
     System.out.println(CumulativeStats.calc(returnsAAA));
     Chart.saveLineChart(new File(outputDir, "returns.html"), "AAA Returns", 1000, 640, true, returnsAAA, returnsLazy3,
         returnsLazy4, returnsMix);
+
+    // Account account = sim.broker.getAccount(0);
+    // account.printTransactions();//TimeLib.TIME_BEGIN, TimeLib.toMs(1996, Month.DECEMBER, 31));
   }
 }

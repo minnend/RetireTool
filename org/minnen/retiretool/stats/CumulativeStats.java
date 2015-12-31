@@ -41,15 +41,15 @@ public class CumulativeStats implements Comparable<CumulativeStats>
       stats.totalReturn = cumulativeReturns.getLast(0) / cumulativeReturns.getFirst(0);
       stats.cagr = FinLib.getAnnualReturn(stats.totalReturn, nMonths);
 
-      DurationalStats rstats = DurationalStats.calc(cumulativeReturns, 12);
-      stats.meanAnnualReturn = rstats.mean;
-      stats.devAnnualReturn = rstats.sdev;
-
-      stats.annualPercentiles[0] = rstats.min;
-      stats.annualPercentiles[1] = rstats.percentile25;
-      stats.annualPercentiles[2] = rstats.median;
-      stats.annualPercentiles[3] = rstats.percentile75;
-      stats.annualPercentiles[4] = rstats.max;
+      // DurationalStats rstats = DurationalStats.calc(cumulativeReturns, 12);
+      // stats.meanAnnualReturn = rstats.mean;
+      // stats.devAnnualReturn = rstats.sdev;
+      //
+      // stats.annualPercentiles[0] = rstats.min;
+      // stats.annualPercentiles[1] = rstats.percentile25;
+      // stats.annualPercentiles[2] = rstats.median;
+      // stats.annualPercentiles[3] = rstats.percentile75;
+      // stats.annualPercentiles[4] = rstats.max;
 
       stats.calcDrawdownStats();
     }

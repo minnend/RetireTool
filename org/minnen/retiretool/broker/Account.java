@@ -299,6 +299,18 @@ public class Account
     sellShares(name, position.getNumShares(), memo);
   }
 
+  public DiscreteDistribution getDistribution(String[] names)
+  {
+    final long totalValue = getValue();
+    DiscreteDistribution dist = new DiscreteDistribution(names);
+    for (String name : names) {
+      long value = getValue(name);
+      double weight = Fixed.toFloat(Fixed.div(value, totalValue));
+      dist.set(name, weight);
+    }
+    return dist;
+  }
+
   public void printTransactions()
   {
     for (Transaction transaction : transactions) {
@@ -312,7 +324,6 @@ public class Account
       if ((transaction instanceof TransactionBuy || transaction instanceof TransactionSell)
           && !transaction.memo.contains("Interest") && !transaction.memo.contains("Dividend")) {
         System.out.println(transaction);
-
       }
     }
   }
@@ -335,6 +346,7 @@ public class Account
     assert targetDistribution.isNormalized();
 
     final long totalValue = getValue();
+    // System.out.printf("Rebalance: [%s]\n", TimeLib.formatDate(broker.getTime()));
     // System.out.printf("Rebalance: %s\n", targetDistribution);
 
     // Sell positions that are over target.
@@ -349,7 +361,7 @@ public class Account
       if (sellValue > 0) {
         // System.out.printf("Sell| %s: %.3f%% => Value=$%s\n", name, targetFrac, Fixed.formatCurrency(sellValue));
         sellValue(name, sellValue, null);
-        assert totalValue == getValue();
+        // assert totalValue == getValue(); // Not true with slippage
       }
     }
 
@@ -367,10 +379,10 @@ public class Account
       if (buyValue > 0) {
         // System.out.printf("Buy| %s: %.3f%% => Value=$%s\n", name, targetFrac, Fixed.formatCurrency(buyValue));
         buyValue(name, buyValue, null);
-        assert totalValue == getValue();
+        // assert totalValue == getValue(); // Not true with slippage
       }
     }
-    assert totalValue == getValue();
+    // assert totalValue == getValue(); // Not true with slippage
   }
 
   public void printPositions()

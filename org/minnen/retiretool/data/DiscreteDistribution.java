@@ -74,6 +74,11 @@ public class DiscreteDistribution
     weights[find(name)] = weight;
   }
 
+  public double get(String name)
+  {
+    return weights[find(name)];
+  }
+
   public int find(String name)
   {
     for (int i = 0; i < names.length; ++i) {
@@ -93,16 +98,20 @@ public class DiscreteDistribution
     return weights.length;
   }
 
+  public double sum()
+  {
+    return Library.sum(weights);
+  }
+
   public boolean isNormalized()
   {
-    double sum = Library.sum(weights);
-    return Math.abs(sum - 1.0) < 1e-6;
+    return Math.abs(sum() - 1.0) < 1e-6;
   }
 
   /** Ensure sum of distribution values is 1.0 (unless current sum is zero). */
   public void normalize()
   {
-    double sum = Library.sum(weights);
+    double sum = sum();
     assert sum >= 0.0;
     if (sum > 0.0) {
       for (int i = 0; i < weights.length; ++i) {
@@ -139,7 +148,7 @@ public class DiscreteDistribution
 
   public boolean isSimilar(DiscreteDistribution distribution, double eps)
   {
-    if (distribution.size() != size()) return false;
+    if (distribution == null || distribution.size() != size()) return false;
     for (int i = 0; i < distribution.size(); ++i) {
       if (Math.abs(distribution.weights[i] - weights[i]) > eps) return false;
     }
@@ -149,9 +158,9 @@ public class DiscreteDistribution
   @Override
   public String toString()
   {
-    StringBuilder sb = new StringBuilder(String.format("[%.1f", weights[0] * 100));
+    StringBuilder sb = new StringBuilder(String.format("[%4.1f", weights[0] * 100));
     for (int i = 1; i < weights.length; ++i) {
-      sb.append(String.format(",%.1f", weights[i] * 100));
+      sb.append(String.format(",%4.1f", weights[i] * 100));
     }
     sb.append("]");
     return sb.toString();

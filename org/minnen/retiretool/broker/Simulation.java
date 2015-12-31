@@ -55,17 +55,66 @@ public class Simulation
     return run(predictor, "Returns");
   }
 
+  private DiscreteDistribution genDistAvoidSmallChanges(DiscreteDistribution current, DiscreteDistribution target)
+  {
+    assert current.size() == target.size();
+    DiscreteDistribution dist = new DiscreteDistribution(target);
+    for (int i = 0; i < target.size(); ++i) {
+      double dw = target.weights[i];
+      double cw = current.weights[i];
+      if (dw > 0.0 && Math.abs(cw - dw) < 0.05) {
+        dist.weights[i] = cw;
+      }
+    }
+    double sum = dist.sum();
+    if (sum < 1.0 - 1e-6) {
+      double missing = 1.0 - sum;
+      while (missing > 1e-6) {
+        double mostUnder = 0.0;
+        int iUnder = -1;
+        for (int i = 0; i < target.size(); ++i) {
+          double diff = target.weights[i] - dist.weights[i];
+          if (diff > mostUnder) {
+            mostUnder = diff;
+            iUnder = i;
+          }
+        }
+        double increase = Math.min(missing, mostUnder);
+        missing -= increase;
+        dist.weights[iUnder] += increase;
+      }
+    } else if (sum > 1.0 + 1e-6) {
+      double excess = sum - 1.0;
+      while (excess > 1e-6) {
+        double mostOver = 0.0;
+        int iOver = -1;
+        for (int i = 0; i < target.size(); ++i) {
+          double diff = dist.weights[i] - target.weights[i];
+          if (diff > mostOver) {
+            mostOver = diff;
+            iOver = i;
+          }
+        }
+        double reduce = Math.min(excess, mostOver);
+        excess -= reduce;
+        dist.weights[iOver] -= reduce;
+      }
+    }
+
+    return dist;
+  }
+
   public Sequence run(Predictor predictor, String name)
   {
     final int T = guideSeq.length();
-    final long principal = Fixed.toFixed(1000.0);
+    final long principal = Fixed.toFixed(10000.0);
     final boolean bPriceIndexAlwaysZero = (guideSeq.getNumDims() == 1);
 
     long prevTime = guideSeq.getStartMS() - TimeLib.MS_IN_DAY;
     long lastRebalance = TimeLib.TIME_BEGIN;
     boolean bNeedRebalance = false;
-    DiscreteDistribution prevDistribution = new DiscreteDistribution("cash");
-    DiscreteDistribution desiredDistribution = null;
+    DiscreteDistribution prevDist = new DiscreteDistribution("cash");
+    DiscreteDistribution targetDist = null;
 
     returnsMonthly = new Sequence(name);
     returnsMonthly.addData(1.0, guideSeq.getStartMS());
@@ -95,13 +144,26 @@ public class Simulation
 
       // Handle case where we buy at the open, not the close.
       if (bBuyAtNextOpen) {
-        if (bNeedRebalance && desiredDistribution != null && rebalanceDelay <= 0) {
+        if (bNeedRebalance && targetDist != null && rebalanceDelay <= 0) {
           if (!bPriceIndexAlwaysZero) {
             broker.setPriceIndex(FinLib.Open);
           }
-          account.rebalance(desiredDistribution);
+
+          DiscreteDistribution curDist = account.getDistribution(predictor.assetChoices);
+          DiscreteDistribution submitDist = genDistAvoidSmallChanges(curDist, targetDist);
+
+          // System.out.printf("Curr: %s\n", curDist);
+          // System.out.printf("Prev: %s\n", prevDist);
+          // System.out.printf("Want: %s\n", targetDist);
+          // System.out.printf("Subm: %s (%f)\n", submitDist, submitDist.sum());
+
+          account.rebalance(submitDist);
+          // curDist = account.getDistribution(predictor.assetChoices);
+          // System.out.printf(" New: %s\n", curDist);
+          // System.out.println();
+
           lastRebalance = time;
-          prevDistribution = new DiscreteDistribution(desiredDistribution);
+          prevDist = new DiscreteDistribution(submitDist);
           if (!bPriceIndexAlwaysZero) {
             broker.setPriceIndex(FinLib.Close);
           }
@@ -113,14 +175,14 @@ public class Simulation
       broker.doEndOfDayBusiness();
 
       // Time for a prediction and possible asset change.
-      desiredDistribution = predictor.selectDistribution();
+      targetDist = predictor.selectDistribution();
 
       // Rebalance if desired distribution changes by more than 2% or if it's been more than a year.
       // Note: we're comparing the current request to the previous one, not to the actual
       // distribution in the account, which could change due to price movement.
       boolean bPrevRebalance = bNeedRebalance;
-      bNeedRebalance = ((time - lastRebalance) / TimeLib.MS_IN_DAY > 365 || !desiredDistribution.isSimilar(
-          prevDistribution, DistributionEPS));
+      bNeedRebalance = ((time - lastRebalance) / TimeLib.MS_IN_DAY > 363 || !targetDist.isSimilar(prevDist,
+          DistributionEPS));
 
       if (maxDelay > 0) {
         if (bNeedRebalance && !bPrevRebalance) {
@@ -132,9 +194,9 @@ public class Simulation
       // Update account at end of the day.
       if (!bBuyAtNextOpen) {
         if (bNeedRebalance && rebalanceDelay <= 0) {
-          account.rebalance(desiredDistribution);
+          account.rebalance(targetDist);
           lastRebalance = time;
-          prevDistribution = new DiscreteDistribution(desiredDistribution);
+          prevDist = new DiscreteDistribution(targetDist);
         }
       }
 
