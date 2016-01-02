@@ -69,42 +69,73 @@ public class AdaptivePredictor extends Predictor
     return CumulativeStats.calc(seq);
   }
 
-  public double[] getWeights(List<MomScore> moms, int n)
+  public double[] getWeights(List<MomScore> moms)
   {
-    // http://www.joptimizer.com/quadraticProgramming.html
+    final int n = moms.size();
     double[] weights = new double[n];
+    Arrays.fill(weights, 1.0 / n);
 
-    final int nLookback = 20;
+    final int nLookback = 15;
     double[][] returns = new double[n][];
     for (int i = 0; i < n; ++i) {
       String name = moms.get(i).name;
-      if (name.equals("cash")) {
-        returns[i] = new double[nLookback - 1];
-      } else {
-        Sequence seq = brokerAccess.getSeq(name);
-        assert seq != null : moms.get(i).name;
-        returns[i] = FinLib.getReturns(seq, -nLookback, -1, 0);
-      }
+      assert !name.equals("cash");
+      Sequence seq = brokerAccess.getSeq(name);
+      assert seq != null : moms.get(i).name;
+      returns[i] = FinLib.getReturns(seq, -nLookback, -1, 0);
     }
 
-    // rng.setSeed(12345L); // TODO
-    double bestScore = -1.0;
-    // System.out.printf("--- [%s] ---\n", TimeLib.formatDate(brokerAccess.getTime()));
-    for (int iter = 0; iter < 100; ++iter) {
-      double[] w = rng.nextSimplex(n);
-      CumulativeStats cstats = sim(w, returns);
-      double score = cstats.cagr;// - cstats.drawdown;
-      if (iter == 0 || score > bestScore) {
-        System.arraycopy(w, 0, weights, 0, n);
-        bestScore = score;
-        // System.out.printf("New Best [%d]: %s  %.3f\n", iter, cstats, score);
-        // System.out.printf("  [%.1f", w[0]*100);
-        // for(int i=1; i<w.length;++i){
-        // System.out.printf(",%.1f", w[i]*100);
-        // }
-        // System.out.println("]");
-      }
-    }
+    // for (int i = 0; i < n; ++i) {
+    // System.out.printf("%5s: ", moms.get(i).name);
+    // double[] r = returns[i];
+    // for (int j = 0; j < r.length; ++j) {
+    // assert !Double.isNaN(r[j]);
+    // System.out.printf("%5.2f ", r[j]);
+    // }
+    // System.out.println();
+    // }
+    // System.out.println();
+
+    double[][] cov = Library.covariance(returns);
+    // double[][] corr = Library.correlation(returns);
+    // double[] dev = Library.cov2dev(cov);
+    // for (int i = 0; i < n; ++i) {
+    // System.out.printf("%5s: ", moms.get(i).name);
+    // for (int j = 0; j < n; ++j) {
+    // assert !Double.isNaN(cov[i][j]);
+    // System.out.printf("%5.2f ", cov[i][j]);
+    // }
+    // System.out.println();
+    // }
+
+    double maxWeight = 0.9;
+    maxWeight = Math.max(maxWeight, 1.0 / n);
+    double[] mvw = FinLib.minvar(cov, maxWeight);
+    // System.out.print("MVW: ");
+    // for (int i = 0; i < n; ++i) {
+    // System.out.printf("%5.3f ", mvw[i]);
+    // }
+    // System.out.println();
+    // System.out.println();
+    // double x = FinLib.portfolioDev(weights, dev, corr);
+    // double y = FinLib.portfolioDev(mvw, dev, corr);
+    // System.out.printf("%f, %f\n", x, y);
+    // assert y < x + 1e-6;
+
+    // double alpha = 1.0;
+    // for (int i = 0; i < n; ++i) {
+    // weights[i] = weights[i] * alpha + mvw[i] * (1.0 - alpha);
+    // }
+    System.arraycopy(mvw, 0, weights, 0, n);
+
+    // if (n <= 3) {
+    // // System.out.print("       ");
+    // System.out.printf("%11s|", TimeLib.formatDate(brokerAccess.getTime()));
+    // for (int i = 0; i < n; ++i) {
+    // System.out.printf("%s:%.2f ", moms.get(i).name, weights[i]);
+    // }
+    // System.out.printf("|%d\n", n);
+    // }
 
     return weights;
   }
@@ -123,7 +154,7 @@ public class AdaptivePredictor extends Predictor
     for (int i = 0; i < n; ++i) {
       String name = assetChoices[i];
       if (name.equals("cash")) {
-        moms.add(new MomScore("cash", 0.0));
+        moms.add(new MomScore("cash", -100.0));
       } else {
         Sequence seq = brokerAccess.getSeq(name);
         double now = seq.average(-20, -1, 0);
@@ -134,7 +165,7 @@ public class AdaptivePredictor extends Predictor
       }
     }
     Collections.sort(moms, Collections.reverseOrder());
-    int nKeep = 1;
+    int nKeep = n;
     for (int i = 0; i < n; ++i) {
       MomScore mom = moms.get(i);
       if (mom.score >= 0.0) {
@@ -146,19 +177,31 @@ public class AdaptivePredictor extends Predictor
     }
     // System.out.println("---");
 
-    nKeep = Math.min(nKeep, n / 2); // TODO parameterize number / fraction to keep
-    // double[] weights = getWeights(moms, nKeep);
+    nKeep = Math.min(nKeep, (int) Math.floor(n * 0.7)); // TODO parameterize number / fraction to keep
+    while (moms.size() > nKeep) {
+      moms.remove(moms.size() - 1);
+    }
+
+    double[] weights = getWeights(moms);
     distribution.clear();
     // System.out.printf("[%s] %d\n", TimeLib.formatDate(brokerAccess.getTime()), nKeep);
     for (int i = 0; i < nKeep; ++i) {
       MomScore mom = moms.get(i);
-      distribution.set(mom.name, 1.0 / nKeep);// weights[i]);
+      distribution.set(mom.name, weights[i]);
       // System.out.printf("%s ", name);
     }
+    //System.out.printf("[%s] %s\n", TimeLib.formatDate2(brokerAccess.getTime()), distribution.toStringWithNames());
+    distribution.clean(5);
+    //System.out.printf("              %s\n", distribution.toStringWithNames());
 
-    // System.out.println();
+    // if (nKeep <= 3) {
+    // double w = 1.0 / (2.0 * nKeep);
+    // distribution.mul(1.0 - w);
+    // distribution.set("cash", w);
+    // }
+
+    // System.out.println();    
     assert distribution.isNormalized();
-    // System.out.printf("[%s] %s\n", TimeLib.formatDate(brokerAccess.getTime()), distribution);
     if (prevDistribution == null) {
       prevDistribution = new DiscreteDistribution(distribution);
     } else {

@@ -79,7 +79,7 @@ public class FeatureVec
     int D1 = getNumDims();
     int D2 = x.getNumDims();
     double[] a = x.get();
-    double[][] ret = Library.allocMatrixDouble(D1, D2);
+    double[][] ret = new double[D1][D2];
 
     if (D1 <= D2) {
       // square or wide matrix

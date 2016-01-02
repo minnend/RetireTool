@@ -285,11 +285,11 @@ public class Account
       nShares = position.getNumShares();
     } else {
       long price = broker.getSellPrice(name);
-      nShares = Fixed.divTrunc(value, price);
+      nShares = Math.min(Fixed.divTrunc(value, price), position.getNumShares());
     }
-    assert nShares <= position.getNumShares();
     // System.out.printf("shares: %.2f / %.2f  value=$%s\n", Fixed.toFloat(nShares),
     // Fixed.toFloat(position.getNumShares()), Fixed.formatCurrency(value));
+    assert nShares <= position.getNumShares();
     return sellShares(name, nShares, memo);
   }
 
@@ -344,6 +344,7 @@ public class Account
   public void rebalance(DiscreteDistribution targetDistribution)
   {
     assert targetDistribution.isNormalized();
+    // targetDistribution.clean();
 
     final long totalValue = getValue();
     // System.out.printf("Rebalance: [%s]\n", TimeLib.formatDate(broker.getTime()));
@@ -352,14 +353,17 @@ public class Account
     // Sell positions that are over target.
     for (String name : getPositionNames()) {
       double targetFrac = targetDistribution.weight(name);
+      assert targetFrac >= 0.0 : String.format("%s: %f", name, targetFrac);
       long currentValue = getValue(name);
-      // System.out.printf("Target: %s = %.1f%% ($%s)\n", name, targetFrac * 100.0, Fixed.formatCurrency(current));
 
       // Only adjust if there is a change.
       long targetValue = Math.round(totalValue * targetFrac);
       long sellValue = Math.min(currentValue, currentValue - targetValue);
+      // System.out.printf("Target: %-5s  %f%% ($%s -> $%s => $%s)\n", name, targetFrac * 100.0,
+      // Fixed.formatCurrency(currentValue), Fixed.formatCurrency(targetValue), Fixed.formatCurrency(sellValue));
       if (sellValue > 0) {
-        // System.out.printf("Sell| %s: %.3f%% => Value=$%s\n", name, targetFrac, Fixed.formatCurrency(sellValue));
+        // System.out.printf("Sell| %s: %f%% => Value=$%s\n", name, targetFrac * 100.0,
+        // Fixed.formatCurrency(sellValue));
         sellValue(name, sellValue, null);
         // assert totalValue == getValue(); // Not true with slippage
       }

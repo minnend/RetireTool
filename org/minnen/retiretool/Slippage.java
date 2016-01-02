@@ -50,13 +50,19 @@ public class Slippage
   public long applyToBuy(long price)
   {
     // Price goes up when buying.
-    return Fixed.mul(price, Fixed.ONE + fixedPercentSlip) + fixedConstSlip;
+    if (fixedPercentSlip != 0) {
+      price = Fixed.mul(price, Fixed.ONE + fixedPercentSlip);
+    }
+    return price + fixedConstSlip;
   }
 
   public long applyToSell(long price)
   {
     // Price goes down when selling.
-    return Fixed.mul(price, Fixed.ONE - fixedPercentSlip) - fixedConstSlip;
+    if (fixedPercentSlip != 0) {
+      price = Fixed.mul(price, Fixed.ONE - fixedPercentSlip);
+    }
+    return price - fixedConstSlip;
   }
 
   public double adjustForAssetChange(double balance, int index, Sequence currentAsset, Sequence nextAsset)

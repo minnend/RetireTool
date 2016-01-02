@@ -22,6 +22,12 @@ import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.DurationalStats;
 import org.minnen.retiretool.stats.RetirementStats;
 
+import com.joptimizer.functions.ConvexMultivariateRealFunction;
+import com.joptimizer.functions.LinearMultivariateRealFunction;
+import com.joptimizer.functions.PDQuadraticMultivariateRealFunction;
+import com.joptimizer.optimizers.JOptimizer;
+import com.joptimizer.optimizers.OptimizationRequest;
+
 public final class FinLib
 {
   public static final double SOC_SEC_AT70 = 3480.00; // http://www.ssa.gov/oact/quickcalc/
@@ -1339,6 +1345,25 @@ public final class FinLib
     return x - y;
   }
 
+  public static double portfolioDev(double[] w, double[] dev, double[][] corr)
+  {
+    final int n = w.length;
+    assert corr.length == n;
+
+    double v = 0.0;
+    for (int i = 0; i < n; ++i) {
+      if (Math.abs(w[i]) < 1e-8) continue;
+      double ki = w[i] * dev[i];
+      v += ki * ki;
+      for (int j = i + 1; j < n; ++j) {
+        v += 2.0 * ki * w[j] * dev[j] * corr[i][j];
+      }
+    }
+
+    System.out.printf("v=%f\n", v);
+    return Math.sqrt(v);
+  }
+
   public static double sharpeDaily(Sequence returns, Sequence benchmark)
   {
     final int N = returns.length();
@@ -1363,5 +1388,67 @@ public final class FinLib
     if (Math.abs(sdev) < 1e-8) return 0.0;
 
     return Math.sqrt(252) * mean / sdev;
+  }
+
+  public static double[] minvar(double[][] corrMatrix)
+  {
+    return minvar(corrMatrix, 1.0);
+  }
+
+  public static double[] minvar(double[][] corrMatrix, double maxWeight)
+  {
+    final int n = corrMatrix.length;
+    final boolean bConstrainedWeight = (maxWeight > 0.0 && maxWeight < 1.0);
+
+    // Initial guess is equal weights; either uniform o
+    double[] guess = new double[n];
+    Arrays.fill(guess, 1.0 / n);
+
+    // Enforce sum(weights)=1.0 via Ax=b (where x == weights).
+    double[][] A = new double[1][n];
+    Arrays.fill(A[0], 1.0);
+    double[] b = new double[] { 1.0 };
+
+    // Objective function.
+    double[][] P = corrMatrix;
+    PDQuadraticMultivariateRealFunction objective = new PDQuadraticMultivariateRealFunction(P, null, 0);
+
+    // We want to be long-only so weights must be constrained to be >= 0.0.
+    final int nInequalities = (bConstrainedWeight ? 2 * n : n);
+    ConvexMultivariateRealFunction[] inequalities = new ConvexMultivariateRealFunction[nInequalities];
+    for (int i = 0; i < n; ++i) {
+      double[] a = new double[n];
+      a[i] = -1.0;
+      inequalities[i] = new LinearMultivariateRealFunction(a, 0);
+
+      if (bConstrainedWeight) {
+        a = new double[n];
+        a[i] = 1.0;
+        inequalities[i + n] = new LinearMultivariateRealFunction(a, -maxWeight - 1e-11);
+      }
+    }
+
+    // Setup optimization problem.
+    OptimizationRequest or = new OptimizationRequest();
+    or.setF0(objective);
+    or.setA(A);
+    or.setB(b);
+    or.setFi(inequalities);
+    or.setToleranceFeas(1.0e-6);
+    or.setTolerance(1.0e-6);
+    or.setInitialPoint(guess);
+
+    // Find the solution.
+    JOptimizer opt = new JOptimizer();
+    opt.setOptimizationRequest(or);
+    try {
+      opt.optimize();
+      double[] w = opt.getOptimizationResponse().getSolution();
+      assert Math.abs(Library.sum(w) - 1.0) < 1e-6;
+      return w;
+    } catch (Exception e) {
+      e.printStackTrace();
+      return null;
+    }
   }
 }

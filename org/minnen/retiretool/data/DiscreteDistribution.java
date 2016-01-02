@@ -120,10 +120,69 @@ public class DiscreteDistribution
     }
   }
 
+  public void clean(int nearestPct)
+  {
+    normalize();
+
+    final int n = weights.length;
+    long[] wlong = new long[n];
+    for (int i = 0; i < n; ++i) {
+      double w = weights[i] * 100.0;
+      wlong[i] = Math.round(w / nearestPct) * nearestPct;
+    }
+
+    long diff = Library.sum(wlong) - 100;
+    while (diff != 0) {
+      final double eps = 1e-6;
+      if (diff < 0) {
+        // Find farthest below.
+        int iBest = -1;
+        double bestGap = 0.0;
+        for (int i = 0; i < n; ++i) {
+          if (Math.abs(weights[i]) < eps) continue;
+          double gap = weights[i] - wlong[i] / 100.0;
+          if (gap > 0 && (iBest < 0 || gap > bestGap)) {
+            iBest = i;
+            bestGap = gap;
+          }
+        }
+        wlong[iBest] += nearestPct;
+        diff += nearestPct;
+      } else {
+        assert diff > 0;
+        // Find farthest above.
+        int iBest = -1;
+        double bestGap = 0.0;
+        for (int i = 0; i < n; ++i) {
+          if (Math.abs(weights[i]) < eps) continue;
+          double gap = wlong[i] / 100.0 - weights[i];
+          if (gap > 0 && (iBest < 0 || gap > bestGap)) {
+            iBest = i;
+            bestGap = gap;
+          }
+        }
+        wlong[iBest] -= nearestPct;
+        diff -= nearestPct;
+      }
+    }
+
+    for (int i = 0; i < weights.length; ++i) {
+      weights[i] = wlong[i] / 100.0;
+    }
+  }
+
   /** Set all values to zero. */
   public void clear()
   {
     Arrays.fill(weights, 0.0);
+  }
+
+  /** Multiply all weights by the given value. */
+  public void mul(double m)
+  {
+    for (int i = 0; i < weights.length; ++i) {
+      weights[i] *= m;
+    }
   }
 
   public static DiscreteDistribution uniform(int n)
@@ -153,6 +212,20 @@ public class DiscreteDistribution
       if (Math.abs(distribution.weights[i] - weights[i]) > eps) return false;
     }
     return true;
+  }
+
+  public String toStringWithNames()
+  {
+    StringBuilder sb = new StringBuilder("[");
+    int nPrinted = 0;
+    for (int i = 0; i < weights.length; ++i) {
+      if (Math.abs(weights[i]) < 1e-4) continue;
+      if (nPrinted > 0) sb.append(",");
+      sb.append(String.format("%s:%.2f", names[i], weights[i] * 100));
+      ++nPrinted;
+    }
+    sb.append("]");
+    return sb.toString();
   }
 
   @Override

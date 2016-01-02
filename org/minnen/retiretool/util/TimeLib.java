@@ -28,6 +28,7 @@ public class TimeLib
 
   public final static DateTimeFormatter dtfTime    = DateTimeFormatter.ofPattern("yyyy MMM d hh:mm:ss a");
   public final static DateTimeFormatter dtfDate    = DateTimeFormatter.ofPattern("d MMM yyyy");
+  public final static DateTimeFormatter dtfDate2   = DateTimeFormatter.ofPattern("dd MMM yyyy");
   public final static DateTimeFormatter dtfMonth   = DateTimeFormatter.ofPattern("MMM yyyy");
   public final static DateTimeFormatter dtfYMD     = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
@@ -198,11 +199,18 @@ public class TimeLib
     return ms2time(ms, zone).format(dtfTime);
   }
 
-  /** @return string representation of the given day (year, month, date) */
+  /** @return string representation of the given day (d MMM YYY) */
   public static String formatDate(long ms)
   {
     if (ms == TIME_ERROR || ms == Long.MAX_VALUE) return null;
     return ms2date(ms).format(dtfDate);
+  }
+
+  /** @return string representation of the given day (dd MMM YYY) */
+  public static String formatDate2(long ms)
+  {
+    if (ms == TIME_ERROR || ms == Long.MAX_VALUE) return null;
+    return ms2date(ms).format(dtfDate2);
   }
 
   /** @return string representation of the given month (year, month) */

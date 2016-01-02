@@ -44,6 +44,8 @@ public class AdaptiveAlloc
   static {
     System.arraycopy(fundSymbols, 0, assetSymbols, 0, fundSymbols.length);
     assetSymbols[assetSymbols.length - 1] = "cash";
+
+    System.setProperty("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.NoOpLog");
   }
 
   public static void main(String[] args) throws IOException
@@ -123,33 +125,35 @@ public class AdaptiveAlloc
     Predictor predictor;
 
     // Lazy 3-fund portfolio.
-    String[] lazy3 = new String[] { "VTSMX", "VBMFX", "VGTSX" };
-    config = new ConfigMixed(new DiscreteDistribution(lazy3, new double[] { 0.34, 0.33, 0.33 }), new PredictorConfig[] {
-        constConfigs[0], constConfigs[1], constConfigs[2] });
-    predictor = config.build(sim.broker.accessObject, lazy3);
-    Sequence returnsLazy3 = sim.run(predictor, "Lazy3");
-    System.out.println(CumulativeStats.calc(returnsLazy3));
+    // String[] lazy3 = new String[] { "VTSMX", "VBMFX", "VGTSX" };
+    // config = new ConfigMixed(new DiscreteDistribution(lazy3, new double[] { 0.34, 0.33, 0.33 }), new
+    // PredictorConfig[] {
+    // constConfigs[0], constConfigs[1], constConfigs[2] });
+    // predictor = config.build(sim.broker.accessObject, lazy3);
+    // Sequence returnsLazy3 = sim.run(predictor, "Lazy3");
+    // System.out.println(CumulativeStats.calc(returnsLazy3));
 
     // Lazy 4-fund portfolio.
-    String[] lazy4 = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX", "cash" };
-    config = new ConfigMixed(new DiscreteDistribution(lazy4, new double[] { 0.4, 0.2, 0.1, 0.3, 0.0 }),
-        new PredictorConfig[] { constConfigs[0], constConfigs[1], constConfigs[2], constConfigs[3], constConfigs[4] });
-    predictor = config.build(sim.broker.accessObject, lazy4);
-    Sequence returnsLazy4 = sim.run(predictor, "Lazy4");
-    System.out.println(CumulativeStats.calc(returnsLazy4));
+    // String[] lazy4 = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX", "cash" };
+    // config = new ConfigMixed(new DiscreteDistribution(lazy4, new double[] { 0.4, 0.2, 0.1, 0.3, 0.0 }),
+    // new PredictorConfig[] { constConfigs[0], constConfigs[1], constConfigs[2], constConfigs[3], constConfigs[4] });
+    // predictor = config.build(sim.broker.accessObject, lazy4);
+    // Sequence returnsLazy4 = sim.run(predictor, "Lazy4");
+    // System.out.println(CumulativeStats.calc(returnsLazy4));
 
     // Run simulation for fixed mix of assets.
-    config = new ConfigMixed(DiscreteDistribution.uniform(fundSymbols), constConfigs);
-    predictor = config.build(sim.broker.accessObject, assetSymbols);
-    Sequence returnsMix = sim.run(predictor, "Equal Mix");
-    System.out.println(CumulativeStats.calc(returnsMix));
+    // config = new ConfigMixed(DiscreteDistribution.uniform(fundSymbols), constConfigs);
+    // predictor = config.build(sim.broker.accessObject, assetSymbols);
+    // Sequence returnsMix = sim.run(predictor, "Equal Mix");
+    // System.out.println(CumulativeStats.calc(returnsMix));
 
     // Run adaptive asset allocation.
     predictor = new AdaptivePredictor(sim.broker.accessObject, assetSymbols);
     Sequence returnsAAA = sim.run(predictor, "Adaptive");
     System.out.println(CumulativeStats.calc(returnsAAA));
-    Chart.saveLineChart(new File(outputDir, "returns.html"), "AAA Returns", 1000, 640, true, returnsAAA, returnsLazy3,
-        returnsLazy4, returnsMix);
+    // Chart.saveLineChart(new File(outputDir, "returns.html"), "AAA Returns", 1000, 640, true, returnsAAA,
+    // returnsLazy3,
+    // returnsLazy4, returnsMix);
 
     // Account account = sim.broker.getAccount(0);
     // account.printTransactions();//TimeLib.TIME_BEGIN, TimeLib.toMs(1996, Month.DECEMBER, 31));

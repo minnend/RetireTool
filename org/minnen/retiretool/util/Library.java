@@ -31,10 +31,6 @@ public final class Library
   public static final String        os           = System.getProperty("os.name");
   public static final boolean       bWindows     = os.startsWith("Win");
 
-  public static enum MatrixOrder {
-    RowMajor, ColumnMajor
-  }
-
   static {
     df.setMaximumFractionDigits(4);
   }
@@ -52,19 +48,6 @@ public final class Library
     // TODO use System.arraycopy.
     for (int i = 0; i < len; i++)
       to[i + iStartTo] = from[i + iStartFrom];
-  }
-
-  public static double[][] allocMatrixDouble(int nRows, int nCols)
-  {
-    return allocMatrixDouble(nRows, nCols, 0.0);
-  }
-
-  public static double[][] allocMatrixDouble(int nRows, int nCols, double init)
-  {
-    double a[][] = new double[nRows][nCols];
-    for (int i = 0; i < nRows; i++)
-      Arrays.fill(a[i], init);
-    return a;
   }
 
   /**
@@ -177,15 +160,56 @@ public final class Library
     return Math.sqrt(variance(a));
   }
 
+  public static double[][] correlation(double[][] r)
+  {
+    final int n = r.length;
+    double[][] cm = new double[n][n];
+    for (int i = 0; i < n; ++i) {
+      cm[i][i] = 1.0;
+      for (int j = i + 1; j < n; ++j) {
+        double p = correlation(r[i], r[j]);
+        assert !Double.isNaN(p);
+        cm[i][j] = cm[j][i] = p;
+      }
+    }
+    return cm;
+  }
+
+  public static double[] cov2dev(double[][] cov)
+  {
+    final int n = cov.length;
+    double[] dev = new double[n];
+    for (int i = 0; i < n; ++i) {
+      dev[i] = Math.sqrt(cov[i][i]);
+    }
+    return dev;
+  }
+
   public static double correlation(double[] a, double[] b)
   {
     assert a.length == b.length;
 
     double sa = stdev(a);
     double sb = stdev(b);
+    if (Math.abs(sa) < 1e-8 || Math.abs(sb) < 1e-8) return 0.0;
 
     double cov = covariance(a, b);
     return cov / (sa * sb);
+  }
+
+  public static double[][] covariance(double[][] r)
+  {
+    final int n = r.length;
+    double[][] cm = new double[n][n];
+    for (int i = 0; i < n; ++i) {
+      cm[i][i] = variance(r[i]);
+      for (int j = i + 1; j < n; ++j) {
+        double p = covariance(r[i], r[j]);
+        assert !Double.isNaN(p);
+        cm[i][j] = cm[j][i] = p;
+      }
+    }
+    return cm;
   }
 
   public static double covariance(double[] a, double[] b)
@@ -205,6 +229,16 @@ public final class Library
     return sum / (a.length - 1);
   }
 
+  /** Return the NxN identity matrix. */
+  public static double[][] eye(int n)
+  {
+    double[][] m = new double[n][n];
+    for (int i = 0; i < n; ++i) {
+      m[i][i] = 1.0;
+    }
+    return m;
+  }
+
   public static int sum(int[] a)
   {
     return sum(a, 0, -1);
@@ -219,6 +253,26 @@ public final class Library
       iEnd += a.length;
     }
     int sum = 0;
+    for (int i = iStart; i <= iEnd; ++i) {
+      sum += a[i];
+    }
+    return sum;
+  }
+
+  public static long sum(long[] a)
+  {
+    return sum(a, 0, -1);
+  }
+
+  public static long sum(long[] a, int iStart, int iEnd)
+  {
+    if (iStart < 0) {
+      iStart += a.length;
+    }
+    if (iEnd < 0) {
+      iEnd += a.length;
+    }
+    long sum = 0;
     for (int i = iStart; i <= iEnd; ++i) {
       sum += a[i];
     }
