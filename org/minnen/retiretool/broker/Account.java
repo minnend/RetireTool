@@ -1,6 +1,7 @@
 package org.minnen.retiretool.broker;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -255,7 +256,8 @@ public class Account
     long time = broker.getTime();
     long price = broker.getSellPrice(name);
     Position position = getPosition(name);
-    assert nShares <= position.getNumShares();
+    final long nSharesHeld = position.getNumShares();
+    assert nShares <= nSharesHeld;
     // System.out.printf("Sell %.2f @ $%s = $%s\n", Fixed.toFloat(nShares), Fixed.formatCurrency(price),
     // Fixed.formatCurrency(Fixed.mul(nShares, price)));
 
@@ -269,7 +271,7 @@ public class Account
       assert receipt.balance > 0;
     }
 
-    TransactionSell sell = new TransactionSell(this, time, name, nShares, price, memo);
+    TransactionSell sell = new TransactionSell(this, time, name, nSharesHeld, nShares, price, memo);
     transactions.add(sell);
     apply(sell);
     return true;
@@ -297,6 +299,14 @@ public class Account
   {
     Position position = getPosition(name);
     sellShares(name, position.getNumShares(), memo);
+  }
+
+  public DiscreteDistribution getDistribution()
+  {
+    String[] names = positions.keySet().toArray(new String[positions.size() + 1]);
+    names[names.length - 1] = "cash";
+    Arrays.sort(names);
+    return getDistribution(names);
   }
 
   public DiscreteDistribution getDistribution(String[] names)

@@ -55,47 +55,110 @@ public class Simulation
     return run(predictor, "Returns");
   }
 
-  private DiscreteDistribution genDistAvoidSmallChanges(DiscreteDistribution current, DiscreteDistribution target)
+  /**
+   * Calculate a distribution that minimizes transaction while coming close to the target.
+   * 
+   * @param current current distribution
+   * @param target target distribution
+   * @param tol tolerance percentage so changes less than this will be ignored (1.0 = 1.0%).
+   * @return distribution similar to target with small changes ignored
+   */
+  private DiscreteDistribution minimizeTransactions(DiscreteDistribution current, DiscreteDistribution target,
+      double tol)
   {
     assert current.size() == target.size();
+    tol /= 100.0; // Convert percentage to fraction
+    final int N = target.size();
+
+    // Force small weights to zero.
+    for (int i = 0; i < N; ++i) {
+      if (Math.abs(target.weights[i]) < 0.005) {
+        target.weights[i] = 0.0;
+      }
+    }
+
+    // System.out.printf("Current: %s\n", current.toStringWithNames(2));
+    // System.out.printf(" Target: %s\n", target.toStringWithNames(2));
+
     DiscreteDistribution dist = new DiscreteDistribution(target);
-    for (int i = 0; i < target.size(); ++i) {
-      double dw = target.weights[i];
+    boolean[] canChange = new boolean[N];
+    for (int i = 0; i < N; ++i) {
+      assert target.names[i].equals(current.names[i]);
+      double tw = target.weights[i];
       double cw = current.weights[i];
-      if (dw > 0.0 && Math.abs(cw - dw) < 0.05) {
-        dist.weights[i] = cw;
+      assert tw == 0.0 || Math.abs(tw) > 0.001;
+      if (tw != 0.0) {
+        canChange[i] = (Math.abs(cw - tw) > tol);
+        if (!canChange[i]) {
+          dist.weights[i] = cw;
+        }
       }
     }
     double sum = dist.sum();
-    if (sum < 1.0 - 1e-6) {
+    // System.out.printf("  Step1: %s  (%f)\n", dist.toStringWithNames(2), sum);
+    // System.out.print("Can Change:");
+    // for (int i = 0; i < N; ++i) {
+    // if (!canChange[i]) continue;
+    // System.out.printf(" %s", target.names[i]);
+    // }
+    // System.out.println();
+
+    if (sum < 1.0 - 1e-4) {
+      // System.out.println("UNDER");
       double missing = 1.0 - sum;
       while (missing > 1e-6) {
+        // Look for something under target.
         double mostUnder = 0.0;
         int iUnder = -1;
-        for (int i = 0; i < target.size(); ++i) {
+        for (int i = 0; i < N; ++i) {
           double diff = target.weights[i] - dist.weights[i];
           if (diff > mostUnder) {
             mostUnder = diff;
             iUnder = i;
           }
         }
+        if (iUnder < 0) {
+          // Nothing under target so look for under current.
+          for (int i = 0; i < N; ++i) {
+            double diff = current.weights[i] - dist.weights[i];
+            if (diff > mostUnder) {
+              mostUnder = diff;
+              iUnder = i;
+            }
+          }
+        }
         double increase = Math.min(missing, mostUnder);
         missing -= increase;
         dist.weights[iUnder] += increase;
       }
-    } else if (sum > 1.0 + 1e-6) {
+    } else if (sum > 1.0 + 1e-4) {
+      // System.out.println("OVER");
       double excess = sum - 1.0;
       while (excess > 1e-6) {
+        // Look for something over the target.
         double mostOver = 0.0;
         int iOver = -1;
-        for (int i = 0; i < target.size(); ++i) {
+        for (int i = 0; i < N; ++i) {
+          if (!canChange[i]) continue;
           double diff = dist.weights[i] - target.weights[i];
           if (diff > mostOver) {
             mostOver = diff;
             iOver = i;
           }
         }
+        if (iOver < 0) {
+          // Nothing over target so look for over current.
+          for (int i = 0; i < N; ++i) {
+            if (!canChange[i]) continue;
+            double diff = dist.weights[i] - current.weights[i];
+            if (diff > mostOver) {
+              mostOver = diff;
+              iOver = i;
+            }
+          }
+        }
         double reduce = Math.min(excess, mostOver);
+        // System.out.printf(" Reduce: %s %f\n", dist.names[iOver], reduce);
         excess -= reduce;
         dist.weights[iOver] -= reduce;
       }
@@ -137,6 +200,8 @@ public class Simulation
       final TimeInfo timeInfo = broker.getTimeInfo();
       // System.out.println(timeInfo);
 
+      // if (timeInfo.date.getYear() > 1996) System.exit(1); // TODO for debug
+
       // Handle initialization issues at t==0.
       if (t == 0) {
         account.deposit(principal, "Initial Deposit");
@@ -149,17 +214,16 @@ public class Simulation
             broker.setPriceIndex(FinLib.Open);
           }
 
-          DiscreteDistribution curDist = account.getDistribution(predictor.assetChoices);
-          DiscreteDistribution submitDist = genDistAvoidSmallChanges(curDist, targetDist);
+          DiscreteDistribution curDist = account.getDistribution(targetDist.names);
+          DiscreteDistribution submitDist = minimizeTransactions(curDist, targetDist, 4.0);
 
-          // System.out.printf("Curr: %s\n", curDist);
-          // System.out.printf("Prev: %s\n", prevDist);
-          // System.out.printf("Want: %s\n", targetDist);
-          // System.out.printf("Subm: %s (%f)\n", submitDist, submitDist.sum());
+          // System.out.printf("Curr: %s\n", curDist.toStringWithNames(2));
+          // System.out.printf("Prev: %s\n", prevDist.toStringWithNames(0));
+          // System.out.printf("Want: %s\n", targetDist.toStringWithNames(0));
+          // System.out.printf("Subm: %s (%f)\n", submitDist.toStringWithNames(2), submitDist.sum());
 
           account.rebalance(submitDist);
-          // curDist = account.getDistribution(predictor.assetChoices);
-          // System.out.printf(" New: %s\n", curDist);
+          // account.printTransactions(timeInfo.time, TimeLib.TIME_END);
           // System.out.println();
 
           lastRebalance = time;

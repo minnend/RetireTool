@@ -130,6 +130,80 @@ public final class Library
     ii[index2] = itmp;
   }
 
+  public static void reorder(double[] a, int[] ii)
+  {
+    double[] b = Arrays.copyOf(a, a.length);
+    for (int i = 0; i < a.length; ++i) {
+      b[i] = a[ii[i]];
+    }
+    System.arraycopy(b, 0, a, 0, a.length);
+  }
+
+  /**
+   * Sort the given array and return the resulting indices
+   * 
+   * @param a data to sort
+   * @param bAscending true = ascending sort, false = descending
+   * @return index of original location of data
+   */
+  public static <T extends Comparable<T>> int[] sort(T[] a, boolean bAscending)
+  {
+    int n = a.length;
+    int[] ii = new int[n];
+    for (int i = 0; i < n; i++) {
+      ii[i] = i;
+    }
+    sort(a, ii, 0, n - 1);
+    if (!bAscending) {
+      for (int i = 0; i < n - i - 1; ++i) {
+        swap(a, ii, i, n - i - 1);
+      }
+    }
+    return ii;
+  }
+
+  /**
+   * Internal insertion sort routine for subarrays that is used by quicksort.
+   * 
+   * @param a an array of Comparable items.
+   * @param ii array of indices that will be rearranged to match sort
+   * @param low the left-most index of the subarray.
+   * @param n the number of items to sort.
+   */
+  private static <T extends Comparable<T>> void sort(T[] a, int[] ii, int low, int high)
+  {
+    for (int p = low + 1; p <= high; p++) {
+      T tmp = a[p];
+      int j;
+      for (j = p; j > low && tmp.compareTo(a[j - 1]) < 0; j--) {
+        a[j] = a[j - 1];
+        ii[j] = ii[j - 1];
+      }
+      a[j] = tmp;
+      ii[j] = p;
+    }
+  }
+
+  /**
+   * Method to swap to elements in an array.
+   * 
+   * @param a an array of objects.
+   * @param ii array of indices that will be rearranged to match sort
+   * @param index1 the index of the first object.
+   * @param index2 the index of the second object.
+   */
+  public static <T extends Comparable<T>> void swap(T[] a, int[] ii, int index1, int index2)
+  {
+    T tmp = a[index1];
+    a[index1] = a[index2];
+    a[index2] = tmp;
+
+    int itmp = ii[index1];
+    ii[index1] = ii[index2];
+    ii[index2] = itmp;
+  }
+
+  /** @return mean (average) of the values in the given array. */
   public static double mean(double[] a)
   {
     double sum = 0.0;

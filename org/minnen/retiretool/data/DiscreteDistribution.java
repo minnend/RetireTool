@@ -105,7 +105,7 @@ public class DiscreteDistribution
 
   public boolean isNormalized()
   {
-    return Math.abs(sum() - 1.0) < 1e-6;
+    return Math.abs(sum() - 1.0) < 1e-4;
   }
 
   /** Ensure sum of distribution values is 1.0 (unless current sum is zero). */
@@ -118,6 +118,12 @@ public class DiscreteDistribution
         weights[i] /= sum;
       }
     }
+  }
+
+  public void sortByName()
+  {
+    int[] ii = Library.sort(names, true);
+    Library.reorder(weights, ii);
   }
 
   public void clean(int nearestPct)
@@ -214,14 +220,15 @@ public class DiscreteDistribution
     return true;
   }
 
-  public String toStringWithNames()
+  public String toStringWithNames(int nSigDig)
   {
     StringBuilder sb = new StringBuilder("[");
     int nPrinted = 0;
+    String format = String.format("%%s:%%.%df", nSigDig);
     for (int i = 0; i < weights.length; ++i) {
       if (Math.abs(weights[i]) < 1e-4) continue;
       if (nPrinted > 0) sb.append(",");
-      sb.append(String.format("%s:%.2f", names[i], weights[i] * 100));
+      sb.append(String.format(format, names[i], weights[i] * 100));
       ++nPrinted;
     }
     sb.append("]");

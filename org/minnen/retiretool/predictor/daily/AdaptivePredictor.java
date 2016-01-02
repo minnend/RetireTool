@@ -190,9 +190,12 @@ public class AdaptivePredictor extends Predictor
       distribution.set(mom.name, weights[i]);
       // System.out.printf("%s ", name);
     }
-    //System.out.printf("[%s] %s\n", TimeLib.formatDate2(brokerAccess.getTime()), distribution.toStringWithNames());
+    // System.out.printf("[%s] %s\n", TimeLib.formatDate2(brokerAccess.getTime()), distribution.toStringWithNames(2));
     distribution.clean(5);
-    //System.out.printf("              %s\n", distribution.toStringWithNames());
+    distribution.sortByName();
+    // System.out.printf("              %s\n", distribution.toStringWithNames(0));
+    // System.out.printf("[%s] %s (Predictor)\n", TimeLib.formatDate2(brokerAccess.getTime()),
+    // distribution.toStringWithNames(0));
 
     // if (nKeep <= 3) {
     // double w = 1.0 / (2.0 * nKeep);
@@ -200,7 +203,7 @@ public class AdaptivePredictor extends Predictor
     // distribution.set("cash", w);
     // }
 
-    // System.out.println();    
+    // System.out.println();
     assert distribution.isNormalized();
     if (prevDistribution == null) {
       prevDistribution = new DiscreteDistribution(distribution);

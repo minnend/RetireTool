@@ -57,7 +57,7 @@ public class TestLibrary
   }
 
   @Test
-  public void testSort()
+  public void testSortDouble()
   {
     // Sort ascending.
     double[] a = new double[] { 5, -3, 2, 0.01, 1e6 };
@@ -70,6 +70,62 @@ public class TestLibrary
     expected = new double[] { 1e6, 5, 2, 0.01, -3 };
     Library.sort(a, false);
     assertArrayEquals(expected, a, 0.0);
+  }
+
+  @Test
+  public void testReorderDouble()
+  {
+    double[] a = new double[] { 1, 2, 3, 4, 5 };
+    int[] ii = new int[] { 0, 1, 2, 3, 4 };
+    double[] expected = new double[] { 1, 2, 3, 4, 5 };
+    Library.reorder(a, ii);
+    assertArrayEquals(expected, a, 0.0);
+
+    a = new double[] { 1, 2, 3, 4, 5 };
+    ii = new int[] { 4, 3, 2, 1, 0 };
+    expected = new double[] { 5, 4, 3, 2, 1 };
+    Library.reorder(a, ii);
+    assertArrayEquals(expected, a, 0.0);
+
+    a = new double[] { 1, 2, 3, 4, 5 };
+    ii = new int[] { 3, 1, 4, 2, 0 };
+    expected = new double[] { 4, 2, 5, 3, 1 };
+    Library.reorder(a, ii);
+    assertArrayEquals(expected, a, 0.0);
+
+    a = new double[] { 1, 2, 3, 4, 5 };
+    ii = new int[] { 1, 4, 3, 0, 2 };
+    expected = new double[] { 2, 5, 4, 1, 3 };
+    Library.reorder(a, ii);
+    assertArrayEquals(expected, a, 0.0);
+
+    a = new double[] { 1 };
+    ii = new int[] { 0 };
+    expected = new double[] { 1 };
+    Library.reorder(a, ii);
+    assertArrayEquals(expected, a, 0.0);
+
+    a = new double[] {};
+    ii = new int[] {};
+    expected = new double[] {};
+    Library.reorder(a, ii);
+    assertArrayEquals(expected, a, 0.0);
+  }
+
+  @Test
+  public void testSortString()
+  {
+    // Sort ascending.
+    String[] a = new String[] { "a", "d", "c", "b" };
+    String[] expected = new String[] { "a", "b", "c", "d" };
+    Library.sort(a, true);
+    assertArrayEquals(expected, a);
+
+    // Sort descending.
+    a = new String[] { "a", "d", "c", "b" };
+    expected = new String[] { "d", "c", "b", "a" };
+    Library.sort(a, false);
+    assertArrayEquals(expected, a);
   }
 
   @Test
