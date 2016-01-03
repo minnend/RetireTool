@@ -77,7 +77,7 @@ public class ComparisonStats
     return stats;
   }
 
-  private static Results calcFromCumulative(Sequence cumulativeReturns1, Sequence cumulativeReturns2, int nMonths,
+  public static Results calcFromCumulative(Sequence cumulativeReturns1, Sequence cumulativeReturns2, int nMonths,
       double diffMargin)
   {
     assert cumulativeReturns1.length() == cumulativeReturns2.length();
@@ -88,7 +88,7 @@ public class ComparisonStats
     return calcFromDurationReturns(returns1, returns2, nMonths, diffMargin);
   }
 
-  private static Results calcFromCumulative(Sequence cumulativeReturns, Sequence[] defenders, int nMonths,
+  public static Results calcFromCumulative(Sequence cumulativeReturns, Sequence[] defenders, int nMonths,
       double diffMargin)
   {
     assert cumulativeReturns.length() == defenders[0].length();
@@ -103,14 +103,14 @@ public class ComparisonStats
     return calcFromDurationReturns(returns1, returns2, nMonths, diffMargin);
   }
 
-  private static Results calcFromCumulative(Sequence cumulativeReturns, double targetReturn, int nMonths,
+  public static Results calcFromCumulative(Sequence cumulativeReturns, double targetReturn, int nMonths,
       double diffMargin)
   {
     Sequence returns = FinLib.calcReturnsForDuration(cumulativeReturns, nMonths);
     return calcFromDurationReturns(returns, targetReturn, nMonths, diffMargin);
   }
 
-  private static Results calcFromDurationReturns(Sequence returnsForDuration1, Sequence returnsForDuration2,
+  public static Results calcFromDurationReturns(Sequence returnsForDuration1, Sequence returnsForDuration2,
       int nMonths, double diffMargin)
   {
     assert returnsForDuration1.length() == returnsForDuration2.length();
@@ -146,7 +146,7 @@ public class ComparisonStats
     return results;
   }
 
-  private static Results calcFromDurationReturns(Sequence returnsForDuration, double targetReturn, int nMonths,
+  public static Results calcFromDurationReturns(Sequence returnsForDuration, double targetReturn, int nMonths,
       double diffMargin)
   {
     Results results = new Results();

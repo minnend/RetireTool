@@ -7,7 +7,6 @@ import java.time.LocalDate;
 import java.time.Month;
 
 import org.junit.Test;
-import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
 
 public class TestTimeLib

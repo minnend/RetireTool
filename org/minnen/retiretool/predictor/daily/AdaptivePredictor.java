@@ -22,7 +22,7 @@ public class AdaptivePredictor extends Predictor
   private static class MomScore implements Comparable<MomScore>
   {
     public final String name;
-    public final double score;
+    public double       score;
 
     public MomScore(String name, double score)
     {
@@ -37,6 +37,12 @@ public class AdaptivePredictor extends Predictor
       if (score > mom.score) return 1;
       return 0;
     }
+
+    @Override
+    public String toString()
+    {
+      return String.format("%s: %.3f", name, score);
+    }
   }
 
   public AdaptivePredictor(ConfigAdaptive config, BrokerInfoAccess brokerAccess, String... assetChoices)
@@ -46,21 +52,20 @@ public class AdaptivePredictor extends Predictor
     this.predictorType = PredictorType.Distribution;
   }
 
-  private double[] getWeights(List<MomScore> moms)
+  private double[] getEqualWeights(int n)
+  {
+    if (n < 1) return null;
+    double[] weights = new double[n];
+    Arrays.fill(weights, 1.0 / n);
+    return weights;
+  }
+
+  private double[][] getReturns(List<MomScore> moms)
   {
     final int n = moms.size();
-    double[] weights = new double[n];
-    final double uniformWeight = 1.0 / n;
-    Arrays.fill(weights, uniformWeight);
-
-    double maxWeight = (config.maxWeight > 0.0 ? config.maxWeight : 1.0);
-    if (config.weighting == Weighting.Equal || maxWeight <= uniformWeight) {
-      return weights;
-    }
-    assert config.weighting == Weighting.MinVar;
-    assert maxWeight > uniformWeight;
 
     final int nLookback = config.nCorrelation;
+    assert nLookback > 0;
     double[][] returns = new double[n][];
     for (int i = 0; i < n; ++i) {
       String name = moms.get(i).name;
@@ -68,8 +73,26 @@ public class AdaptivePredictor extends Predictor
       Sequence seq = brokerAccess.getSeq(name);
       assert seq != null : moms.get(i).name;
       returns[i] = FinLib.getReturns(seq, -nLookback, -1, config.iPrice);
+      assert returns[i].length == returns[0].length;
     }
+    return returns;
+  }
 
+  private double[] getMinVarWeights(List<MomScore> moms)
+  {
+    final int n = moms.size();
+    if (n < 1) return null;
+    if (n == 1) return new double[] { 1.0 };
+
+    double[] weights = getEqualWeights(n);
+    final double uniformWeight = 1.0 / n;
+
+    double maxWeight = (config.maxWeight > 0.0 ? config.maxWeight : 1.0);
+    assert maxWeight >= uniformWeight : String.format("%f vs %f", maxWeight, uniformWeight);
+    double minWeight = (config.minWeight > 0.0 ? config.minWeight : 0.0);
+    assert minWeight >= 0.0 && minWeight <= uniformWeight : String.format("%f vs %f", minWeight, uniformWeight);
+
+    double[][] returns = getReturns(moms);
     // for (int i = 0; i < n; ++i) {
     // System.out.printf("%5s: ", moms.get(i).name);
     // double[] r = returns[i];
@@ -87,13 +110,14 @@ public class AdaptivePredictor extends Predictor
     // for (int i = 0; i < n; ++i) {
     // System.out.printf("%5s: ", moms.get(i).name);
     // for (int j = 0; j < n; ++j) {
-    // assert !Double.isNaN(cov[i][j]);
-    // System.out.printf("%5.2f ", cov[i][j]);
+    // assert !Double.isNaN(corr[i][j]);
+    // System.out.printf("%5.2f ", corr[i][j]);
     // }
     // System.out.println();
     // }
+    // System.out.println();
 
-    double[] mvw = FinLib.minvar(cov, maxWeight);
+    double[] mvw = FinLib.minvar(cov, minWeight, maxWeight);
     // System.out.print("MVW: ");
     // for (int i = 0; i < n; ++i) {
     // System.out.printf("%5.3f ", mvw[i]);
@@ -150,18 +174,24 @@ public class AdaptivePredictor extends Predictor
       }
     }
     Collections.sort(moms, Collections.reverseOrder());
-    int nKeep = n;
+    int nGoodMom = 0;
     for (int i = 0; i < n; ++i) {
       MomScore mom = moms.get(i);
       if (mom.score >= 0.0) {
-        nKeep = i + 1;
+        nGoodMom = i + 1;
         // System.out.printf("%s: %.3f\n", mom.name, mom.score);
       } else {
         break;
       }
     }
     // System.out.println("---");
+    while (moms.size() > nGoodMom) {
+      moms.remove(moms.size() - 1);
+    }
+    assert moms.size() == nGoodMom;
 
+    // Calculate max number of assets to keep and remove rest.
+    int nKeep = nGoodMom;
     if (config.maxKeepFrac > 0.0) {
       nKeep = Math.min(nKeep, (int) Math.floor(n * config.maxKeepFrac));
     }
@@ -173,7 +203,7 @@ public class AdaptivePredictor extends Predictor
     }
     assert moms.size() == nKeep;
 
-    double[] weights = getWeights(moms);
+    double[] weights = (config.weighting == Weighting.Equal ? getEqualWeights(nKeep) : getMinVarWeights(moms));
     distribution.clear();
     // System.out.printf("[%s] %d\n", TimeLib.formatDate(brokerAccess.getTime()), nKeep);
     for (int i = 0; i < nKeep; ++i) {
@@ -181,6 +211,12 @@ public class AdaptivePredictor extends Predictor
       distribution.set(mom.name, weights[i]);
       // System.out.printf("%s ", name);
     }
+
+    // If nothing looks good, hold all cash.
+    if (nKeep == 0) {
+      distribution.set("cash", 1.0);
+    }
+
     // System.out.printf("[%s] %s\n", TimeLib.formatDate2(brokerAccess.getTime()), distribution.toStringWithNames(2));
     distribution.clean(config.pctQuantum);
     // distribution.sortByName();

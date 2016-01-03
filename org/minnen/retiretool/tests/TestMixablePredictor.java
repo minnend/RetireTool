@@ -4,7 +4,6 @@ import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.Month;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
@@ -86,7 +85,7 @@ public class TestMixablePredictor
 
   private CumulativeStats runSim(PredictorConfig config)
   {
-    Predictor predictor = config.build(sim.broker.accessObject, fundSymbols);
+    Predictor predictor = config.build(sim.broker.accessObject, assetSymbols);
     Sequence returns = sim.run(predictor);
     return CumulativeStats.calc(returns);
   }

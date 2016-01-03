@@ -20,6 +20,7 @@ import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.DurationalStats;
 import org.minnen.retiretool.stats.ComparisonStats.Results;
 import org.minnen.retiretool.util.FinLib;
+import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.TimeLib;
 
 public class Chart
@@ -962,6 +963,8 @@ public class Chart
   public static void saveAnnualStatsTable(File file, int width, boolean bCheckDate, Sequence... seqs)
       throws IOException
   {
+    final double diffMargin = 0.5;
+
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
       writer.write("<html><head>\n");
       writer.write("<title>Annual Statistics</title>\n");
@@ -978,7 +981,7 @@ public class Chart
 
       double widthPercent = 100.0 / (seqs.length + 1);
       String th = String.format("<th style=\"width: %.2f%%\">", widthPercent);
-      writer.write(th + "</th>\n");
+      writer.write(th + "Year</th>\n");
       for (Sequence seq : seqs) {
         writer.write(String.format("%s%s</th>\n", th, FinLib.getBaseName(seq.getName())));
       }
@@ -988,6 +991,7 @@ public class Chart
       LocalDate lastDate = TimeLib.ms2date(seqs[0].getEndMS());
       int iStart = TimeLib.findStartofFirstYear(seqs[0], bCheckDate);
       LocalDate date = TimeLib.ms2date(seqs[0].getTimeMS(iStart));
+      double[] returns = new double[seqs.length];
       while (true) {
         LocalDate nextDate = date.with(TemporalAdjusters.firstDayOfNextYear());
         int iNext = seqs[0].getIndexAtOrBefore(TimeLib.toMs(nextDate.minusDays(1)));
@@ -995,10 +999,16 @@ public class Chart
         writer.write("<tr>\n");
         writer.write(String.format("<td><b>%d</b></td>", date.getYear()));
 
-        for (Sequence seq : seqs) {
+        for (int i = 0; i < seqs.length; ++i) {
+          Sequence seq = seqs[i];
           double tr = FinLib.getTotalReturn(seq, iStart - 1, iNext);
           double ar = FinLib.getAnnualReturn(tr, 12);
-          writer.write(String.format("<td>%.2f</td>", ar));
+          returns[i] = ar;
+        }
+        int iBest = Library.argmax(returns);
+        for (int i = 0; i < seqs.length; ++i) {
+          boolean bold = (returns[iBest] - returns[i] < diffMargin);
+          writer.write(String.format("<td>%s%.2f%s</td>", bold ? "<b>" : "", returns[i], bold ? "</b>" : ""));
         }
         writer.write("</tr>\n");
 

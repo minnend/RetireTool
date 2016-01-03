@@ -32,12 +32,15 @@ public class AdaptiveAlloc
 {
   public static final SequenceStore store        = new SequenceStore();
 
-  public static final Slippage      slippage     = new Slippage(0.02, 0.0);
+  public static final Slippage      slippage     = new Slippage(0.03, 0.0);
 
   // These symbols go back to 1 April 1996.
   public static final String[]      fundSymbols  = new String[] { "SPY", "VTSMX", "VBMFX", "VGSIX", "VGTSX", "EWU",
       "EWG", "EWJ", "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX", "SGGDX", "VGPMX", "USAGX", "FSPCX",
       "FSRBX", "FPBFX", "ETGIX"                 };
+
+  // public static final String[] fundSymbols = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX",
+  // "VGENX", "VFICX", "VGPMX", "DFGBX", };
 
   // These symbols go back to 28 Jan 1993.
   // public static final String[] fundSymbols = new String[] { "VTSMX", "VBMFX", "VGENX", "WHOSX", "FAGIX", "DFGBX",
@@ -159,12 +162,14 @@ public class AdaptiveAlloc
     System.out.println(CumulativeStats.calc(returnsLazy4));
 
     // All stock.
-    predictor = new ConfigConst("VTSMX").build(sim.broker.accessObject, fundSymbols);
+    PredictorConfig stockConfig = new ConfigConst("VTSMX");
+    predictor = stockConfig.build(sim.broker.accessObject, fundSymbols);
     Sequence returnsStock = sim.run(predictor, "Stock");
     System.out.println(CumulativeStats.calc(returnsStock));
 
     // All bonds.
-    predictor = new ConfigConst("VBMFX").build(sim.broker.accessObject, fundSymbols);
+    PredictorConfig bondConfig = new ConfigConst("VBMFX");
+    predictor = bondConfig.build(sim.broker.accessObject, fundSymbols);
     Sequence returnsBonds = sim.run(predictor, "Bonds");
     System.out.println(CumulativeStats.calc(returnsBonds));
 
@@ -182,12 +187,6 @@ public class AdaptiveAlloc
     // predictor = tacticalConfig.build(sim.broker.accessObject, fundSymbols);
     // Sequence returnsTactical = sim.run(predictor, "Tactical");
     // System.out.println(CumulativeStats.calc(returnsTactical));
-
-    // Run simulation for fixed mix of assets.
-    // config = new ConfigMixed(DiscreteDistribution.uniform(fundSymbols), constConfigs);
-    // predictor = config.build(sim.broker.accessObject, assetSymbols);
-    // Sequence returnsMix = sim.run(predictor, "Equal Mix");
-    // System.out.println(CumulativeStats.calc(returnsMix));
 
     // Run adaptive asset allocation.
     TradeFreq tradeFreq = TradeFreq.Weekly;
@@ -216,7 +215,7 @@ public class AdaptiveAlloc
     // Combination of EqualWeight and Tactical.
     Sequence[] defenders = new Sequence[] { returnsStock, returnsBonds, returnsLazy2, returnsLazy3, returnsLazy4 };
     List<ComparisonStats> compStats = new ArrayList<>();
-    for (int i = 0; i <= 100; i += 10) {
+    for (int i = 0; i <= 100; i += 50) {
       double alpha = i / 100.0;
       double[] weights = new double[] { alpha, 1.0 - alpha };
       config = new ConfigMixed(new DiscreteDistribution(weights), tacticalConfig, equalWeightConfig);
@@ -232,7 +231,7 @@ public class AdaptiveAlloc
       }
       Sequence ret = sim.run(predictor, name);
       returns.add(ret);
-      compStats.add(ComparisonStats.calc(ret, 0.25, defenders));
+      compStats.add(ComparisonStats.calc(ret, 0.5, defenders));
       System.out.println(CumulativeStats.calc(ret));
     }
 

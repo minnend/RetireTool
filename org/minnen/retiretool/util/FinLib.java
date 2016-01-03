@@ -1392,13 +1392,13 @@ public final class FinLib
 
   public static double[] minvar(double[][] corrMatrix)
   {
-    return minvar(corrMatrix, 1.0);
+    return minvar(corrMatrix, 0.0, 1.0);
   }
 
-  public static double[] minvar(double[][] corrMatrix, double maxWeight)
+  public static double[] minvar(double[][] corrMatrix, double minWeight, double maxWeight)
   {
     final int n = corrMatrix.length;
-    final boolean bConstrainedWeight = (maxWeight > 0.0 && maxWeight < 1.0);
+    final boolean bConstrainedMaxWeight = (maxWeight > 0.0 && maxWeight < 1.0);
 
     // Initial guess is equal weights; either uniform o
     double[] guess = new double[n];
@@ -1414,14 +1414,14 @@ public final class FinLib
     PDQuadraticMultivariateRealFunction objective = new PDQuadraticMultivariateRealFunction(P, null, 0);
 
     // We want to be long-only so weights must be constrained to be >= 0.0.
-    final int nInequalities = (bConstrainedWeight ? 2 * n : n);
+    final int nInequalities = (bConstrainedMaxWeight ? 2 * n : n);
     ConvexMultivariateRealFunction[] inequalities = new ConvexMultivariateRealFunction[nInequalities];
     for (int i = 0; i < n; ++i) {
       double[] a = new double[n];
       a[i] = -1.0;
-      inequalities[i] = new LinearMultivariateRealFunction(a, 0);
+      inequalities[i] = new LinearMultivariateRealFunction(a, minWeight);
 
-      if (bConstrainedWeight) {
+      if (bConstrainedMaxWeight) {
         a = new double[n];
         a[i] = 1.0;
         inequalities[i + n] = new LinearMultivariateRealFunction(a, -maxWeight - 1e-11);
