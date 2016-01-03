@@ -10,10 +10,23 @@ public class ConfigMulti extends PredictorConfig
 {
   public long                     assetMap;
   private final PredictorConfig[] configs;
+  private final int               iPredictRisky;
+  private final int               iPredictSafe;
 
   public ConfigMulti(long assetMap, PredictorConfig... configs)
   {
+    this(assetMap, 0, 1, configs);
+  }
+
+  public ConfigMulti(long assetMap, int iPredictRisky, int iPredictSafe, PredictorConfig... configs)
+  {
+    assert iPredictRisky >= 0 && iPredictRisky < configs.length;
+    assert iPredictSafe >= 0 && iPredictSafe < configs.length;
+    assert iPredictRisky != iPredictSafe;
+
     this.assetMap = assetMap;
+    this.iPredictRisky = iPredictRisky;
+    this.iPredictSafe = iPredictSafe;
     this.configs = Arrays.copyOf(configs, configs.length);
   }
 

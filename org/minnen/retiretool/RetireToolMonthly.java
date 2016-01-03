@@ -1039,7 +1039,7 @@ public class RetireToolMonthly
 
     // Generate curve for each decade.
     List<Sequence> decades = new ArrayList<Sequence>();
-    int iDecadeStart = TimeLib.findStartofFirstDecade(stockData);
+    int iDecadeStart = TimeLib.findStartofFirstDecade(stockData, false);
     for (int i = iDecadeStart; i + 120 < stockData.length(); i += 120) {
       LocalDate date = TimeLib.ms2date(stockData.getTimeMS(i));
       Sequence decadeStock = FinLib.calcSnpReturns(stockData, i, 120, DividendMethod.MONTHLY);

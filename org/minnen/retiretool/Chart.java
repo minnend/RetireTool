@@ -5,6 +5,8 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.temporal.TemporalAdjuster;
+import java.time.temporal.TemporalAdjusters;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map.Entry;
@@ -861,7 +863,7 @@ public class Chart
 
   public static void printDecadeTable(Sequence cumulativeReturns)
   {
-    int iStart = TimeLib.findStartofFirstDecade(cumulativeReturns);
+    int iStart = TimeLib.findStartofFirstDecade(cumulativeReturns, false);
     if (iStart < 0) {
       return;
     }
@@ -890,7 +892,7 @@ public class Chart
   public static void printDecadeTable(Sequence returns1, Sequence returns2)
   {
     assert returns1.length() == returns2.length();
-    int iStart = TimeLib.findStartofFirstDecade(returns1);
+    int iStart = TimeLib.findStartofFirstDecade(returns1, false);
     if (iStart < 0) {
       return;
     }
@@ -949,5 +951,67 @@ public class Chart
           winPercent2));
     }
     return sb.toString();
+  }
+
+  public static void saveAnnualStatsTable(File file, int width, boolean bCheckDate, List<Sequence> seqs)
+      throws IOException
+  {
+    saveAnnualStatsTable(file, width, bCheckDate, seqs.toArray(new Sequence[seqs.size()]));
+  }
+
+  public static void saveAnnualStatsTable(File file, int width, boolean bCheckDate, Sequence... seqs)
+      throws IOException
+  {
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+      writer.write("<html><head>\n");
+      writer.write("<title>Annual Statistics</title>\n");
+      writer.write("<script src=\"http://code.jquery.com/jquery.min.js\"></script>\n");
+      writer.write("<script type=\"text/javascript\" src=\"js/jquery.tablesorter.min.js\"></script>\n");
+      writer.write("<script type=\"text/javascript\">\n");
+      writer.write(" $(document).ready(function() { $(\"#statsTable\").tablesorter( {widgets: ['zebra']} ); } );\n");
+      writer.write("</script>\n");
+      writer
+          .write("<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
+      writer.write(String.format("</head><body style=\"width:%dpx\">\n", width));
+      writer.write("<table id=\"statsTable\" class=\"tablesorter\">\n");
+      writer.write("<thead><tr>\n");
+
+      double widthPercent = 100.0 / (seqs.length + 1);
+      String th = String.format("<th style=\"width: %.2f%%\">", widthPercent);
+      writer.write(th + "</th>\n");
+      for (Sequence seq : seqs) {
+        writer.write(String.format("%s%s</th>\n", th, FinLib.getBaseName(seq.getName())));
+      }
+      writer.write("</tr></thead>\n");
+      writer.write("<tbody>\n");
+
+      LocalDate lastDate = TimeLib.ms2date(seqs[0].getEndMS());
+      int iStart = TimeLib.findStartofFirstYear(seqs[0], bCheckDate);
+      LocalDate date = TimeLib.ms2date(seqs[0].getTimeMS(iStart));
+      while (true) {
+        LocalDate nextDate = date.with(TemporalAdjusters.firstDayOfNextYear());
+        int iNext = seqs[0].getIndexAtOrBefore(TimeLib.toMs(nextDate.minusDays(1)));
+
+        writer.write("<tr>\n");
+        writer.write(String.format("<td><b>%d</b></td>", date.getYear()));
+
+        for (Sequence seq : seqs) {
+          double tr = FinLib.getTotalReturn(seq, iStart - 1, iNext);
+          double ar = FinLib.getAnnualReturn(tr, 12);
+          writer.write(String.format("<td>%.2f</td>", ar));
+        }
+        writer.write("</tr>\n");
+
+        // Find start of next year.
+        date = nextDate;
+        iStart = seqs[0].getIndexAtOrAfter(TimeLib.toMs(date));
+        if (iStart < 0) break;
+
+        // Make sure there is data for December of the next year.
+        if (lastDate.getYear() == date.getYear() && lastDate.getMonthValue() < 12) break;
+      }
+      writer.write("</tbody>\n</table>\n");
+      writer.write("</body></html>\n");
+    }
   }
 }

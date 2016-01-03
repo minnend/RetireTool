@@ -1,5 +1,7 @@
 package org.minnen.retiretool.predictor.daily;
 
+import java.util.Set;
+
 import org.minnen.retiretool.broker.BrokerInfoAccess;
 import org.minnen.retiretool.data.DiscreteDistribution;
 
@@ -20,13 +22,15 @@ public class MixedPredictor extends Predictor
   @Override
   protected void calcDistribution(DiscreteDistribution distribution)
   {
+    // Calculate the combined distribution.
     distribution.clear();
     for (int i = 0; i < predictors.length; ++i) {
       double wi = mix.weights[i];
-      DiscreteDistribution di = predictors[i].selectDistribution();
-      assert di.size() == distribution.size();
-      for (int j = 0; j < di.size(); ++j) {
-        distribution.weights[j] += wi * di.weights[j];
+      DiscreteDistribution dist = predictors[i].selectDistribution();
+      for (int j = 0; j < dist.size(); ++j) {
+        int iName = distribution.find(dist.names[j]);
+        assert iName >= 0 : name;
+        distribution.weights[iName] += wi * dist.weights[j];
       }
     }
     distribution.normalize();

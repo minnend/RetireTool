@@ -90,13 +90,31 @@ public class TimeLib
     return toMs(LocalDate.of(year, month, day));
   }
 
-  /** @return whole number of months between the times (partial month is ignored). */
-  public static int monthsBetween(long t1, long t2)
+  /** @return fractional months between the times. */
+  public static double monthsBetween(long t1, long t2)
   {
     assert t1 != TimeLib.TIME_ERROR && t2 != TimeLib.TIME_ERROR;
+    if (t2 < t1) {
+      long tmp = t1;
+      t1 = t2;
+      t2 = tmp;
+    }
+    assert t1 <= t2;
     LocalDate d1 = ms2date(t1);
     LocalDate d2 = ms2date(t2);
-    return (int) ChronoUnit.MONTHS.between(d1, d2);
+    long nWholeMonths = ChronoUnit.MONTHS.between(d1, d2);
+    d1 = d1.plusMonths(nWholeMonths);
+    assert d1.isBefore(d2) || d1.isEqual(d2);
+
+    long nDays1 = ChronoUnit.DAYS.between(d1, d2);
+    assert nDays1 >= 0;
+    d1 = d1.plusMonths(1);
+    long nDays2 = ChronoUnit.DAYS.between(d2, d1);
+    assert nDays2 >= 0;
+
+    long nDays = nDays1 + nDays2;
+
+    return nWholeMonths + (double) nDays1 / nDays;
   }
 
   /**
@@ -105,18 +123,35 @@ public class TimeLib
    * @param seq Sequence with timestamps
    * @return index for first decade or -1 if none
    */
-  public static int findStartofFirstDecade(Sequence seq)
+  public static int findStartofFirstDecade(Sequence seq, boolean bCheckDate)
   {
     // Find start of decade.
-    int iStart = -1;
     for (int i = 0; i < seq.length(); ++i) {
       LocalDate date = ms2date(seq.getTimeMS(i));
-      if (date.getMonth() == Month.JANUARY && date.getYear() % 10 == 0) {
-        iStart = i;
-        break;
+      if (date.getMonth() == Month.JANUARY && date.getYear() % 10 == 0
+          && (!bCheckDate || date.equals(TimeLib.toFirstBusinessDayOfMonth(date)))) {
+        return i;
       }
     }
-    return iStart;
+    return -1;
+  }
+
+  /**
+   * Returns index corresponding to first entry of new year (e.g. January 1881).
+   * 
+   * @param seq Sequence with timestamps
+   * @return index for first year or -1 if none
+   */
+  public static int findStartofFirstYear(Sequence seq, boolean bCheckDate)
+  {
+    // Find start of year.
+    for (int i = 0; i < seq.length(); ++i) {
+      LocalDate date = ms2date(seq.getTimeMS(i));
+      if (date.getMonth() == Month.JANUARY && (!bCheckDate || date.equals(TimeLib.toFirstBusinessDayOfMonth(date)))) {
+        return i;
+      }
+    }
+    return -1;
   }
 
   public static long calcCommonStart(List<Sequence> seqs)
@@ -181,6 +216,7 @@ public class TimeLib
     return day1 < day2;
   }
 
+  /** @return True if the two dates are for the same month of the same year. */
   public static boolean isSameMonth(LocalDate d1, LocalDate d2)
   {
     return d1.getYear() == d2.getYear() && d1.getMonth() == d2.getMonth();
@@ -225,6 +261,13 @@ public class TimeLib
   {
     if (ms == TIME_ERROR || ms == Long.MAX_VALUE) return null;
     return ms2date(ms).format(dtfYMD);
+  }
+
+  /** @return LocalDate for the given date moved to the first business day of the month. */
+  public static LocalDate toFirstBusinessDayOfMonth(LocalDate date)
+  {
+    LocalDate lastOfPrevMonth = date.minusMonths(1).with(TemporalAdjusters.lastDayOfMonth());
+    return toNextBusinessDay(lastOfPrevMonth);
   }
 
   /** @return LocalDate for the given date moved to the last business day of the month. */

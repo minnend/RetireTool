@@ -787,9 +787,9 @@ public class RetireTool
 
     // searchPredictors(dataDir, dir);
     // searchSMA(dataDir, dir);
-    // runOne(dir);
+    runOne(dir);
     // runSweep(dir);
-    runJitterTest(dir);
+    // runJitterTest(dir);
     // runMultiSweep(dir);
     // runMixSweep(dir);
 

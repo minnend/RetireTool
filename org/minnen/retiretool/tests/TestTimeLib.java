@@ -15,35 +15,40 @@ public class TestTimeLib
   @Test
   public void testMonthsBetween()
   {
+    final double eps = 1 - 4;
     long t1, t2;
 
     t1 = TimeLib.toMs(2015, Month.DECEMBER, 20);
     t2 = TimeLib.toMs(2015, Month.DECEMBER, 20);
-    assertEquals(0, TimeLib.monthsBetween(t1, t2));
+    assertEquals(0.0, TimeLib.monthsBetween(t1, t2), eps);
+
+    t1 = TimeLib.toMs(2015, Month.DECEMBER, 1);
+    t2 = TimeLib.toMs(2016, Month.JANUARY, 1);
+    assertEquals(1.0, TimeLib.monthsBetween(t1, t2), eps);
 
     t1 = TimeLib.toMs(2015, Month.DECEMBER, 1);
     t2 = TimeLib.toMs(2015, Month.DECEMBER, 31);
-    assertEquals(0, TimeLib.monthsBetween(t1, t2));
+    assertEquals(30.0 / 31.0, TimeLib.monthsBetween(t1, t2), eps);
 
     t1 = TimeLib.toMs(2015, Month.NOVEMBER, 20);
     t2 = TimeLib.toMs(2015, Month.DECEMBER, 20);
-    assertEquals(1, TimeLib.monthsBetween(t1, t2));
+    assertEquals(1.0, TimeLib.monthsBetween(t1, t2), eps);
 
     t1 = TimeLib.toMs(2015, Month.NOVEMBER, 20);
     t2 = TimeLib.toMs(2015, Month.DECEMBER, 19);
-    assertEquals(0, TimeLib.monthsBetween(t1, t2));
+    assertEquals(29.0 / 30.0, TimeLib.monthsBetween(t1, t2), eps);
 
     t1 = TimeLib.toMs(2015, Month.NOVEMBER, 30);
     t2 = TimeLib.toMs(2015, Month.DECEMBER, 1);
-    assertEquals(0, TimeLib.monthsBetween(t1, t2));
+    assertEquals(1.0 / 30.0, TimeLib.monthsBetween(t1, t2), eps);
 
     t1 = TimeLib.toMs(2015, Month.NOVEMBER, 1);
     t2 = TimeLib.toMs(2015, Month.DECEMBER, 30);
-    assertEquals(1, TimeLib.monthsBetween(t1, t2));
+    assertEquals(1.0 + 29.0 / 31.0, TimeLib.monthsBetween(t1, t2), eps);
 
     t1 = TimeLib.toMs(2013, Month.NOVEMBER, 1);
     t2 = TimeLib.toMs(2015, Month.DECEMBER, 30);
-    assertEquals(25, TimeLib.monthsBetween(t1, t2));
+    assertEquals(25 + 29.0 / 31.0, TimeLib.monthsBetween(t1, t2), eps);
   }
 
   @Test
@@ -207,6 +212,28 @@ public class TestTimeLib
     assertEquals(2016, date.getYear());
     assertEquals(Month.FEBRUARY, date.getMonth());
     assertEquals(29, date.getDayOfMonth());
+  }
+
+  @Test
+  public void testToFirstBusinessDayOfMonth()
+  {
+    LocalDate d1, d2;
+
+    d1 = LocalDate.of(2015, Month.DECEMBER, 20);
+    d2 = TimeLib.toFirstBusinessDayOfMonth(d1);
+    assertTrue(TimeLib.isSameMonth(d1, d2));
+    assertEquals(2015, d2.getYear());
+    assertEquals(1, d2.getDayOfMonth());
+
+    d1 = LocalDate.of(2016, Month.FEBRUARY, 20);
+    d2 = TimeLib.toFirstBusinessDayOfMonth(d1);
+    assertTrue(TimeLib.isSameMonth(d1, d2));
+    assertEquals(1, d2.getDayOfMonth());
+
+    d1 = LocalDate.of(2016, Month.MAY, 30);
+    d2 = TimeLib.toFirstBusinessDayOfMonth(d1);
+    assertTrue(TimeLib.isSameMonth(d1, d2));
+    assertEquals(2, d2.getDayOfMonth());
   }
 
   @Test

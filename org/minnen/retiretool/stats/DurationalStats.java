@@ -16,8 +16,6 @@ public class DurationalStats extends ReturnStats
 
   public static DurationalStats calc(Sequence cumulativeReturns, int nMonthsPerPeriod)
   {
-    int nMonths = cumulativeReturns.size() - 1;
-    assert nMonths >= 2;
     Sequence durationReturns = FinLib.calcReturnsForDuration(cumulativeReturns, nMonthsPerPeriod);
     return new DurationalStats(cumulativeReturns, durationReturns, nMonthsPerPeriod);
   }

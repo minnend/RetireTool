@@ -1,7 +1,5 @@
 package org.minnen.retiretool.predictor.daily;
 
-import java.time.LocalDate;
-import java.time.Month;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -10,15 +8,16 @@ import java.util.List;
 import org.minnen.retiretool.broker.BrokerInfoAccess;
 import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.Sequence;
-import org.minnen.retiretool.stats.CumulativeStats;
+import org.minnen.retiretool.predictor.config.ConfigAdaptive;
+import org.minnen.retiretool.predictor.config.ConfigAdaptive.TradeFreq;
+import org.minnen.retiretool.predictor.config.ConfigAdaptive.Weighting;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Library;
-import org.minnen.retiretool.util.Random;
 import org.minnen.retiretool.util.TimeLib;
 
 public class AdaptivePredictor extends Predictor
 {
-  private final Random         rng              = new Random();
+  private final ConfigAdaptive config;
   private DiscreteDistribution prevDistribution = null;
 
   private static class MomScore implements Comparable<MomScore>
@@ -41,48 +40,35 @@ public class AdaptivePredictor extends Predictor
     }
   }
 
-  public AdaptivePredictor(BrokerInfoAccess brokerAccess, String[] assetChoices)
+  public AdaptivePredictor(ConfigAdaptive config, BrokerInfoAccess brokerAccess, String[] assetChoices)
   {
     super("Adaptive", brokerAccess, assetChoices);
+    this.config = config;
     this.predictorType = PredictorType.Distribution;
   }
 
-  private CumulativeStats sim(double[] weights, double[][] returns)
-  {
-    assert weights.length == returns.length;
-
-    final int n = returns[0].length;
-    Sequence seq = new Sequence("Returns");
-    LocalDate date = LocalDate.of(1900, Month.JANUARY, 1);
-    double balance = 1000.0;
-    for (int t = 0; t < n; ++t) {
-      double r = 0.0;
-      for (int i = 0; i < returns.length; ++i) {
-        r += weights[i] * returns[i][t];
-      }
-      balance *= FinLib.ret2mul(r);
-
-      seq.addData(balance, date);
-      date = date.plusMonths(1);
-    }
-
-    return CumulativeStats.calc(seq);
-  }
-
-  public double[] getWeights(List<MomScore> moms)
+  private double[] getWeights(List<MomScore> moms)
   {
     final int n = moms.size();
     double[] weights = new double[n];
-    Arrays.fill(weights, 1.0 / n);
+    final double uniformWeight = 1.0 / n;
+    Arrays.fill(weights, uniformWeight);
 
-    final int nLookback = 15;
+    double maxWeight = (config.maxWeight > 0.0 ? config.maxWeight : 1.0);
+    if (config.weighting == Weighting.Equal || maxWeight <= uniformWeight) {
+      return weights;
+    }
+    assert config.weighting == Weighting.MinVar;
+    assert maxWeight > uniformWeight;
+
+    final int nLookback = config.nCorrelation;
     double[][] returns = new double[n][];
     for (int i = 0; i < n; ++i) {
       String name = moms.get(i).name;
       assert !name.equals("cash");
       Sequence seq = brokerAccess.getSeq(name);
       assert seq != null : moms.get(i).name;
-      returns[i] = FinLib.getReturns(seq, -nLookback, -1, 0);
+      returns[i] = FinLib.getReturns(seq, -nLookback, -1, config.iPrice);
     }
 
     // for (int i = 0; i < n; ++i) {
@@ -108,8 +94,6 @@ public class AdaptivePredictor extends Predictor
     // System.out.println();
     // }
 
-    double maxWeight = 0.9;
-    maxWeight = Math.max(maxWeight, 1.0 / n);
     double[] mvw = FinLib.minvar(cov, maxWeight);
     // System.out.print("MVW: ");
     // for (int i = 0; i < n; ++i) {
@@ -143,7 +127,9 @@ public class AdaptivePredictor extends Predictor
   @Override
   protected void calcDistribution(DiscreteDistribution distribution)
   {
-    if (prevDistribution != null && !brokerAccess.getTimeInfo().isLastDayOfWeek) {
+    if (prevDistribution != null
+        && ((config.tradeFreq == TradeFreq.Weekly && !brokerAccess.getTimeInfo().isLastDayOfWeek) || config.tradeFreq == TradeFreq.Monthly
+            && !brokerAccess.getTimeInfo().isLastDayOfMonth)) {
       distribution.copyFrom(prevDistribution);
       return;
     }
@@ -157,8 +143,8 @@ public class AdaptivePredictor extends Predictor
         moms.add(new MomScore("cash", -100.0));
       } else {
         Sequence seq = brokerAccess.getSeq(name);
-        double now = seq.average(-20, -1, 0);
-        double before = seq.average(-100, -80, 0);
+        double now = seq.average(-config.nTriggerA, -config.nTriggerB, config.iPrice);
+        double before = seq.average(-config.nBaseA, -config.nBaseB, config.iPrice);
         double mul = now / before;
         double score = FinLib.mul2ret(mul);
         moms.add(new MomScore(name, score));
@@ -177,10 +163,16 @@ public class AdaptivePredictor extends Predictor
     }
     // System.out.println("---");
 
-    nKeep = Math.min(nKeep, (int) Math.floor(n * 0.7)); // TODO parameterize number / fraction to keep
+    if (config.maxKeepFrac > 0.0) {
+      nKeep = Math.min(nKeep, (int) Math.floor(n * config.maxKeepFrac));
+    }
+    if (config.maxKeep > 0) {
+      nKeep = Math.min(nKeep, config.maxKeep);
+    }
     while (moms.size() > nKeep) {
       moms.remove(moms.size() - 1);
     }
+    assert moms.size() == nKeep;
 
     double[] weights = getWeights(moms);
     distribution.clear();
@@ -191,17 +183,11 @@ public class AdaptivePredictor extends Predictor
       // System.out.printf("%s ", name);
     }
     // System.out.printf("[%s] %s\n", TimeLib.formatDate2(brokerAccess.getTime()), distribution.toStringWithNames(2));
-    distribution.clean(5);
-    distribution.sortByName();
+    distribution.clean(config.pctQuantum);
+    // distribution.sortByName();
     // System.out.printf("              %s\n", distribution.toStringWithNames(0));
     // System.out.printf("[%s] %s (Predictor)\n", TimeLib.formatDate2(brokerAccess.getTime()),
     // distribution.toStringWithNames(0));
-
-    // if (nKeep <= 3) {
-    // double w = 1.0 / (2.0 * nKeep);
-    // distribution.mul(1.0 - w);
-    // distribution.set("cash", w);
-    // }
 
     // System.out.println();
     assert distribution.isNormalized();
@@ -210,5 +196,11 @@ public class AdaptivePredictor extends Predictor
     } else {
       prevDistribution.copyFrom(distribution);
     }
+  }
+
+  @Override
+  public void reset()
+  {
+    prevDistribution = null;
   }
 }

@@ -59,6 +59,7 @@ public class ConfigMixed extends PredictorConfig
   {
     StringBuilder sb = new StringBuilder();
     sb.append(String.format("MixedPredictor%s", mix));
+    // sb.append("\n");
     // for (int i = 0; i < configs.length; ++i) {
     // sb.append(String.format(" %s%s", configs[i], i == configs.length - 1 ? "" : "\n"));
     // }

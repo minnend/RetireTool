@@ -85,8 +85,8 @@ public class Sequence implements Iterable<FeatureVec>
 
   public String toString()
   {
-    return String.format("[Seq: len=%d, %dD  [%s]->[%s]]", length(), getNumDims(),
-        TimeLib.formatTime(getStartMS()), TimeLib.formatTime(getEndMS()));
+    return String.format("[Seq: len=%d, %dD  [%s]->[%s]]", length(), getNumDims(), TimeLib.formatTime(getStartMS()),
+        TimeLib.formatTime(getEndMS()));
   }
 
   /**
@@ -307,6 +307,14 @@ public class Sequence implements Iterable<FeatureVec>
   public long getLengthMS()
   {
     return getEndMS() - getStartMS();
+  }
+
+  /**
+   * @return length of this sequence in fractional months
+   */
+  public double getLengthMonths()
+  {
+    return TimeLib.monthsBetween(getStartMS(), getEndMS());
   }
 
   /** @return time in ms of the given data frame */

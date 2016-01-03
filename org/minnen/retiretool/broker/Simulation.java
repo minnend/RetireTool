@@ -22,6 +22,7 @@ public class Simulation
   public final int           maxDelay;
   public final Broker        broker;
 
+  private double             startingBalance = 10000.0;
   public Sequence            returnsDaily;
   public Sequence            returnsMonthly;
 
@@ -67,6 +68,7 @@ public class Simulation
       double tol)
   {
     assert current.size() == target.size();
+    final double eps = 1e-4;
     tol /= 100.0; // Convert percentage to fraction
     final int N = target.size();
 
@@ -103,10 +105,10 @@ public class Simulation
     // }
     // System.out.println();
 
-    if (sum < 1.0 - 1e-4) {
+    if (sum < 1.0 - eps) {
       // System.out.println("UNDER");
       double missing = 1.0 - sum;
-      while (missing > 1e-6) {
+      while (missing > eps) {
         // Look for something under target.
         double mostUnder = 0.0;
         int iUnder = -1;
@@ -131,10 +133,10 @@ public class Simulation
         missing -= increase;
         dist.weights[iUnder] += increase;
       }
-    } else if (sum > 1.0 + 1e-4) {
+    } else if (sum > 1.0 + eps) {
       // System.out.println("OVER");
       double excess = sum - 1.0;
-      while (excess > 1e-6) {
+      while (excess > eps) {
         // Look for something over the target.
         double mostOver = 0.0;
         int iOver = -1;
@@ -170,7 +172,7 @@ public class Simulation
   public Sequence run(Predictor predictor, String name)
   {
     final int T = guideSeq.length();
-    final long principal = Fixed.toFixed(10000.0);
+    final long principal = Fixed.toFixed(startingBalance);
     final boolean bPriceIndexAlwaysZero = (guideSeq.getNumDims() == 1);
 
     long prevTime = guideSeq.getStartMS() - TimeLib.MS_IN_DAY;
@@ -199,8 +201,6 @@ public class Simulation
       broker.setTime(time, prevTime, nextTime);
       final TimeInfo timeInfo = broker.getTimeInfo();
       // System.out.println(timeInfo);
-
-      // if (timeInfo.date.getYear() > 1996) System.exit(1); // TODO for debug
 
       // Handle initialization issues at t==0.
       if (t == 0) {

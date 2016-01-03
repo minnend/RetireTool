@@ -1,8 +1,12 @@
 package org.minnen.retiretool.data;
 
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.minnen.retiretool.util.Library;
+
+import cern.jet.random.Distributions;
 
 /**
  * Represents a discrete distribution (i.e. a multinomial).
@@ -76,7 +80,8 @@ public class DiscreteDistribution
 
   public double get(String name)
   {
-    return weights[find(name)];
+    int ix = find(name);
+    return ix < 0 ? 0.0 : weights[ix];
   }
 
   public int find(String name)
@@ -211,11 +216,26 @@ public class DiscreteDistribution
     return distribution;
   }
 
+  public static Set<String> getAllNames(DiscreteDistribution... dists)
+  {
+    Set<String> names = new HashSet<>();
+    for (DiscreteDistribution dist : dists) {
+      for (String name : dist.names) {
+        names.add(name);
+      }
+    }
+    return names;
+  }
+
   public boolean isSimilar(DiscreteDistribution distribution, double eps)
   {
-    if (distribution == null || distribution.size() != size()) return false;
-    for (int i = 0; i < distribution.size(); ++i) {
-      if (Math.abs(distribution.weights[i] - weights[i]) > eps) return false;
+    if (distribution == null) return false;
+
+    Set<String> names = DiscreteDistribution.getAllNames(this, distribution);
+    for (String name : names) {
+      double w1 = this.get(name);
+      double w2 = distribution.get(name);
+      if (Math.abs(w1 - w2) > eps) return false;
     }
     return true;
   }
