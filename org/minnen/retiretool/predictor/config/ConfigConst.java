@@ -1,22 +1,24 @@
 package org.minnen.retiretool.predictor.config;
 
+import java.util.Arrays;
+
 import org.minnen.retiretool.broker.BrokerInfoAccess;
 import org.minnen.retiretool.predictor.daily.ConstPredictor;
 import org.minnen.retiretool.predictor.daily.Predictor;
 
 public class ConfigConst extends PredictorConfig
 {
-  public final int iPredict;
+  public final String assetName;
 
-  public ConfigConst(int iPredict)
+  public ConfigConst(String assetName)
   {
-    this.iPredict = iPredict;
+    this.assetName = assetName;
   }
 
   @Override
   public boolean isValid()
   {
-    return (iPredict >= 0);
+    return (assetName != null);
   }
 
   @Override
@@ -28,12 +30,13 @@ public class ConfigConst extends PredictorConfig
   @Override
   public Predictor build(BrokerInfoAccess brokerAccess, String... assetNames)
   {
-    return new ConstPredictor(this, brokerAccess, assetNames);
+    assert Arrays.asList(assetNames).contains(assetName) : assetName;
+    return new ConstPredictor(this, brokerAccess, assetName);
   }
 
   @Override
   public String toString()
   {
-    return String.format("Const=%d", iPredict);
+    return "Const=" + assetName;
   }
 }

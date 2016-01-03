@@ -17,6 +17,7 @@ import org.minnen.retiretool.predictor.config.PredictorConfig;
 import org.minnen.retiretool.predictor.daily.ConstPredictor;
 import org.minnen.retiretool.predictor.daily.MixedPredictor;
 import org.minnen.retiretool.predictor.daily.MultiPredictor;
+import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.predictor.daily.TimeCode;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.util.FinLib;
@@ -64,7 +65,8 @@ public class Dashboard
   public static void runFiveTwoMix(Simulation sim, File dir) throws IOException
   {
     // Buy-and-Hold.
-    ConstPredictor predRisky = new ConstPredictor(new ConfigConst(0), sim.broker.accessObject, assetNames);
+    PredictorConfig configRisky = new ConfigConst(riskyName);
+    Predictor predRisky = configRisky.build(sim.broker.accessObject, assetNames);
     // ConstPredictor predSafe = new ConstPredictor(new ConfigConst(1), sim.broker.accessObject, assetNames);
     // MixedPredictor predBaseline = new MixedPredictor(new Predictor[] { predRisky, predSafe }, new
     // DiscreteDistribution(
@@ -206,7 +208,8 @@ public class Dashboard
   public static void runMulti3(Simulation sim, File dir) throws IOException
   {
     // Buy-and-Hold.
-    ConstPredictor predRisky = new ConstPredictor(new ConfigConst(0), sim.broker.accessObject, assetNames);
+    PredictorConfig configRisky = new ConfigConst(riskyName);
+    Predictor predRisky = configRisky.build(sim.broker.accessObject, assetNames);
     // ConstPredictor predSafe = new ConstPredictor(new ConfigConst(1), sim.broker.accessObject, assetNames);
     // MixedPredictor predBaseline = new MixedPredictor(new Predictor[] { predRisky, predSafe }, new
     // DiscreteDistribution(

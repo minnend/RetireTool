@@ -18,7 +18,7 @@ public abstract class Predictor
    * </ul>
    */
   public enum PredictorType {
-    InOut, SelectOne, Distribution
+    SelectOne, Distribution
   }
 
   /** Name of this predictor. */
@@ -51,12 +51,8 @@ public abstract class Predictor
 
   public final String selectAsset()
   {
-    if (predictorType == PredictorType.InOut) {
-      boolean bIn = calcInOut();
-      return assetChoices[bIn ? 0 : 1];
-    } else if (predictorType == PredictorType.SelectOne) {
-      int index = calcSelectOne();
-      return assetChoices[index];
+    if (predictorType == PredictorType.SelectOne) {
+      return calcSelectOne();
     } else {
       assert predictorType == PredictorType.Distribution : predictorType;
       DiscreteDistribution distribution = selectDistribution();
@@ -75,12 +71,9 @@ public abstract class Predictor
       distribution.clear();
     }
 
-    if (predictorType == PredictorType.InOut) {
-      boolean bIn = calcInOut();
-      distribution.weights[bIn ? 0 : 1] = 1.0;
-    } else if (predictorType == PredictorType.SelectOne) {
-      int index = calcSelectOne();
-      distribution.weights[index] = 1.0;
+    if (predictorType == PredictorType.SelectOne) {
+      String name = calcSelectOne();
+      distribution.set(name, 1.0);
     } else {
       assert predictorType == PredictorType.Distribution;
       calcDistribution(distribution);
@@ -90,12 +83,7 @@ public abstract class Predictor
     return distribution;
   }
 
-  protected boolean calcInOut()
-  {
-    throw new RuntimeException("Predictors that decide in/out status should override calcInOut().");
-  }
-
-  protected int calcSelectOne()
+  protected String calcSelectOne()
   {
     throw new RuntimeException("Predictors that select a single asset should override calcSelectOne().");
   }

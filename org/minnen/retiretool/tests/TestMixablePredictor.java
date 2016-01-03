@@ -107,7 +107,7 @@ public class TestMixablePredictor
   public void testConst()
   {
     for (int i = 0; i < fundSymbols.length; ++i) {
-      PredictorConfig config = new ConfigConst(i);
+      PredictorConfig config = new ConfigConst(fundSymbols[i]);
       assertTrue(checkWithMix(config));
     }
   }
@@ -145,13 +145,22 @@ public class TestMixablePredictor
   @Test
   public void testMulti()
   {
+    long assetMap = 254;
+    int iIn = 0;
+    int iOut = 1;
     PredictorConfig config;
+    PredictorConfig[] configs;
 
-    final long assetMap = 254;
-    PredictorConfig[] configs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, 0, 2),
-        new ConfigSMA(50, 0, 180, 30, 1.0, 0, 2), new ConfigSMA(10, 0, 220, 0, 2.0, 0, 2), };
+    configs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, 0, 2, iIn, iOut),
+        new ConfigSMA(50, 0, 180, 30, 1.0, 0, 2, iIn, iOut), new ConfigSMA(10, 0, 220, 0, 2.0, 0, 2, iIn, iOut), };
     config = new ConfigMulti(assetMap, configs);
+    assertTrue(checkWithMix(config));
 
+    iIn = 1;
+    iOut = 3;
+    configs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, 0, 2, iIn, iOut),
+        new ConfigSMA(50, 0, 180, 30, 1.0, 0, 2, iIn, iOut), new ConfigSMA(10, 0, 220, 0, 2.0, 0, 2, iIn, iOut), };
+    config = new ConfigMulti(assetMap, configs);
     assertTrue(checkWithMix(config));
   }
 }

@@ -13,7 +13,6 @@ import org.minnen.retiretool.predictor.config.ConfigAdaptive.TradeFreq;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive.Weighting;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Library;
-import org.minnen.retiretool.util.TimeLib;
 
 public class AdaptivePredictor extends Predictor
 {
@@ -40,7 +39,7 @@ public class AdaptivePredictor extends Predictor
     }
   }
 
-  public AdaptivePredictor(ConfigAdaptive config, BrokerInfoAccess brokerAccess, String[] assetChoices)
+  public AdaptivePredictor(ConfigAdaptive config, BrokerInfoAccess brokerAccess, String... assetChoices)
   {
     super("Adaptive", brokerAccess, assetChoices);
     this.config = config;

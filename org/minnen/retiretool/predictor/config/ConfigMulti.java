@@ -10,23 +10,11 @@ public class ConfigMulti extends PredictorConfig
 {
   public long                     assetMap;
   private final PredictorConfig[] configs;
-  private final int               iPredictRisky;
-  private final int               iPredictSafe;
 
   public ConfigMulti(long assetMap, PredictorConfig... configs)
   {
-    this(assetMap, 0, 1, configs);
-  }
-
-  public ConfigMulti(long assetMap, int iPredictRisky, int iPredictSafe, PredictorConfig... configs)
-  {
-    assert iPredictRisky >= 0 && iPredictRisky < configs.length;
-    assert iPredictSafe >= 0 && iPredictSafe < configs.length;
-    assert iPredictRisky != iPredictSafe;
-
+    super(configs[0].iPredictIn, configs[0].iPredictOut);
     this.assetMap = assetMap;
-    this.iPredictRisky = iPredictRisky;
-    this.iPredictSafe = iPredictSafe;
     this.configs = Arrays.copyOf(configs, configs.length);
   }
 
@@ -38,9 +26,17 @@ public class ConfigMulti extends PredictorConfig
   @Override
   public boolean isValid()
   {
+    // Make sure basde configs are valid.
     for (int i = 0; i < configs.length; ++i) {
       if (!configs[i].isValid()) return false;
     }
+
+    // Make sure all base configs have the same in/out values.
+    for (int i = 1; i < configs.length; ++i) {
+      assert configs[i].iPredictIn == configs[0].iPredictIn;
+      assert configs[i].iPredictOut == configs[0].iPredictOut;
+    }
+
     return true;
   }
 
@@ -61,7 +57,8 @@ public class ConfigMulti extends PredictorConfig
     for (int i = 0; i < configs.length; ++i) {
       predictors[i] = configs[i].build(brokerAccess, assetNames);
     }
-    return new MultiPredictor(predictors, assetMap, assetNames[0], assetNames[1], brokerAccess);
+
+    return new MultiPredictor(predictors, assetMap, assetNames[iPredictIn], assetNames[iPredictOut], brokerAccess);
   }
 
   @Override

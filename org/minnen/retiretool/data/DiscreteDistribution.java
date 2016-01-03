@@ -66,6 +66,15 @@ public class DiscreteDistribution
     return this;
   }
 
+  public boolean hasNames()
+  {
+    if (names == null || names.length != weights.length) return false;
+    for (int i = 0; i < names.length; ++i) {
+      if (names[i] == null || names[i].isEmpty()) return false;
+    }
+    return true;
+  }
+
   /** Update the name and weight of the i^th entry. */
   public void set(int i, String name, double weight)
   {

@@ -8,6 +8,20 @@ public abstract class PredictorConfig
 {
   public static final Random rng = new Random();
 
+  public final int           iPredictIn;
+  public final int           iPredictOut;
+
+  public PredictorConfig()
+  {
+    this(0, 1);
+  }
+
+  public PredictorConfig(int iPredictIn, int iPredictOut)
+  {
+    this.iPredictIn = iPredictIn;
+    this.iPredictOut = iPredictOut;
+  }
+
   public abstract boolean isValid();
 
   /** @return a perturbed version of this configuration. */

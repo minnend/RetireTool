@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.minnen.retiretool.broker.Account;
 import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.DiscreteDistribution;
@@ -24,6 +23,7 @@ import org.minnen.retiretool.predictor.config.ConfigMulti;
 import org.minnen.retiretool.predictor.config.ConfigSMA;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
 import org.minnen.retiretool.predictor.daily.Predictor;
+import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
@@ -51,6 +51,11 @@ public class AdaptiveAlloc
     assetSymbols[assetSymbols.length - 1] = "cash";
 
     System.setProperty("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.NoOpLog");
+  }
+
+  public static int assetIndex(String name)
+  {
+    return Arrays.asList(assetSymbols).indexOf(name);
   }
 
   public static void main(String[] args) throws IOException
@@ -118,13 +123,12 @@ public class AdaptiveAlloc
     Simulation sim = new Simulation(store, guideSeq, slippage, 0, true);
 
     // Run simulation for buy-and-hold of individual assets.
-    PredictorConfig[] constConfigs = new PredictorConfig[fundSymbols.length];
-    for (int i = 0; i < constConfigs.length; ++i) {
-      constConfigs[i] = new ConfigConst(i);
-      // Predictor predictor = constConfigs[i].build(sim.broker.accessObject, assetSymbols);
-      // Sequence returns = sim.run(predictor, fundSymbols[i]);
-      // System.out.println(CumulativeStats.calc(returns));
-    }
+    // for (int i = 0; i < fundSymbols.length; ++i) {
+    // PredictorConfig config = new ConfigConst(fundSymbols[i]);
+    // Predictor predictor = config.build(sim.broker.accessObject, assetSymbols);
+    // Sequence returns = sim.run(predictor, fundSymbols[i]);
+    // System.out.println(CumulativeStats.calc(returns));
+    // }
 
     PredictorConfig config;
     Predictor predictor;
@@ -132,35 +136,35 @@ public class AdaptiveAlloc
 
     // Lazy 2-fund portfolio.
     String[] lazy2 = new String[] { "VTSMX", "VBMFX" };
-    config = new ConfigMixed(new DiscreteDistribution(lazy2, new double[] { 0.7, 0.3 }), new PredictorConfig[] {
-        constConfigs[0], constConfigs[1] });
+    config = new ConfigMixed(new DiscreteDistribution(lazy2, new double[] { 0.7, 0.3 }), new ConfigConst(lazy2[0]),
+        new ConfigConst(lazy2[1]));
     predictor = config.build(sim.broker.accessObject, lazy2);
     Sequence returnsLazy2 = sim.run(predictor, "Lazy2");
     System.out.println(CumulativeStats.calc(returnsLazy2));
 
     // Lazy 3-fund portfolio.
     String[] lazy3 = new String[] { "VTSMX", "VBMFX", "VGTSX" };
-    config = new ConfigMixed(new DiscreteDistribution(lazy3, new double[] { 0.34, 0.33, 0.33 }), new PredictorConfig[] {
-        constConfigs[0], constConfigs[1], constConfigs[2] });
+    config = new ConfigMixed(new DiscreteDistribution(lazy3, new double[] { 0.34, 0.33, 0.33 }), new ConfigConst(
+        lazy3[0]), new ConfigConst(lazy3[1]), new ConfigConst(lazy3[2]));
     predictor = config.build(sim.broker.accessObject, lazy3);
     Sequence returnsLazy3 = sim.run(predictor, "Lazy3");
     System.out.println(CumulativeStats.calc(returnsLazy3));
 
     // Lazy 4-fund portfolio.
-    // String[] lazy4 = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX", "cash" };
-    // config = new ConfigMixed(new DiscreteDistribution(lazy4, new double[] { 0.4, 0.2, 0.1, 0.3, 0.0 }),
-    // new PredictorConfig[] { constConfigs[0], constConfigs[1], constConfigs[2], constConfigs[3], constConfigs[4] });
-    // predictor = config.build(sim.broker.accessObject, lazy4);
-    // Sequence returnsLazy4 = sim.run(predictor, "Lazy4");
-    // System.out.println(CumulativeStats.calc(returnsLazy4));
+    String[] lazy4 = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX" };
+    config = new ConfigMixed(new DiscreteDistribution(lazy4, new double[] { 0.4, 0.2, 0.1, 0.3 }), new ConfigConst(
+        lazy4[0]), new ConfigConst(lazy4[1]), new ConfigConst(lazy4[2]), new ConfigConst(lazy4[3]));
+    predictor = config.build(sim.broker.accessObject, lazy4);
+    Sequence returnsLazy4 = sim.run(predictor, "Lazy4");
+    System.out.println(CumulativeStats.calc(returnsLazy4));
 
     // All stock.
-    predictor = constConfigs[0].build(sim.broker.accessObject, "VTSMX");
+    predictor = new ConfigConst("VTSMX").build(sim.broker.accessObject, fundSymbols);
     Sequence returnsStock = sim.run(predictor, "Stock");
     System.out.println(CumulativeStats.calc(returnsStock));
 
     // All bonds.
-    predictor = constConfigs[0].build(sim.broker.accessObject, "VBMFX");
+    predictor = new ConfigConst("VBMFX").build(sim.broker.accessObject, fundSymbols);
     Sequence returnsBonds = sim.run(predictor, "Bonds");
     System.out.println(CumulativeStats.calc(returnsBonds));
 
@@ -168,12 +172,16 @@ public class AdaptiveAlloc
     final long assetMap = 254;
     final long gap = 2 * TimeLib.MS_IN_DAY;
     final int iPrice = 0;
-    PredictorConfig[] tacticalConfigs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, iPrice, gap),
-        new ConfigSMA(50, 0, 180, 30, 1.0, iPrice, gap), new ConfigSMA(10, 0, 220, 0, 2.0, iPrice, gap), };
-    PredictorConfig tacticalConfig = new ConfigMulti(assetMap, 1, 2, tacticalConfigs);
-    predictor = tacticalConfig.build(sim.broker.accessObject, fundSymbols);
-    Sequence returnsTactical = sim.run(predictor, "Tactical");
-    System.out.println(CumulativeStats.calc(returnsTactical));
+    final int iPredictIn = assetIndex("VTSMX");
+    final int iPredictOut = assetIndex("VBMFX");
+    PredictorConfig[] tacticalConfigs = new PredictorConfig[] {
+        new ConfigSMA(20, 0, 240, 150, 0.25, iPrice, gap, iPredictIn, iPredictOut),
+        new ConfigSMA(50, 0, 180, 30, 1.0, iPrice, gap, iPredictIn, iPredictOut),
+        new ConfigSMA(10, 0, 220, 0, 2.0, iPrice, gap, iPredictIn, iPredictOut), };
+    PredictorConfig tacticalConfig = new ConfigMulti(assetMap, tacticalConfigs);
+    // predictor = tacticalConfig.build(sim.broker.accessObject, fundSymbols);
+    // Sequence returnsTactical = sim.run(predictor, "Tactical");
+    // System.out.println(CumulativeStats.calc(returnsTactical));
 
     // Run simulation for fixed mix of assets.
     // config = new ConfigMixed(DiscreteDistribution.uniform(fundSymbols), constConfigs);
@@ -186,42 +194,58 @@ public class AdaptiveAlloc
     PredictorConfig minvarConfig = new ConfigAdaptive(15, 0.9, Weighting.MinVar, 20, 100, 80, 0.7, -1, tradeFreq, 0);
     PredictorConfig equalWeightConfig = new ConfigAdaptive(-1, -1, Weighting.Equal, 30, 100, 80, 0.5, 4, tradeFreq, 0);
 
-    for (int i = 0; i <= 100; i += 101) {
+    // for (int i = 0; i <= 100; i += 101) {
+    // double alpha = i / 100.0;
+    // double[] weights = new double[] { alpha, 1.0 - alpha };
+    // config = new ConfigMixed(new DiscreteDistribution(weights), minvarConfig, equalWeightConfig);
+    // assert config.isValid();
+    // predictor = config.build(sim.broker.accessObject, assetSymbols);
+    // String name;
+    // if (i == 0) {
+    // name = "EqualWeight";
+    // } else if (i == 100) {
+    // name = "MinVar";
+    // } else {
+    // name = String.format("AAA.%d/%d", i, 100 - i);
+    // }
+    // Sequence ret = sim.run(predictor, name);
+    // returns.add(ret);
+    // System.out.println(CumulativeStats.calc(ret));
+    // }
+
+    // Combination of EqualWeight and Tactical.
+    Sequence[] defenders = new Sequence[] { returnsStock, returnsBonds, returnsLazy2, returnsLazy3, returnsLazy4 };
+    List<ComparisonStats> compStats = new ArrayList<>();
+    for (int i = 0; i <= 100; i += 10) {
       double alpha = i / 100.0;
       double[] weights = new double[] { alpha, 1.0 - alpha };
-      config = new ConfigMixed(new DiscreteDistribution(weights), minvarConfig, equalWeightConfig);
+      config = new ConfigMixed(new DiscreteDistribution(weights), tacticalConfig, equalWeightConfig);
       assert config.isValid();
       predictor = config.build(sim.broker.accessObject, assetSymbols);
       String name;
       if (i == 0) {
-        name = "AAA.EW";// qualWeight";
+        name = "EqualWeight";
       } else if (i == 100) {
-        name = "AAA.MinVar";
+        name = "Tactical";
       } else {
-        name = String.format("AAA.%d/%d", i, 100 - i);
+        name = String.format("TEW.%d/%d", i, 100 - i);
       }
       Sequence ret = sim.run(predictor, name);
       returns.add(ret);
+      compStats.add(ComparisonStats.calc(ret, 0.25, defenders));
       System.out.println(CumulativeStats.calc(ret));
     }
-
-    // Combination of EqualWeight and Tactical.
-    config = new ConfigMixed(new DiscreteDistribution(0.0, 1.0), equalWeightConfig, tacticalConfig);
-    assert config.isValid();
-    predictor = config.build(sim.broker.accessObject, assetSymbols);
-    Sequence returnsCombo = sim.run(predictor, "Combo");
-    System.out.println(CumulativeStats.calc(returnsCombo));
 
     returns.add(returnsBonds);
     returns.add(returnsStock);
     returns.add(returnsLazy2);
     returns.add(returnsLazy3);
     // returns.add(returnsLazy4);
-    returns.add(returnsTactical);
-    returns.add(returnsCombo);
+    // returns.add(returnsTactical);
     Chart.saveLineChart(new File(outputDir, "returns.html"),
         String.format("Returns (%d\u00A2 Spread)", Math.round(slippage.constSlip * 200)), 1000, 640, true, returns);
     Chart.saveAnnualStatsTable(new File(outputDir, "annual-stats.html"), 1000, false, returns);
+    Chart.saveComparisonTable(new File(outputDir, "comparison.html"), 1000, compStats);
 
     // Account account = sim.broker.getAccount(0);
     // account.printTransactions();//TimeLib.TIME_BEGIN, TimeLib.toMs(1996, Month.DECEMBER, 31));

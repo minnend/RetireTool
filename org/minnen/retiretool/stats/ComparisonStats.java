@@ -24,7 +24,8 @@ public class ComparisonStats
   public double                targetReturn;
   public Sequence[]            defenders;
   public Map<Integer, Results> durationToResults;
-  public final static int[]    durations = new int[] { 1, 12, 5 * 12, 10 * 12, 15 * 12, 20 * 12, 30 * 12 };
+  public final static int[]    durations = new int[] { 1, 12, 2 * 12, 3 * 12, 4 * 12, 5 * 12, 10 * 12, 15 * 12,
+      20 * 12, 30 * 12                  };
 
   private ComparisonStats()
   {
@@ -76,7 +77,7 @@ public class ComparisonStats
     return stats;
   }
 
-  public static Results calcFromCumulative(Sequence cumulativeReturns1, Sequence cumulativeReturns2, int nMonths,
+  private static Results calcFromCumulative(Sequence cumulativeReturns1, Sequence cumulativeReturns2, int nMonths,
       double diffMargin)
   {
     assert cumulativeReturns1.length() == cumulativeReturns2.length();
@@ -87,7 +88,7 @@ public class ComparisonStats
     return calcFromDurationReturns(returns1, returns2, nMonths, diffMargin);
   }
 
-  public static Results calcFromCumulative(Sequence cumulativeReturns, Sequence[] defenders, int nMonths,
+  private static Results calcFromCumulative(Sequence cumulativeReturns, Sequence[] defenders, int nMonths,
       double diffMargin)
   {
     assert cumulativeReturns.length() == defenders[0].length();
@@ -102,14 +103,14 @@ public class ComparisonStats
     return calcFromDurationReturns(returns1, returns2, nMonths, diffMargin);
   }
 
-  public static Results calcFromCumulative(Sequence cumulativeReturns, double targetReturn, int nMonths,
+  private static Results calcFromCumulative(Sequence cumulativeReturns, double targetReturn, int nMonths,
       double diffMargin)
   {
     Sequence returns = FinLib.calcReturnsForDuration(cumulativeReturns, nMonths);
     return calcFromDurationReturns(returns, targetReturn, nMonths, diffMargin);
   }
 
-  public static Results calcFromDurationReturns(Sequence returnsForDuration1, Sequence returnsForDuration2,
+  private static Results calcFromDurationReturns(Sequence returnsForDuration1, Sequence returnsForDuration2,
       int nMonths, double diffMargin)
   {
     assert returnsForDuration1.length() == returnsForDuration2.length();
@@ -145,7 +146,7 @@ public class ComparisonStats
     return results;
   }
 
-  public static Results calcFromDurationReturns(Sequence returnsForDuration, double targetReturn, int nMonths,
+  private static Results calcFromDurationReturns(Sequence returnsForDuration, double targetReturn, int nMonths,
       double diffMargin)
   {
     Results results = new Results();

@@ -551,7 +551,7 @@ public class RetireTool
     PredictorConfig config = new ConfigMulti(assetMap, configs);
 
     // PredictorConfig configStock = new ConfigConst(0);
-    PredictorConfig configSafe = new ConfigConst(1);
+    PredictorConfig configSafe = new ConfigConst(safeName);
 
     // Predictor predictorStock = configStock.build(broker.accessObject, assetNames);
     // Sequence stockReturns = runBrokerSim(predictorStock, broker, guideSeq, MaxDelay, BuyAtNextOpen);

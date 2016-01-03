@@ -5,18 +5,18 @@ import org.minnen.retiretool.predictor.config.ConfigConst;
 
 public class ConstPredictor extends Predictor
 {
-  public final int iPredict;
+  public final String assetName;
 
-  public ConstPredictor(ConfigConst config, BrokerInfoAccess brokerAccess, String[] assetChoices)
+  public ConstPredictor(ConfigConst config, BrokerInfoAccess brokerAccess, String assetName)
   {
-    super("Const:" + assetChoices[config.iPredict], brokerAccess, assetChoices);
-    this.iPredict = config.iPredict;
+    super("Const:" + assetName, brokerAccess, assetName);
+    this.assetName = assetName;
     this.predictorType = PredictorType.SelectOne;
   }
 
   @Override
-  protected int calcSelectOne()
+  protected String calcSelectOne()
   {
-    return iPredict;
+    return assetName;
   }
 }

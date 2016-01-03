@@ -19,7 +19,7 @@ public class SMAPredictor extends Predictor
   public SMAPredictor(ConfigSMA config, String assetName, String alternativeAsset, BrokerInfoAccess brokerAccess)
   {
     super("SMA", brokerAccess, new String[] { assetName, alternativeAsset });
-    this.predictorType = PredictorType.InOut;
+    this.predictorType = PredictorType.SelectOne;
     this.config = config;
     this.assetID = brokerAccess.getID(assetName);
     this.integralName = assetName + "-integral";
@@ -27,7 +27,12 @@ public class SMAPredictor extends Predictor
   }
 
   @Override
-  protected boolean calcInOut()
+  protected String calcSelectOne()
+  {
+    return (calcInOut() ? assetChoices[0] : assetChoices[1]);
+  }
+
+  private boolean calcInOut()
   {
     final long time = brokerAccess.getTime();
 

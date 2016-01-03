@@ -51,7 +51,7 @@ public class ConfigMixed extends PredictorConfig
     for (int i = 0; i < configs.length; ++i) {
       predictors[i] = configs[i].build(brokerAccess, assetNames);
     }
-    return new MixedPredictor(predictors, mix, brokerAccess);
+    return new MixedPredictor(predictors, mix, brokerAccess, assetNames);
   }
 
   @Override

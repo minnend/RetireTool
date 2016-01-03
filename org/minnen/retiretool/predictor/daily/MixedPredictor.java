@@ -1,7 +1,5 @@
 package org.minnen.retiretool.predictor.daily;
 
-import java.util.Set;
-
 import org.minnen.retiretool.broker.BrokerInfoAccess;
 import org.minnen.retiretool.data.DiscreteDistribution;
 
@@ -9,9 +7,10 @@ public class MixedPredictor extends Predictor
 {
   public final DiscreteDistribution mix;
 
-  public MixedPredictor(Predictor[] predictors, DiscreteDistribution mix, BrokerInfoAccess brokerAccess)
+  public MixedPredictor(Predictor[] predictors, DiscreteDistribution mix, BrokerInfoAccess brokerAccess,
+      String... assetChoices)
   {
-    super("Mixed", brokerAccess, predictors[0].assetChoices);
+    super("Mixed", brokerAccess, assetChoices);
     assert mix.size() == predictors.length;
     this.predictorType = PredictorType.Distribution;
     this.predictors = predictors;
@@ -29,7 +28,7 @@ public class MixedPredictor extends Predictor
       DiscreteDistribution dist = predictors[i].selectDistribution();
       for (int j = 0; j < dist.size(); ++j) {
         int iName = distribution.find(dist.names[j]);
-        assert iName >= 0 : name;
+        assert iName >= 0 : dist.names[j];
         distribution.weights[iName] += wi * dist.weights[j];
       }
     }

@@ -20,6 +20,14 @@ public class ConfigSMA extends PredictorConfig
   public ConfigSMA(int nLookbackTriggerA, int nLookbackTriggerB, int nLookbackBaseA, int nLookbackBaseB, double margin,
       int iPrice, long minTimeBetweenFlips)
   {
+    this(nLookbackTriggerA, nLookbackTriggerB, nLookbackBaseA, nLookbackBaseB, margin, iPrice, minTimeBetweenFlips, 0,
+        1);
+  }
+
+  public ConfigSMA(int nLookbackTriggerA, int nLookbackTriggerB, int nLookbackBaseA, int nLookbackBaseB, double margin,
+      int iPrice, long minTimeBetweenFlips, int iPredictIn, int iPredictOut)
+  {
+    super(iPredictIn, iPredictOut);
     this.nLookbackTriggerA = nLookbackTriggerA;
     this.nLookbackTriggerB = nLookbackTriggerB;
     this.nLookbackBaseA = nLookbackBaseA;
@@ -45,7 +53,7 @@ public class ConfigSMA extends PredictorConfig
   @Override
   public Predictor build(BrokerInfoAccess brokerAccess, String... assetNames)
   {
-    return new SMAPredictor(this, assetNames[0], assetNames[1], brokerAccess);
+    return new SMAPredictor(this, assetNames[iPredictIn], assetNames[iPredictOut], brokerAccess);
   }
 
   @Override
