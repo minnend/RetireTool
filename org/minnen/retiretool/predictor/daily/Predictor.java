@@ -2,6 +2,8 @@ package org.minnen.retiretool.predictor.daily;
 
 import org.minnen.retiretool.broker.BrokerInfoAccess;
 import org.minnen.retiretool.data.DiscreteDistribution;
+import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.TimeLib;
 
@@ -108,5 +110,14 @@ public abstract class Predictor
         predictor.reset();
       }
     }
+  }
+
+  protected double[] getReturns(String name, int nLookback, int iDim)
+  {
+    assert nLookback > 0;
+    assert !name.equals("cash");
+    Sequence seq = brokerAccess.getSeq(name);
+    assert seq != null : name;
+    return FinLib.getReturns(seq, -nLookback, -1, iDim);
   }
 }

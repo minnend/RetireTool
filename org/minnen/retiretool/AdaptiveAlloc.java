@@ -22,6 +22,7 @@ import org.minnen.retiretool.predictor.config.ConfigMixed;
 import org.minnen.retiretool.predictor.config.ConfigTactical;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
 import org.minnen.retiretool.predictor.daily.Predictor;
+import org.minnen.retiretool.predictor.daily.VolResPredictor;
 import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.util.FinLib;
@@ -36,7 +37,7 @@ public class AdaptiveAlloc
   // These symbols go back to 1 April 1996.
   public static final String[]      fundSymbols  = new String[] { "SPY", "VTSMX", "VBMFX", "VGSIX", "VGTSX", "EWU",
       "EWG", "EWJ", "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX", "SGGDX", "VGPMX", "USAGX", "FSPCX",
-      "FSRBX", "FPBFX", "ETGIX"         };
+      "FSRBX", "FPBFX", "ETGIX", "VDIGX", "MDY" };
 
   // public static final String[] fundSymbols = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX",
   // "VGENX", "VFICX", "VGPMX", "DFGBX", };
@@ -173,6 +174,11 @@ public class AdaptiveAlloc
     Sequence returnsBonds = sim.run(predictor, "Bonds");
     System.out.println(CumulativeStats.calc(returnsBonds));
 
+    // Volatility-Responsive Asset Allocation.
+    predictor = new VolResPredictor("VTSMX", "VBMFX", sim.broker.accessObject);
+    Sequence returnsVolRes = sim.run(predictor, "VolRes");
+    System.out.println(CumulativeStats.calc(returnsVolRes));
+
     // predictor = new TacticalPredictor(0, sim.broker.accessObject, "SPY", "VTSMX", "VGSIX", "VGTSX", "EWU", "EWG",
     // "EWJ", "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX", "SGGDX", "VGPMX", "USAGX", "FSPCX",
     // "FSRBX", "FPBFX", "ETGIX", "VBMFX", "cash");
@@ -186,8 +192,11 @@ public class AdaptiveAlloc
 
     // Run adaptive asset allocation.
     TradeFreq tradeFreq = TradeFreq.Weekly;
-    // PredictorConfig minvarConfig = new ConfigAdaptive(15, 0.9, Weighting.MinVar, 20, 100, 80, 0.7, -1, tradeFreq, 0);
-    PredictorConfig equalWeightConfig = new ConfigAdaptive(-1, -1, Weighting.Equal, 30, 100, 80, 0.5, 4, tradeFreq, 0);
+    int pctQuantum = 2;
+    PredictorConfig minvarConfig = new ConfigAdaptive(15, 0.9, Weighting.MinVar, 20, 100, 80, 0.7, -1, pctQuantum,
+        tradeFreq, 0);
+    PredictorConfig equalWeightConfig = new ConfigAdaptive(-1, -1, Weighting.Equal, 40, 100, 80, 0.5, 4, pctQuantum,
+        tradeFreq, 0);
 
     // for (int i = 0; i <= 100; i += 101) {
     // double alpha = i / 100.0;
@@ -215,7 +224,7 @@ public class AdaptiveAlloc
     }
 
     // Combination of EqualWeight and Tactical.
-    for (int i = 0; i <= 100; i += 25) {
+    for (int i = 0; i <= 100; i += 100) {
       double alpha = i / 100.0;
       double[] weights = new double[] { alpha, 1.0 - alpha };
       config = new ConfigMixed(new DiscreteDistribution(weights), tacticalConfig, equalWeightConfig);
@@ -237,9 +246,10 @@ public class AdaptiveAlloc
 
     returns.add(returnsStock);
     returns.add(returnsBonds);
-    // returns.add(returnsLazy2);
-    // returns.add(returnsLazy3);
-    // returns.add(returnsLazy4);
+    returns.add(returnsLazy2);
+    returns.add(returnsLazy3);
+    returns.add(returnsLazy4);
+    returns.add(returnsVolRes);
     Chart.saveLineChart(new File(outputDir, "returns.html"),
         String.format("Returns (%d\u00A2 Spread)", Math.round(slippage.constSlip * 200)), 1000, 640, true, returns);
     Chart.saveAnnualStatsTable(new File(outputDir, "annual-stats.html"), 1000, false, returns);

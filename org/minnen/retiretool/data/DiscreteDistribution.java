@@ -6,8 +6,6 @@ import java.util.Set;
 
 import org.minnen.retiretool.util.Library;
 
-import cern.jet.random.Distributions;
-
 /**
  * Represents a discrete distribution (i.e. a multinomial).
  *
@@ -154,6 +152,7 @@ public class DiscreteDistribution
     long diff = Library.sum(wlong) - 100;
     while (diff != 0) {
       final double eps = 1e-6;
+      long change = Math.min(nearestPct, Math.abs(diff));
       if (diff < 0) {
         // Find farthest below.
         int iBest = -1;
@@ -165,9 +164,9 @@ public class DiscreteDistribution
             iBest = i;
             bestGap = gap;
           }
-        }
-        wlong[iBest] += nearestPct;
-        diff += nearestPct;
+        }        
+        wlong[iBest] += change;
+        diff += change;
       } else {
         assert diff > 0;
         // Find farthest above.
@@ -181,8 +180,8 @@ public class DiscreteDistribution
             bestGap = gap;
           }
         }
-        wlong[iBest] -= nearestPct;
-        diff -= nearestPct;
+        wlong[iBest] -= change;
+        diff -= change;
       }
     }
 

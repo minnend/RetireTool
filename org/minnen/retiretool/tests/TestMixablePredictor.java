@@ -128,16 +128,16 @@ public class TestMixablePredictor
   {
     PredictorConfig config;
 
-    config = new ConfigAdaptive(-1, -1, Weighting.Equal, 20, 100, 60, 0.5, 5, TradeFreq.Weekly, 0);
+    config = new ConfigAdaptive(-1, -1, Weighting.Equal, 20, 100, 60, 0.5, 5, 5, TradeFreq.Weekly, 0);
     assertTrue(checkWithMix(config));
 
-    config = new ConfigAdaptive(-1, -1, Weighting.Equal, 50, 100, 90, -1, 3, TradeFreq.Monthly, 0);
+    config = new ConfigAdaptive(-1, -1, Weighting.Equal, 50, 100, 90, -1, 3, 5, TradeFreq.Monthly, 0);
     assertTrue(checkWithMix(config));
 
-    config = new ConfigAdaptive(20, 1.0, Weighting.MinVar, 50, 100, 90, -1, 3, TradeFreq.Weekly, 0);
+    config = new ConfigAdaptive(20, 1.0, Weighting.MinVar, 50, 100, 90, -1, 3, 5, TradeFreq.Weekly, 0);
     assertTrue(checkWithMix(config));
 
-    config = new ConfigAdaptive(15, 0.5, Weighting.MinVar, 20, 50, 30, 0.8, 5, TradeFreq.Monthly, 0);
+    config = new ConfigAdaptive(15, 0.5, Weighting.MinVar, 20, 50, 30, 0.8, 5, 5, TradeFreq.Monthly, 0);
     assertTrue(checkWithMix(config));
   }
 

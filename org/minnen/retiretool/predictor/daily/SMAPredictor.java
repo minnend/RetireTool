@@ -18,7 +18,7 @@ public class SMAPredictor extends Predictor
 
   public SMAPredictor(ConfigSMA config, String assetName, String alternativeAsset, BrokerInfoAccess brokerAccess)
   {
-    super("SMA", brokerAccess, new String[] { assetName, alternativeAsset });
+    super("SMA", brokerAccess, assetName, alternativeAsset);
     this.predictorType = PredictorType.SelectOne;
     this.config = config;
     this.assetID = brokerAccess.getID(assetName);

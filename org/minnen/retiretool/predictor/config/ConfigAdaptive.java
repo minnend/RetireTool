@@ -29,7 +29,7 @@ public class ConfigAdaptive extends PredictorConfig
   public final int       iPrice;
 
   public ConfigAdaptive(int nCorrelation, double maxWeight, Weighting weighting, int nTrigger, int nBaseA, int nBaseB,
-      double maxKeepFrac, int maxKeep, TradeFreq tradeFreq, int iPrice)
+      double maxKeepFrac, int maxKeep, int pctQuantum, TradeFreq tradeFreq, int iPrice)
   {
     this.nCorrelation = nCorrelation;
     this.minWeight = 0.0;
@@ -41,7 +41,7 @@ public class ConfigAdaptive extends PredictorConfig
     this.nBaseB = nBaseB;
     this.maxKeepFrac = maxKeepFrac;
     this.maxKeep = maxKeep;
-    this.pctQuantum = 5;
+    this.pctQuantum = pctQuantum;
     this.tradeFreq = tradeFreq;
     this.iPrice = iPrice;
   }
