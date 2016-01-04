@@ -91,13 +91,17 @@ public class ComparisonStats
   public static Results calcFromCumulative(Sequence cumulativeReturns, Sequence[] defenders, int nMonths,
       double diffMargin)
   {
-    assert cumulativeReturns.length() == defenders[0].length();
     Sequence returns1 = FinLib.calcReturnsForDuration(cumulativeReturns, nMonths);
-    Sequence returns2 = FinLib.calcReturnsForDuration(defenders[0], nMonths);
-
-    for (int i = 1; i < defenders.length; ++i) {
+    Sequence returns2 = null;
+    for (int i = 0; i < defenders.length; ++i) {
+      if (cumulativeReturns == defenders[i]) continue;
       assert cumulativeReturns.length() == defenders[i].length();
-      returns2._max(FinLib.calcReturnsForDuration(defenders[i], nMonths));
+      Sequence returns = FinLib.calcReturnsForDuration(defenders[i], nMonths);
+      if (returns2 == null) {
+        returns2 = returns;
+      } else {
+        returns2._max(returns);
+      }
     }
 
     return calcFromDurationReturns(returns1, returns2, nMonths, diffMargin);

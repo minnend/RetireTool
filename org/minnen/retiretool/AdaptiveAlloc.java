@@ -19,8 +19,7 @@ import org.minnen.retiretool.predictor.config.ConfigAdaptive.TradeFreq;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive.Weighting;
 import org.minnen.retiretool.predictor.config.ConfigConst;
 import org.minnen.retiretool.predictor.config.ConfigMixed;
-import org.minnen.retiretool.predictor.config.ConfigMulti;
-import org.minnen.retiretool.predictor.config.ConfigSMA;
+import org.minnen.retiretool.predictor.config.ConfigTactical;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.stats.ComparisonStats;
@@ -37,7 +36,7 @@ public class AdaptiveAlloc
   // These symbols go back to 1 April 1996.
   public static final String[]      fundSymbols  = new String[] { "SPY", "VTSMX", "VBMFX", "VGSIX", "VGTSX", "EWU",
       "EWG", "EWJ", "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX", "SGGDX", "VGPMX", "USAGX", "FSPCX",
-      "FSRBX", "FPBFX", "ETGIX"                 };
+      "FSRBX", "FPBFX", "ETGIX"         };
 
   // public static final String[] fundSymbols = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX",
   // "VGENX", "VFICX", "VGPMX", "DFGBX", };
@@ -96,6 +95,7 @@ public class AdaptiveAlloc
     // TimeLib.formatDate(seq.getEndMS()));
     // }
     long commonStart = TimeLib.calcCommonStart(seqs);
+    // long commonStart = TimeLib.toMs(2008, Month.JANUARY, 1);
     // long commonEnd = TimeLib.calcCommonEnd(seqs);
     long commonEnd = TimeLib.toMs(2012, Month.DECEMBER, 31);
     System.out.printf("Common[%d]: [%s] -> [%s]\n", seqs.size(), TimeLib.formatDate(commonStart),
@@ -163,34 +163,30 @@ public class AdaptiveAlloc
 
     // All stock.
     PredictorConfig stockConfig = new ConfigConst("VTSMX");
-    predictor = stockConfig.build(sim.broker.accessObject, fundSymbols);
+    predictor = stockConfig.build(sim.broker.accessObject, assetSymbols);
     Sequence returnsStock = sim.run(predictor, "Stock");
     System.out.println(CumulativeStats.calc(returnsStock));
 
     // All bonds.
     PredictorConfig bondConfig = new ConfigConst("VBMFX");
-    predictor = bondConfig.build(sim.broker.accessObject, fundSymbols);
+    predictor = bondConfig.build(sim.broker.accessObject, assetSymbols);
     Sequence returnsBonds = sim.run(predictor, "Bonds");
     System.out.println(CumulativeStats.calc(returnsBonds));
 
-    // Tactical: Stocks vs. Bonds.
-    final long assetMap = 254;
-    final long gap = 2 * TimeLib.MS_IN_DAY;
-    final int iPrice = 0;
-    final int iPredictIn = assetIndex("VTSMX");
-    final int iPredictOut = assetIndex("VBMFX");
-    PredictorConfig[] tacticalConfigs = new PredictorConfig[] {
-        new ConfigSMA(20, 0, 240, 150, 0.25, iPrice, gap, iPredictIn, iPredictOut),
-        new ConfigSMA(50, 0, 180, 30, 1.0, iPrice, gap, iPredictIn, iPredictOut),
-        new ConfigSMA(10, 0, 220, 0, 2.0, iPrice, gap, iPredictIn, iPredictOut), };
-    PredictorConfig tacticalConfig = new ConfigMulti(assetMap, tacticalConfigs);
-    // predictor = tacticalConfig.build(sim.broker.accessObject, fundSymbols);
+    // predictor = new TacticalPredictor(0, sim.broker.accessObject, "SPY", "VTSMX", "VGSIX", "VGTSX", "EWU", "EWG",
+    // "EWJ", "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX", "SGGDX", "VGPMX", "USAGX", "FSPCX",
+    // "FSRBX", "FPBFX", "ETGIX", "VBMFX", "cash");
+    // predictor = new TacticalPredictor(0, sim.broker.accessObject, "VTSMX", "VGSIX", "VGTSX", "VGENX", "WHOSX",
+    // "VGPMX",
+    // "USAGX", "VBMFX", "cash");
+    PredictorConfig tacticalConfig = new ConfigTactical(0, "SPY", "VTSMX", "VBMFX");
+    // predictor = tacticalConfig.build(sim.broker.accessObject, assetSymbols);
     // Sequence returnsTactical = sim.run(predictor, "Tactical");
     // System.out.println(CumulativeStats.calc(returnsTactical));
 
     // Run adaptive asset allocation.
     TradeFreq tradeFreq = TradeFreq.Weekly;
-    PredictorConfig minvarConfig = new ConfigAdaptive(15, 0.9, Weighting.MinVar, 20, 100, 80, 0.7, -1, tradeFreq, 0);
+    // PredictorConfig minvarConfig = new ConfigAdaptive(15, 0.9, Weighting.MinVar, 20, 100, 80, 0.7, -1, tradeFreq, 0);
     PredictorConfig equalWeightConfig = new ConfigAdaptive(-1, -1, Weighting.Equal, 30, 100, 80, 0.5, 4, tradeFreq, 0);
 
     // for (int i = 0; i <= 100; i += 101) {
@@ -212,10 +208,14 @@ public class AdaptiveAlloc
     // System.out.println(CumulativeStats.calc(ret));
     // }
 
-    // Combination of EqualWeight and Tactical.
-    Sequence[] defenders = new Sequence[] { returnsStock, returnsBonds, returnsLazy2, returnsLazy3, returnsLazy4 };
     List<ComparisonStats> compStats = new ArrayList<>();
-    for (int i = 0; i <= 100; i += 50) {
+    Sequence[] defenders = new Sequence[] { returnsStock, returnsBonds, returnsLazy2, returnsLazy3, returnsLazy4 };
+    for (Sequence ret : defenders) {
+      compStats.add(ComparisonStats.calc(ret, 0.5, defenders));
+    }
+
+    // Combination of EqualWeight and Tactical.
+    for (int i = 0; i <= 100; i += 25) {
       double alpha = i / 100.0;
       double[] weights = new double[] { alpha, 1.0 - alpha };
       config = new ConfigMixed(new DiscreteDistribution(weights), tacticalConfig, equalWeightConfig);
@@ -235,12 +235,11 @@ public class AdaptiveAlloc
       System.out.println(CumulativeStats.calc(ret));
     }
 
-    returns.add(returnsBonds);
     returns.add(returnsStock);
-    returns.add(returnsLazy2);
-    returns.add(returnsLazy3);
+    returns.add(returnsBonds);
+    // returns.add(returnsLazy2);
+    // returns.add(returnsLazy3);
     // returns.add(returnsLazy4);
-    // returns.add(returnsTactical);
     Chart.saveLineChart(new File(outputDir, "returns.html"),
         String.format("Returns (%d\u00A2 Spread)", Math.round(slippage.constSlip * 200)), 1000, 640, true, returns);
     Chart.saveAnnualStatsTable(new File(outputDir, "annual-stats.html"), 1000, false, returns);

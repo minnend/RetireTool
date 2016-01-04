@@ -3,7 +3,6 @@ package org.minnen.retiretool.predictor.config;
 import org.minnen.retiretool.broker.BrokerInfoAccess;
 import org.minnen.retiretool.predictor.daily.AdaptivePredictor;
 import org.minnen.retiretool.predictor.daily.Predictor;
-import org.minnen.retiretool.predictor.daily.SMAPredictor;
 
 public class ConfigAdaptive extends PredictorConfig
 {
