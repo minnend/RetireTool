@@ -50,4 +50,12 @@ public abstract class ConfigScanner<T extends PredictorConfig>
     }
     return nConfigs;
   }
+
+  public void reset()
+  {
+    index = 0;
+    for (Scanner param : parameters) {
+      param.reset();
+    }
+  }
 }

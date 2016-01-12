@@ -24,6 +24,7 @@ import org.minnen.retiretool.predictor.config.ConfigTactical;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.predictor.daily.VolResPredictor;
+import org.minnen.retiretool.predictor.daily.WalkForwardPredictor;
 import org.minnen.retiretool.predictor.optimize.AdaptiveScanner;
 import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
@@ -257,23 +258,29 @@ public class AdaptiveAlloc
     // returns.add(returnsLazy3);
     // returns.add(returnsLazy4);
 
-    AdaptiveScanner scanner = new AdaptiveScanner();
-    List<CumulativeStats> cstats = new ArrayList<CumulativeStats>();
-    while (true) {
-      config = scanner.get();
-      if (config == null) break;
-      // System.out.println(config);
-      predictor = config.build(sim.broker.accessObject, assetSymbols);
-      Sequence ret = sim.run(predictor, config.toString());
-      CumulativeStats stats = CumulativeStats.calc(ret);
-      cstats.add(stats);
-      System.out.printf("%6.2f %s\n", 100.0 * scanner.percent(), stats);
-    }
-    CumulativeStats.filter(cstats);
-    System.out.printf("Best Results (%d)\n", scanner.size());
-    for (CumulativeStats stats : cstats) {
-      System.out.println(stats);
-    }
+    Simulation wfpSim = new Simulation(store, guideSeq, slippage, 0, true);
+    WalkForwardPredictor wfp = new WalkForwardPredictor(wfpSim, new AdaptiveScanner(), sim.broker.accessObject,
+        assetSymbols);
+    Sequence returnsWF = sim.run(wfp, "WalkForward");
+    System.out.println(CumulativeStats.calc(returnsWF));
+
+    // AdaptiveScanner scanner = new AdaptiveScanner();
+    // List<CumulativeStats> cstats = new ArrayList<CumulativeStats>();
+    // while (true) {
+    // config = scanner.get();
+    // if (config == null) break;
+    // // System.out.println(config);
+    // predictor = config.build(sim.broker.accessObject, assetSymbols);
+    // Sequence ret = sim.run(predictor, config.toString());
+    // CumulativeStats stats = CumulativeStats.calc(ret);
+    // cstats.add(stats);
+    // System.out.printf("%6.2f %s\n", 100.0 * scanner.percent(), stats);
+    // }
+    // CumulativeStats.filter(cstats);
+    // System.out.printf("Best Results (%d)\n", scanner.size());
+    // for (CumulativeStats stats : cstats) {
+    // System.out.println(stats);
+    // }
 
     Chart.saveLineChart(new File(outputDir, "returns.html"),
         String.format("Returns (%d\u00A2 Spread)", Math.round(slippage.constSlip * 200)), 1000, 640, true, returns);

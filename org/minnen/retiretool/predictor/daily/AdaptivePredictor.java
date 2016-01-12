@@ -12,7 +12,6 @@ import org.minnen.retiretool.predictor.config.ConfigAdaptive;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive.TradeFreq;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive.Weighting;
 import org.minnen.retiretool.util.FinLib;
-import org.minnen.retiretool.util.Fixed;
 import org.minnen.retiretool.util.Library;
 
 public class AdaptivePredictor extends Predictor

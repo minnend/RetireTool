@@ -7,6 +7,7 @@ import java.util.function.Predicate;
 
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.WeightedValue;
+import org.minnen.retiretool.predictor.config.PredictorConfig;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
 
@@ -17,19 +18,20 @@ import org.minnen.retiretool.util.TimeLib;
  */
 public class CumulativeStats implements Comparable<CumulativeStats>
 {
-  public Sequence cumulativeReturns;
-  public double   cagr              = 1.0;
-  public double   meanAnnualReturn  = 1.0;
-  public double   devAnnualReturn;
-  public double   totalReturn       = 1.0;
-  public double   drawdown;
-  public double   percentNewHigh;
-  public double   percentDown10;
-  public double   peakReturn;
-  public double   percentUp;
-  public double   percentDown;
-  public double[] annualPercentiles = new double[5];
-  public double   leverage          = 1.0;
+  public Sequence        cumulativeReturns;
+  public double          cagr              = 1.0;
+  public double          meanAnnualReturn  = 1.0;
+  public double          devAnnualReturn;
+  public double          totalReturn       = 1.0;
+  public double          drawdown;
+  public double          percentNewHigh;
+  public double          percentDown10;
+  public double          peakReturn;
+  public double          percentUp;
+  public double          percentDown;
+  public double[]        annualPercentiles = new double[5];
+  public double          leverage          = 1.0;
+  public PredictorConfig config;
 
   public static CumulativeStats calc(Sequence cumulativeReturns)
   {
