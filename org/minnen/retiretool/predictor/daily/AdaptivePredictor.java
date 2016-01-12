@@ -195,7 +195,7 @@ public class AdaptivePredictor extends Predictor
     // Calculate max number of assets to keep and remove rest.
     int nKeep = nGoodMom;
     if (config.maxKeepFrac > 0.0) {
-      nKeep = Math.min(nKeep, (int) Math.floor(n * config.maxKeepFrac));
+      nKeep = Math.min(nKeep, (int) Math.round(n * config.maxKeepFrac));
     }
     if (config.maxKeep > 0) {
       nKeep = Math.min(nKeep, config.maxKeep);

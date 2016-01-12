@@ -10,6 +10,7 @@ import org.minnen.retiretool.predictor.config.ConfigMulti;
 import org.minnen.retiretool.predictor.config.ConfigTactical;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
 import org.minnen.retiretool.util.Library;
+import org.minnen.retiretool.util.TimeLib;
 
 public class TacticalPredictor extends Predictor
 {

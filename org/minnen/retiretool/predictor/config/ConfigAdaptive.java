@@ -49,7 +49,7 @@ public class ConfigAdaptive extends PredictorConfig
   @Override
   public boolean isValid()
   {
-    return ((weighting != Weighting.MinVar || nCorrelation > 1) && nTriggerA >= nTriggerB && nBaseA >= nBaseB && iPrice >= 0);
+    return ((weighting != Weighting.MinVar || nCorrelation > 1) && nTriggerA >= nTriggerB && nBaseA > nBaseB && iPrice >= 0);
   }
 
   @Override
@@ -68,8 +68,13 @@ public class ConfigAdaptive extends PredictorConfig
   @Override
   public String toString()
   {
-    return String.format("%s #corr=%d  #mom=[%d]/[%d,%d]  #keep=(%.1f%%,%d)", weighting == Weighting.MinVar ? "MinVar"
-        : "EqualWeight", nCorrelation, nTriggerA, nBaseA, nBaseB, maxKeepFrac * 100, maxKeep);
+    StringBuilder sb = new StringBuilder();
+    sb.append(weighting == Weighting.MinVar ? "MinVar" : "EqualWeight");
+    if (weighting == Weighting.MinVar) {
+      sb.append(String.format(" #corr=%d", nCorrelation));
+    }
+    sb.append(String.format(" #mom=[%d]/[%d,%d]  #keep=(%.1f%%,%d)", nTriggerA, nBaseA, nBaseB, maxKeepFrac * 100,
+        maxKeep));
+    return sb.toString();
   }
-
 }

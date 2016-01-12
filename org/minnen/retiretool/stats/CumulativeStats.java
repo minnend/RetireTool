@@ -1,6 +1,7 @@
 package org.minnen.retiretool.stats;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -142,7 +143,7 @@ public class CumulativeStats implements Comparable<CumulativeStats>
     // return String.format("[%s: CAGR=%.2f  DD=%.1f  Down10=%.1f]", FinLib.getBaseName(name()), cagr, drawdown,
     // percentDown10);
 
-    //return String.format("[%s: %5.2f, %4.1f |%.2f]", FinLib.getBaseName(name()), cagr, drawdown, scoreSimple());
+    // return String.format("[%s: %5.2f, %4.1f |%.2f]", FinLib.getBaseName(name()), cagr, drawdown, scoreSimple());
     return String.format("[%s: %5.2f, %4.1f]", FinLib.getBaseName(name()), cagr, drawdown);
   }
 
@@ -235,6 +236,18 @@ public class CumulativeStats implements Comparable<CumulativeStats>
       public boolean test(CumulativeStats cstats)
       {
         return (cstats == null);
+      }
+    });
+
+    stats.sort(new Comparator<CumulativeStats>()
+    {
+
+      @Override
+      public int compare(CumulativeStats c1, CumulativeStats c2)
+      {
+        double v1 = c1.scoreSimple();
+        double v2 = c2.scoreSimple();
+        return ((Double) v2).compareTo(v1);
       }
     });
   }

@@ -18,7 +18,7 @@ public class ConfigTactical extends PredictorConfig
   @Override
   public boolean isValid()
   {
-    return true;
+    return (iPrice >= 0 && assetChoices != null && assetChoices.length >= 2);
   }
 
   @Override

@@ -6,6 +6,7 @@ import java.time.Month;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.minnen.retiretool.broker.Simulation;
@@ -23,6 +24,7 @@ import org.minnen.retiretool.predictor.config.ConfigTactical;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.predictor.daily.VolResPredictor;
+import org.minnen.retiretool.predictor.optimize.AdaptiveScanner;
 import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.util.FinLib;
@@ -37,7 +39,7 @@ public class AdaptiveAlloc
   // These symbols go back to 1 April 1996.
   public static final String[]      fundSymbols  = new String[] { "SPY", "VTSMX", "VBMFX", "VGSIX", "VGTSX", "EWU",
       "EWG", "EWJ", "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX", "SGGDX", "VGPMX", "USAGX", "FSPCX",
-      "FSRBX", "FPBFX", "ETGIX", "VDIGX", "MDY" };
+      "FSRBX", "FPBFX", "ETGIX", "VDIGX", "MDY", "VBINX" };
 
   // public static final String[] fundSymbols = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX",
   // "VGENX", "VFICX", "VGPMX", "DFGBX", };
@@ -96,7 +98,7 @@ public class AdaptiveAlloc
     // TimeLib.formatDate(seq.getEndMS()));
     // }
     long commonStart = TimeLib.calcCommonStart(seqs);
-    // long commonStart = TimeLib.toMs(2008, Month.JANUARY, 1);
+    // long commonStart = TimeLib.toMs(2006, Month.JANUARY, 1);
     // long commonEnd = TimeLib.calcCommonEnd(seqs);
     long commonEnd = TimeLib.toMs(2012, Month.DECEMBER, 31);
     System.out.printf("Common[%d]: [%s] -> [%s]\n", seqs.size(), TimeLib.formatDate(commonStart),
@@ -175,17 +177,20 @@ public class AdaptiveAlloc
     System.out.println(CumulativeStats.calc(returnsBonds));
 
     // Volatility-Responsive Asset Allocation.
-    predictor = new VolResPredictor("VTSMX", "VBMFX", sim.broker.accessObject);
-    Sequence returnsVolRes = sim.run(predictor, "VolRes");
-    System.out.println(CumulativeStats.calc(returnsVolRes));
+    // predictor = new VolResPredictor("VTSMX", "VBMFX", sim.broker.accessObject);
+    // Sequence returnsVolRes = sim.run(predictor, "VolRes");
+    // System.out.println(CumulativeStats.calc(returnsVolRes));
 
-    // predictor = new TacticalPredictor(0, sim.broker.accessObject, "SPY", "VTSMX", "VGSIX", "VGTSX", "EWU", "EWG",
-    // "EWJ", "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX", "SGGDX", "VGPMX", "USAGX", "FSPCX",
-    // "FSRBX", "FPBFX", "ETGIX", "VBMFX", "cash");
-    // predictor = new TacticalPredictor(0, sim.broker.accessObject, "VTSMX", "VGSIX", "VGTSX", "VGENX", "WHOSX",
+    // PredictorConfig tacticalConfig = new ConfigTactical(0, "SPY", "VTSMX", "VGSIX", "VGTSX", "EWU", "EWG", "EWJ",
+    // "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX", "SGGDX", "VGPMX", "USAGX", "FSPCX", "FSRBX",
+    // "FPBFX", "ETGIX", "VBMFX", "cash");
+
+    // PredictorConfig tacticalConfig = new ConfigTactical(0, "VTSMX", "MDY", "VGSIX", "VGTSX", "VGENX", "WHOSX",
     // "VGPMX",
     // "USAGX", "VBMFX", "cash");
-    PredictorConfig tacticalConfig = new ConfigTactical(0, "SPY", "VTSMX", "VBMFX");
+
+    PredictorConfig tacticalConfig = new ConfigTactical(0, "VTSMX", "SPY", "VBMFX");
+
     // predictor = tacticalConfig.build(sim.broker.accessObject, assetSymbols);
     // Sequence returnsTactical = sim.run(predictor, "Tactical");
     // System.out.println(CumulativeStats.calc(returnsTactical));
@@ -193,10 +198,12 @@ public class AdaptiveAlloc
     // Run adaptive asset allocation.
     TradeFreq tradeFreq = TradeFreq.Weekly;
     int pctQuantum = 2;
-    PredictorConfig minvarConfig = new ConfigAdaptive(15, 0.9, Weighting.MinVar, 20, 100, 80, 0.7, -1, pctQuantum,
-        tradeFreq, 0);
+    // PredictorConfig minvarConfig = new ConfigAdaptive(15, 0.9, Weighting.MinVar, 20, 100, 80, 0.7, -1, pctQuantum,
+    // tradeFreq, 0);
     PredictorConfig equalWeightConfig = new ConfigAdaptive(-1, -1, Weighting.Equal, 40, 100, 80, 0.5, 4, pctQuantum,
         tradeFreq, 0);
+    PredictorConfig ewConfig2 = new ConfigAdaptive(-1, -1, Weighting.Equal, 30, 110, 60, 0.5, 5, pctQuantum, tradeFreq,
+        0);
 
     // for (int i = 0; i <= 100; i += 101) {
     // double alpha = i / 100.0;
@@ -224,7 +231,7 @@ public class AdaptiveAlloc
     }
 
     // Combination of EqualWeight and Tactical.
-    for (int i = 0; i <= 100; i += 100) {
+    for (int i = 0; i <= 100; i += 25) {
       double alpha = i / 100.0;
       double[] weights = new double[] { alpha, 1.0 - alpha };
       config = new ConfigMixed(new DiscreteDistribution(weights), tacticalConfig, equalWeightConfig);
@@ -246,10 +253,28 @@ public class AdaptiveAlloc
 
     returns.add(returnsStock);
     returns.add(returnsBonds);
-    returns.add(returnsLazy2);
-    returns.add(returnsLazy3);
-    returns.add(returnsLazy4);
-    returns.add(returnsVolRes);
+    // returns.add(returnsLazy2);
+    // returns.add(returnsLazy3);
+    // returns.add(returnsLazy4);
+
+    AdaptiveScanner scanner = new AdaptiveScanner();
+    List<CumulativeStats> cstats = new ArrayList<CumulativeStats>();
+    while (true) {
+      config = scanner.get();
+      if (config == null) break;
+      // System.out.println(config);
+      predictor = config.build(sim.broker.accessObject, assetSymbols);
+      Sequence ret = sim.run(predictor, config.toString());
+      CumulativeStats stats = CumulativeStats.calc(ret);
+      cstats.add(stats);
+      System.out.printf("%6.2f %s\n", 100.0 * scanner.percent(), stats);
+    }
+    CumulativeStats.filter(cstats);
+    System.out.printf("Best Results (%d)\n", scanner.size());
+    for (CumulativeStats stats : cstats) {
+      System.out.println(stats);
+    }
+
     Chart.saveLineChart(new File(outputDir, "returns.html"),
         String.format("Returns (%d\u00A2 Spread)", Math.round(slippage.constSlip * 200)), 1000, 640, true, returns);
     Chart.saveAnnualStatsTable(new File(outputDir, "annual-stats.html"), 1000, false, returns);

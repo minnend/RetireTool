@@ -49,10 +49,10 @@ public class PerfFixed
 
   public static void main(String[] args)
   {
-    final int N = 100000000;
+    final int N = 1000000;
     double valueLong = perfLong(N);
-    // double valueBigDec = perfBigDec(N);
-    // System.out.printf("%f vs. %f\n", valueLong, valueBigDec);
-    // assert Math.abs(valueLong - valueBigDec) < 1e-4;
+    double valueBigDec = perfBigDec(N);
+    System.out.printf("%f vs. %f\n", valueLong, valueBigDec);
+    assert Math.abs(valueLong - valueBigDec) < 1e-4;
   }
 }

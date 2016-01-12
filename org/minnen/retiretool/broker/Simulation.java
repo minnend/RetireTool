@@ -68,6 +68,7 @@ public class Simulation
       double tol)
   {
     assert current.size() == target.size();
+    assert target.isNormalized() : target;
     final double eps = 1e-4;
     tol /= 100.0; // Convert percentage to fraction
     final int N = target.size();
@@ -106,8 +107,22 @@ public class Simulation
     // System.out.println();
 
     if (sum < 1.0 - eps) {
-      // System.out.println("UNDER");
       double missing = 1.0 - sum;
+      // System.out.printf("UNDER: %f (missing=%f)\n", sum, missing);
+
+      // Try to distribute to assets that are already changing.
+      int nAbsorb = 0;
+      for (int i = 0; i < N; ++i) {
+        if (canChange[i] && dist.weights[i] > 0.0) ++nAbsorb;
+      }
+      if (nAbsorb > 0) {
+        double absorb = missing / nAbsorb;
+        for (int i = 0; i < N; ++i) {
+          if (canChange[i] && dist.weights[i] > 0.0) dist.weights[i] += absorb;
+        }
+        missing = 0.0;
+      }
+
       while (missing > eps) {
         // Look for something under target.
         double mostUnder = 0.0;
@@ -134,8 +149,22 @@ public class Simulation
         dist.weights[iUnder] += increase;
       }
     } else if (sum > 1.0 + eps) {
-      // System.out.println("OVER");
+      // System.out.printf("OVER: %f", sum);
       double excess = sum - 1.0;
+
+      // Try to distribute to assets that are already changing.
+      int nAbsorb = 0;
+      for (int i = 0; i < N; ++i) {
+        if (canChange[i] && dist.weights[i] > 0.0) ++nAbsorb;
+      }
+      if (nAbsorb > 0) {
+        double absorb = excess / nAbsorb;
+        for (int i = 0; i < N; ++i) {
+          if (canChange[i] && dist.weights[i] > 0.0) dist.weights[i] -= absorb;
+        }
+        excess = 0.0;
+      }
+
       while (excess > eps) {
         // Look for something over the target.
         double mostOver = 0.0;
@@ -160,7 +189,7 @@ public class Simulation
           }
         }
         double reduce = Math.min(excess, mostOver);
-        // System.out.printf(" Reduce: %s %f\n", dist.names[iOver], reduce);
+        System.out.printf(" Reduce: %s %f\n", dist.names[iOver], reduce);
         excess -= reduce;
         dist.weights[iOver] -= reduce;
       }
@@ -217,10 +246,12 @@ public class Simulation
           DiscreteDistribution curDist = account.getDistribution(targetDist.names);
           DiscreteDistribution submitDist = minimizeTransactions(curDist, targetDist, 4.0);
 
-          // System.out.printf("Curr: %s\n", curDist.toStringWithNames(2));
-          // System.out.printf("Prev: %s\n", prevDist.toStringWithNames(0));
-          // System.out.printf("Want: %s\n", targetDist.toStringWithNames(0));
-          // System.out.printf("Subm: %s (%f)\n", submitDist.toStringWithNames(2), submitDist.sum());
+          if (!submitDist.isNormalized()) {
+            System.out.printf("Curr: %s\n", curDist.toStringWithNames(2));
+            System.out.printf("Prev: %s\n", prevDist.toStringWithNames(0));
+            System.out.printf("Want: %s\n", targetDist.toStringWithNames(0));
+            System.out.printf("Subm: %s (%f)\n", submitDist.toStringWithNames(2), submitDist.sum());
+          }
 
           account.rebalance(submitDist);
           // account.printTransactions(timeInfo.time, TimeLib.TIME_END);
