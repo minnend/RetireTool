@@ -2,6 +2,7 @@ package org.minnen.retiretool;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Month;
 import java.time.ZoneId;
 
 import org.minnen.retiretool.broker.Simulation;
@@ -351,5 +352,22 @@ public class Dashboard
     Sequence guideSeq = stock.subseq(iStart);
     Simulation sim = new Simulation(store, guideSeq, slippage, maxDelay, bBuyAtNextOpen);
     runMulti3(sim, dir);
+
+    int[][] allParams = new int[][] { { 20, 0, 240, 150 }, { 50, 0, 180, 30 }, { 10, 0, 200, 0 } };
+
+    // Generate graphs.
+    store.unlock();
+    for (int i = 0; i < allParams.length; ++i) {
+      int[] params = allParams[i];
+      final long startMs = TimeLib.toMs(2015, Month.JANUARY, 1);
+      final long endMs = TimeLib.TIME_END;
+      Sequence trigger = FinLib.sma(stock, params[0], params[1]).subseq(startMs, endMs);
+      Sequence base = FinLib.sma(stock, params[2], params[3]).subseq(startMs, endMs);
+      Sequence raw = stock.subseq(startMs, endMs);
+      trigger.setName("Trigger");
+      base.setName("Base");
+      Chart.saveLineChart(new File(dir, String.format("sma%d.html", i + 1)), String.format("SMA-%d", i + 1), 1000, 600,
+          true, trigger, base, raw);
+    }
   }
 }

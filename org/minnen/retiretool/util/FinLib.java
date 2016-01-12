@@ -1451,4 +1451,18 @@ public final class FinLib
       return null;
     }
   }
+
+  public static Sequence sma(Sequence seq, int ta, int tb)
+  {
+    assert ta >= tb;
+    Sequence sma = new Sequence(seq.getName() + "-sma");
+    final int iLast = seq.length() - 1;
+    for (int t = 0; t <= iLast; ++t) {
+      final int iBaseA = Math.max(t - ta, 0);
+      final int iBaseB = Math.max(t - tb, 0);
+      double v = seq.average(iBaseA, iBaseB, 0);
+      sma.addData(v, seq.getTimeMS(t));
+    }
+    return sma;
+  }
 }
