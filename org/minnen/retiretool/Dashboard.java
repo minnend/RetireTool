@@ -356,7 +356,6 @@ public class Dashboard
     int[][] allParams = new int[][] { { 20, 0, 240, 150 }, { 50, 0, 180, 30 }, { 10, 0, 200, 0 } };
 
     // Generate graphs.
-    store.unlock();
     for (int i = 0; i < allParams.length; ++i) {
       int[] params = allParams[i];
       final long startMs = TimeLib.toMs(2015, Month.JANUARY, 1);

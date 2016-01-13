@@ -1,0 +1,18 @@
+package org.minnen.retiretool.data;
+
+public class IndexRange
+{
+  public final int iStart;
+  public final int iEnd;
+
+  public IndexRange(int iStart, int iEnd)
+  {
+    this.iStart = iStart;
+    this.iEnd = iEnd;
+  }
+
+  public int length()
+  {
+    return iEnd - iStart + 1;
+  }
+}

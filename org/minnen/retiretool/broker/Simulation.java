@@ -222,9 +222,10 @@ public class Simulation
     broker.reset();
     broker.setPriceIndex(bPriceIndexAlwaysZero ? 0 : FinLib.Close);
     Account account = broker.openAccount(Account.Type.Roth, true);
+    final long key = Sequence.Lock.genKey();
     for (int t = 0; t < T; ++t) {
       final long time = guideSeq.getTimeMS(t);
-      store.lock(TimeLib.TIME_BEGIN, time);
+      store.relock(TimeLib.TIME_BEGIN, time, key);
       final long nextTime = (t == T - 1 ? TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(time))) : guideSeq
           .getTimeMS(t + 1));
       broker.setTime(time, prevTime, nextTime);
@@ -295,8 +296,6 @@ public class Simulation
         }
       }
 
-      store.unlock();
-
       double value = Fixed.toFloat(Fixed.div(account.getValue(), principal));
       returnsDaily.addData(value, time);
       if (timeInfo.isLastDayOfMonth) {
@@ -304,6 +303,7 @@ public class Simulation
       }
       prevTime = time;
     }
+    store.unlock(key);
 
     return returnsMonthly;
   }

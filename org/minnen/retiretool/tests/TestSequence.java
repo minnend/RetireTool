@@ -36,7 +36,8 @@ public class TestSequence
     assertEquals(2, subseq.length());
     assertArrayEquals(new double[] { 1, 4 }, subseq.extractDim(0), eps);
 
-    seq.lock(1, 3);
+    final long key = 1234;
+    seq.lock(1, 3, key);
     subseq = seq.subseq(1, 2);
     assertEquals(2, subseq.length());
     assertArrayEquals(new double[] { 4, 3 }, subseq.extractDim(0), eps);
@@ -59,7 +60,8 @@ public class TestSequence
     assertEquals(2, a.length);
     assertArrayEquals(new double[] { 1, 4 }, a, eps);
 
-    seq.lock(1, 3);
+    final long key = 1234;
+    seq.lock(1, 3, key);
     a = seq.extractDim(0, 1, 2);
     assertEquals(2, a.length);
     assertArrayEquals(new double[] { 4, 3 }, a, eps);
@@ -70,16 +72,77 @@ public class TestSequence
   {
     Sequence seq = new Sequence("test", new double[] { 2, 1, 4, 3 });
     assertFalse(seq.isLocked());
-    seq.lock(0, 3);
+    final long key = 1234;
+    seq.lock(0, 3, key);
     assertTrue(seq.isLocked());
     assertEquals(4, seq.length());
     assertEquals(1, seq.get(1, 0), eps);
     assertEquals(3, seq.get(3, 0), eps);
 
-    seq.lock(1, 2);
+    seq.lock(1, 2, key);
+    assertTrue(seq.isLocked());
     assertEquals(2, seq.length());
     assertEquals(1, seq.get(0, 0), eps);
     assertEquals(4, seq.get(1, 0), eps);
+  }
+
+  @Test
+  public void testMultipleLocks()
+  {
+    Sequence seq = new Sequence("test", new double[] { 2, 1, 4, 3 });
+    assertFalse(seq.isLocked());
+    final long key = 1234;
+
+    // Three locks.
+    seq.lock(0, 3, key);
+    assertTrue(seq.isLocked());
+
+    seq.lock(0, 2, key);
+    assertTrue(seq.isLocked());
+
+    seq.lock(0, 1, key);
+    assertTrue(seq.isLocked());
+
+    // Unlock all three.
+    seq.unlock(key);
+    assertTrue(seq.isLocked());
+
+    seq.unlock(key);
+    assertTrue(seq.isLocked());
+
+    seq.unlock(key);
+    assertFalse(seq.isLocked());
+  }
+
+  @Test(expected = RuntimeException.class)
+  public void testSecondLockOutOfBounds()
+  {
+    Sequence seq = new Sequence("test", new double[] { 2, 1, 4, 3 });
+    assertFalse(seq.isLocked());
+    final long key1 = 1234;
+    seq.lock(1, 2, key1);
+    assertTrue(seq.isLocked());
+    assertEquals(2, seq.length());
+    assertEquals(1, seq.get(0, 0), eps);
+    assertEquals(4, seq.get(1, 0), eps);
+
+    final long key2 = 5678;
+    seq.lock(0, 3, key2);
+  }
+
+  @Test(expected = RuntimeException.class)
+  public void testLockBadKey()
+  {
+    Sequence seq = new Sequence("test", new double[] { 2, 1, 4, 3 });
+    assertFalse(seq.isLocked());
+
+    final long key = 1234;
+    final long badKey = 4321;
+    assertNotEquals(key, badKey);
+
+    seq.lock(0, 3, key);
+    assertTrue(seq.isLocked());
+    seq.unlock(badKey);
   }
 
   @Test(expected = IndexOutOfBoundsException.class)
@@ -87,7 +150,8 @@ public class TestSequence
   {
     Sequence seq = new Sequence("test", new double[] { 2, 1, 4, 3 });
     assertFalse(seq.isLocked());
-    seq.lock(1, 2);
+    final long key = 1234;
+    seq.lock(1, 2, key);
     assertTrue(seq.isLocked());
     assertEquals(2, seq.length());
     seq.get(-10);
@@ -98,7 +162,8 @@ public class TestSequence
   {
     Sequence seq = new Sequence("test", new double[] { 2, 1, 4, 3 });
     assertFalse(seq.isLocked());
-    seq.lock(0, 2);
+    final long key = 1234;
+    seq.lock(0, 2, key);
     assertTrue(seq.isLocked());
     assertEquals(3, seq.length());
     seq.get(3);

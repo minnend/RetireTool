@@ -10,9 +10,9 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import org.minnen.retiretool.LinearFunc;
+import org.minnen.retiretool.data.Sequence.EndpointBehavior;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Random;
-import org.minnen.retiretool.util.TimeLib;
 
 /**
  * This class stores sequences that hold cumulative returns for a particular asset / strategy. The store ensures that
@@ -185,23 +185,31 @@ public class SequenceStore implements Iterable<Sequence>
   /**
    * Lock all sequences currently in the store.
    * 
-   * @param startMS first accessible ms (inclusive)
-   * @param endMS last accessible ms (inclusive)
+   * @param startMs first accessible ms (inclusive)
+   * @param endMs last accessible ms (inclusive)
    */
-  public void lock(long startMS, long endMS)
+  public long lock(long startMs, long endMs)
+  {
+    final long key = Sequence.Lock.genKey();
+    for (Sequence seq : seqs) {
+      IndexRange range = seq.getIndices(startMs, endMs, EndpointBehavior.Inside);
+      seq.lock(range.iStart, range.iEnd, key);
+    }
+    return key;
+  }
+
+  public void relock(long startMs, long endMs, long key)
   {
     for (Sequence seq : seqs) {
-      int iStart = (startMS == TimeLib.TIME_BEGIN ? 0 : seq.getIndexAtOrAfter(startMS));
-      int iEnd = seq.getIndexAtOrBefore(endMS);
-      seq.lock(iStart, iEnd);
+      seq.relock(startMs, endMs, EndpointBehavior.Inside, key);
     }
   }
 
   /** Unlock all sequences currently in this store. */
-  public void unlock()
+  public void unlock(long key)
   {
     for (Sequence seq : seqs) {
-      seq.unlock();
+      seq.unlock(key);
     }
   }
 

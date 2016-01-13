@@ -1,9 +1,13 @@
 package org.minnen.retiretool.data;
 
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Stack;
 
 import org.minnen.retiretool.data.FeatureVec;
+import org.minnen.retiretool.util.Random;
 import org.minnen.retiretool.util.TimeLib;
 
 /**
@@ -13,40 +17,64 @@ import org.minnen.retiretool.util.TimeLib;
  */
 public class Sequence implements Iterable<FeatureVec>
 {
+  public static final Random rng = new Random();
+
+  /** Stores information about a single lock position. */
+  public static class Lock
+  {
+    /** First index of locked region (real, inclusive). */
+    public final int  iStart;
+
+    /** Last index of locked region (real, inclusive). */
+    public final int  iEnd;
+
+    /** Key used to lock region; must be specified to unlock. */
+    public final long key;
+
+    public final int  iPrevEnd;
+
+    public Lock(int iStart, int iEnd, long key)
+    {
+      this(iStart, iEnd, -1, key);
+    }
+
+    public Lock(int iStart, int iEnd, int iPrevEnd, long key)
+    {
+      this.iStart = iStart;
+      this.iEnd = iEnd;
+      this.iPrevEnd = iPrevEnd;
+      this.key = key;
+    }
+
+    public static long genKey()
+    {
+      return rng.nextLong();
+    }
+  }
+
   /** data stored in this data set */
-  private List<FeatureVec> data;
-  private String           name;
-  private int              lockStart   = -1;
-  private int              lockEnd     = -1;
-  private int              prevLockEnd = -1;
+  private final List<FeatureVec> data  = new ArrayList<>();
+  private String                 name;
+  private final Stack<Lock>      locks = new Stack<>();
 
   public enum EndpointBehavior {
-    Closest, Inside, Outside
+    Closest, Inside, Outside, AtOrAfter, AtOrBefore
   }
 
   /**
-   * Create an anonymous sequence at 1Hz
+   * Create an empty, unnamed sequence.
    */
   public Sequence()
-  {
-    init();
-  }
+  {}
 
   /**
-   * Create a named sequence
+   * Create a named sequence.
    * 
    * @param name name of this sequence
    */
   public Sequence(String name)
   {
     setName(name);
-    init();
-  }
-
-  /** initialize this sequence (constructors call this function) */
-  protected void init()
-  {
-    data = new ArrayList<FeatureVec>();
   }
 
   /**
@@ -99,6 +127,21 @@ public class Sequence implements Iterable<FeatureVec>
     return get(0).getNumDims();
   }
 
+  private Sequence lockReal(int iStartReal, int iEndReal, int iPrevEnd, long key)
+  {
+    assert iStartReal >= 0;
+    assert iEndReal < data.size();
+    if (isLocked()) {
+      Lock lock = locks.peek();
+      assert iStartReal >= lock.iStart;
+      assert iEndReal <= lock.iEnd;
+    }
+
+    Lock lock = new Lock(iStartReal, iEndReal, iPrevEnd, key);
+    locks.push(lock);
+    return this;
+  }
+
   /**
    * Lock this sequence so that only elements in [iStart, iEnd] can be access.
    * 
@@ -108,50 +151,100 @@ public class Sequence implements Iterable<FeatureVec>
    * 
    * @param iStart first index that can be accessed (inclusive)
    * @param iEnd last index that can be accessed (inclusive)
+   * @return key to unlock this sequence.
    */
-  public Sequence lock(int iStart, int iEnd)
+  public Sequence lock(int iStart, int iEnd, long key)
   {
-    assert (iStart >= -1 && iStart <= length() - 1);
-    assert (iEnd >= -1 && iEnd <= length() - 1);
-    assert (iStart <= iEnd);
-    lockStart = iStart;
-    lockEnd = iEnd;
-    return this;
+    if (iStart < -1 || iStart >= length()) {
+      throw new IndexOutOfBoundsException(String.format("Start: %d vs [0, %d]", iStart, length() - 1));
+    }
+    if (iEnd < -1 || iEnd >= length()) {
+      throw new IndexOutOfBoundsException(String.format("End: %d vs [0, %d]", iStart, length() - 1));
+    }
+    if (iStart > iEnd) {
+      throw new IndexOutOfBoundsException(String.format("Start after End (%d vs %d)", iStart, iEnd));
+    }
+
+    // Locks store real indices so adjust from relative to real.
+    iStart = adjustIndex(iStart);
+    iEnd = adjustIndex(iEnd);
+    return lockReal(iStart, iEnd, -1, key);
   }
 
-  public Sequence lockToMatch(Sequence seq)
+  /** Replace the existing lock (if there is one) with the given range. */
+  public Sequence relock(long startMs, long endMs, EndpointBehavior endpointBehavior, long key)
+  {
+    int iPrevEnd = -1;
+    if (isLocked()) {
+      iPrevEnd = locks.peek().iEnd;
+      unlock(key); // Verify key and remove last lock
+    }
+
+    IndexRange range = getIndices(startMs, endMs, endpointBehavior);
+    return lockReal(range.iStart, range.iEnd, iPrevEnd, key);
+  }
+
+  /**
+   * Lock this sequence to match the bounds of the given sequences.
+   * 
+   * @return key to unlock this sequence.
+   */
+  public Sequence lockToMatch(Sequence seq, long key)
   {
     int iStart = getClosestIndex(seq.getStartMS());
     int iEnd = getClosestIndex(seq.getEndMS());
     assert iEnd - iStart + 1 == seq.length();
-    return lock(iStart, iEnd);
+    return lock(iStart, iEnd, key);
   }
 
-  public Sequence unlock()
+  public Sequence unlock(long key)
   {
-    prevLockEnd = lockEnd;
-    lockStart = lockEnd = -1;
-    return this;
+    Lock lock = locks.peek();
+    if (key == lock.key) {
+      locks.pop();
+      return this;
+    } else {
+      throw new RuntimeException("Tried to unlock sequence with wrong key.");
+    }
   }
 
   public boolean isLocked()
   {
-    return lockStart >= 0 || lockEnd >= 0;
+    return !locks.isEmpty();
   }
+
+  // TODO remove unused functions
+  // public static void lock(int iStart, int iEnd, long key, Sequence... seqs)
+  // {
+  // for (Sequence seq : seqs) {
+  // seq.lock(iStart, iEnd, key);
+  // }
+  // }
+  //
+  // public static void unlock(long key, Sequence... seqs)
+  // {
+  // for (Sequence seq : seqs) {
+  // seq.unlock(key);
+  // }
+  // }
 
   /** @return First real (internal) index that respects lock. */
   private int getFirstIndex()
   {
-    return Math.max(lockStart, 0);
+    if (locks.isEmpty()) {
+      return 0;
+    } else {
+      return locks.peek().iStart;
+    }
   }
 
   /** @return Last real (internal) index that respects lock. */
   private int getLastIndex()
   {
-    if (lockEnd < 0) {
+    if (locks.isEmpty()) {
       return data.size() - 1;
     } else {
-      return lockEnd;
+      return locks.peek().iEnd;
     }
   }
 
@@ -168,20 +261,6 @@ public class Sequence implements Iterable<FeatureVec>
       throw new IndexOutOfBoundsException(String.format("%d vs. [%d, %d]", i, iStart, iEnd));
     }
     return iStart + i;
-  }
-
-  public static void lock(int iStart, int iEnd, Sequence... seqs)
-  {
-    for (Sequence seq : seqs) {
-      seq.lock(iStart, iEnd);
-    }
-  }
-
-  public static void unlock(Sequence... seqs)
-  {
-    for (Sequence seq : seqs) {
-      seq.unlock();
-    }
   }
 
   /** @return length of this sequence */
@@ -479,18 +558,21 @@ public class Sequence implements Iterable<FeatureVec>
     int i = -1;
 
     // Heuristic check since a typical use case is incremental locking.
-    if (prevLockEnd >= 0 && !isLocked()) {
-      long t1 = data.get(prevLockEnd).getTime();
-      long t2 = prevLockEnd + 1 < data.size() ? data.get(prevLockEnd + 1).getTime() : TimeLib.TIME_END;
-      long t3 = prevLockEnd + 2 < data.size() ? data.get(prevLockEnd + 2).getTime() : TimeLib.TIME_END;
-      if (ms >= t1 && ms <= t3) {
-        if (ms == t3) {
-          return prevLockEnd + 2;
-        } else if (t2 <= ms) {
-          return prevLockEnd + 1;
-        } else {
-          assert t1 <= ms;
-          return prevLockEnd;
+    if (isLocked()) {
+      int iPrevLockEnd = locks.peek().iPrevEnd;
+      if (iPrevLockEnd >= 0) {
+        long t1 = data.get(iPrevLockEnd).getTime();
+        long t2 = iPrevLockEnd + 1 < data.size() ? data.get(iPrevLockEnd + 1).getTime() : TimeLib.TIME_END;
+        long t3 = iPrevLockEnd + 2 < data.size() ? data.get(iPrevLockEnd + 2).getTime() : TimeLib.TIME_END;
+        if (ms >= t1 && ms <= t3) {
+          if (ms == t3) {
+            return iPrevLockEnd + 2;
+          } else if (t2 <= ms) {
+            return iPrevLockEnd + 1;
+          } else {
+            assert t1 <= ms;
+            return iPrevLockEnd;
+          }
         }
       }
     }
@@ -522,6 +604,19 @@ public class Sequence implements Iterable<FeatureVec>
     }
     assert i < 0 || getTimeMS(i) >= ms;
     return i;
+  }
+
+  public int getIndexForTime(long ms, EndpointBehavior endpointBehavior)
+  {
+    if (endpointBehavior == EndpointBehavior.Closest) {
+      return getClosestIndex(ms);
+    } else if (endpointBehavior == EndpointBehavior.AtOrBefore) {
+      return getIndexAtOrBefore(ms);
+    } else if (endpointBehavior == EndpointBehavior.AtOrAfter) {
+      return getIndexAtOrAfter(ms);
+    } else {
+      throw new UnsupportedOperationException();
+    }
   }
 
   /** Add all data from the given sequence to the end of this sequence. */
@@ -631,8 +726,7 @@ public class Sequence implements Iterable<FeatureVec>
     return seq;
   }
 
-  /** @return subsequence based on start/end times. */
-  public Sequence subseq(long startMs, long endMs, EndpointBehavior endpointBehavior)
+  public IndexRange getIndices(long startMs, long endMs, EndpointBehavior endpointBehavior)
   {
     assert startMs <= endMs;
     int i, j;
@@ -642,13 +736,26 @@ public class Sequence implements Iterable<FeatureVec>
     } else if (endpointBehavior == EndpointBehavior.Inside) {
       i = getIndexAtOrAfter(startMs);
       j = getIndexAtOrBefore(endMs);
-    } else {
-      assert endpointBehavior == EndpointBehavior.Outside;
+    } else if (endpointBehavior == EndpointBehavior.Outside) {
       i = getIndexAtOrBefore(startMs);
+      j = getIndexAtOrAfter(endMs);
+    } else if (endpointBehavior == EndpointBehavior.AtOrBefore) {
+      i = getIndexAtOrBefore(startMs);
+      j = getIndexAtOrBefore(endMs);
+    } else {
+      assert endpointBehavior == EndpointBehavior.AtOrAfter;
+      i = getIndexAtOrAfter(startMs);
       j = getIndexAtOrAfter(endMs);
     }
     assert i <= j;
-    return subseq(i, j - i + 1);
+    return new IndexRange(i, j);
+  }
+
+  /** @return subsequence based on start/end times. */
+  public Sequence subseq(long startMs, long endMs, EndpointBehavior endpointBehavior)
+  {
+    IndexRange range = getIndices(startMs, endMs, endpointBehavior);
+    return subseq(range.iStart, range.length());
   }
 
   /** @return subsequence that does not extend beyond start/end times. */
@@ -798,7 +905,7 @@ public class Sequence implements Iterable<FeatureVec>
     for (FeatureVec v : data) {
       seq.addData(new FeatureVec(v));
     }
-    seq.lock(lockStart, lockEnd);
+    seq.locks.addAll(locks);
     return seq;
   }
 

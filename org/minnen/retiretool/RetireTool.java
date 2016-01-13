@@ -134,7 +134,7 @@ public class RetireTool
     Account account = broker.openAccount(Account.Type.Roth, true);
     for (int t = 0; t < T; ++t) {
       long time = guideSeq.getTimeMS(t);
-      store.lock(TimeLib.TIME_BEGIN, time);
+      long key = store.lock(TimeLib.TIME_BEGIN, time);
       long nextTime = (t == T - 1 ? TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(time))) : guideSeq
           .getTimeMS(t + 1));
       broker.setTime(time, prevTime, nextTime);
@@ -194,7 +194,7 @@ public class RetireTool
         }
       }
 
-      store.unlock();
+      store.unlock(key);
       if (timeInfo.isLastDayOfMonth) {
         returns.addData(Fixed.toFloat(Fixed.div(account.getValue(), principal)), time);
       }

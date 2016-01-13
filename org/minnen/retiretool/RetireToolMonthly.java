@@ -1254,13 +1254,14 @@ public class RetireToolMonthly
 
     RetirementStats[] results = new RetirementStats[names.length];
 
+    final long key = Sequence.Lock.genKey();
     for (int i = 0; i < names.length; ++i) {
       Sequence cumulativeReturns = store.get(names[i]);
-      Sequence cpi = store.getMisc("cpi").lockToMatch(cumulativeReturns);
+      Sequence cpi = store.getMisc("cpi").lockToMatch(cumulativeReturns, key);
       // List<Integer> failures =
       results[i] = FinLib.calcSavingsTarget(cumulativeReturns, cpi, salary, likelihood, nYears, expenseRatio,
           retireAge, ssAge, expectedMonthlySS, desiredRunwayYears);
-      cpi.unlock();
+      cpi.unlock(key);
       System.out.printf("(%.2f%%) %60s: $%s\n", 100.0 * (i + 1) / names.length, names[i],
           FinLib.dollarFormatter.format(results[i].principal));
     }
@@ -1312,11 +1313,10 @@ public class RetireToolMonthly
 
   public static void genChartsForDifficultTimePeriods(File dir) throws IOException
   {
-    final long[][] timePeriods = new long[][] {
-        { TimeLib.toMs(1924, 12, 31), TimeLib.toMs(1934, 12, 31) },
+    final long[][] timePeriods = new long[][] { { TimeLib.toMs(1924, 12, 31), TimeLib.toMs(1934, 12, 31) },
         { TimeLib.toMs(1994, 12, 31), TimeLib.toMs(2004, 12, 31) },
         { TimeLib.toMs(2004, 12, 31), TimeLib.toMs(2014, 12, 31) },
-        { TimeLib.toMs(1999,12, 31), TimeLib.toMs(2009, 12, 31) },
+        { TimeLib.toMs(1999, 12, 31), TimeLib.toMs(2009, 12, 31) },
         { TimeLib.toMs(1999, 12, 31), TimeLib.toMs(2015, 8, 30) },
         { TimeLib.toMs(1994, 1, 1), TimeLib.toMs(2013, 12, 31) } };
 

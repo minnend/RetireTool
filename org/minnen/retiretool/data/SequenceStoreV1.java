@@ -126,6 +126,7 @@ public class SequenceStoreV1 extends SequenceStore
   {
     assert !nameToIndex.containsKey(name) : name;
     assert realReturns.isEmpty() || realReturns.size() == nominalReturns.size();
+    final long key = Sequence.Lock.genKey();
 
     // Get inflation data to calculate real returns.
     Sequence inflation = null;
@@ -133,7 +134,7 @@ public class SequenceStoreV1 extends SequenceStore
       inflation = getMisc("inflation");
       assert !inflation.isLocked();
       inflation.lock(inflation.getClosestIndex(cumulativeReturns.getStartMS()),
-          inflation.getClosestIndex(cumulativeReturns.getEndMS()));
+          inflation.getClosestIndex(cumulativeReturns.getEndMS()), key);
       assert cumulativeReturns.length() == inflation.length();
     }
 
@@ -166,7 +167,7 @@ public class SequenceStoreV1 extends SequenceStore
       assert real.length() == cumulativeReturns.length();
       realReturns.add(real);
       assert getReal(name) == real;
-      inflation.unlock();
+      inflation.unlock(key);
     }
 
     // Calculate cumulative stats for this strategy.
@@ -423,40 +424,46 @@ public class SequenceStoreV1 extends SequenceStore
     Sequence inflation = getMisc("inflation");
     assert !inflation.isLocked();
 
+    final long key = Sequence.Lock.genKey();
     realReturns.clear();
     for (Sequence nominal : nominalReturns) {
-      inflation.lockToMatch(nominal);
+      inflation.lockToMatch(nominal, key);
       Sequence real = FinLib.calcRealReturns(nominal, inflation);
       assert real.length() == nominal.length();
       realReturns.add(real);
       assert getReal(real.getName()) == real;
-      inflation.unlock();
+      inflation.unlock(key);
     }
   }
 
   /**
    * Lock all sequences currently in the store.
    * 
-   * @param startMS first accessible ms (inclusive)
-   * @param endMS last accessible ms (inclusive)
+   * @param startMS first accessible ms (inclusive).
+   * @param endMS last accessible ms (inclusive).
+   * @return key used to lock sequences.
    */
-  public void lock(long startMS, long endMS)
+  @Override
+  public long lock(long startMS, long endMS)
   {
+    final long key = Sequence.Lock.genKey();
     for (List<Sequence> seqs : seqLists) {
       for (Sequence seq : seqs) {
         int iStart = (startMS == TimeLib.TIME_BEGIN ? 0 : seq.getIndexAtOrAfter(startMS));
         int iEnd = seq.getIndexAtOrBefore(endMS);
-        seq.lock(iStart, iEnd);
+        seq.lock(iStart, iEnd, key);
       }
     }
+    return key;
   }
 
   /** Unlock all sequences currently in this store. */
-  public void unlock()
+  @Override
+  public void unlock(long key)
   {
     for (List<Sequence> seqs : seqLists) {
       for (Sequence seq : seqs) {
-        seq.unlock();
+        seq.unlock(key);
       }
     }
   }
