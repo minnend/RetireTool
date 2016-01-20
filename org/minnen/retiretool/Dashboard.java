@@ -334,8 +334,12 @@ public class Dashboard
       f.write("<li>Price change between events\n");
       f.write("<li>Price change between trades\n");
       f.write("</ol>\n");
+      f.write("<p>\n");
+      f.write("[<a href=\"sma1.html\">SMA-1</a>]\n");
+      f.write("[<a href=\"sma2.html\">SMA-2</a>]\n");
+      f.write("[<a href=\"sma3.html\">SMA-3</a>]\n");
+      f.write("</p>\n");
       f.write("</div>\n");
-
       f.write("</body></html>\n");
     }
   }
@@ -368,7 +372,7 @@ public class Dashboard
       trigger.setName("Trigger");
       base.setName("Base");
       Chart.saveLineChart(new File(dir, String.format("sma%d.html", i + 1)), String.format("SMA-%d", i + 1), 1000, 600,
-          true, trigger, baseLow, baseHigh, raw);
+          true, false, trigger, baseLow, baseHigh, raw);
     }
   }
 }

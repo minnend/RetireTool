@@ -22,10 +22,12 @@ import org.minnen.retiretool.predictor.config.ConfigConst;
 import org.minnen.retiretool.predictor.config.ConfigMixed;
 import org.minnen.retiretool.predictor.config.ConfigTactical;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
+import org.minnen.retiretool.predictor.daily.AdaptivePredictor;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.predictor.daily.VolResPredictor;
-import org.minnen.retiretool.predictor.daily.WalkForwardPredictor;
 import org.minnen.retiretool.predictor.optimize.AdaptiveScanner;
+import org.minnen.retiretool.predictor.optimize.ConfigScanner;
+import org.minnen.retiretool.predictor.optimize.Optimizer;
 import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.util.FinLib;
@@ -62,6 +64,38 @@ public class AdaptiveAlloc
   public static int assetIndex(String name)
   {
     return Arrays.asList(assetSymbols).indexOf(name);
+  }
+
+  public static void walkForwadOptimization(Simulation sim)
+  {
+    final int stepMonths = 3;
+    final int optMonths = 36;
+    AdaptiveScanner scanner = new AdaptiveScanner();
+    long optStart = store.getCommonStartTime();
+    int nTestMonths = 0;
+    double totalReturn = 1.0;
+    while (true) {
+      long optEnd = TimeLib.toMs(TimeLib.ms2date(optStart).plusMonths(optMonths)
+          .with(TemporalAdjusters.lastDayOfMonth()));
+      long simStart = TimeLib.toNextBusinessDay(optEnd);
+      long simEnd = TimeLib.toPreviousBusinessDay(TimeLib.toMs(TimeLib.ms2date(simStart).plusMonths(stepMonths)));
+      if (simEnd > sim.getEndMS()) break;
+
+      System.out.printf("Optm: [%s] -> [%s]\n", TimeLib.formatDate(optStart), TimeLib.formatDate(optEnd));
+      scanner.reset();
+      PredictorConfig config = Optimizer.grid(scanner, sim, optStart, optEnd, assetSymbols);
+      Predictor predictor = config.build(sim.broker.accessObject, assetSymbols);
+      sim.run(predictor, simStart, simEnd, "Test");
+      CumulativeStats stats = CumulativeStats.calc(sim.returnsMonthly);
+      System.out.printf("Test: [%s] -> [%s]: %.3f, %.2f\n", TimeLib.formatDate(simStart), TimeLib.formatDate(simEnd),
+          FinLib.mul2ret(stats.totalReturn), stats.drawdown);
+      nTestMonths += stepMonths;
+      totalReturn *= stats.totalReturn;
+      optStart = TimeLib.toMs(TimeLib.ms2date(optStart).plusMonths(stepMonths)
+          .with(TemporalAdjusters.firstDayOfMonth()));
+      System.out.println(config);
+      System.out.printf("-- %.2f%% (%d) --\n", FinLib.getAnnualReturn(totalReturn, nTestMonths), nTestMonths);
+    }
   }
 
   public static void main(String[] args) throws IOException
@@ -102,6 +136,7 @@ public class AdaptiveAlloc
     // long commonStart = TimeLib.toMs(2006, Month.JANUARY, 1);
     // long commonEnd = TimeLib.calcCommonEnd(seqs);
     long commonEnd = TimeLib.toMs(2012, Month.DECEMBER, 31);
+    store.setCommonTimes(commonStart, commonEnd);
     System.out.printf("Common[%d]: [%s] -> [%s]\n", seqs.size(), TimeLib.formatDate(commonStart),
         TimeLib.formatDate(commonEnd));
 
@@ -206,6 +241,8 @@ public class AdaptiveAlloc
     PredictorConfig ewConfig2 = new ConfigAdaptive(-1, -1, Weighting.Equal, 30, 110, 60, 0.5, 5, pctQuantum, tradeFreq,
         0);
 
+    walkForwadOptimization(sim);
+
     // for (int i = 0; i <= 100; i += 101) {
     // double alpha = i / 100.0;
     // double[] weights = new double[] { alpha, 1.0 - alpha };
@@ -257,12 +294,6 @@ public class AdaptiveAlloc
     // returns.add(returnsLazy2);
     // returns.add(returnsLazy3);
     // returns.add(returnsLazy4);
-
-    Simulation wfpSim = new Simulation(store, guideSeq, slippage, 0, true);
-    WalkForwardPredictor wfp = new WalkForwardPredictor(wfpSim, new AdaptiveScanner(), sim.broker.accessObject,
-        assetSymbols);
-    Sequence returnsWF = sim.run(wfp, "WalkForward");
-    System.out.println(CumulativeStats.calc(returnsWF));
 
     // AdaptiveScanner scanner = new AdaptiveScanner();
     // List<CumulativeStats> cstats = new ArrayList<CumulativeStats>();

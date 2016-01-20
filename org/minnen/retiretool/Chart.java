@@ -43,22 +43,22 @@ public class Chart
   }
 
   public static void saveLineChart(File file, String title, int width, int height, boolean logarithmic,
-      Sequence... seqs) throws IOException
+      boolean monthly, Sequence... seqs) throws IOException
   {
     saveHighChart(file, ChartType.Line, title, null, null, width, height, Double.NaN, Double.NaN, logarithmic ? 0.5
-        : Double.NaN, logarithmic, 0, seqs);
+        : Double.NaN, logarithmic, monthly, 0, seqs);
   }
 
   public static void saveLineChart(File file, String title, int width, int height, boolean logarithmic,
-      List<Sequence> seqs) throws IOException
+      boolean monthly, List<Sequence> seqs) throws IOException
   {
     saveHighChart(file, ChartType.Line, title, null, null, width, height, Double.NaN, Double.NaN, logarithmic ? 0.5
-        : Double.NaN, logarithmic, 0, seqs.toArray(new Sequence[seqs.size()]));
+        : Double.NaN, logarithmic, monthly, 0, seqs.toArray(new Sequence[seqs.size()]));
   }
 
   public static void saveHighChart(File file, ChartType chartType, String title, String[] labels, String[] colors,
-      int width, int height, double ymin, double ymax, double minorTickInterval, boolean logarithmic, int dim,
-      Sequence... seqs) throws IOException
+      int width, int height, double ymin, double ymax, double minorTickInterval, boolean logarithmic, boolean monthly,
+      int dim, Sequence... seqs) throws IOException
   {
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
       writer.write("<html><head>\n");
@@ -83,7 +83,11 @@ public class Chart
         }
       } else {
         for (int i = 0; i < seqs[0].size(); ++i) {
-          writer.write("'" + TimeLib.formatMonth(seqs[0].getTimeMS(i)) + "'");
+          if (monthly) {
+            writer.write("'" + TimeLib.formatMonth(seqs[0].getTimeMS(i)) + "'");
+          } else {
+            writer.write("'" + TimeLib.formatDate(seqs[0].getTimeMS(i)) + "'");
+          }
           if (i < seqs[0].size() - 1) {
             writer.write(",");
           }

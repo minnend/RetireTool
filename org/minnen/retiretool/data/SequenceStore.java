@@ -13,6 +13,7 @@ import org.minnen.retiretool.LinearFunc;
 import org.minnen.retiretool.data.Sequence.EndpointBehavior;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Random;
+import org.minnen.retiretool.util.TimeLib;
 
 /**
  * This class stores sequences that hold cumulative returns for a particular asset / strategy. The store ensures that
@@ -31,6 +32,25 @@ public class SequenceStore implements Iterable<Sequence>
   private final Map<String, Integer> nameToIndex = new HashMap<>();
   private final Map<String, String>  aliasMap    = new HashMap<>();
   private final Map<String, String>  nameToOrig  = new HashMap<>();
+
+  private long                       commonStart = TimeLib.TIME_ERROR;
+  private long                       commonEnd   = TimeLib.TIME_ERROR;
+
+  public long getCommonStartTime()
+  {
+    return commonStart;
+  }
+
+  public long getCommonEndTime()
+  {
+    return commonEnd;
+  }
+
+  public void setCommonTimes(long commonStart, long commonEnd)
+  {
+    this.commonStart = commonStart;
+    this.commonEnd = commonEnd;
+  }
 
   public void clear()
   {

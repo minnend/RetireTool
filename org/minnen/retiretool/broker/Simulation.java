@@ -24,8 +24,6 @@ public class Simulation
   public final int           maxDelay;
   public final Broker        broker;
 
-  private final long         key             = Sequence.Lock.genKey();
-
   private double             startingBalance = 10000.0;
   public Sequence            returnsDaily;
   public Sequence            returnsMonthly;
@@ -66,6 +64,7 @@ public class Simulation
   private DiscreteDistribution minimizeTransactions(DiscreteDistribution current, DiscreteDistribution target,
       double tol)
   {
+    // TODO Needs work & testing. Multiple ideas here that aren't working together.
     assert current.size() == target.size();
     assert target.isNormalized() : target;
     final double eps = 1e-4;
@@ -204,10 +203,9 @@ public class Simulation
 
   public Sequence run(Predictor predictor, long timeStart, long timeEnd, String name)
   {
-    System.out.printf("Run1: [%s] -> [%s] = [%s] -> [%s] (%d, %d)\n",
-        TimeLib.formatDate(timeStart), TimeLib.formatDate(timeEnd),
-        TimeLib.formatDate(guideSeq.getStartMS()), TimeLib.formatDate(guideSeq.getEndMS()),
-        timeEnd, guideSeq.getStartMS());
+    // System.out.printf("Run1: [%s] -> [%s] = [%s] -> [%s] (%d, %d)\n", TimeLib.formatDate(timeStart),
+    // TimeLib.formatDate(timeEnd), TimeLib.formatDate(guideSeq.getStartMS()),
+    // TimeLib.formatDate(guideSeq.getEndMS()), timeEnd, guideSeq.getStartMS());
     if (timeStart == TimeLib.TIME_BEGIN) {
       timeStart = guideSeq.getStartMS();
     }
@@ -215,9 +213,10 @@ public class Simulation
       timeEnd = guideSeq.getEndMS();
     }
     IndexRange range = guideSeq.getIndices(timeStart, timeEnd, EndpointBehavior.Closest);
-    System.out.printf("Run: [%s] -> [%s] = [%d] -> [%d]\n",
-        TimeLib.formatDate(timeStart), TimeLib.formatDate(timeEnd),
-        range.iStart, range.iEnd);
+    // System.out.printf("Run: [%s] -> [%s] = [%d] -> [%d]\n", TimeLib.formatDate(timeStart),
+    // TimeLib.formatDate(timeEnd),
+    // range.iStart, range.iEnd);
+    final long key = Sequence.Lock.genKey();
     guideSeq.lock(range.iStart, range.iEnd, key);
     Sequence ret = run(predictor, name);
     guideSeq.unlock(key);
@@ -226,13 +225,12 @@ public class Simulation
 
   public Sequence run(Predictor predictor, String name)
   {
-    System.out.printf("Sim.run [%s]\n", name);
     final int T = guideSeq.length();
     final long principal = Fixed.toFixed(startingBalance);
     final boolean bPriceIndexAlwaysZero = (guideSeq.getNumDims() == 1);
 
-    System.out.printf("Sim.run[T=%d]: [%s] -> [%s]\n", T, TimeLib.formatDate(guideSeq.getStartMS()),
-        TimeLib.formatDate(guideSeq.getEndMS()));
+    // System.out.printf("Sim.run[T=%d]: [%s] -> [%s]\n", T, TimeLib.formatDate(guideSeq.getStartMS()),
+    // TimeLib.formatDate(guideSeq.getEndMS()));
 
     long prevTime = guideSeq.getStartMS() - TimeLib.MS_IN_DAY;
     long lastRebalance = TimeLib.TIME_BEGIN;
@@ -253,12 +251,12 @@ public class Simulation
     broker.setPriceIndex(bPriceIndexAlwaysZero ? 0 : FinLib.Close);
     Account account = broker.openAccount(Account.Type.Roth, true);
     final long key = Sequence.Lock.genKey();
-    System.out.printf("key = %d\n", key);
-    System.out.printf("lock store: %d -> %d\n", guideSeq.getStartMS(), guideSeq.getEndMS());
+    // System.out.printf("key = %d\n", key);
+    // System.out.printf("lock store: %d -> %d\n", guideSeq.getStartMS(), guideSeq.getEndMS());
     store.lock(guideSeq.getStartMS(), guideSeq.getEndMS(), key);
     for (int t = 0; t < T; ++t) {
       final long time = guideSeq.getTimeMS(t);
-      System.out.printf(" [t=%d  %s  relock]\n", t, TimeLib.formatDate(time));
+      // System.out.printf(" [t=%d  %s  relock]\n", t, TimeLib.formatDate(time));
       store.relock(TimeLib.TIME_BEGIN, time, key);
       final long nextTime = (t == T - 1 ? TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(time))) : guideSeq
           .getTimeMS(t + 1));
@@ -305,9 +303,9 @@ public class Simulation
       broker.doEndOfDayBusiness();
 
       // Time for a prediction and possible asset change.
-      System.out.printf("Predict.start\n");
+      // System.out.printf("Predict.start\n");
       targetDist = predictor.selectDistribution();
-      System.out.printf("Predict.end\n");
+      // System.out.printf("Predict.end\n");
 
       // Rebalance if desired distribution changes by more than 2% or if it's been more than a year.
       // Note: we're comparing the current request to the previous one, not to the actual
@@ -341,7 +339,6 @@ public class Simulation
     }
     store.unlock(key);
 
-    System.out.printf("Sim Done (%s)\n", name);
     return returnsMonthly;
   }
 }

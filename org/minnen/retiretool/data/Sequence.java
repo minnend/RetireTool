@@ -129,7 +129,6 @@ public class Sequence implements Iterable<FeatureVec>
 
   private Sequence lockReal(int iStartReal, int iEndReal, int iPrevEnd, long key)
   {
-    if (name.equals("tbilldata")) System.out.printf("Lock(real): %d\n", key);
     assert iStartReal >= 0;
     assert iEndReal < data.size();
     if (isLocked()) {
@@ -156,7 +155,6 @@ public class Sequence implements Iterable<FeatureVec>
    */
   public Sequence lock(int iStart, int iEnd, long key)
   {
-    if (name.equals("tbilldata")) System.out.printf("Lock: %d  [%d, %d]\n", key, iStart, iEnd);
     if (iStart < 0 || iStart >= length()) {
       throw new IndexOutOfBoundsException(String.format("Start[%s]: %d vs [0, %d]", name, iStart, length() - 1));
     }
@@ -176,7 +174,6 @@ public class Sequence implements Iterable<FeatureVec>
   /** Replace the existing lock (if there is one) with the given range. */
   public Sequence relock(long startMs, long endMs, EndpointBehavior endpointBehavior, long key)
   {
-    if (name.equals("tbilldata")) System.out.printf("Relock: %d\n", key);
     int iPrevEnd = -1;
     if (isLocked()) {
       iPrevEnd = locks.peek().iEnd;
@@ -194,16 +191,19 @@ public class Sequence implements Iterable<FeatureVec>
    */
   public Sequence lockToMatch(Sequence seq, long key)
   {
-    if (name.equals("tbilldata")) System.out.printf("LockToMatch: %d\n", key);
     int iStart = getClosestIndex(seq.getStartMS());
     int iEnd = getClosestIndex(seq.getEndMS());
     assert iEnd - iStart + 1 == seq.length();
     return lock(iStart, iEnd, key);
   }
 
+  /**
+   * Unlock this sequence.
+   * @param key key used to unlock the sequence (must match key used to lock it).
+   * @return this sequence
+   */
   public Sequence unlock(long key)
   {
-    if (name.equals("tbilldata")) System.out.printf("Unlock: %d (%d)\n", key, locks.peek().key);
     Lock lock = locks.peek();
     if (key == lock.key) {
       locks.pop();

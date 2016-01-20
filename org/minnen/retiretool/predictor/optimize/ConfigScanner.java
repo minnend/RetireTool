@@ -13,6 +13,18 @@ public abstract class ConfigScanner<T extends PredictorConfig>
 
   public abstract T get();
 
+  public List<PredictorConfig> getAll()
+  {
+    List<PredictorConfig> list = new ArrayList<>();
+    while (true) {
+      PredictorConfig config = get();
+      if (config == null) break;
+      assert config.isValid();
+      list.add(config);
+    }
+    return list;
+  }
+
   public boolean isDone()
   {
     return index >= size();
@@ -23,20 +35,17 @@ public abstract class ConfigScanner<T extends PredictorConfig>
     return (double) index / size();
   }
 
-  protected boolean advance()
+  protected void advance()
   {
-    boolean bAdvancedSomething = false;
     for (Scanner param : parameters) {
       param.advance();
       if (param.isDone()) {
         param.reset();
       } else {
-        bAdvancedSomething = true;
         break;
       }
     }
     ++index;
-    return bAdvancedSomething;
   }
 
   public int size()
