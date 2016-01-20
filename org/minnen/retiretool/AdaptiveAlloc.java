@@ -142,40 +142,40 @@ public class AdaptiveAlloc
     List<Sequence> returns = new ArrayList<>();
 
     // Lazy 2-fund portfolio.
-    String[] lazy2 = new String[] { "VTSMX", "VBMFX" };
-    config = new ConfigMixed(new DiscreteDistribution(lazy2, new double[] { 0.7, 0.3 }), new ConfigConst(lazy2[0]),
-        new ConfigConst(lazy2[1]));
-    predictor = config.build(sim.broker.accessObject, lazy2);
-    Sequence returnsLazy2 = sim.run(predictor, "Lazy2");
-    System.out.println(CumulativeStats.calc(returnsLazy2));
+    // String[] lazy2 = new String[] { "VTSMX", "VBMFX" };
+    // config = new ConfigMixed(new DiscreteDistribution(lazy2, new double[] { 0.7, 0.3 }), new ConfigConst(lazy2[0]),
+    // new ConfigConst(lazy2[1]));
+    // predictor = config.build(sim.broker.accessObject, lazy2);
+    // Sequence returnsLazy2 = sim.run(predictor, "Lazy2");
+    // System.out.println(CumulativeStats.calc(returnsLazy2));
 
     // Lazy 3-fund portfolio.
-    String[] lazy3 = new String[] { "VTSMX", "VBMFX", "VGTSX" };
-    config = new ConfigMixed(new DiscreteDistribution(lazy3, new double[] { 0.34, 0.33, 0.33 }), new ConfigConst(
-        lazy3[0]), new ConfigConst(lazy3[1]), new ConfigConst(lazy3[2]));
-    predictor = config.build(sim.broker.accessObject, lazy3);
-    Sequence returnsLazy3 = sim.run(predictor, "Lazy3");
-    System.out.println(CumulativeStats.calc(returnsLazy3));
+    // String[] lazy3 = new String[] { "VTSMX", "VBMFX", "VGTSX" };
+    // config = new ConfigMixed(new DiscreteDistribution(lazy3, new double[] { 0.34, 0.33, 0.33 }), new ConfigConst(
+    // lazy3[0]), new ConfigConst(lazy3[1]), new ConfigConst(lazy3[2]));
+    // predictor = config.build(sim.broker.accessObject, lazy3);
+    // Sequence returnsLazy3 = sim.run(predictor, "Lazy3");
+    // System.out.println(CumulativeStats.calc(returnsLazy3));
 
     // Lazy 4-fund portfolio.
-    String[] lazy4 = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX" };
-    config = new ConfigMixed(new DiscreteDistribution(lazy4, new double[] { 0.4, 0.2, 0.1, 0.3 }), new ConfigConst(
-        lazy4[0]), new ConfigConst(lazy4[1]), new ConfigConst(lazy4[2]), new ConfigConst(lazy4[3]));
-    predictor = config.build(sim.broker.accessObject, lazy4);
-    Sequence returnsLazy4 = sim.run(predictor, "Lazy4");
-    System.out.println(CumulativeStats.calc(returnsLazy4));
+    // String[] lazy4 = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX" };
+    // config = new ConfigMixed(new DiscreteDistribution(lazy4, new double[] { 0.4, 0.2, 0.1, 0.3 }), new ConfigConst(
+    // lazy4[0]), new ConfigConst(lazy4[1]), new ConfigConst(lazy4[2]), new ConfigConst(lazy4[3]));
+    // predictor = config.build(sim.broker.accessObject, lazy4);
+    // Sequence returnsLazy4 = sim.run(predictor, "Lazy4");
+    // System.out.println(CumulativeStats.calc(returnsLazy4));
 
     // All stock.
-    PredictorConfig stockConfig = new ConfigConst("VTSMX");
-    predictor = stockConfig.build(sim.broker.accessObject, assetSymbols);
-    Sequence returnsStock = sim.run(predictor, "Stock");
-    System.out.println(CumulativeStats.calc(returnsStock));
+    // PredictorConfig stockConfig = new ConfigConst("VTSMX");
+    // predictor = stockConfig.build(sim.broker.accessObject, assetSymbols);
+    // Sequence returnsStock = sim.run(predictor, "Stock");
+    // System.out.println(CumulativeStats.calc(returnsStock));
 
     // All bonds.
-    PredictorConfig bondConfig = new ConfigConst("VBMFX");
-    predictor = bondConfig.build(sim.broker.accessObject, assetSymbols);
-    Sequence returnsBonds = sim.run(predictor, "Bonds");
-    System.out.println(CumulativeStats.calc(returnsBonds));
+    // PredictorConfig bondConfig = new ConfigConst("VBMFX");
+    // predictor = bondConfig.build(sim.broker.accessObject, assetSymbols);
+    // Sequence returnsBonds = sim.run(predictor, "Bonds");
+    // System.out.println(CumulativeStats.calc(returnsBonds));
 
     // Volatility-Responsive Asset Allocation.
     // predictor = new VolResPredictor("VTSMX", "VBMFX", sim.broker.accessObject);
@@ -225,35 +225,35 @@ public class AdaptiveAlloc
     // System.out.println(CumulativeStats.calc(ret));
     // }
 
-    List<ComparisonStats> compStats = new ArrayList<>();
-    Sequence[] defenders = new Sequence[] { returnsStock, returnsBonds, returnsLazy2, returnsLazy3, returnsLazy4 };
-    for (Sequence ret : defenders) {
-      compStats.add(ComparisonStats.calc(ret, 0.5, defenders));
-    }
+    // List<ComparisonStats> compStats = new ArrayList<>();
+    // Sequence[] defenders = new Sequence[] { returnsStock, returnsBonds, returnsLazy2, returnsLazy3, returnsLazy4 };
+    // for (Sequence ret : defenders) {
+    // compStats.add(ComparisonStats.calc(ret, 0.5, defenders));
+    // }
 
     // Combination of EqualWeight and Tactical.
-    for (int i = 0; i <= 100; i += 25) {
-      double alpha = i / 100.0;
-      double[] weights = new double[] { alpha, 1.0 - alpha };
-      config = new ConfigMixed(new DiscreteDistribution(weights), tacticalConfig, equalWeightConfig);
-      assert config.isValid();
-      predictor = config.build(sim.broker.accessObject, assetSymbols);
-      String name;
-      if (i == 0) {
-        name = "EqualWeight";
-      } else if (i == 100) {
-        name = "Tactical";
-      } else {
-        name = String.format("TEW.%d/%d", i, 100 - i);
-      }
-      Sequence ret = sim.run(predictor, name);
-      returns.add(ret);
-      compStats.add(ComparisonStats.calc(ret, 0.5, defenders));
-      System.out.println(CumulativeStats.calc(ret));
-    }
+    // for (int i = 0; i <= 100; i += 50) {
+    // double alpha = i / 100.0;
+    // double[] weights = new double[] { alpha, 1.0 - alpha };
+    // config = new ConfigMixed(new DiscreteDistribution(weights), tacticalConfig, equalWeightConfig);
+    // assert config.isValid();
+    // predictor = config.build(sim.broker.accessObject, assetSymbols);
+    // String name;
+    // if (i == 0) {
+    // name = "EqualWeight";
+    // } else if (i == 100) {
+    // name = "Tactical";
+    // } else {
+    // name = String.format("TEW.%d/%d", i, 100 - i);
+    // }
+    // Sequence ret = sim.run(predictor, name);
+    // returns.add(ret);
+    // // compStats.add(ComparisonStats.calc(ret, 0.5, defenders));
+    // System.out.println(CumulativeStats.calc(ret));
+    // }
 
-    returns.add(returnsStock);
-    returns.add(returnsBonds);
+    // returns.add(returnsStock);
+    // returns.add(returnsBonds);
     // returns.add(returnsLazy2);
     // returns.add(returnsLazy3);
     // returns.add(returnsLazy4);
@@ -282,10 +282,10 @@ public class AdaptiveAlloc
     // System.out.println(stats);
     // }
 
-    Chart.saveLineChart(new File(outputDir, "returns.html"),
-        String.format("Returns (%d\u00A2 Spread)", Math.round(slippage.constSlip * 200)), 1000, 640, true, returns);
-    Chart.saveAnnualStatsTable(new File(outputDir, "annual-stats.html"), 1000, false, returns);
-    Chart.saveComparisonTable(new File(outputDir, "comparison.html"), 1000, compStats);
+    // Chart.saveLineChart(new File(outputDir, "returns.html"),
+    // String.format("Returns (%d\u00A2 Spread)", Math.round(slippage.constSlip * 200)), 1000, 640, true, returns);
+    // Chart.saveAnnualStatsTable(new File(outputDir, "annual-stats.html"), 1000, false, returns);
+    // Chart.saveComparisonTable(new File(outputDir, "comparison.html"), 1000, compStats);
 
     // Account account = sim.broker.getAccount(0);
     // account.printTransactions();//TimeLib.TIME_BEGIN, TimeLib.toMs(1996, Month.DECEMBER, 31));

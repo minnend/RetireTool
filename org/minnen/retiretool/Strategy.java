@@ -41,7 +41,8 @@ public class Strategy
     for (int t = iStart + 1; t < N; ++t) {
       System.out.printf("Process: %d = [%s]\n", t, TimeLib.formatMonth(seqs[0].getTimeMS(t)));
       assert seqs[0].getTimeMS(t) == seqs[1].getTimeMS(t);
-      long key = predictor.store.lock(TimeLib.TIME_BEGIN, seqs[0].getTimeMS(t) - 1);
+      final long key = Sequence.Lock.genKey();
+      predictor.store.lock(TimeLib.TIME_BEGIN, seqs[0].getTimeMS(t) - 1, key);
       double[] distribution = predictor.selectDistribution(seqs);
       assert distribution.length == seqs.length;
       predictor.store.unlock(key);
@@ -373,7 +374,8 @@ public class Strategy
       double r1 = risky.get(t, 0) / risky.get(t - 1, 0);
       double r2 = safe.get(t, 0) / safe.get(t - 1, 0);
 
-      long key = store.lock(prices.getStartMS(), prices.getTimeMS(t) - 1);
+      final long key = Sequence.Lock.genKey();
+      store.lock(prices.getStartMS(), prices.getTimeMS(t) - 1, key);
 
       boolean bAll = true;
       for (int i = 0; i < M; ++i) {

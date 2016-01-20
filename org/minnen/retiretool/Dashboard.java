@@ -353,7 +353,7 @@ public class Dashboard
     Simulation sim = new Simulation(store, guideSeq, slippage, maxDelay, bBuyAtNextOpen);
     runMulti3(sim, dir);
 
-    int[][] allParams = new int[][] { { 20, 0, 240, 150 }, { 50, 0, 180, 30 }, { 10, 0, 200, 0 } };
+    int[][] allParams = new int[][] { { 20, 0, 240, 150, 25 }, { 50, 0, 180, 30, 100 }, { 10, 0, 200, 0, 200 } };
 
     // Generate graphs.
     for (int i = 0; i < allParams.length; ++i) {
@@ -362,11 +362,13 @@ public class Dashboard
       final long endMs = TimeLib.TIME_END;
       Sequence trigger = FinLib.sma(stock, params[0], params[1]).subseq(startMs, endMs);
       Sequence base = FinLib.sma(stock, params[2], params[3]).subseq(startMs, endMs);
+      Sequence baseLow = base.dup()._mul(1.0 - params[4] / 10000.0).setName("BaseLow");
+      Sequence baseHigh = base.dup()._mul(1.0 + params[4] / 10000.0).setName("BaseHigh");
       Sequence raw = stock.subseq(startMs, endMs);
       trigger.setName("Trigger");
       base.setName("Base");
       Chart.saveLineChart(new File(dir, String.format("sma%d.html", i + 1)), String.format("SMA-%d", i + 1), 1000, 600,
-          true, trigger, base, raw);
+          true, trigger, baseLow, baseHigh, raw);
     }
   }
 }

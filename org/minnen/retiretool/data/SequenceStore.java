@@ -185,17 +185,16 @@ public class SequenceStore implements Iterable<Sequence>
   /**
    * Lock all sequences currently in the store.
    * 
-   * @param startMs first accessible ms (inclusive)
-   * @param endMs last accessible ms (inclusive)
+   * @param startMs first accessible ms (inclusive).
+   * @param endMs last accessible ms (inclusive).
+   * @param key key to use for locking / unlocking sequences.
    */
-  public long lock(long startMs, long endMs)
+  public void lock(long startMs, long endMs, long key)
   {
-    final long key = Sequence.Lock.genKey();
     for (Sequence seq : seqs) {
       IndexRange range = seq.getIndices(startMs, endMs, EndpointBehavior.Inside);
       seq.lock(range.iStart, range.iEnd, key);
     }
-    return key;
   }
 
   public void relock(long startMs, long endMs, long key)

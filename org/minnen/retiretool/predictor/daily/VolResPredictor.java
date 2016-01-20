@@ -6,6 +6,10 @@ import org.minnen.retiretool.predictor.config.ConfigAdaptive.TradeFreq;
 import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.TimeLib;
 
+/**
+ * Implementation of Volatility-Responsive Asset Allocation from Russell Investments.
+ * http://www.russell.com/us/institutional-investors/research/volatility-responsive-asset-allocation.page
+ */
 public class VolResPredictor extends Predictor
 {
   private DiscreteDistribution prevDistribution = null;

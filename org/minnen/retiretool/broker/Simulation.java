@@ -2,7 +2,9 @@ package org.minnen.retiretool.broker;
 
 import org.minnen.retiretool.Slippage;
 import org.minnen.retiretool.data.DiscreteDistribution;
+import org.minnen.retiretool.data.IndexRange;
 import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.data.Sequence.EndpointBehavior;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.util.FinLib;
@@ -21,6 +23,8 @@ public class Simulation
   public final boolean       bBuyAtNextOpen;
   public final int           maxDelay;
   public final Broker        broker;
+
+  private final long         key             = Sequence.Lock.genKey();
 
   private double             startingBalance = 10000.0;
   public Sequence            returnsDaily;
@@ -49,11 +53,6 @@ public class Simulation
   public long getEndMS()
   {
     return guideSeq.getEndMS();
-  }
-
-  public Sequence run(Predictor predictor)
-  {
-    return run(predictor, "Returns");
   }
 
   /**
@@ -198,11 +197,42 @@ public class Simulation
     return dist;
   }
 
+  public Sequence run(Predictor predictor)
+  {
+    return run(predictor, "Returns");
+  }
+
+  public Sequence run(Predictor predictor, long timeStart, long timeEnd, String name)
+  {
+    System.out.printf("Run1: [%s] -> [%s] = [%s] -> [%s] (%d, %d)\n",
+        TimeLib.formatDate(timeStart), TimeLib.formatDate(timeEnd),
+        TimeLib.formatDate(guideSeq.getStartMS()), TimeLib.formatDate(guideSeq.getEndMS()),
+        timeEnd, guideSeq.getStartMS());
+    if (timeStart == TimeLib.TIME_BEGIN) {
+      timeStart = guideSeq.getStartMS();
+    }
+    if (timeEnd == TimeLib.TIME_END) {
+      timeEnd = guideSeq.getEndMS();
+    }
+    IndexRange range = guideSeq.getIndices(timeStart, timeEnd, EndpointBehavior.Closest);
+    System.out.printf("Run: [%s] -> [%s] = [%d] -> [%d]\n",
+        TimeLib.formatDate(timeStart), TimeLib.formatDate(timeEnd),
+        range.iStart, range.iEnd);
+    guideSeq.lock(range.iStart, range.iEnd, key);
+    Sequence ret = run(predictor, name);
+    guideSeq.unlock(key);
+    return ret;
+  }
+
   public Sequence run(Predictor predictor, String name)
   {
+    System.out.printf("Sim.run [%s]\n", name);
     final int T = guideSeq.length();
     final long principal = Fixed.toFixed(startingBalance);
     final boolean bPriceIndexAlwaysZero = (guideSeq.getNumDims() == 1);
+
+    System.out.printf("Sim.run[T=%d]: [%s] -> [%s]\n", T, TimeLib.formatDate(guideSeq.getStartMS()),
+        TimeLib.formatDate(guideSeq.getEndMS()));
 
     long prevTime = guideSeq.getStartMS() - TimeLib.MS_IN_DAY;
     long lastRebalance = TimeLib.TIME_BEGIN;
@@ -223,8 +253,12 @@ public class Simulation
     broker.setPriceIndex(bPriceIndexAlwaysZero ? 0 : FinLib.Close);
     Account account = broker.openAccount(Account.Type.Roth, true);
     final long key = Sequence.Lock.genKey();
+    System.out.printf("key = %d\n", key);
+    System.out.printf("lock store: %d -> %d\n", guideSeq.getStartMS(), guideSeq.getEndMS());
+    store.lock(guideSeq.getStartMS(), guideSeq.getEndMS(), key);
     for (int t = 0; t < T; ++t) {
       final long time = guideSeq.getTimeMS(t);
+      System.out.printf(" [t=%d  %s  relock]\n", t, TimeLib.formatDate(time));
       store.relock(TimeLib.TIME_BEGIN, time, key);
       final long nextTime = (t == T - 1 ? TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(time))) : guideSeq
           .getTimeMS(t + 1));
@@ -271,7 +305,9 @@ public class Simulation
       broker.doEndOfDayBusiness();
 
       // Time for a prediction and possible asset change.
+      System.out.printf("Predict.start\n");
       targetDist = predictor.selectDistribution();
+      System.out.printf("Predict.end\n");
 
       // Rebalance if desired distribution changes by more than 2% or if it's been more than a year.
       // Note: we're comparing the current request to the previous one, not to the actual
@@ -305,6 +341,7 @@ public class Simulation
     }
     store.unlock(key);
 
+    System.out.printf("Sim Done (%s)\n", name);
     return returnsMonthly;
   }
 }

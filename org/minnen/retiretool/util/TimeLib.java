@@ -239,7 +239,9 @@ public class TimeLib
   public static String formatDate(long ms)
   {
     if (ms == TIME_ERROR || ms == Long.MAX_VALUE) return null;
-    return ms2date(ms).format(dtfDate);
+    else if (ms == TIME_BEGIN) return "Begin";
+    else if (ms == TIME_END) return "End";
+    else return ms2date(ms).format(dtfDate);
   }
 
   /** @return string representation of the given day (dd MMM YYY) */

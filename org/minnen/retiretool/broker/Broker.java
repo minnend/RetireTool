@@ -33,7 +33,6 @@ public class Broker
   public void reset()
   {
     accounts.clear();
-    // store.unlock(); // TODO should not be needed
     timeInfo = origTimeInfo;
   }
 

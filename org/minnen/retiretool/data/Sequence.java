@@ -129,6 +129,7 @@ public class Sequence implements Iterable<FeatureVec>
 
   private Sequence lockReal(int iStartReal, int iEndReal, int iPrevEnd, long key)
   {
+    if (name.equals("tbilldata")) System.out.printf("Lock(real): %d\n", key);
     assert iStartReal >= 0;
     assert iEndReal < data.size();
     if (isLocked()) {
@@ -155,11 +156,12 @@ public class Sequence implements Iterable<FeatureVec>
    */
   public Sequence lock(int iStart, int iEnd, long key)
   {
-    if (iStart < -1 || iStart >= length()) {
-      throw new IndexOutOfBoundsException(String.format("Start: %d vs [0, %d]", iStart, length() - 1));
+    if (name.equals("tbilldata")) System.out.printf("Lock: %d  [%d, %d]\n", key, iStart, iEnd);
+    if (iStart < 0 || iStart >= length()) {
+      throw new IndexOutOfBoundsException(String.format("Start[%s]: %d vs [0, %d]", name, iStart, length() - 1));
     }
-    if (iEnd < -1 || iEnd >= length()) {
-      throw new IndexOutOfBoundsException(String.format("End: %d vs [0, %d]", iStart, length() - 1));
+    if (iEnd < 0 || iEnd >= length()) {
+      throw new IndexOutOfBoundsException(String.format("End[%s]: %d vs [0, %d]", name, iEnd, length() - 1));
     }
     if (iStart > iEnd) {
       throw new IndexOutOfBoundsException(String.format("Start after End (%d vs %d)", iStart, iEnd));
@@ -174,6 +176,7 @@ public class Sequence implements Iterable<FeatureVec>
   /** Replace the existing lock (if there is one) with the given range. */
   public Sequence relock(long startMs, long endMs, EndpointBehavior endpointBehavior, long key)
   {
+    if (name.equals("tbilldata")) System.out.printf("Relock: %d\n", key);
     int iPrevEnd = -1;
     if (isLocked()) {
       iPrevEnd = locks.peek().iEnd;
@@ -191,6 +194,7 @@ public class Sequence implements Iterable<FeatureVec>
    */
   public Sequence lockToMatch(Sequence seq, long key)
   {
+    if (name.equals("tbilldata")) System.out.printf("LockToMatch: %d\n", key);
     int iStart = getClosestIndex(seq.getStartMS());
     int iEnd = getClosestIndex(seq.getEndMS());
     assert iEnd - iStart + 1 == seq.length();
@@ -199,12 +203,13 @@ public class Sequence implements Iterable<FeatureVec>
 
   public Sequence unlock(long key)
   {
+    if (name.equals("tbilldata")) System.out.printf("Unlock: %d (%d)\n", key, locks.peek().key);
     Lock lock = locks.peek();
     if (key == lock.key) {
       locks.pop();
       return this;
     } else {
-      throw new RuntimeException("Tried to unlock sequence with wrong key.");
+      throw new RuntimeException(String.format("Tried to unlock sequence with wrong key (%s).", name));
     }
   }
 

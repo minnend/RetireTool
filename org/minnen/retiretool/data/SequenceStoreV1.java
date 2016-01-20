@@ -444,9 +444,8 @@ public class SequenceStoreV1 extends SequenceStore
    * @return key used to lock sequences.
    */
   @Override
-  public long lock(long startMS, long endMS)
+  public void lock(long startMS, long endMS, long key)
   {
-    final long key = Sequence.Lock.genKey();
     for (List<Sequence> seqs : seqLists) {
       for (Sequence seq : seqs) {
         int iStart = (startMS == TimeLib.TIME_BEGIN ? 0 : seq.getIndexAtOrAfter(startMS));
@@ -454,7 +453,6 @@ public class SequenceStoreV1 extends SequenceStore
         seq.lock(iStart, iEnd, key);
       }
     }
-    return key;
   }
 
   /** Unlock all sequences currently in this store. */
