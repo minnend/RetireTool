@@ -196,13 +196,9 @@ public class Simulation
     return dist;
   }
 
-  public Sequence run(Predictor predictor)
-  {
-    return run(predictor, "Returns");
-  }
-
   public Sequence run(Predictor predictor, long timeStart, long timeEnd, String name)
   {
+    assert timeStart != TimeLib.TIME_ERROR && timeEnd != TimeLib.TIME_ERROR;
     // System.out.printf("Run1: [%s] -> [%s] = [%s] -> [%s] (%d, %d)\n", TimeLib.formatDate(timeStart),
     // TimeLib.formatDate(timeEnd), TimeLib.formatDate(guideSeq.getStartMS()),
     // TimeLib.formatDate(guideSeq.getEndMS()), timeEnd, guideSeq.getStartMS());
@@ -221,6 +217,11 @@ public class Simulation
     Sequence ret = run(predictor, name);
     guideSeq.unlock(key);
     return ret;
+  }
+
+  public Sequence run(Predictor predictor)
+  {
+    return run(predictor, "Returns");
   }
 
   public Sequence run(Predictor predictor, String name)

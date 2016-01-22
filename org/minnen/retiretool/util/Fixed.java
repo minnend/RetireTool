@@ -35,7 +35,7 @@ public class Fixed
 
   public static long toFixed(long x)
   {
-    return x * SCALE;
+    return Math.multiplyExact(x, SCALE);
   }
 
   public static double toFloat(long x)
@@ -61,11 +61,11 @@ public class Fixed
       y = -y;
     }
 
-    // Check for overflow.
-    assert Long.MAX_VALUE / x >= y : String.format("Fixed-Point Overflow: %d x %d", x, y);
     // TODO use BigInteger to handle case where result fits but intermediate value overflows.
+    long z = Math.multiplyExact(x, y);
+    z = Math.addExact(z, HALF_SCALE);
 
-    return sign * ((x * y + HALF_SCALE) / SCALE);
+    return sign * (z / SCALE);
   }
 
   /** Divide values and round (midpoint moves away from zero). */
@@ -82,7 +82,10 @@ public class Fixed
     }
 
     // TODO use BigInteger to handle case where result fits but intermediate value overflows.
-    return sign * (x * SCALE + y / 2) / y;
+    long z = Math.multiplyExact(x, SCALE);
+    z = Math.addExact(z, y / 2);
+
+    return sign * z / y;
   }
 
   /** Divide values and truncate toward zero. */
@@ -98,7 +101,8 @@ public class Fixed
       y = -y;
     }
 
-    return sign * (x * SCALE) / y;
+    long z = Math.multiplyExact(x, SCALE);
+    return sign * z / y;
   }
 
   public static long sign(long x)
