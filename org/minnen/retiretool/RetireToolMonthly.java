@@ -16,7 +16,6 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
-import org.minnen.retiretool.Chart.ChartType;
 import org.minnen.retiretool.predictor.monthly.AssetPredictor;
 import org.minnen.retiretool.predictor.monthly.ConstantPredictor;
 import org.minnen.retiretool.predictor.monthly.MixedPredictor;
@@ -44,6 +43,8 @@ import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.Random;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.util.FinLib.DividendMethod;
+import org.minnen.retiretool.viz.Chart;
+import org.minnen.retiretool.viz.Chart.ChartType;
 
 public class RetireToolMonthly
 {
