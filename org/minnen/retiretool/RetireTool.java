@@ -131,14 +131,14 @@ public class RetireTool
     returns.addData(1.0, guideSeq.getStartMS());
     int rebalanceDelay = 0;
 
-    Account account = broker.openAccount(Account.Type.Roth, true);
+    Account account = broker.openAccount("SimAccount", Account.Type.Roth, true);
     for (int t = 0; t < T; ++t) {
       long time = guideSeq.getTimeMS(t);
       final long key = Sequence.Lock.genKey();
       store.lock(TimeLib.TIME_BEGIN, time, key);
       long nextTime = (t == T - 1 ? TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(time))) : guideSeq
           .getTimeMS(t + 1));
-      broker.setTime(time, prevTime, nextTime);
+      broker.setTime(new TimeInfo(time, prevTime, nextTime));
       TimeInfo timeInfo = broker.getTimeInfo();
 
       // Handle initialization issues at t==0.

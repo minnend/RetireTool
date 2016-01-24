@@ -34,7 +34,6 @@ public class Dashboard
   public static final LinearFunc    PriceSDev      = LinearFunc.Zero;
 
   public static final int           maxDelay       = 0;
-  public static final boolean       bBuyAtNextOpen = true;
   public static final long          gap            = 2 * TimeLib.MS_IN_DAY;
 
   public static final String        riskyName      = "stock";
@@ -354,7 +353,7 @@ public class Dashboard
     Sequence stock = store.get(riskyName);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stock.subseq(iStart);
-    Simulation sim = new Simulation(store, guideSeq, slippage, maxDelay, bBuyAtNextOpen);
+    Simulation sim = new Simulation(store, guideSeq, slippage, maxDelay, FinLib.Close);
     runMulti3(sim, dir);
 
     int[][] allParams = new int[][] { { 20, 0, 240, 150, 25 }, { 50, 0, 180, 30, 100 }, { 10, 0, 200, 0, 200 } };

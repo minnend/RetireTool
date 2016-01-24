@@ -15,4 +15,10 @@ public class IndexRange
   {
     return iEnd - iStart + 1;
   }
+
+  @Override
+  public String toString()
+  {
+    return String.format("[%d,%d]", iStart, iEnd);
+  }
 }

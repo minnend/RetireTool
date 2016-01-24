@@ -5,6 +5,9 @@ import org.minnen.retiretool.data.SequenceStore;
 
 /**
  * Provides limited access to information in a broker.
+ * 
+ * Pass this object to trading systems so that they can interact with the broker without "accidentally" modifying the
+ * broker or accessing restricted information.
  */
 public class BrokerInfoAccess
 {

@@ -14,33 +14,43 @@ import org.minnen.retiretool.util.TimeLib;
 
 public class Simulation
 {
-  public static final double DistributionEPS = 0.02;
-  public static final Random rng             = new Random();
+  public static final double   DistributionEPS = 0.02;
+  public static final Random   rng             = new Random();
+  public static final String   AccountName     = "SimAccount";
 
-  public final SequenceStore store;
-  public final Sequence      guideSeq;
-  public final Slippage      slippage;
-  public final boolean       bBuyAtNextOpen;
-  public final int           maxDelay;
-  public final Broker        broker;
+  public final SequenceStore   store;
+  public final Sequence        guideSeq;
+  public final Slippage        slippage;
+  public final int             maxDelay;
+  public final Broker          broker;
 
-  private double             startingBalance = 10000.0;
-  public Sequence            returnsDaily;
-  public Sequence            returnsMonthly;
+  private final double         startingBalance = 10000.0;
 
-  public Simulation(SequenceStore store, Sequence guideSeq)
-  {
-    this(store, guideSeq, Slippage.None, 0, true);
-  }
+  public Sequence              returnsDaily;
+  public Sequence              returnsMonthly;
 
-  public Simulation(SequenceStore store, Sequence guideSeq, Slippage slippage, int maxDelay, boolean bBuyAtNextOpen)
+  private long                 runKey;
+  private int                  runIndex        = -1;
+  private long                 lastRebalance   = TimeLib.TIME_BEGIN;
+  private boolean              bNeedRebalance;
+  private int                  rebalanceDelay;
+  private DiscreteDistribution prevDist;
+  private Predictor            predictor;
+
+  public Simulation(SequenceStore store, Sequence guideSeq, Slippage slippage, int maxDelay, int iPrice)
   {
     this.store = store;
     this.guideSeq = guideSeq;
     this.slippage = slippage;
-    this.bBuyAtNextOpen = bBuyAtNextOpen;
     this.maxDelay = maxDelay;
     this.broker = new Broker(store, slippage, guideSeq);
+
+    // TODO need better handling of prices:
+    // 1. Fixed index
+    // 2. Read close, buy on next open (if OHLC data)
+    // 3. #2 but calculate returns based on adjusted close (if no separate dividend data)
+    // 4. Buy at random price based on OHLC (with adjustment if necessary)
+    this.broker.setPriceIndex(iPrice);
   }
 
   public long getStartMS()
@@ -51,6 +61,11 @@ public class Simulation
   public long getEndMS()
   {
     return guideSeq.getEndMS();
+  }
+
+  public void setPredictor(Predictor predictor)
+  {
+    this.predictor = predictor;
   }
 
   /**
@@ -196,7 +211,25 @@ public class Simulation
     return dist;
   }
 
+  public Sequence run(Predictor predictor)
+  {
+    return run(predictor, "Returns");
+  }
+
+  public Sequence run(Predictor predictor, String name)
+  {
+    return run(predictor, TimeLib.TIME_BEGIN, TimeLib.TIME_END, name);
+  }
+
   public Sequence run(Predictor predictor, long timeStart, long timeEnd, String name)
+  {
+    setupRun(predictor, timeStart, timeEnd, name);
+    runTo(timeEnd);
+    finishRun();
+    return returnsMonthly;
+  }
+
+  public void setupRun(Predictor predictor, long timeStart, long timeEnd, String name)
   {
     assert timeStart != TimeLib.TIME_ERROR && timeEnd != TimeLib.TIME_ERROR;
     // System.out.printf("Run1: [%s] -> [%s] = [%s] -> [%s] (%d, %d)\n", TimeLib.formatDate(timeStart),
@@ -209,94 +242,61 @@ public class Simulation
       timeEnd = guideSeq.getEndMS();
     }
     IndexRange range = guideSeq.getIndices(timeStart, timeEnd, EndpointBehavior.Closest);
-    // System.out.printf("Run: [%s] -> [%s] = [%d] -> [%d]\n", TimeLib.formatDate(timeStart),
-    // TimeLib.formatDate(timeEnd),
-    // range.iStart, range.iEnd);
-    final long key = Sequence.Lock.genKey();
-    guideSeq.lock(range.iStart, range.iEnd, key);
-    Sequence ret = run(predictor, name);
-    guideSeq.unlock(key);
-    return ret;
-  }
-
-  public Sequence run(Predictor predictor)
-  {
-    return run(predictor, "Returns");
-  }
-
-  public Sequence run(Predictor predictor, String name)
-  {
-    final int T = guideSeq.length();
-    final long principal = Fixed.toFixed(startingBalance);
-    final boolean bPriceIndexAlwaysZero = (guideSeq.getNumDims() == 1);
-
-    // System.out.printf("Sim.run[T=%d]: [%s] -> [%s]\n", T, TimeLib.formatDate(guideSeq.getStartMS()),
-    // TimeLib.formatDate(guideSeq.getEndMS()));
-
-    long prevTime = guideSeq.getStartMS() - TimeLib.MS_IN_DAY;
-    long lastRebalance = TimeLib.TIME_BEGIN;
-    boolean bNeedRebalance = false;
-    DiscreteDistribution prevDist = new DiscreteDistribution("cash");
-    DiscreteDistribution targetDist = null;
+    runKey = Sequence.Lock.genKey();
+    guideSeq.lock(range.iStart, range.iEnd, runKey);
+    runIndex = 0;
+    lastRebalance = TimeLib.TIME_BEGIN;
+    bNeedRebalance = false;
+    rebalanceDelay = 0;
+    prevDist = new DiscreteDistribution("cash");
+    this.predictor = predictor;
 
     returnsMonthly = new Sequence(name);
     returnsMonthly.addData(1.0, guideSeq.getStartMS());
     returnsDaily = new Sequence(name);
     returnsDaily.addData(1.0, guideSeq.getStartMS());
 
-    int rebalanceDelay = 0;
+    broker.reset();
+    broker.openAccount(AccountName, Fixed.toFixed(startingBalance), Account.Type.Roth, true);
 
     // TODO support prediction at start instead of on second tick
+    // if (predictor != null) {
+    // store.lock(TimeLib.TIME_BEGIN, guideSeq.getStartMS(), runKey);
+    // DiscreteDistribution targetDist = predictor.selectDistribution();
+    // }
+  }
 
-    broker.reset();
-    broker.setPriceIndex(bPriceIndexAlwaysZero ? 0 : FinLib.Close);
-    Account account = broker.openAccount(Account.Type.Roth, true);
-    final long key = Sequence.Lock.genKey();
-    // System.out.printf("key = %d\n", key);
-    // System.out.printf("lock store: %d -> %d\n", guideSeq.getStartMS(), guideSeq.getEndMS());
-    store.lock(guideSeq.getStartMS(), guideSeq.getEndMS(), key);
-    for (int t = 0; t < T; ++t) {
-      final long time = guideSeq.getTimeMS(t);
-      // System.out.printf(" [t=%d  %s  relock]\n", t, TimeLib.formatDate(time));
-      store.relock(TimeLib.TIME_BEGIN, time, key);
-      final long nextTime = (t == T - 1 ? TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(time))) : guideSeq
-          .getTimeMS(t + 1));
-      broker.setTime(time, prevTime, nextTime);
-      final TimeInfo timeInfo = broker.getTimeInfo();
-      // System.out.println(timeInfo);
+  public void runTo(long timeEnd)
+  {
+    if (timeEnd == TimeLib.TIME_END) {
+      timeEnd = guideSeq.getEndMS();
+    }
 
-      // Handle initialization issues at t==0.
-      if (t == 0) {
-        account.deposit(principal, "Initial Deposit");
-      }
+    Account account = broker.getAccount(AccountName);
+    DiscreteDistribution targetDist = null;
+
+    while (guideSeq.getTimeMS(runIndex) < timeEnd) {
+      final TimeInfo timeInfo = new TimeInfo(runIndex, guideSeq);
+      broker.setTime(timeInfo);
+      store.relock(TimeLib.TIME_BEGIN, timeInfo.time, runKey);
 
       // Handle case where we buy at the open, not the close.
-      if (bBuyAtNextOpen) {
-        if (bNeedRebalance && targetDist != null && rebalanceDelay <= 0) {
-          if (!bPriceIndexAlwaysZero) {
-            broker.setPriceIndex(FinLib.Open);
-          }
+      if (bNeedRebalance && targetDist != null && rebalanceDelay <= 0) {
+        DiscreteDistribution curDist = account.getDistribution(targetDist.names);
+        DiscreteDistribution submitDist = minimizeTransactions(curDist, targetDist, 4.0);
 
-          DiscreteDistribution curDist = account.getDistribution(targetDist.names);
-          DiscreteDistribution submitDist = minimizeTransactions(curDist, targetDist, 4.0);
-
-          if (!submitDist.isNormalized()) {
-            System.out.printf("Curr: %s\n", curDist.toStringWithNames(2));
-            System.out.printf("Prev: %s\n", prevDist.toStringWithNames(0));
-            System.out.printf("Want: %s\n", targetDist.toStringWithNames(0));
-            System.out.printf("Subm: %s (%f)\n", submitDist.toStringWithNames(2), submitDist.sum());
-          }
-
-          account.rebalance(submitDist);
-          // account.printTransactions(timeInfo.time, TimeLib.TIME_END);
-          // System.out.println();
-
-          lastRebalance = time;
-          prevDist = new DiscreteDistribution(submitDist);
-          if (!bPriceIndexAlwaysZero) {
-            broker.setPriceIndex(FinLib.Close);
-          }
+        // TODO improve & test submission distribution code.
+        if (!submitDist.isNormalized()) {
+          System.out.printf("Curr: %s\n", curDist.toStringWithNames(2));
+          System.out.printf("Prev: %s\n", prevDist.toStringWithNames(0));
+          System.out.printf("Want: %s\n", targetDist.toStringWithNames(0));
+          System.out.printf("Subm: %s (%f)\n", submitDist.toStringWithNames(2), submitDist.sum());
         }
+
+        account.rebalance(submitDist);
+        lastRebalance = timeInfo.time;
+        // TODO should be able to assign submitDist instead of copy-constructor -- test that
+        prevDist = new DiscreteDistribution(submitDist);
       }
 
       // End of day business.
@@ -304,15 +304,15 @@ public class Simulation
       broker.doEndOfDayBusiness();
 
       // Time for a prediction and possible asset change.
-      // System.out.printf("Predict.start\n");
       targetDist = predictor.selectDistribution();
-      // System.out.printf("Predict.end\n");
 
-      // Rebalance if desired distribution changes by more than 2% or if it's been more than a year.
+      // TODO clean up wording: rebalance vs active change in target distribution
+
+      // Rebalance if desired distribution changes too much or if it's been more than a year.
       // Note: we're comparing the current request to the previous one, not to the actual
       // distribution in the account, which could change due to price movement.
       boolean bPrevRebalance = bNeedRebalance;
-      bNeedRebalance = ((time - lastRebalance) / TimeLib.MS_IN_DAY > 363 || !targetDist.isSimilar(prevDist,
+      bNeedRebalance = ((timeInfo.time - lastRebalance) / TimeLib.MS_IN_DAY > 363 || !targetDist.isSimilar(prevDist,
           DistributionEPS));
 
       if (maxDelay > 0) {
@@ -322,24 +322,19 @@ public class Simulation
         }
       }
 
-      // Update account at end of the day.
-      if (!bBuyAtNextOpen) {
-        if (bNeedRebalance && rebalanceDelay <= 0) {
-          account.rebalance(targetDist);
-          lastRebalance = time;
-          prevDist = new DiscreteDistribution(targetDist);
-        }
+      double value = Fixed.toFloat(account.getValue()) / startingBalance;
+      returnsDaily.addData(value, timeInfo.time);
+      if (timeInfo.isLastDayOfMonth || runIndex == guideSeq.length() - 1) {
+        returnsMonthly.addData(value, timeInfo.time);
       }
 
-      double value = Fixed.toFloat(Fixed.div(account.getValue(), principal));
-      returnsDaily.addData(value, time);
-      if (timeInfo.isLastDayOfMonth) {
-        returnsMonthly.addData(value, time);
-      }
-      prevTime = time;
+      ++runIndex;
     }
-    store.unlock(key);
+  }
 
-    return returnsMonthly;
+  public void finishRun()
+  {
+    guideSeq.unlock(runKey);
+    store.unlock(runKey);
   }
 }

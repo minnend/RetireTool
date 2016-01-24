@@ -27,6 +27,7 @@ public class Account
     Taxable, Traditional, Roth
   };
 
+  public final String                 name;
   public final Broker                 broker;
   public final Type                   type;
   private final boolean               bReinvestDividends;
@@ -41,8 +42,9 @@ public class Account
   private long                        cashSumForMonth;
   private int                         numDaysInMonth;
 
-  public Account(Broker broker, Type type, boolean bReinvestDividends)
+  public Account(String name, Broker broker, Type type, boolean bReinvestDividends)
   {
+    this.name = name;
     this.broker = broker;
     this.type = type;
     this.bReinvestDividends = bReinvestDividends;

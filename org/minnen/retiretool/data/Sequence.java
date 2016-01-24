@@ -17,21 +17,21 @@ import org.minnen.retiretool.util.TimeLib;
  */
 public class Sequence implements Iterable<FeatureVec>
 {
-  public static final Random rng = new Random();
-
   /** Stores information about a single lock position. */
   public static class Lock
   {
+    public static final Random rng = new Random();
+
     /** First index of locked region (real, inclusive). */
-    public final int  iStart;
+    public final int           iStart;
 
     /** Last index of locked region (real, inclusive). */
-    public final int  iEnd;
+    public final int           iEnd;
 
     /** Key used to lock region; must be specified to unlock. */
-    public final long key;
+    public final long          key;
 
-    public final int  iPrevEnd;
+    public final int           iPrevEnd;
 
     public Lock(int iStart, int iEnd, long key)
     {
@@ -52,11 +52,26 @@ public class Sequence implements Iterable<FeatureVec>
     }
   }
 
-  /** data stored in this data set */
+  /** Data stored in this data set. */
   private final List<FeatureVec> data  = new ArrayList<>();
+
+  /** Name of this sequence. */
   private String                 name;
+
+  /** Locks applied to this sequence. */
   private final Stack<Lock>      locks = new Stack<>();
 
+  /**
+   * Defines behavior when searching for an index matching a given time.
+   * 
+   * <ul>
+   * <li>Closest = closest index, either before after the given time.
+   * <li>Inside = given a time range, first must be at or after and second must be at or before the first / last time.
+   * <li>Outisde = given a time range, first must be at or before and second must be at or after the first / last time.
+   * <li>AtOrAfter = closest index at or after the given time.
+   * <li>AtOrBefore = closest index at or before the given time.
+   * </ul>
+   */
   public enum EndpointBehavior {
     Closest, Inside, Outside, AtOrAfter, AtOrBefore
   }
@@ -127,6 +142,15 @@ public class Sequence implements Iterable<FeatureVec>
     return get(0).getNumDims();
   }
 
+  /**
+   * Lock this sequence using real indices (i.e. indices that ignore existing locks).
+   * 
+   * @param iStartReal start index of the new lock
+   * @param iEndReal end index of the new lock
+   * @param iPrevEnd end index of previous lock (or full sequence if no locks)
+   * @param key key value required to unlock this sequence.
+   * @return this sequence.
+   */
   private Sequence lockReal(int iStartReal, int iEndReal, int iPrevEnd, long key)
   {
     assert iStartReal >= 0;
@@ -175,7 +199,7 @@ public class Sequence implements Iterable<FeatureVec>
   public Sequence relock(long startMs, long endMs, EndpointBehavior endpointBehavior, long key)
   {
     int iPrevEnd = -1;
-    if (isLocked()) {
+    if (isLocked(key)) {
       iPrevEnd = locks.peek().iEnd;
       unlock(key); // Verify key and remove last lock
     }
@@ -199,6 +223,7 @@ public class Sequence implements Iterable<FeatureVec>
 
   /**
    * Unlock this sequence.
+   * 
    * @param key key used to unlock the sequence (must match key used to lock it).
    * @return this sequence
    */
@@ -213,25 +238,18 @@ public class Sequence implements Iterable<FeatureVec>
     }
   }
 
+  /** @return True if this sequence is locked. */
   public boolean isLocked()
   {
     return !locks.isEmpty();
   }
 
-  // TODO remove unused functions
-  // public static void lock(int iStart, int iEnd, long key, Sequence... seqs)
-  // {
-  // for (Sequence seq : seqs) {
-  // seq.lock(iStart, iEnd, key);
-  // }
-  // }
-  //
-  // public static void unlock(long key, Sequence... seqs)
-  // {
-  // for (Sequence seq : seqs) {
-  // seq.unlock(key);
-  // }
-  // }
+  /** @return True if the most recent lock uses the given key. */
+  public boolean isLocked(long key)
+  {
+    if (locks.isEmpty()) return false;
+    return locks.peek().key == key;
+  }
 
   /** @return First real (internal) index that respects lock. */
   private int getFirstIndex()

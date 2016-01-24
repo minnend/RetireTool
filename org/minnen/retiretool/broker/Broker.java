@@ -9,6 +9,11 @@ import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Fixed;
 
+/**
+ * Represents a trading broker at which a strategy can open accounts and make trades.
+ * 
+ * @author David Minnen
+ */
 public class Broker
 {
   public final BrokerInfoAccess accessObject = new BrokerInfoAccess(this);
@@ -26,7 +31,7 @@ public class Broker
   {
     this.store = store;
     this.slippage = slippage;
-    this.origTimeInfo = new TimeInfo(guideSeq);
+    this.origTimeInfo = new TimeInfo(0, guideSeq);
     this.timeInfo = origTimeInfo;
   }
 
@@ -41,9 +46,14 @@ public class Broker
     return accounts.size();
   }
 
-  public Account getAccount(int i)
+  public Account getAccount(String name)
   {
-    return accounts.get(i);
+    for (Account account : accounts) {
+      if (account.name.equals(name)) {
+        return account;
+      }
+    }
+    return null;
   }
 
   public void setPriceIndex(int index)
@@ -52,9 +62,9 @@ public class Broker
     iPrice = index;
   }
 
-  public void setTime(long time, long prevTime, long nextTime)
+  public void setTime(TimeInfo timeInfo)
   {
-    timeInfo = new TimeInfo(time, prevTime, nextTime);
+    this.timeInfo = timeInfo;
   }
 
   public long getTime()
@@ -83,16 +93,16 @@ public class Broker
     }
   }
 
-  public Account openAccount(Account.Type accountType, boolean bReinvestDividends)
+  public Account openAccount(String name, Account.Type accountType, boolean bReinvestDividends)
   {
-    return openAccount(0L, accountType, bReinvestDividends);
+    return openAccount(name, 0L, accountType, bReinvestDividends);
   }
 
-  public Account openAccount(long startingBalance, Account.Type accountType, boolean bReinvestDividends)
+  public Account openAccount(String name, long startingBalance, Account.Type accountType, boolean bReinvestDividends)
   {
     assert startingBalance >= 0L;
 
-    Account account = new Account(this, accountType, bReinvestDividends);
+    Account account = new Account(name, this, accountType, bReinvestDividends);
     accounts.add(account);
     if (startingBalance > 0L) {
       account.deposit(startingBalance, "Initial Deposit");
