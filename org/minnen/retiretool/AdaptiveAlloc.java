@@ -199,31 +199,32 @@ public class AdaptiveAlloc
     List<Sequence> returns = new ArrayList<>();
 
     // Lazy 2-fund portfolio.
-    String[] lazy2 = new String[] { "VTSMX", "VBMFX" };
-    config = new ConfigMixed(new DiscreteDistribution(lazy2, new double[] { 0.7, 0.3 }), new ConfigConst(lazy2[0]),
-        new ConfigConst(lazy2[1]));
-    predictor = config.build(sim.broker.accessObject, lazy2);
-    Sequence returnsLazy2 = sim.run(predictor, timeSimStart, "Lazy2");
-    System.out.println(CumulativeStats.calc(returnsLazy2));
-    returns.add(returnsLazy2);
+    // String[] lazy2 = new String[] { "VTSMX", "VBMFX" };
+    // config = new ConfigMixed(new DiscreteDistribution(lazy2, new double[] { 0.7, 0.3 }), new ConfigConst(lazy2[0]),
+    // new ConfigConst(lazy2[1]));
+    // predictor = config.build(sim.broker.accessObject, lazy2);
+    // Sequence returnsLazy2 = sim.run(predictor, timeSimStart, "Lazy2");
+    // System.out.println(CumulativeStats.calc(returnsLazy2));
+    // returns.add(returnsLazy2);
+    // Chart.saveHoldings(new File(outputDir, "holdings-lazy2.html"), sim.holdings);
 
     // Lazy 3-fund portfolio.
-    String[] lazy3 = new String[] { "VTSMX", "VBMFX", "VGTSX" };
-    config = new ConfigMixed(new DiscreteDistribution(lazy3, new double[] { 0.34, 0.33, 0.33 }), new ConfigConst(
-        lazy3[0]), new ConfigConst(lazy3[1]), new ConfigConst(lazy3[2]));
-    predictor = config.build(sim.broker.accessObject, lazy3);
-    Sequence returnsLazy3 = sim.run(predictor, timeSimStart, "Lazy3");
-    System.out.println(CumulativeStats.calc(returnsLazy3));
-    returns.add(returnsLazy3);
+    // String[] lazy3 = new String[] { "VTSMX", "VBMFX", "VGTSX" };
+    // config = new ConfigMixed(new DiscreteDistribution(lazy3, new double[] { 0.34, 0.33, 0.33 }), new ConfigConst(
+    // lazy3[0]), new ConfigConst(lazy3[1]), new ConfigConst(lazy3[2]));
+    // predictor = config.build(sim.broker.accessObject, lazy3);
+    // Sequence returnsLazy3 = sim.run(predictor, timeSimStart, "Lazy3");
+    // System.out.println(CumulativeStats.calc(returnsLazy3));
+    // returns.add(returnsLazy3);
 
     // Lazy 4-fund portfolio.
-    String[] lazy4 = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX" };
-    config = new ConfigMixed(new DiscreteDistribution(lazy4, new double[] { 0.4, 0.2, 0.1, 0.3 }), new ConfigConst(
-        lazy4[0]), new ConfigConst(lazy4[1]), new ConfigConst(lazy4[2]), new ConfigConst(lazy4[3]));
-    predictor = config.build(sim.broker.accessObject, lazy4);
-    Sequence returnsLazy4 = sim.run(predictor, timeSimStart, "Lazy4");
-    System.out.println(CumulativeStats.calc(returnsLazy4));
-    returns.add(returnsLazy4);
+    // String[] lazy4 = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX" };
+    // config = new ConfigMixed(new DiscreteDistribution(lazy4, new double[] { 0.4, 0.2, 0.1, 0.3 }), new ConfigConst(
+    // lazy4[0]), new ConfigConst(lazy4[1]), new ConfigConst(lazy4[2]), new ConfigConst(lazy4[3]));
+    // predictor = config.build(sim.broker.accessObject, lazy4);
+    // Sequence returnsLazy4 = sim.run(predictor, timeSimStart, "Lazy4");
+    // System.out.println(CumulativeStats.calc(returnsLazy4));
+    // returns.add(returnsLazy4);
 
     // All stock.
     // PredictorConfig stockConfig = new ConfigConst("VTSMX");
@@ -240,10 +241,10 @@ public class AdaptiveAlloc
     // returns.add(returnsBonds);
 
     // Volatility-Responsive Asset Allocation.
-    predictor = new VolResPredictor("VTSMX", "VBMFX", sim.broker.accessObject);
-    Sequence returnsVolRes = sim.run(predictor, timeSimStart, "VolRes");
-    System.out.println(CumulativeStats.calc(returnsVolRes));
-    returns.add(returnsVolRes);
+    // predictor = new VolResPredictor("VTSMX", "VBMFX", sim.broker.accessObject);
+    // Sequence returnsVolRes = sim.run(predictor, timeSimStart, "VolRes");
+    // System.out.println(CumulativeStats.calc(returnsVolRes));
+    // returns.add(returnsVolRes);
 
     // PredictorConfig tacticalConfig = new ConfigTactical(0, "SPY", "VTSMX", "VGSIX", "VGTSX", "EWU", "EWG", "EWJ",
     // "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX", "SGGDX", "VGPMX", "USAGX", "FSPCX", "FSRBX",
@@ -268,6 +269,13 @@ public class AdaptiveAlloc
         tradeFreq, 0);
     // PredictorConfig ewConfig2 = new ConfigAdaptive(-1, -1, Weighting.Equal, 30, 110, 60, 0.5, 5, pctQuantum,
     // tradeFreq, 0);
+
+    // Adaptive Asset Allocation (Equal Weight).
+    predictor = equalWeightConfig.build(sim.broker.accessObject, assetSymbols);
+    Sequence returnsAdaptive = sim.run(predictor, timeSimStart, "Adaptive");
+    System.out.println(CumulativeStats.calc(returnsAdaptive));
+    returns.add(returnsAdaptive);
+    Chart.saveHoldings(new File(outputDir, "holdings-adaptive.html"), sim.holdings);
 
     // for (int i = 0; i <= 100; i += 101) {
     // double alpha = i / 100.0;
@@ -315,8 +323,8 @@ public class AdaptiveAlloc
     // System.out.println(CumulativeStats.calc(ret));
     // }
 
-    Simulation wfSim = walkForwadOptimization(timeSimStart, simFactory);
-    returns.add(wfSim.returnsMonthly);
+    // Simulation wfSim = walkForwadOptimization(timeSimStart, simFactory);
+    // returns.add(wfSim.returnsMonthly);
 
     // AdaptiveScanner scanner = new AdaptiveScanner();
     // List<CumulativeStats> cstats = new ArrayList<CumulativeStats>();

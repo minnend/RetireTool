@@ -1,5 +1,9 @@
 package org.minnen.retiretool.broker;
 
+import java.time.LocalDate;
+import java.util.Map;
+import java.util.TreeMap;
+
 import org.minnen.retiretool.Slippage;
 import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.IndexRange;
@@ -13,28 +17,31 @@ import org.minnen.retiretool.util.TimeLib;
 
 public class Simulation
 {
-  public static final double   DistributionEPS = 0.02;
-  public static final Random   rng             = new Random();
-  public static final String   AccountName     = "SimAccount";
+  public static final double                  DistributionEPS = 0.02;
+  public static final double                  TargetEPS       = 0.1;
 
-  public final SequenceStore   store;
-  public final Sequence        guideSeq;
-  public final Slippage        slippage;
-  public final int             maxDelay;
-  public final Broker          broker;
+  public static final Random                  rng             = new Random();
+  public static final String                  AccountName     = "SimAccount";
 
-  private final double         startingBalance = 10000.0;
+  public final SequenceStore                  store;
+  public final Sequence                       guideSeq;
+  public final Slippage                       slippage;
+  public final int                            maxDelay;
+  public final Broker                         broker;
 
-  public Sequence              returnsDaily;
-  public Sequence              returnsMonthly;
+  private final double                        startingBalance = 10000.0;
 
-  private long                 runKey;
-  private int                  runIndex        = -1;
-  private long                 lastRebalance   = TimeLib.TIME_BEGIN;
-  private boolean              bNeedRebalance;
-  private int                  rebalanceDelay;
-  private DiscreteDistribution prevDist;
-  private Predictor            predictor;
+  public Sequence                             returnsDaily;
+  public Sequence                             returnsMonthly;
+  public Map<LocalDate, DiscreteDistribution> holdings;
+
+  private long                                runKey;
+  private int                                 runIndex        = -1;
+  private long                                lastRebalance   = TimeLib.TIME_BEGIN;
+  private boolean                             bNeedRebalance;
+  private int                                 rebalanceDelay;
+  private DiscreteDistribution                prevDist;
+  private Predictor                           predictor;
 
   public Simulation(SequenceStore store, Sequence guideSeq, Slippage slippage, int maxDelay, int iPrice)
   {
@@ -264,6 +271,7 @@ public class Simulation
     returnsMonthly.addData(1.0, guideSeq.getStartMS());
     returnsDaily = new Sequence(name);
     returnsDaily.addData(1.0, guideSeq.getStartMS());
+    holdings = new TreeMap<>();
 
     broker.reset();
     broker.openAccount(AccountName, Fixed.toFixed(startingBalance), Account.Type.Roth, true);
@@ -295,7 +303,8 @@ public class Simulation
       // Handle case where we buy at the open, not the close.
       if (bNeedRebalance && targetDist != null && rebalanceDelay <= 0) {
         DiscreteDistribution curDist = account.getDistribution(targetDist.names);
-        DiscreteDistribution submitDist = minimizeTransactions(curDist, targetDist, 4.0);
+        // DiscreteDistribution submitDist = minimizeTransactions(curDist, targetDist, 4.0);
+        DiscreteDistribution submitDist = new DiscreteDistribution(targetDist);
 
         // TODO improve & test submission distribution code.
         if (!submitDist.isNormalized()) {
@@ -305,6 +314,7 @@ public class Simulation
           System.out.printf("Subm: %s (%f)\n", submitDist.toStringWithNames(2), submitDist.sum());
         }
 
+        System.out.printf("Rebalance! [%s]\n", timeInfo.date);
         account.rebalance(submitDist);
         lastRebalance = timeInfo.time;
         // TODO should be able to assign submitDist instead of copy-constructor -- test that
@@ -324,8 +334,13 @@ public class Simulation
       // Note: we're comparing the current request to the previous one, not to the actual
       // distribution in the account, which could change due to price movement.
       boolean bPrevRebalance = bNeedRebalance;
-      bNeedRebalance = ((timeInfo.time - lastRebalance) / TimeLib.MS_IN_DAY > 363 || !targetDist.isSimilar(prevDist,
-          DistributionEPS));
+      DiscreteDistribution curDist = account.getDistribution();
+      bNeedRebalance = ((timeInfo.time - lastRebalance) / TimeLib.MS_IN_DAY > 363
+          || !targetDist.isSimilar(prevDist, DistributionEPS) || !targetDist.isSimilar(curDist, TargetEPS));
+      if (bNeedRebalance) {
+        System.out.printf("Need Rebalance: [%s] vs [%s]   %s vs %s / %s\n", TimeLib.formatDate(timeInfo.time),
+            TimeLib.formatDate(lastRebalance), targetDist, prevDist, curDist);
+      }
 
       if (maxDelay > 0) {
         if (bNeedRebalance && !bPrevRebalance) {
@@ -334,10 +349,14 @@ public class Simulation
         }
       }
 
+      // Update returns and holding information.
       double value = Fixed.toFloat(account.getValue()) / startingBalance;
       returnsDaily.addData(value, timeInfo.time);
       if (timeInfo.isLastDayOfMonth || runIndex == guideSeq.length() - 1) {
         returnsMonthly.addData(value, timeInfo.time);
+      }
+      if (timeInfo.isLastDayOfWeek) {
+        holdings.put(timeInfo.date, account.getDistribution());
       }
 
       store.unlock(runKey);
