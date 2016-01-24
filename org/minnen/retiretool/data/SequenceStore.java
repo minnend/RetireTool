@@ -217,13 +217,6 @@ public class SequenceStore implements Iterable<Sequence>
     }
   }
 
-  public void relock(long startMs, long endMs, long key)
-  {
-    for (Sequence seq : seqs) {
-      seq.relock(startMs, endMs, EndpointBehavior.Inside, key);
-    }
-  }
-
   /** Unlock all sequences currently in this store. */
   public void unlock(long key)
   {

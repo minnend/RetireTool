@@ -7,7 +7,6 @@ import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.Sequence.EndpointBehavior;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.predictor.daily.Predictor;
-import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Fixed;
 import org.minnen.retiretool.util.Random;
 import org.minnen.retiretool.util.TimeLib;
@@ -61,6 +60,11 @@ public class Simulation
   public long getEndMS()
   {
     return guideSeq.getEndMS();
+  }
+
+  public long getSimTime()
+  {
+    return guideSeq.getTimeMS(runIndex);
   }
 
   public void setPredictor(Predictor predictor)
@@ -221,6 +225,11 @@ public class Simulation
     return run(predictor, TimeLib.TIME_BEGIN, TimeLib.TIME_END, name);
   }
 
+  public Sequence run(Predictor predictor, long timeStart, String name)
+  {
+    return run(predictor, timeStart, TimeLib.TIME_END, name);
+  }
+
   public Sequence run(Predictor predictor, long timeStart, long timeEnd, String name)
   {
     setupRun(predictor, timeStart, timeEnd, name);
@@ -275,10 +284,13 @@ public class Simulation
     Account account = broker.getAccount(AccountName);
     DiscreteDistribution targetDist = null;
 
-    while (guideSeq.getTimeMS(runIndex) < timeEnd) {
+    // System.out.printf("Sim.runTo(Start,%d): [%s] -> [%s]\n", runIndex,
+    // TimeLib.formatDate(guideSeq.getTimeMS(runIndex)),
+    // TimeLib.formatDate(timeEnd));
+    while (runIndex < guideSeq.length() && guideSeq.getTimeMS(runIndex) <= timeEnd) {
       final TimeInfo timeInfo = new TimeInfo(runIndex, guideSeq);
       broker.setTime(timeInfo);
-      store.relock(TimeLib.TIME_BEGIN, timeInfo.time, runKey);
+      store.lock(TimeLib.TIME_BEGIN, timeInfo.time, runKey);
 
       // Handle case where we buy at the open, not the close.
       if (bNeedRebalance && targetDist != null && rebalanceDelay <= 0) {
@@ -328,6 +340,7 @@ public class Simulation
         returnsMonthly.addData(value, timeInfo.time);
       }
 
+      store.unlock(runKey);
       ++runIndex;
     }
   }
@@ -335,6 +348,5 @@ public class Simulation
   public void finishRun()
   {
     guideSeq.unlock(runKey);
-    store.unlock(runKey);
   }
 }

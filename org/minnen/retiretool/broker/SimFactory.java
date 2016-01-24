@@ -26,6 +26,6 @@ public class SimFactory
 
   public Simulation build()
   {
-    return new Simulation(store, guideSeq, slippage, maxDelay, iPrice);
+    return new Simulation(store, guideSeq.dup(), slippage, maxDelay, iPrice);
   }
 }
