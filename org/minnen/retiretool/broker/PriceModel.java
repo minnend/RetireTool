@@ -4,6 +4,9 @@ import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Random;
 
+/**
+ * Provides various methods for calculating trade price from an OLHC vector.
+ */
 public class PriceModel
 {
   public final static PriceModel zeroModel      = new PriceModel(Type.FixedIndex, 0, Double.NaN);

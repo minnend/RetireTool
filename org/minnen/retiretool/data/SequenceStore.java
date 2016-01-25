@@ -9,9 +9,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import org.minnen.retiretool.LinearFunc;
 import org.minnen.retiretool.data.Sequence.EndpointBehavior;
 import org.minnen.retiretool.util.FinLib;
+import org.minnen.retiretool.util.LinearFunc;
 import org.minnen.retiretool.util.Random;
 import org.minnen.retiretool.util.TimeLib;
 

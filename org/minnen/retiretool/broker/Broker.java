@@ -6,13 +6,10 @@ import java.util.List;
 import org.minnen.retiretool.Slippage;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
-import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Fixed;
 
 /**
  * Represents a trading broker at which a strategy can open accounts and make trades.
- * 
- * @author David Minnen
  */
 public class Broker
 {
@@ -23,9 +20,8 @@ public class Broker
   private final TimeInfo        origTimeInfo;
 
   private TimeInfo              timeInfo;
-
-  public Slippage               slippage;
-  public PriceModel             priceModel;
+  private Slippage              slippage;
+  private PriceModel            priceModel;
 
   public Broker(SequenceStore store, Slippage slippage, Sequence guideSeq)
   {

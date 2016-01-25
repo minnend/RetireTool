@@ -24,6 +24,7 @@ import org.minnen.retiretool.stats.JitterStats;
 import org.minnen.retiretool.stats.ReturnStats;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Fixed;
+import org.minnen.retiretool.util.LinearFunc;
 import org.minnen.retiretool.util.Random;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.util.FinLib.DividendMethod;

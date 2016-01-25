@@ -1,4 +1,4 @@
-package org.minnen.retiretool;
+package org.minnen.retiretool.util;
 
 /** Implements y = a*x + b */
 public class LinearFunc
