@@ -74,7 +74,7 @@ public class AdaptiveAlloc
 
     // Simulator used for optimizing predictor parameters.
     Simulation simOpt = simFactory.build();
-    AdaptiveScanner scanner = new AdaptiveScanner();
+    AdaptiveScanner scanner = new AdaptiveScanner(FinLib.AdjClose);
 
     // Simulator used for tracking walk-forward results.
     Simulation wfSim = simFactory.build();
@@ -199,14 +199,14 @@ public class AdaptiveAlloc
     List<Sequence> returns = new ArrayList<>();
 
     // Lazy 2-fund portfolio.
-    String[] lazy2 = new String[] { "VTSMX", "VBMFX" };
-    config = new ConfigMixed(new DiscreteDistribution(lazy2, new double[] { 0.7, 0.3 }), new ConfigConst(lazy2[0]),
-        new ConfigConst(lazy2[1]));
-    predictor = config.build(sim.broker.accessObject, lazy2);
-    Sequence returnsLazy2 = sim.run(predictor, timeSimStart, "Lazy2");
-    System.out.println(CumulativeStats.calc(returnsLazy2));
-    returns.add(returnsLazy2);
-    Chart.saveHoldings(new File(outputDir, "holdings-lazy2.html"), sim.holdings);
+    // String[] lazy2 = new String[] { "VTSMX", "VBMFX" };
+    // config = new ConfigMixed(new DiscreteDistribution(lazy2, new double[] { 0.7, 0.3 }), new ConfigConst(lazy2[0]),
+    // new ConfigConst(lazy2[1]));
+    // predictor = config.build(sim.broker.accessObject, lazy2);
+    // Sequence returnsLazy2 = sim.run(predictor, timeSimStart, "Lazy2");
+    // System.out.println(CumulativeStats.calc(returnsLazy2));
+    // returns.add(returnsLazy2);
+    // Chart.saveHoldings(new File(outputDir, "holdings-lazy2.html"), sim.holdings);
 
     // Lazy 3-fund portfolio.
     // String[] lazy3 = new String[] { "VTSMX", "VBMFX", "VGTSX" };
@@ -227,11 +227,11 @@ public class AdaptiveAlloc
     // returns.add(returnsLazy4);
 
     // All stock.
-    PredictorConfig stockConfig = new ConfigConst("VTSMX");
-    predictor = stockConfig.build(sim.broker.accessObject, assetSymbols);
-    Sequence returnsStock = sim.run(predictor, timeSimStart, "Stock");
-    System.out.println(CumulativeStats.calc(returnsStock));
-    returns.add(returnsStock);
+    // PredictorConfig stockConfig = new ConfigConst("VTSMX");
+    // predictor = stockConfig.build(sim.broker.accessObject, assetSymbols);
+    // Sequence returnsStock = sim.run(predictor, timeSimStart, "Stock");
+    // System.out.println(CumulativeStats.calc(returnsStock));
+    // returns.add(returnsStock);
 
     // // All bonds.
     // PredictorConfig bondConfig = new ConfigConst("VBMFX");
@@ -246,15 +246,17 @@ public class AdaptiveAlloc
     // System.out.println(CumulativeStats.calc(returnsVolRes));
     // returns.add(returnsVolRes);
 
-    // PredictorConfig tacticalConfig = new ConfigTactical(0, "SPY", "VTSMX", "VGSIX", "VGTSX", "EWU", "EWG", "EWJ",
+    // PredictorConfig tacticalConfig = new ConfigTactical(FinLib.AdjClose, "SPY", "VTSMX", "VGSIX", "VGTSX", "EWU",
+    // "EWG", "EWJ",
     // "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX", "SGGDX", "VGPMX", "USAGX", "FSPCX", "FSRBX",
     // "FPBFX", "ETGIX", "VBMFX", "cash");
 
-    // PredictorConfig tacticalConfig = new ConfigTactical(0, "VTSMX", "MDY", "VGSIX", "VGTSX", "VGENX", "WHOSX",
+    // PredictorConfig tacticalConfig = new ConfigTactical(FinLib.AdjClose, "VTSMX", "MDY", "VGSIX", "VGTSX", "VGENX",
+    // "WHOSX",
     // "VGPMX",
     // "USAGX", "VBMFX", "cash");
 
-    // PredictorConfig tacticalConfig = new ConfigTactical(0, "VTSMX", "SPY", "VBMFX");
+    // PredictorConfig tacticalConfig = new ConfigTactical(FinLib.AdjClose, "VTSMX", "SPY", "VBMFX");
 
     // predictor = tacticalConfig.build(sim.broker.accessObject, assetSymbols);
     // Sequence returnsTactical = sim.run(predictor, timeSimStart,"Tactical");
@@ -264,11 +266,11 @@ public class AdaptiveAlloc
     TradeFreq tradeFreq = TradeFreq.Weekly;
     int pctQuantum = 2;
     // PredictorConfig minvarConfig = new ConfigAdaptive(15, 0.9, Weighting.MinVar, 20, 100, 80, 0.7, -1, pctQuantum,
-    // tradeFreq, 0);
+    // tradeFreq, FinLib.AdjClose);
     PredictorConfig equalWeightConfig = new ConfigAdaptive(-1, -1, Weighting.Equal, 40, 100, 80, 0.5, 4, pctQuantum,
-        tradeFreq, 0);
+        tradeFreq, FinLib.AdjClose);
     // PredictorConfig ewConfig2 = new ConfigAdaptive(-1, -1, Weighting.Equal, 30, 110, 60, 0.5, 5, pctQuantum,
-    // tradeFreq, 0);
+    // tradeFreq, FinLib.AdjClose);
 
     // Adaptive Asset Allocation (Equal Weight).
     predictor = equalWeightConfig.build(sim.broker.accessObject, assetSymbols);

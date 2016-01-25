@@ -1452,7 +1452,7 @@ public final class FinLib
     }
   }
 
-  public static Sequence sma(Sequence seq, int ta, int tb)
+  public static Sequence sma(Sequence seq, int ta, int tb, int iDim)
   {
     assert ta >= tb;
     Sequence sma = new Sequence(seq.getName() + "-sma");
@@ -1460,7 +1460,7 @@ public final class FinLib
     for (int t = 0; t <= iLast; ++t) {
       final int iBaseA = Math.max(t - ta, 0);
       final int iBaseB = Math.max(t - tb, 0);
-      double v = seq.average(iBaseA, iBaseB, 0);
+      double v = seq.average(iBaseA, iBaseB, iDim);
       sma.addData(v, seq.getTimeMS(t));
     }
     return sma;

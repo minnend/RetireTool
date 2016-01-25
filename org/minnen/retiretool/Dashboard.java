@@ -365,8 +365,8 @@ public class Dashboard
       int[] params = allParams[i];
       final long startMs = TimeLib.toMs(2015, Month.JANUARY, 1);
       final long endMs = TimeLib.TIME_END;
-      Sequence trigger = FinLib.sma(stock, params[0], params[1]).subseq(startMs, endMs);
-      Sequence base = FinLib.sma(stock, params[2], params[3]).subseq(startMs, endMs);
+      Sequence trigger = FinLib.sma(stock, params[0], params[1], FinLib.Close).subseq(startMs, endMs);
+      Sequence base = FinLib.sma(stock, params[2], params[3], FinLib.Close).subseq(startMs, endMs);
       Sequence baseLow = base.dup()._mul(1.0 - params[4] / 10000.0).setName("BaseLow");
       Sequence baseHigh = base.dup()._mul(1.0 + params[4] / 10000.0).setName("BaseHigh");
       Sequence raw = stock.subseq(startMs, endMs);

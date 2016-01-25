@@ -64,30 +64,4 @@ public class Slippage
     }
     return price - fixedConstSlip;
   }
-
-  public double adjustForAssetChange(double balance, int index, Sequence currentAsset, Sequence nextAsset)
-  {
-    if (nextAsset != currentAsset) {
-      // Slippage for sale.
-      if (currentAsset != null) {
-        double listedPrice = currentAsset.get(index, 0);
-        double tradePrice = applyToSell(listedPrice);
-        double ratio = tradePrice / listedPrice;
-        assert ratio <= 1.0;
-        balance *= ratio;
-      }
-
-      // Slippage for buy.
-      if (nextAsset != null) {
-        double listedPrice = nextAsset.get(index, 0);
-        double tradePrice = applyToBuy(listedPrice);
-        double ratio = listedPrice / tradePrice;
-        assert ratio <= 1.0;
-        balance *= ratio;
-      }
-
-      currentAsset = nextAsset;
-    }
-    return balance;
-  }
 }
