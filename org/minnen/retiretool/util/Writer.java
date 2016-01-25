@@ -1,4 +1,4 @@
-package org.minnen.retiretool;
+package org.minnen.retiretool.util;
 
 import java.io.BufferedWriter;
 import java.io.File;
