@@ -15,8 +15,8 @@ public class AdaptiveScanner extends ConfigScanner<ConfigAdaptive>
   // IntScanner maxKeep = IntScanner.fromList(4);
 
   IntScanner trigger = IntScanner.fromList(20, 40);
-  IntScanner baseA   = IntScanner.fromList(100);
-  IntScanner baseB   = IntScanner.fromList(60, 80);
+  IntScanner baseA   = IntScanner.fromList(60, 100, 120);
+  IntScanner baseB   = IntScanner.fromList(40, 60, 80);
   IntScanner maxKeep = IntScanner.fromList(4);
 
   // IntScanner trigger = IntScanner.fromList(20, 30, 40, 60);

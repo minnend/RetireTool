@@ -303,6 +303,7 @@ public class Simulation
       // Handle case where we buy at the open, not the close.
       if (bNeedRebalance && targetDist != null && rebalanceDelay <= 0) {
         DiscreteDistribution curDist = account.getDistribution(targetDist.names);
+        // TODO figure out better approach for minimizing transactions. Some predictors may want to turn this off.
         // DiscreteDistribution submitDist = minimizeTransactions(curDist, targetDist, 4.0);
         DiscreteDistribution submitDist = new DiscreteDistribution(targetDist);
 
@@ -314,7 +315,7 @@ public class Simulation
           System.out.printf("Subm: %s (%f)\n", submitDist.toStringWithNames(2), submitDist.sum());
         }
 
-        System.out.printf("Rebalance! [%s]\n", timeInfo.date);
+        // System.out.printf("Rebalance! [%s]\n", timeInfo.date);
         account.rebalance(submitDist);
         lastRebalance = timeInfo.time;
         // TODO should be able to assign submitDist instead of copy-constructor -- test that
@@ -337,10 +338,10 @@ public class Simulation
       DiscreteDistribution curDist = account.getDistribution();
       bNeedRebalance = ((timeInfo.time - lastRebalance) / TimeLib.MS_IN_DAY > 363
           || !targetDist.isSimilar(prevDist, DistributionEPS) || !targetDist.isSimilar(curDist, TargetEPS));
-      if (bNeedRebalance) {
-        System.out.printf("Need Rebalance: [%s] vs [%s]   %s vs %s / %s\n", TimeLib.formatDate(timeInfo.time),
-            TimeLib.formatDate(lastRebalance), targetDist, prevDist, curDist);
-      }
+      // if (bNeedRebalance) {
+      // System.out.printf("Need Rebalance: [%s] vs [%s]   %s vs %s / %s\n", TimeLib.formatDate(timeInfo.time),
+      // TimeLib.formatDate(lastRebalance), targetDist, prevDist, curDist);
+      // }
 
       if (maxDelay > 0) {
         if (bNeedRebalance && !bPrevRebalance) {

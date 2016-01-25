@@ -1048,8 +1048,8 @@ public class Chart
       }
     }
     final String[] colors = Colors.getHex(names.size());
-    System.out.printf("Names: %d\n", names.size());
 
+    // Generate HTML visualization.
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
       writer.write("<html><head>\n");
       writer.write("<title>Holdings</title>\n");

@@ -41,14 +41,15 @@ public class AdaptiveAlloc
 
   public static final Slippage      slippage     = new Slippage(0.03, 0.0);
 
-  // These symbols go back to 1 April 1996.
+  // These symbols go back to 13 May 1996.
   public static final String[]      fundSymbols  = new String[] { "SPY", "VTSMX", "VBMFX", "VGSIX", "VGTSX", "EWU",
       "EWG", "EWJ", "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX", "SGGDX", "VGPMX", "USAGX", "FSPCX",
       "FSRBX", "FPBFX", "ETGIX", "VDIGX", "MDY", "VBINX" };
 
-  // public static final String[] fundSymbols = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX", "VGENX", "WHOSX" };
+  // public static final String[] fundSymbols = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX", "VGENX", "WHOSX",
+  // "USAGX" };
 
-  // These symbols go back to 28 Jan 1993.
+  // These symbols go back to 27 April 1992.
   // public static final String[] fundSymbols = new String[] { "VTSMX", "VBMFX", "VGENX", "WHOSX", "FAGIX", "DFGBX",
   // "VGPMX", "USAGX", "FSPCX", "FSRBX", "FPBFX" };
 
@@ -68,7 +69,7 @@ public class AdaptiveAlloc
   {
     final int stepMonths = 3;
     // final int minOptMonths = 12 * 1;
-    final int maxOptMonths = 12 * 3;
+    final int maxOptMonths = 12 * 5;
 
     // Simulator used for optimizing predictor parameters.
     Simulation simOpt = simFactory.build();
@@ -96,7 +97,7 @@ public class AdaptiveAlloc
           TimeLib.toMs(TimeLib.ms2date(optEnd).minusMonths(maxOptMonths).with(TemporalAdjusters.firstDayOfMonth())));
       assert optStart < optEnd;
 
-      System.out.printf("Optm: [%s] -> [%s]\n", TimeLib.formatDate(optStart), TimeLib.formatDate(optEnd));
+      // System.out.printf("Optm: [%s] -> [%s]\n", TimeLib.formatDate(optStart), TimeLib.formatDate(optEnd));
       // System.out.printf("Test: [%s] -> [%s]\n", TimeLib.formatDate(testStart), TimeLib.formatDate(testEnd));
 
       // Find best predictor parameters.
@@ -188,26 +189,29 @@ public class AdaptiveAlloc
     Simulation sim = simFactory.build();
 
     // Run simulation for buy-and-hold of individual assets.
+    // List<Sequence> symbolReturns = new ArrayList<>();
     // for (int i = 0; i < fundSymbols.length; ++i) {
     // PredictorConfig config = new ConfigConst(fundSymbols[i]);
     // Predictor predictor = config.build(sim.broker.accessObject, assetSymbols);
-    // Sequence returns = sim.run(predictor, timeSimStart, fundSymbols[i]);
-    // System.out.println(CumulativeStats.calc(returns));
+    // sim.run(predictor, TimeLib.TIME_BEGIN, fundSymbols[i]);
+    // symbolReturns.add(sim.returnsMonthly);
+    // System.out.println(CumulativeStats.calc(sim.returnsMonthly));
     // }
+    // Chart.saveLineChart(new File(outputDir, "all.html"), "Individual Returns", 1000, 640, true, true, symbolReturns);
 
     PredictorConfig config;
     Predictor predictor;
     List<Sequence> returns = new ArrayList<>();
 
     // Lazy 2-fund portfolio.
-    // String[] lazy2 = new String[] { "VTSMX", "VBMFX" };
-    // config = new ConfigMixed(new DiscreteDistribution(lazy2, new double[] { 0.7, 0.3 }), new ConfigConst(lazy2[0]),
-    // new ConfigConst(lazy2[1]));
-    // predictor = config.build(sim.broker.accessObject, lazy2);
-    // Sequence returnsLazy2 = sim.run(predictor, timeSimStart, "Lazy2");
-    // System.out.println(CumulativeStats.calc(returnsLazy2));
-    // returns.add(returnsLazy2);
-    // Chart.saveHoldings(new File(outputDir, "holdings-lazy2.html"), sim.holdings);
+    String[] lazy2 = new String[] { "VTSMX", "VBMFX" };
+    config = new ConfigMixed(new DiscreteDistribution(lazy2, new double[] { 0.7, 0.3 }), new ConfigConst(lazy2[0]),
+        new ConfigConst(lazy2[1]));
+    predictor = config.build(sim.broker.accessObject, lazy2);
+    Sequence returnsLazy2 = sim.run(predictor, timeSimStart, "Lazy2");
+    System.out.println(CumulativeStats.calc(returnsLazy2));
+    returns.add(returnsLazy2);
+    Chart.saveHoldings(new File(outputDir, "holdings-lazy2.html"), sim.holdings);
 
     // Lazy 3-fund portfolio.
     // String[] lazy3 = new String[] { "VTSMX", "VBMFX", "VGTSX" };
@@ -228,11 +232,11 @@ public class AdaptiveAlloc
     // returns.add(returnsLazy4);
 
     // All stock.
-    // PredictorConfig stockConfig = new ConfigConst("VTSMX");
-    // predictor = stockConfig.build(sim.broker.accessObject, assetSymbols);
-    // Sequence returnsStock = sim.run(predictor, timeSimStart, "Stock");
-    // System.out.println(CumulativeStats.calc(returnsStock));
-    // returns.add(returnsStock);
+    PredictorConfig stockConfig = new ConfigConst("VTSMX");
+    predictor = stockConfig.build(sim.broker.accessObject, assetSymbols);
+    Sequence returnsStock = sim.run(predictor, timeSimStart, "Stock");
+    System.out.println(CumulativeStats.calc(returnsStock));
+    returns.add(returnsStock);
 
     // // All bonds.
     // PredictorConfig bondConfig = new ConfigConst("VBMFX");
@@ -255,7 +259,7 @@ public class AdaptiveAlloc
     // "VGPMX",
     // "USAGX", "VBMFX", "cash");
 
-    PredictorConfig tacticalConfig = new ConfigTactical(0, "VTSMX", "SPY", "VBMFX");
+    // PredictorConfig tacticalConfig = new ConfigTactical(0, "VTSMX", "SPY", "VBMFX");
 
     // predictor = tacticalConfig.build(sim.broker.accessObject, assetSymbols);
     // Sequence returnsTactical = sim.run(predictor, timeSimStart,"Tactical");
@@ -273,7 +277,7 @@ public class AdaptiveAlloc
 
     // Adaptive Asset Allocation (Equal Weight).
     predictor = equalWeightConfig.build(sim.broker.accessObject, assetSymbols);
-    Sequence returnsAdaptive = sim.run(predictor, timeSimStart, "Adaptive");
+    Sequence returnsAdaptive = sim.run(predictor, timeSimStart, "Adaptive1");
     System.out.println(CumulativeStats.calc(returnsAdaptive));
     returns.add(returnsAdaptive);
     Chart.saveHoldings(new File(outputDir, "holdings-adaptive.html"), sim.holdings);
@@ -325,6 +329,7 @@ public class AdaptiveAlloc
     // }
 
     // Simulation wfSim = walkForwadOptimization(timeSimStart, simFactory);
+    // System.out.println(CumulativeStats.calc(wfSim.returnsMonthly));
     // returns.add(wfSim.returnsMonthly);
 
     // AdaptiveScanner scanner = new AdaptiveScanner();
@@ -348,6 +353,7 @@ public class AdaptiveAlloc
     Chart.saveLineChart(new File(outputDir, "returns.html"),
         String.format("Returns (%d\u00A2 Spread)", Math.round(slippage.constSlip * 200)), 1000, 640, true, true,
         returns);
+
     // Chart.saveAnnualStatsTable(new File(outputDir, "annual-stats.html"), 1000, false, returns);
     // Chart.saveComparisonTable(new File(outputDir, "comparison.html"), 1000, compStats);
 
