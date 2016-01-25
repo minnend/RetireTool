@@ -3,7 +3,6 @@ package org.minnen.retiretool.predictor.optimize;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive.TradeFreq;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive.Weighting;
-import org.minnen.retiretool.util.FinLib;
 
 public class AdaptiveScanner extends ConfigScanner<ConfigAdaptive>
 {
@@ -18,8 +17,8 @@ public class AdaptiveScanner extends ConfigScanner<ConfigAdaptive>
   // private IntScanner maxKeep = IntScanner.fromList(4);
 
   private IntScanner trigger = IntScanner.fromList(20, 40);
-  private IntScanner baseA   = IntScanner.fromList(60, 100, 120);
-  private IntScanner baseB   = IntScanner.fromList(40, 60, 80);
+  private IntScanner baseA   = IntScanner.fromList(100, 120);
+  private IntScanner baseB   = IntScanner.fromList(60, 80);
   private IntScanner maxKeep = IntScanner.fromList(4);
 
   // private IntScanner trigger = IntScanner.fromList(20, 30, 40, 60);

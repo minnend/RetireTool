@@ -26,13 +26,16 @@ public class PriceModel
   public final boolean bAdjustPrices;
   public final Random  rng = new Random();
 
-  private PriceModel(Type type, boolean bAdjustPrices)
+  public PriceModel(Type type, boolean bAdjustPrices)
   {
     this(type, bAdjustPrices, -1, Double.NaN);
   }
 
   public PriceModel(Type type, boolean bAdjustPrices, int iFixed, double slipFraction)
   {
+    assert type != Type.FixedIndex || iFixed >= 0;
+    assert (type != Type.OpenSlip && type != Type.CloseSlip) || !Double.isNaN(slipFraction);
+
     this.type = type;
     this.bAdjustPrices = bAdjustPrices;
     this.iFixed = iFixed;
