@@ -1,5 +1,6 @@
 package org.minnen.retiretool.broker;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,6 +29,10 @@ public class Broker
     }
   }
 
+  public enum TimeOfDay {
+    MarketOpen, AfterMarketClosed;
+  }
+
   public final BrokerInfoAccess         accessObject = new BrokerInfoAccess(this);
   public final SequenceStore            store;
 
@@ -37,17 +42,26 @@ public class Broker
 
   private TimeInfo                      timeInfo;
   private Slippage                      slippage;
-  private PriceModel                    priceModel;
+
+  /** Price model used to give a quote while the market is open. */
+  private PriceModel                    quoteModel;
+
+  /** Price model used when the market is closed (or when the request is for a day other than "today"). */
+  private PriceModel                    valueModel;
+
+  /** The broker works with daily data, but we still want to distinguish market-open vs. after-market-close. */
+  private TimeOfDay                     timeOfDay;
 
   public Broker(SequenceStore store, Slippage slippage, Sequence guideSeq)
   {
-    this(store, PriceModel.closeModel, slippage, guideSeq);
+    this(store, PriceModel.closeModel, PriceModel.closeModel, slippage, guideSeq);
   }
 
-  public Broker(SequenceStore store, PriceModel priceModel, Slippage slippage, Sequence guideSeq)
+  public Broker(SequenceStore store, PriceModel valueModel, PriceModel quoteModel, Slippage slippage, Sequence guideSeq)
   {
     this.store = store;
-    this.priceModel = priceModel;
+    this.valueModel = valueModel;
+    this.quoteModel = quoteModel;
     this.slippage = slippage;
     this.origTimeInfo = new TimeInfo(0, guideSeq);
     this.timeInfo = origTimeInfo;
@@ -58,6 +72,7 @@ public class Broker
     accounts.clear();
     priceQuotes.clear();
     timeInfo = origTimeInfo;
+    timeOfDay = TimeOfDay.MarketOpen;
   }
 
   public int numAccounts()
@@ -75,15 +90,26 @@ public class Broker
     return null;
   }
 
-  public void setPriceModel(PriceModel priceModel)
+  public void setQuoteModel(PriceModel quoteModel)
   {
-    // TODO better if price index was automatically selected based on time of day.
-    this.priceModel = priceModel;
+    this.quoteModel = quoteModel;
   }
 
-  public void setTime(TimeInfo timeInfo)
+  public void setValueModel(PriceModel valueModel)
+  {
+    this.valueModel = valueModel;
+  }
+
+  public void setPriceModels(PriceModel valueModel, PriceModel quoteModel)
+  {
+    setQuoteModel(quoteModel);
+    setValueModel(valueModel);
+  }
+
+  public void setNewDay(TimeInfo timeInfo)
   {
     this.timeInfo = timeInfo;
+    timeOfDay = TimeOfDay.MarketOpen;
   }
 
   public long getTime()
@@ -96,6 +122,11 @@ public class Broker
     return timeInfo;
   }
 
+  public TimeOfDay getTimeOfDay()
+  {
+    return timeOfDay;
+  }
+
   /**
    * Handle business at end of day (E.g. pay dividends and interest).
    * 
@@ -105,6 +136,9 @@ public class Broker
    */
   public void doEndOfDayBusiness()
   {
+    // End of day means the market is now closed.
+    timeOfDay = TimeOfDay.AfterMarketClosed;
+
     // End of day business.
     for (Account account : accounts) {
       account.doEndOfDayBusiness(timeInfo, store);
@@ -126,6 +160,8 @@ public class Broker
    */
   public void finishDay()
   {
+    assert timeOfDay == TimeOfDay.AfterMarketClosed; // Dont't "finish" until after end-of-day business.
+
     // Price quotes are only valid for one day.
     priceQuotes.clear();
   }
@@ -147,35 +183,67 @@ public class Broker
     return account;
   }
 
+  /** @return Price for current broker time (today). */
   public long getPrice(String name)
   {
     return getPrice(name, getTime());
   }
 
+  /**
+   * Return the price for the given asset and day.
+   * 
+   * @param name return price for this asset.
+   * @param time return price for this day.
+   * @return Price for the given day (and time-of-day if today).
+   */
   public long getPrice(String name, long time)
   {
+    // Price requests depend on the day, not the time so all times should be exactly at noon.
+    LocalDateTime dateTime = TimeLib.ms2time(time);
+    assert dateTime.getHour() == 12 && dateTime.getMinute() == 0 && dateTime.getSecond() == 0
+        && dateTime.getNano() == 0;
+
     assert time <= getTime(); // No peeking into the future.
-
-    PriceQuote quote = priceQuotes.getOrDefault(name, null);
-    if (quote != null) {
-      assert quote.time == time : String.format("%s: [%s] vs [%s]", name, TimeLib.formatTime(time),
-          TimeLib.formatTime(quote.time));
-      return quote.price;
+    if (time == timeInfo.time && timeOfDay == TimeOfDay.MarketOpen) {
+      // Price quotes may be semi-random but we want the same value for each request.
+      PriceQuote quote = priceQuotes.getOrDefault(name, null);
+      if (quote != null) {
+        assert quote.time == time : String.format("%s: [%s] vs [%s]", name, TimeLib.formatTime(time),
+            TimeLib.formatTime(quote.time));
+        return quote.price;
+      } else {
+        // Price quote is not cached so calculate it.
+        long price = getPrice(name, quoteModel, time);
+        priceQuotes.put(name, new PriceQuote(time, price));
+        return price;
+      }
+    } else {
+      // After the market is closed, report the "value" price (typically Close or AdjClose).
+      assert timeOfDay == TimeOfDay.AfterMarketClosed;
+      return getPrice(name, valueModel, time);
     }
+  }
 
+  /**
+   * Calculate and return the price for the given asset at the given time using the given price model.
+   * 
+   * This function does not use cached values and does not cache the result internally.
+   */
+  private long getPrice(String name, PriceModel priceModel, long time)
+  {
     Sequence seq = store.get(name);
     int index = seq.getClosestIndex(time);
     double floatPrice = priceModel.getPrice(seq.get(index));
-    long price = Fixed.round(Fixed.toFixed(floatPrice), Fixed.THOUSANDTH);
-    priceQuotes.put(name, new PriceQuote(time, price));
-    return price;
+    return Fixed.round(Fixed.toFixed(floatPrice), Fixed.THOUSANDTH);
   }
 
+  /** @return Price to buy the given asset today (includes slippage) */
   public long getBuyPrice(String name)
   {
     return slippage.applyToBuy(getPrice(name));
   }
 
+  /** @return Price to sell the given asset today (includes slippage) */
   public long getSellPrice(String name)
   {
     return slippage.applyToSell(getPrice(name));

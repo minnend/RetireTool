@@ -140,7 +140,7 @@ public class RetireTool
       store.lock(TimeLib.TIME_BEGIN, time, key);
       long nextTime = (t == T - 1 ? TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(time))) : guideSeq
           .getTimeMS(t + 1));
-      broker.setTime(new TimeInfo(time, prevTime, nextTime));
+      broker.setNewDay(new TimeInfo(time, prevTime, nextTime));
       TimeInfo timeInfo = broker.getTimeInfo();
 
       // Handle initialization issues at t==0.
@@ -151,7 +151,7 @@ public class RetireTool
       // Handle case where we buy at the open, not the close.
       if (bBuyAtNextOpen) {
         if (bNeedRebalance && desiredDistribution != null && rebalanceDelay <= 0) {
-          broker.setPriceModel(PriceModel.openModel);
+          broker.setQuoteModel(PriceModel.openModel);
           account.updatePositions(desiredDistribution);
           lastRebalance = time;
           if (prevDistribution == null) {
@@ -159,7 +159,7 @@ public class RetireTool
           } else {
             prevDistribution.copyFrom(desiredDistribution);
           }
-          broker.setPriceModel(PriceModel.closeModel);
+          broker.setQuoteModel(PriceModel.closeModel);
         }
       }
 

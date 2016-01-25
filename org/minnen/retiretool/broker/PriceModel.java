@@ -9,35 +9,49 @@ import org.minnen.retiretool.util.Random;
  */
 public class PriceModel
 {
-  public final static PriceModel zeroModel      = new PriceModel(Type.FixedIndex, 0, Double.NaN);
-  public final static PriceModel closeModel     = new PriceModel(Type.Close);
-  public final static PriceModel adjCloseModel  = new PriceModel(Type.AdjClose);
-  public final static PriceModel openModel      = new PriceModel(Type.Open);
-  public final static PriceModel uniformOCModel = new PriceModel(Type.UniformOC);
-  public final static PriceModel uniformHLModel = new PriceModel(Type.UniformHL);
+  public final static PriceModel zeroModel      = new PriceModel(Type.FixedIndex, false, 0, Double.NaN);
+  public final static PriceModel closeModel     = new PriceModel(Type.Close, false);
+  public final static PriceModel adjCloseModel  = new PriceModel(Type.AdjClose, false);
+  public final static PriceModel openModel      = new PriceModel(Type.Open, false);
+  public final static PriceModel uniformOCModel = new PriceModel(Type.UniformOC, true);
+  public final static PriceModel uniformHLModel = new PriceModel(Type.UniformHL, true);
 
   public enum Type {
     FixedIndex, Close, AdjClose, Open, UniformOC, UniformHL, OpenSlip, CloseSlip
   }
 
-  public final Type   type;
-  public final int    iFixed;
-  public final double slipFraction;
-  public final Random rng = new Random();
+  public final Type    type;
+  public final int     iFixed;
+  public final double  slipFraction;
+  public final boolean bAdjustPrices;
+  public final Random  rng = new Random();
 
-  private PriceModel(Type type)
+  private PriceModel(Type type, boolean bAdjustPrices)
   {
-    this(type, -1, Double.NaN);
+    this(type, bAdjustPrices, -1, Double.NaN);
   }
 
-  public PriceModel(Type type, int iFixed, double slipFraction)
+  public PriceModel(Type type, boolean bAdjustPrices, int iFixed, double slipFraction)
   {
     this.type = type;
+    this.bAdjustPrices = bAdjustPrices;
     this.iFixed = iFixed;
     this.slipFraction = slipFraction;
+
+    // Never adjust prices if using AdjClose.
+    assert type != Type.AdjClose || !bAdjustPrices;
   }
 
   public double getPrice(FeatureVec priceData)
+  {
+    double price = getRawPrice(priceData);
+    if (bAdjustPrices) {
+      price = adjustPrice(price, priceData);
+    }
+    return price;
+  }
+
+  private double getRawPrice(FeatureVec priceData)
   {
     switch (type) {
     case FixedIndex:
@@ -72,6 +86,6 @@ public class PriceModel
 
   public static double adjustPrice(double price, FeatureVec priceData)
   {
-    return price * priceData.get(FinLib.AdjClose) / priceData.get(FinLib.Close);
+    return priceData.get(FinLib.AdjClose) / priceData.get(FinLib.Close) * price;
   }
 }

@@ -43,20 +43,14 @@ public class Simulation
   private DiscreteDistribution                prevDist;
   private Predictor                           predictor;
 
-  public Simulation(SequenceStore store, Sequence guideSeq, Slippage slippage, int maxDelay, PriceModel priceModel)
+  public Simulation(SequenceStore store, Sequence guideSeq, Slippage slippage, int maxDelay, PriceModel valueModel,
+      PriceModel quoteModel)
   {
     this.store = store;
     this.guideSeq = guideSeq;
     this.slippage = slippage;
     this.maxDelay = maxDelay;
-    this.broker = new Broker(store, slippage, guideSeq);
-
-    // TODO need better handling of prices:
-    // 1. Fixed index
-    // 2. Read close, buy on next open (if OHLC data)
-    // 3. #2 but calculate returns based on adjusted close (if no separate dividend data)
-    // 4. Buy at random price based on OHLC (with adjustment if necessary)
-    this.broker.setPriceModel(priceModel);
+    this.broker = new Broker(store, valueModel, quoteModel, slippage, guideSeq);
   }
 
   public long getStartMS()
@@ -297,7 +291,7 @@ public class Simulation
     // TimeLib.formatDate(timeEnd));
     while (runIndex < guideSeq.length() && guideSeq.getTimeMS(runIndex) <= timeEnd) {
       final TimeInfo timeInfo = new TimeInfo(runIndex, guideSeq);
-      broker.setTime(timeInfo);
+      broker.setNewDay(timeInfo);
       store.lock(TimeLib.TIME_BEGIN, timeInfo.time, runKey);
 
       // Handle case where we buy at the open, not the close.

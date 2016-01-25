@@ -81,7 +81,8 @@ public class TestMixablePredictor
     // Setup simulation.
     Sequence guideSeq = store.get(fundSymbols[0]);
     guideSeq = guideSeq.subseq(simStartMs, guideSeq.getEndMS(), EndpointBehavior.Closest);
-    sim = new Simulation(store, guideSeq, Slippage.None, 0, PriceModel.zeroModel);
+    PriceModel priceModel = new PriceModel(PriceModel.Type.FixedIndex, false, 0, Double.NaN);
+    sim = new Simulation(store, guideSeq, Slippage.None, 0, priceModel, priceModel);
   }
 
   private CumulativeStats runSim(PredictorConfig config)

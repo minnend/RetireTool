@@ -180,7 +180,7 @@ public class AdaptiveAlloc
 
     // Setup simulation.
     Sequence guideSeq = store.get(fundSymbols[0]).dup();
-    SimFactory simFactory = new SimFactory(store, guideSeq, slippage, 0, PriceModel.adjCloseModel);
+    SimFactory simFactory = new SimFactory(store, guideSeq, slippage, 0, PriceModel.closeModel, PriceModel.closeModel);
     Simulation sim = simFactory.build();
 
     // Run simulation for buy-and-hold of individual assets.

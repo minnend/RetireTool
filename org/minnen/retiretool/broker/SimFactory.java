@@ -13,19 +13,22 @@ public class SimFactory
   public final Sequence      guideSeq;
   public final Slippage      slippage;
   public final int           maxDelay;
-  public final PriceModel    priceModel;
+  public final PriceModel    valueModel;
+  public final PriceModel    quoteModel;
 
-  public SimFactory(SequenceStore store, Sequence guideSeq, Slippage slippage, int maxDelay, PriceModel priceModel)
+  public SimFactory(SequenceStore store, Sequence guideSeq, Slippage slippage, int maxDelay, PriceModel valueModel,
+      PriceModel quoteModel)
   {
     this.store = store;
     this.guideSeq = guideSeq;
     this.slippage = slippage;
     this.maxDelay = maxDelay;
-    this.priceModel = priceModel;
+    this.valueModel = valueModel;
+    this.quoteModel = quoteModel;
   }
 
   public Simulation build()
   {
-    return new Simulation(store, guideSeq.dup(), slippage, maxDelay, priceModel);
+    return new Simulation(store, guideSeq.dup(), slippage, maxDelay, valueModel, quoteModel);
   }
 }
