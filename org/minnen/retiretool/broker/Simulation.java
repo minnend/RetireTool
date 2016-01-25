@@ -43,7 +43,7 @@ public class Simulation
   private DiscreteDistribution                prevDist;
   private Predictor                           predictor;
 
-  public Simulation(SequenceStore store, Sequence guideSeq, Slippage slippage, int maxDelay, int iPrice)
+  public Simulation(SequenceStore store, Sequence guideSeq, Slippage slippage, int maxDelay, PriceModel priceModel)
   {
     this.store = store;
     this.guideSeq = guideSeq;
@@ -56,7 +56,7 @@ public class Simulation
     // 2. Read close, buy on next open (if OHLC data)
     // 3. #2 but calculate returns based on adjusted close (if no separate dividend data)
     // 4. Buy at random price based on OHLC (with adjustment if necessary)
-    this.broker.setPriceIndex(iPrice);
+    this.broker.setPriceModel(priceModel);
   }
 
   public long getStartMS()

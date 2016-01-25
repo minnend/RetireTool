@@ -11,6 +11,7 @@ import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 import org.minnen.retiretool.Slippage;
+import org.minnen.retiretool.broker.PriceModel;
 import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.DiscreteDistribution;
@@ -80,7 +81,7 @@ public class TestMixablePredictor
     // Setup simulation.
     Sequence guideSeq = store.get(fundSymbols[0]);
     guideSeq = guideSeq.subseq(simStartMs, guideSeq.getEndMS(), EndpointBehavior.Closest);
-    sim = new Simulation(store, guideSeq, Slippage.None, 0, 0);
+    sim = new Simulation(store, guideSeq, Slippage.None, 0, PriceModel.zeroModel);
   }
 
   private CumulativeStats runSim(PredictorConfig config)

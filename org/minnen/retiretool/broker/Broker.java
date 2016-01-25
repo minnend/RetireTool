@@ -18,18 +18,24 @@ public class Broker
 {
   public final BrokerInfoAccess accessObject = new BrokerInfoAccess(this);
   public final SequenceStore    store;
-  public final Slippage         slippage;
 
   private final List<Account>   accounts     = new ArrayList<>();
   private final TimeInfo        origTimeInfo;
 
   private TimeInfo              timeInfo;
 
-  private int                   iPrice       = FinLib.Close;
+  public Slippage               slippage;
+  public PriceModel             priceModel;
 
   public Broker(SequenceStore store, Slippage slippage, Sequence guideSeq)
   {
+    this(store, PriceModel.closeModel, slippage, guideSeq);
+  }
+
+  public Broker(SequenceStore store, PriceModel priceModel, Slippage slippage, Sequence guideSeq)
+  {
     this.store = store;
+    this.priceModel = priceModel;
     this.slippage = slippage;
     this.origTimeInfo = new TimeInfo(0, guideSeq);
     this.timeInfo = origTimeInfo;
@@ -56,10 +62,10 @@ public class Broker
     return null;
   }
 
-  public void setPriceIndex(int index)
+  public void setPriceModel(PriceModel priceModel)
   {
     // TODO better if price index was automatically selected based on time of day.
-    iPrice = index;
+    this.priceModel = priceModel;
   }
 
   public void setTime(TimeInfo timeInfo)
@@ -121,7 +127,7 @@ public class Broker
 
     Sequence seq = store.get(name);
     int index = seq.getClosestIndex(time);
-    double floatPrice = seq.get(index, iPrice);
+    double floatPrice = priceModel.getPrice(seq.get(index));
     long price = Fixed.round(Fixed.toFixed(floatPrice), Fixed.THOUSANDTH);
     return price;
   }

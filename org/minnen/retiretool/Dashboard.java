@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.time.Month;
 import java.time.ZoneId;
 
+import org.minnen.retiretool.broker.PriceModel;
 import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.DiscreteDistribution;
@@ -26,20 +27,20 @@ import org.minnen.retiretool.viz.Chart;
 
 public class Dashboard
 {
-  public final static SequenceStore store          = new SequenceStore();
+  public final static SequenceStore store      = new SequenceStore();
 
   /** Dimension to use in the price sequence for SMA predictions. */
-  public static int                 iPriceSMA      = 0;
+  public static int                 iPriceSMA  = 0;
 
-  public static final Slippage      slippage       = Slippage.None;
-  public static final LinearFunc    PriceSDev      = LinearFunc.Zero;
+  public static final Slippage      slippage   = Slippage.None;
+  public static final LinearFunc    PriceSDev  = LinearFunc.Zero;
 
-  public static final int           maxDelay       = 0;
-  public static final long          gap            = 2 * TimeLib.MS_IN_DAY;
+  public static final int           maxDelay   = 0;
+  public static final long          gap        = 2 * TimeLib.MS_IN_DAY;
 
-  public static final String        riskyName      = "stock";
-  public static final String        safeName       = "cash";
-  public static final String[]      assetNames     = new String[] { riskyName, safeName };
+  public static final String        riskyName  = "stock";
+  public static final String        safeName   = "cash";
+  public static final String[]      assetNames = new String[] { riskyName, safeName };
 
   public static void setupData() throws IOException
   {
@@ -354,7 +355,7 @@ public class Dashboard
     Sequence stock = store.get(riskyName);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stock.subseq(iStart);
-    Simulation sim = new Simulation(store, guideSeq, slippage, maxDelay, FinLib.Close);
+    Simulation sim = new Simulation(store, guideSeq, slippage, maxDelay, PriceModel.closeModel);
     runMulti3(sim, dir);
 
     int[][] allParams = new int[][] { { 20, 0, 240, 150, 25 }, { 50, 0, 180, 30, 100 }, { 10, 0, 200, 0, 200 } };

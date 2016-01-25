@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import org.minnen.retiretool.broker.PriceModel;
 import org.minnen.retiretool.broker.SimFactory;
 import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.DataIO;
@@ -169,23 +170,17 @@ public class AdaptiveAlloc
     double nSimMonths = TimeLib.monthsBetween(timeSimStart, commonEnd);
     System.out.printf("Simulation Start: [%s] (%.1f months)\n", TimeLib.formatDate(timeSimStart), nSimMonths);
 
+    // Extract common subsequence from each data sequence and add to the sequence store.
     for (int i = 0; i < seqs.size(); ++i) {
       Sequence seq = seqs.get(i);
-      // TODO need to incorporate dividend payments explicitly.
-      // Currently extracting adjusted close that implicitly incorporates dividends.
-      seq = seq.extractDims(FinLib.AdjClose);
       seq = seq.subseq(commonStart, commonEnd, EndpointBehavior.Closest);
       seqs.set(i, seq);
       store.add(seq);
-
-      // double tr = FinLib.getTotalReturn(seq, seq.getClosestIndex(simStartMs), -1, 0);
-      // double ar = FinLib.getAnnualReturn(tr, nSimMonths);
-      // System.out.printf("%s: %5.2f%%  (%.2fx)\n", seq.getName(), ar, tr);
     }
 
     // Setup simulation.
     Sequence guideSeq = store.get(fundSymbols[0]).dup();
-    SimFactory simFactory = new SimFactory(store, guideSeq, slippage, 0, 0);
+    SimFactory simFactory = new SimFactory(store, guideSeq, slippage, 0, PriceModel.adjCloseModel);
     Simulation sim = simFactory.build();
 
     // Run simulation for buy-and-hold of individual assets.
@@ -277,9 +272,9 @@ public class AdaptiveAlloc
 
     // Adaptive Asset Allocation (Equal Weight).
     predictor = equalWeightConfig.build(sim.broker.accessObject, assetSymbols);
-    Sequence returnsAdaptive = sim.run(predictor, timeSimStart, "Adaptive1");
-    System.out.println(CumulativeStats.calc(returnsAdaptive));
-    returns.add(returnsAdaptive);
+    sim.run(predictor, timeSimStart, "Adaptive1");
+    System.out.println(CumulativeStats.calc(sim.returnsMonthly));
+    returns.add(sim.returnsMonthly);
     Chart.saveHoldings(new File(outputDir, "holdings-adaptive.html"), sim.holdings);
 
     // for (int i = 0; i <= 100; i += 101) {

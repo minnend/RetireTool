@@ -29,6 +29,7 @@ import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.util.FinLib.DividendMethod;
 import org.minnen.retiretool.broker.Account;
 import org.minnen.retiretool.broker.Broker;
+import org.minnen.retiretool.broker.PriceModel;
 import org.minnen.retiretool.broker.TimeInfo;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.DiscreteDistribution;
@@ -149,7 +150,7 @@ public class RetireTool
       // Handle case where we buy at the open, not the close.
       if (bBuyAtNextOpen) {
         if (bNeedRebalance && desiredDistribution != null && rebalanceDelay <= 0) {
-          broker.setPriceIndex(FinLib.Open);
+          broker.setPriceModel(PriceModel.openModel);
           account.rebalance(desiredDistribution);
           lastRebalance = time;
           if (prevDistribution == null) {
@@ -157,7 +158,7 @@ public class RetireTool
           } else {
             prevDistribution.copyFrom(desiredDistribution);
           }
-          broker.setPriceIndex(FinLib.Close);
+          broker.setPriceModel(PriceModel.closeModel);
         }
       }
 
