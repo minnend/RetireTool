@@ -152,7 +152,7 @@ public class RetireTool
       if (bBuyAtNextOpen) {
         if (bNeedRebalance && desiredDistribution != null && rebalanceDelay <= 0) {
           broker.setPriceModel(PriceModel.openModel);
-          account.rebalance(desiredDistribution);
+          account.updatePositions(desiredDistribution);
           lastRebalance = time;
           if (prevDistribution == null) {
             prevDistribution = new DiscreteDistribution(desiredDistribution);
@@ -187,7 +187,7 @@ public class RetireTool
       // Update account at end of the day.
       if (!bBuyAtNextOpen) {
         if (bNeedRebalance && rebalanceDelay <= 0) {
-          account.rebalance(desiredDistribution);
+          account.updatePositions(desiredDistribution);
           lastRebalance = time;
           if (prevDistribution == null) {
             prevDistribution = new DiscreteDistribution(desiredDistribution);

@@ -353,7 +353,7 @@ public class Account
     }
   }
 
-  public void rebalance(DiscreteDistribution targetDistribution)
+  public void updatePositions(DiscreteDistribution targetDistribution)
   {
     assert targetDistribution.isNormalized();
     // targetDistribution.clean();

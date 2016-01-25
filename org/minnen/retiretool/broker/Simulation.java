@@ -316,7 +316,7 @@ public class Simulation
         }
 
         // System.out.printf("Rebalance! [%s]\n", timeInfo.date);
-        account.rebalance(submitDist);
+        account.updatePositions(submitDist);
         lastRebalance = timeInfo.time;
         // TODO should be able to assign submitDist instead of copy-constructor -- test that
         prevDist = new DiscreteDistribution(submitDist);
@@ -360,6 +360,7 @@ public class Simulation
         holdings.put(timeInfo.date, account.getDistribution());
       }
 
+      broker.finishDay();
       store.unlock(runKey);
       ++runIndex;
     }

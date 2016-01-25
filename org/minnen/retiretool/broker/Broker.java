@@ -1,27 +1,43 @@
 package org.minnen.retiretool.broker;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.minnen.retiretool.Slippage;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.util.Fixed;
+import org.minnen.retiretool.util.TimeLib;
 
 /**
  * Represents a trading broker at which a strategy can open accounts and make trades.
  */
 public class Broker
 {
-  public final BrokerInfoAccess accessObject = new BrokerInfoAccess(this);
-  public final SequenceStore    store;
+  public static class PriceQuote
+  {
+    public final long time;
+    public final long price;
 
-  private final List<Account>   accounts     = new ArrayList<>();
-  private final TimeInfo        origTimeInfo;
+    public PriceQuote(long time, long price)
+    {
+      this.time = time;
+      this.price = price;
+    }
+  }
 
-  private TimeInfo              timeInfo;
-  private Slippage              slippage;
-  private PriceModel            priceModel;
+  public final BrokerInfoAccess         accessObject = new BrokerInfoAccess(this);
+  public final SequenceStore            store;
+
+  private final List<Account>           accounts     = new ArrayList<>();
+  private final Map<String, PriceQuote> priceQuotes  = new HashMap<>();
+  private final TimeInfo                origTimeInfo;
+
+  private TimeInfo                      timeInfo;
+  private Slippage                      slippage;
+  private PriceModel                    priceModel;
 
   public Broker(SequenceStore store, Slippage slippage, Sequence guideSeq)
   {
@@ -40,6 +56,7 @@ public class Broker
   public void reset()
   {
     accounts.clear();
+    priceQuotes.clear();
     timeInfo = origTimeInfo;
   }
 
@@ -79,6 +96,13 @@ public class Broker
     return timeInfo;
   }
 
+  /**
+   * Handle business at end of day (E.g. pay dividends and interest).
+   * 
+   * A strategy may access the broker for the current day after this point. For example, dividends and interest are paid
+   * at the end of the day, and then a strategy might analyze the situation to make predictions and decide on buy/sell
+   * orders for tomorrow.
+   */
   public void doEndOfDayBusiness()
   {
     // End of day business.
@@ -93,6 +117,17 @@ public class Broker
         account.doEndOfMonthBusiness(timeInfo, store);
       }
     }
+  }
+
+  /**
+   * Finish any administrative / infrastructure work for the current day.
+   * 
+   * Nothing should access the broker for the current day after this call.
+   */
+  public void finishDay()
+  {
+    // Price quotes are only valid for one day.
+    priceQuotes.clear();
   }
 
   public Account openAccount(String name, Account.Type accountType, boolean bReinvestDividends)
@@ -121,10 +156,18 @@ public class Broker
   {
     assert time <= getTime(); // No peeking into the future.
 
+    PriceQuote quote = priceQuotes.getOrDefault(name, null);
+    if (quote != null) {
+      assert quote.time == time : String.format("%s: [%s] vs [%s]", name, TimeLib.formatTime(time),
+          TimeLib.formatTime(quote.time));
+      return quote.price;
+    }
+
     Sequence seq = store.get(name);
     int index = seq.getClosestIndex(time);
     double floatPrice = priceModel.getPrice(seq.get(index));
     long price = Fixed.round(Fixed.toFixed(floatPrice), Fixed.THOUSANDTH);
+    priceQuotes.put(name, new PriceQuote(time, price));
     return price;
   }
 
