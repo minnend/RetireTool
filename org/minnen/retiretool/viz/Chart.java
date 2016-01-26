@@ -21,7 +21,10 @@ import java.util.regex.Pattern;
 
 import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.FeatureVec;
+import org.minnen.retiretool.data.IndexRange;
 import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.data.Sequence.EndpointBehavior;
 import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.DurationalStats;
@@ -1036,7 +1039,8 @@ public class Chart
     }
   }
 
-  public static void saveHoldings(File file, Map<LocalDate, DiscreteDistribution> holdings) throws IOException
+  public static void saveHoldings(File file, Map<LocalDate, DiscreteDistribution> holdings, SequenceStore store)
+      throws IOException
   {
     final int width = 800;
 
@@ -1066,6 +1070,7 @@ public class Chart
       Collections.reverse(holdingsReversed);
       DiscreteDistribution prevDist = null;
       boolean bEvenRow = false;
+      LocalDate prevDate = null;
       for (Map.Entry<LocalDate, DiscreteDistribution> entry : holdingsReversed) {
         LocalDate date = entry.getKey();
         DiscreteDistribution dist = alignDist(entry.getValue(), prevDist, date);
@@ -1079,12 +1084,23 @@ public class Chart
             symbol2color.put(symbol, colors[colorIndex]);
             colorIndex = (colorIndex + 1) % colors.length;
           }
+          String returnString = "";
+          if (prevDate != null) {
+            Sequence seq = store.tryGet(dist.names[i]);
+            if (seq != null) {
+              IndexRange range = seq.getIndices(TimeLib.toMs(date), TimeLib.toMs(prevDate), EndpointBehavior.Closest);
+              double tr = FinLib.getTotalReturn(seq, range.iStart, range.iEnd, FinLib.AdjClose);
+              double r = FinLib.mul2ret(tr);
+              returnString = String.format(" (%.2f)", r);
+            }
+          }
           writer.write(String.format(
-              "<span style=\"float: left; width: %.2f%%; background: %s; white-space: nowrap;\">%s (%.1f)</span>\n",
-              dist.weights[i] * 100 - 0.01, symbol2color.get(symbol), symbol, dist.weights[i] * 100));
+              "<span style=\"float: left; width: %.2f%%; background: %s; white-space: nowrap;\">%s%s</span>\n",
+              dist.weights[i] * 100 - 0.01, symbol2color.get(symbol), symbol, returnString));
         }
         writer.write("</td></tr>");
         bEvenRow = !bEvenRow;
+        prevDate = date;
       }
       writer.write("</tbody>\n</table>\n");
       writer.write("</body></html>\n");

@@ -279,7 +279,7 @@ public class AdaptiveAlloc
     sim.run(predictor, timeSimStart, "Adaptive1");
     System.out.println(CumulativeStats.calc(sim.returnsMonthly));
     returns.add(sim.returnsMonthly);
-    Chart.saveHoldings(new File(outputDir, "holdings-adaptive.html"), sim.holdings);
+    Chart.saveHoldings(new File(outputDir, "holdings-adaptive.html"), sim.holdings, sim.store);
 
     // for (int i = 0; i <= 100; i += 101) {
     // double alpha = i / 100.0;
