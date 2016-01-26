@@ -217,7 +217,7 @@ public class AdaptivePredictor extends Predictor
     }
 
     // If nothing looks good, hold all cash.
-    if (nKeep <= 1) {
+    if (nKeep <= 0) {
       distribution.set("cash", 1.0);
     }
 

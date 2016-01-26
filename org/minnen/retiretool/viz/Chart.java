@@ -1076,7 +1076,9 @@ public class Chart
         DiscreteDistribution dist = alignDist(entry.getValue(), prevDist, date);
         prevDist = dist;
         writer.write(bEvenRow ? "<tr class=\"evenRow\">" : "<tr>");
-        writer.write(String.format("<td style=\"width:10%%\">%s</td><td style=\"width:90%%\">\n", date));
+        writer.write(String.format("<td class=\"date\">%s</td>\n", date));
+        double combinedReturn = 0.0;
+        StringBuffer sb = new StringBuffer();
         for (int i = 0; i < dist.size(); ++i) {
           if (dist.weights[i] < 0.02) continue; // Skip very small allocations.
           String symbol = dist.names[i];
@@ -1091,14 +1093,18 @@ public class Chart
               IndexRange range = seq.getIndices(TimeLib.toMs(date), TimeLib.toMs(prevDate), EndpointBehavior.Closest);
               double tr = FinLib.getTotalReturn(seq, range.iStart, range.iEnd, FinLib.AdjClose);
               double r = FinLib.mul2ret(tr);
+              combinedReturn += r * dist.weights[i];
               returnString = String.format(" (%.2f)", r);
             }
           }
-          writer.write(String.format(
-              "<span style=\"float: left; width: %.2f%%; background: %s; white-space: nowrap;\">%s%s</span>\n",
-              dist.weights[i] * 100 - 0.01, symbol2color.get(symbol), symbol, returnString));
+          sb.append(String.format(
+              "<span style=\"float: left; width: %.4f%%; background: %s; white-space: nowrap;\">%s%s</span>\n",
+              dist.weights[i] * 100 - 0.0001, symbol2color.get(symbol), symbol, returnString));
         }
-        writer.write("</td></tr>");
+        writer.write(String.format("<td class=\"combined-return\">%.2f</td>\n", combinedReturn));
+        writer.write("<td class=\"viz\">\n");
+        writer.write(sb.toString());
+        writer.write("</td></tr>\n");
         bEvenRow = !bEvenRow;
         prevDate = date;
       }

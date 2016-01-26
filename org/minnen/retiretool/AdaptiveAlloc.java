@@ -69,7 +69,7 @@ public class AdaptiveAlloc
   public static Simulation walkForwadOptimization(long timeSimStart, SimFactory simFactory)
   {
     final int stepMonths = 3;
-    final int maxOptMonths = 12 * 5;
+    final int maxOptMonths = 12 * 3;
 
     // Simulator used for optimizing predictor parameters.
     Simulation simOpt = simFactory.build();
@@ -220,33 +220,33 @@ public class AdaptiveAlloc
     // returns.add(returnsLazy3);
 
     // Lazy 4-fund portfolio.
-    // String[] lazy4 = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX" };
-    // config = new ConfigMixed(new DiscreteDistribution(lazy4, new double[] { 0.4, 0.2, 0.1, 0.3 }), new ConfigConst(
-    // lazy4[0]), new ConfigConst(lazy4[1]), new ConfigConst(lazy4[2]), new ConfigConst(lazy4[3]));
-    // predictor = config.build(sim.broker.accessObject, lazy4);
-    // Sequence returnsLazy4 = sim.run(predictor, timeSimStart, "Lazy4");
-    // System.out.println(CumulativeStats.calc(returnsLazy4));
-    // returns.add(returnsLazy4);
+    String[] lazy4 = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX" };
+    config = new ConfigMixed(new DiscreteDistribution(lazy4, new double[] { 0.4, 0.2, 0.1, 0.3 }), new ConfigConst(
+        lazy4[0]), new ConfigConst(lazy4[1]), new ConfigConst(lazy4[2]), new ConfigConst(lazy4[3]));
+    predictor = config.build(sim.broker.accessObject, lazy4);
+    Sequence returnsLazy4 = sim.run(predictor, timeSimStart, "Lazy4");
+    System.out.println(CumulativeStats.calc(returnsLazy4));
+    returns.add(returnsLazy4);
 
     // All stock.
-    // PredictorConfig stockConfig = new ConfigConst("VTSMX");
-    // predictor = stockConfig.build(sim.broker.accessObject, assetSymbols);
-    // Sequence returnsStock = sim.run(predictor, timeSimStart, "Stock");
-    // System.out.println(CumulativeStats.calc(returnsStock));
-    // returns.add(returnsStock);
+    PredictorConfig stockConfig = new ConfigConst("VTSMX");
+    predictor = stockConfig.build(sim.broker.accessObject, assetSymbols);
+    Sequence returnsStock = sim.run(predictor, timeSimStart, "Stock");
+    System.out.println(CumulativeStats.calc(returnsStock));
+    returns.add(returnsStock);
 
-    // // All bonds.
-    // PredictorConfig bondConfig = new ConfigConst("VBMFX");
-    // predictor = bondConfig.build(sim.broker.accessObject, assetSymbols);
-    // Sequence returnsBonds = sim.run(predictor, timeSimStart,"Bonds");
-    // System.out.println(CumulativeStats.calc(returnsBonds));
-    // returns.add(returnsBonds);
+    // All bonds.
+    PredictorConfig bondConfig = new ConfigConst("VBMFX");
+    predictor = bondConfig.build(sim.broker.accessObject, assetSymbols);
+    Sequence returnsBonds = sim.run(predictor, timeSimStart, "Bonds");
+    System.out.println(CumulativeStats.calc(returnsBonds));
+    returns.add(returnsBonds);
 
     // Volatility-Responsive Asset Allocation.
-    // predictor = new VolResPredictor("VTSMX", "VBMFX", sim.broker.accessObject);
-    // Sequence returnsVolRes = sim.run(predictor, timeSimStart, "VolRes");
-    // System.out.println(CumulativeStats.calc(returnsVolRes));
-    // returns.add(returnsVolRes);
+    predictor = new VolResPredictor("VTSMX", "VBMFX", sim.broker.accessObject);
+    Sequence returnsVolRes = sim.run(predictor, timeSimStart, "VolRes");
+    System.out.println(CumulativeStats.calc(returnsVolRes));
+    returns.add(returnsVolRes);
 
     // PredictorConfig tacticalConfig = new ConfigTactical(FinLib.AdjClose, "SPY", "VTSMX", "VGSIX", "VGTSX", "EWU",
     // "EWG", "EWJ",
@@ -273,13 +273,18 @@ public class AdaptiveAlloc
     // tradeFreq, FinLib.AdjClose);
 
     // Adaptive Asset Allocation (Equal Weight).
-    PredictorConfig equalWeightConfig = new ConfigAdaptive(-1, -1, Weighting.Equal, 40, 100, 80, 0.5, 4, pctQuantum,
-        tradeFreq, FinLib.AdjClose);
-    predictor = equalWeightConfig.build(sim.broker.accessObject, assetSymbols);
-    sim.run(predictor, timeSimStart, "Adaptive1");
-    System.out.println(CumulativeStats.calc(sim.returnsMonthly));
-    returns.add(sim.returnsMonthly);
-    Chart.saveHoldings(new File(outputDir, "holdings-adaptive.html"), sim.holdings, sim.store);
+    // PredictorConfig equalWeightConfig1 = new ConfigAdaptive(-1, -1, Weighting.Equal, 40, 100, 80, 0.5, 4, pctQuantum,
+    // tradeFreq, FinLib.AdjClose);
+    // PredictorConfig equalWeightConfig2 = new ConfigAdaptive(-1, -1, Weighting.Equal, 20, 120, 100, 0.5, 2,
+    // pctQuantum,
+    // tradeFreq, FinLib.AdjClose);
+    // predictor = equalWeightConfig1.build(sim.broker.accessObject, assetSymbols);
+    // // config = new ConfigMixed(new DiscreteDistribution(0.5, 0.5), equalWeightConfig1, equalWeightConfig2);
+    // // predictor = config.build(sim.broker.accessObject, assetSymbols);
+    // sim.run(predictor, timeSimStart, "Adaptive1");
+    // System.out.println(CumulativeStats.calc(sim.returnsMonthly));
+    // returns.add(sim.returnsMonthly);
+    // Chart.saveHoldings(new File(outputDir, "holdings-adaptive.html"), sim.holdings, sim.store);
 
     // for (int i = 0; i <= 100; i += 101) {
     // double alpha = i / 100.0;
@@ -327,10 +332,10 @@ public class AdaptiveAlloc
     // System.out.println(CumulativeStats.calc(ret));
     // }
 
-    // Simulation wfSim = walkForwadOptimization(timeSimStart, simFactory);
-    // System.out.println(CumulativeStats.calc(wfSim.returnsMonthly));
-    // returns.add(wfSim.returnsMonthly);
-    // Chart.saveHoldings(new File(outputDir, "holdings-adaptive.html"), wfSim.holdings);
+    Simulation wfSim = walkForwadOptimization(timeSimStart, simFactory);
+    System.out.println(CumulativeStats.calc(wfSim.returnsMonthly));
+    returns.add(wfSim.returnsMonthly);
+    Chart.saveHoldings(new File(outputDir, "holdings-adaptive.html"), wfSim.holdings, wfSim.store);
 
     // AdaptiveScanner scanner = new AdaptiveScanner();
     // List<CumulativeStats> cstats = new ArrayList<CumulativeStats>();
