@@ -1068,12 +1068,12 @@ public class Chart
       boolean bEvenRow = false;
       for (Map.Entry<LocalDate, DiscreteDistribution> entry : holdingsReversed) {
         LocalDate date = entry.getKey();
-        DiscreteDistribution dist = alignDist(entry.getValue(), prevDist);
+        DiscreteDistribution dist = alignDist(entry.getValue(), prevDist, date);
         prevDist = dist;
         writer.write(bEvenRow ? "<tr class=\"evenRow\">" : "<tr>");
         writer.write(String.format("<td style=\"width:10%%\">%s</td><td style=\"width:90%%\">\n", date));
         for (int i = 0; i < dist.size(); ++i) {
-          if (dist.weights[i] < 0.009) continue;
+          if (dist.weights[i] < 0.02) continue; // Skip very small allocations.
           String symbol = dist.names[i];
           if (!symbol2color.containsKey(symbol)) {
             symbol2color.put(symbol, colors[colorIndex]);
@@ -1091,7 +1091,7 @@ public class Chart
     }
   }
 
-  private static DiscreteDistribution alignDist(DiscreteDistribution dist, DiscreteDistribution base)
+  private static DiscreteDistribution alignDist(DiscreteDistribution dist, DiscreteDistribution base, LocalDate date)
   {
     if (dist == null) return null;
     if (base == null) return dist;
@@ -1101,14 +1101,20 @@ public class Chart
     boolean[] matchTo = new boolean[dist.size()];
 
     // Align all matching symbols.
-    for (int iDist = 0; iDist < dist.size(); ++iDist) {
-      int iBase = base.find(dist.names[iDist]);
-      if (iBase >= 0 && iBase < dist.size()) {
-        matchFrom[iDist] = true;
-        matchTo[iBase] = true;
-        aligned.names[iBase] = dist.names[iDist];
-        aligned.weights[iBase] = dist.weights[iDist];
+    int iNext = dist.size() - 1;
+    for (int iBase = base.size() - 1; iBase >= 0; --iBase) {
+      int iDist = dist.find(base.names[iBase]);
+      if (iDist < 0) continue;
+
+      matchFrom[iDist] = true;
+      if (iBase < iNext) {
+        iNext = iBase;
       }
+      assert !matchTo[iNext];
+      matchTo[iNext] = true;
+      aligned.names[iNext] = dist.names[iDist];
+      aligned.weights[iNext] = dist.weights[iDist];
+      --iNext;
     }
 
     // Fill in the gaps.

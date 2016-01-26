@@ -191,14 +191,17 @@ public class AdaptivePredictor extends Predictor
     }
     assert moms.size() == nGoodMom;
 
-    // Calculate max number of assets to keep and remove rest.
-    int nKeep = nGoodMom;
+    // Calculate the maximum number of funds we can hold.
+    int nMaxKeep = n;
     if (config.maxKeepFrac > 0.0) {
-      nKeep = Math.min(nKeep, (int) Math.round(n * config.maxKeepFrac));
+      nMaxKeep = Math.min(nMaxKeep, (int) Math.round(n * config.maxKeepFrac));
     }
     if (config.maxKeep > 0) {
-      nKeep = Math.min(nKeep, config.maxKeep);
+      nMaxKeep = Math.min(nMaxKeep, config.maxKeep);
     }
+
+    // Calculate max number of assets to keep and remove rest.
+    int nKeep = Math.min(nGoodMom, nMaxKeep);
     while (moms.size() > nKeep) {
       moms.remove(moms.size() - 1);
     }
@@ -214,7 +217,7 @@ public class AdaptivePredictor extends Predictor
     }
 
     // If nothing looks good, hold all cash.
-    if (nKeep == 0) {
+    if (nKeep <= 1) {
       distribution.set("cash", 1.0);
     }
 
