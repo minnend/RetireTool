@@ -13,6 +13,7 @@ public class PriceModel
   public final static PriceModel closeModel     = new PriceModel(Type.Close, false);
   public final static PriceModel adjCloseModel  = new PriceModel(Type.AdjClose, false);
   public final static PriceModel openModel      = new PriceModel(Type.Open, false);
+  public final static PriceModel adjOpenModel      = new PriceModel(Type.Open, true);
   public final static PriceModel uniformOCModel = new PriceModel(Type.UniformOC, true);
   public final static PriceModel uniformHLModel = new PriceModel(Type.UniformHL, true);
 

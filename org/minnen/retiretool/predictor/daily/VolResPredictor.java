@@ -2,9 +2,7 @@ package org.minnen.retiretool.predictor.daily;
 
 import org.minnen.retiretool.broker.BrokerInfoAccess;
 import org.minnen.retiretool.data.DiscreteDistribution;
-import org.minnen.retiretool.predictor.config.ConfigAdaptive.TradeFreq;
 import org.minnen.retiretool.util.Library;
-import org.minnen.retiretool.util.TimeLib;
 
 /**
  * Implementation of Volatility-Responsive Asset Allocation from Russell Investments.

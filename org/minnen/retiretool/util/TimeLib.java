@@ -341,6 +341,7 @@ public class TimeLib
 
     // New Years.
     if (md.equals(MonthDay.of(1, 1))) return true;
+    if (md.equals(MonthDay.of(1, 2)) && date.getDayOfWeek() == DayOfWeek.MONDAY) return true;
 
     // MLK Day (first observed in 1986).
     if (date.getYear() >= 1986) {
@@ -364,6 +365,8 @@ public class TimeLib
 
     // Independence Day.
     if (md.equals(MonthDay.of(7, 4))) return true;
+    if (md.equals(MonthDay.of(7, 3)) && date.getDayOfWeek() == DayOfWeek.FRIDAY) return true;
+    if (md.equals(MonthDay.of(7, 5)) && date.getDayOfWeek() == DayOfWeek.MONDAY) return true;
 
     // Labor Day.
     LocalDate labor = TimeLib.getNthDayOfWeek(date.getYear(), Month.SEPTEMBER, 1, DayOfWeek.MONDAY);
@@ -375,6 +378,8 @@ public class TimeLib
 
     // Christmas.
     if (md.equals(MonthDay.of(12, 25))) return true;
+    if (md.equals(MonthDay.of(12, 24)) && date.getDayOfWeek() == DayOfWeek.FRIDAY) return true;
+    if (md.equals(MonthDay.of(12, 26)) && date.getDayOfWeek() == DayOfWeek.MONDAY) return true;
 
     return false;
   }
@@ -382,6 +387,37 @@ public class TimeLib
   public static boolean isBusinessDay(LocalDate date)
   {
     return !isWeekend(date) && !isHoliday(date);
+  }
+
+  public static long toLastBusinessDayOfWeek(long ms)
+  {
+    return toMs(toLastBusinessDayOfWeek(ms2date(ms)));
+  }
+
+  /**
+   * Return the last business day in the week containing the given date. A week runs from Monday to Sunday.
+   * 
+   * @return last business day in the week containing the given date.
+   */
+  public static LocalDate toLastBusinessDayOfWeek(LocalDate date)
+  {
+    LocalDate lastBusinessDayOfWeek = isBusinessDay(date) ? date : null;
+
+    LocalDate next = date;
+    while (true) {
+      next = toNextBusinessDay(next);
+      if (!isSameWeek(next, date)) break;
+      lastBusinessDayOfWeek = next;
+    }
+
+    if (lastBusinessDayOfWeek == null) {
+      LocalDate prev = toPreviousBusinessDay(date);
+      if (isSameWeek(prev, date)) {
+        lastBusinessDayOfWeek = prev;
+      }
+    }
+
+    return lastBusinessDayOfWeek;
   }
 
   public static long toPreviousBusinessDay(long ms)
@@ -444,6 +480,9 @@ public class TimeLib
     return fartherDate;
   }
 
+  /**
+   * @return A date representing the Nth DoW in the given month/year (e.g. 3rd Monday of November, 1956).
+   */
   public static LocalDate getNthDayOfWeek(int year, Month month, int nth, DayOfWeek dow)
   {
     assert nth != 0;

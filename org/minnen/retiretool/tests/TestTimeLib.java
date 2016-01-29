@@ -388,6 +388,10 @@ public class TestTimeLib
     LocalDate date = LocalDate.of(2015, 1, 1);
     assertTrue(TimeLib.isHoliday(date));
 
+    // New Years Day on Sunday.
+    date = LocalDate.of(2006, 1, 2);
+    assertTrue(TimeLib.isHoliday(date));
+
     // MLK Day.
     date = LocalDate.of(2015, 1, 19);
     assertTrue(TimeLib.isHoliday(date));
@@ -408,6 +412,14 @@ public class TestTimeLib
     date = LocalDate.of(2015, 7, 4);
     assertTrue(TimeLib.isHoliday(date));
 
+    // Independence Day on Saturday.
+    date = LocalDate.of(2009, 7, 3);
+    assertTrue(TimeLib.isHoliday(date));
+
+    // Independence Day on Sunday.
+    date = LocalDate.of(1999, 7, 5);
+    assertTrue(TimeLib.isHoliday(date));
+
     // Labor Day.
     date = LocalDate.of(2015, 9, 7);
     assertTrue(TimeLib.isHoliday(date));
@@ -420,11 +432,47 @@ public class TestTimeLib
     date = LocalDate.of(2015, 12, 25);
     assertTrue(TimeLib.isHoliday(date));
 
+    // Christmas on Saturday
+    date = LocalDate.of(2010, 12, 24);
+    assertTrue(TimeLib.isHoliday(date));
+
+    // Christmas on Sunday
+    date = LocalDate.of(2005, 12, 26);
+    assertTrue(TimeLib.isHoliday(date));
+
     // Not holidays.
     date = LocalDate.of(2015, 1, 2);
     assertFalse(TimeLib.isHoliday(date));
 
     date = LocalDate.of(2015, 12, 31);
     assertFalse(TimeLib.isHoliday(date));
+  }
+
+  @Test
+  public void testLastBusinessDayOfWeek()
+  {
+    LocalDate date;
+
+    date = LocalDate.of(2016, Month.JANUARY, 8);
+    assertEquals(LocalDate.of(2016, Month.JANUARY, 8), TimeLib.toLastBusinessDayOfWeek(date));
+
+    date = LocalDate.of(2016, Month.JANUARY, 7);
+    assertEquals(LocalDate.of(2016, Month.JANUARY, 8), TimeLib.toLastBusinessDayOfWeek(date));
+
+    date = LocalDate.of(2016, Month.JANUARY, 4);
+    assertEquals(LocalDate.of(2016, Month.JANUARY, 8), TimeLib.toLastBusinessDayOfWeek(date));
+
+    date = LocalDate.of(2016, Month.JANUARY, 10);
+    assertEquals(LocalDate.of(2016, Month.JANUARY, 8), TimeLib.toLastBusinessDayOfWeek(date));
+
+    // January 1 is a holiday.
+    date = LocalDate.of(2016, Month.JANUARY, 1);
+    assertEquals(LocalDate.of(2015, Month.DECEMBER, 31), TimeLib.toLastBusinessDayOfWeek(date));
+
+    date = LocalDate.of(2016, Month.FEBRUARY, 10);
+    assertEquals(LocalDate.of(2016, Month.FEBRUARY, 12), TimeLib.toLastBusinessDayOfWeek(date));
+
+    date = LocalDate.of(2016, Month.FEBRUARY, 29);
+    assertEquals(LocalDate.of(2016, Month.MARCH, 4), TimeLib.toLastBusinessDayOfWeek(date));
   }
 }

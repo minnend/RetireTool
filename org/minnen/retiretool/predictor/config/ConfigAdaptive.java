@@ -77,4 +77,11 @@ public class ConfigAdaptive extends PredictorConfig
         maxKeep));
     return sb.toString();
   }
+
+  public static ConfigAdaptive buildEqualWeight(int nTrigger, int nBaseA, int nBaseB, double maxKeepFrac, int maxKeep,
+      int pctQuantum, TradeFreq tradeFreq, int iPrice)
+  {
+    return new ConfigAdaptive(-1, -1, Weighting.Equal, nTrigger, nBaseA, nBaseB, maxKeepFrac, maxKeep, pctQuantum,
+        tradeFreq, iPrice);
+  }
 }

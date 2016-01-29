@@ -179,6 +179,8 @@ public class Chart
         writer.write("    },\n");
         // writer.write("    threshold: null\n");
         writer.write("   }\n");
+      } else if (chartType == ChartType.Line) {
+        writer.write("    line: { marker: { enabled: false } }\n");
       }
       writer.write("  },\n");
 
@@ -310,8 +312,8 @@ public class Chart
     }
   }
 
-  public static void saveScatterPlot(File file, String title, int width, int height, int radius, Sequence scatter)
-      throws IOException
+  public static void saveScatterPlot(File file, String title, int width, int height, int radius, String[] dimNames,
+      Sequence scatter) throws IOException
   {
     assert scatter.getNumDims() >= 2;
 
@@ -344,13 +346,14 @@ public class Chart
       writer.write("   scatter: {\n");
       writer.write(String.format("    marker: { radius: %d, symbol: 'circle' },\n", radius));
       writer.write("    dataLabels: {\n");
-      writer.write("      enabled: true,\n");
+      writer.write("      enabled: false,\n");
       writer.write("      format: '{point.name}'\n");
       writer.write("    },\n");
       writer.write("    tooltip: {\n");
       writer.write("     headerFormat: '',\n");
-      writer
-          .write("     pointFormat: '<b>{point.name}</b><br/>CAGR: <b>{point.y}</b><br/>Volatility: <b>{point.x}</b>'\n");
+      writer.write(String.format(
+          "     pointFormat: '<b>{point.name}</b><br/>%s: <b>{point.x}</b><br/>%s: <b>{point.y}</b>'\n",
+          dimNames == null ? "x" : dimNames[0], dimNames == null ? "y" : dimNames[1]));
       writer.write("    }\n");
       writer.write("   }\n");
       writer.write("  },\n");
@@ -359,10 +362,10 @@ public class Chart
       for (int i = 0; i < scatter.size(); ++i) {
         FeatureVec v = scatter.get(i);
         // writer.write(String.format("[%.3f,%.3f]", v.get(0), v.get(1)));
-        double cagr = v.get(0);
-        double stdev = v.get(1);
+        double x = v.get(0);
+        double y = v.get(1);
         String name = v.getName();
-        writer.write(String.format("{x:%.3f, y:%.3f, name: '%s'}", stdev, cagr, FinLib.getBaseName(name)));
+        writer.write(String.format("{x:%.3f, y:%.3f, name: '%s'}", x, y, FinLib.getBaseName(name)));
         if (i < scatter.length() - 1) {
           writer.write(",\n");
         }

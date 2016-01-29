@@ -240,6 +240,17 @@ public class AdaptivePredictor extends Predictor
   @Override
   public void reset()
   {
+    super.reset();
     prevDistribution = null;
+  }
+
+  public double getPrediction(String name)
+  {
+    // System.out.printf("[%s] (%d)\n", TimeLib.formatDate(brokerAccess.getTime()), brokerAccess.getTime());
+    Sequence seq = brokerAccess.getSeq(name);
+    double now = seq.average(-config.nTriggerA, -config.nTriggerB, config.iPrice);
+    double before = seq.average(-config.nBaseA, -config.nBaseB, config.iPrice);
+    double mul = now / before;
+    return FinLib.mul2ret(mul);
   }
 }

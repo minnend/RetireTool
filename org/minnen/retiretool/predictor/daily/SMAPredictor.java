@@ -97,6 +97,7 @@ public class SMAPredictor extends Predictor
   @Override
   public void reset()
   {
+    super.reset();
     reloc = 0;
     timeLastFlip = TimeLib.TIME_ERROR;
   }

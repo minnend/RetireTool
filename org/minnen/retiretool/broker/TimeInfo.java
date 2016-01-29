@@ -27,6 +27,11 @@ public class TimeInfo
         .toNextBusinessDay(guideSeq.getEndMS()));
   }
 
+  public TimeInfo(long time)
+  {
+    this(time, TimeLib.toPreviousBusinessDay(time), TimeLib.toNextBusinessDay(time));
+  }
+
   public TimeInfo(long time, long prevTime, long nextTime)
   {
     assert time != prevTime;

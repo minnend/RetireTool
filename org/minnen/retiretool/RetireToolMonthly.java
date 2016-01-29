@@ -812,7 +812,7 @@ public class RetireToolMonthly
 
     Chart.saveScatterPlot(new File(dir, "strategy-scatter.html"),
         String.format("Momentum: Returns vs. Volatility (%s)", TimeLib.formatDurationMonths(duration)), GRAPH_WIDTH,
-        GRAPH_HEIGHT, 5, scatter);
+        GRAPH_HEIGHT, 5, new String[] { "Volatility", "CAGR" }, scatter);
 
     // Win rate vs. first strategy.
     double diffMargin = 0.25;
