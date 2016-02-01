@@ -1,9 +1,5 @@
 package org.minnen.retiretool.predictor.daily;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.minnen.retiretool.broker.BrokerInfoAccess;
 import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.Sequence;
@@ -123,10 +119,5 @@ public abstract class Predictor
     Sequence seq = brokerAccess.getSeq(name);
     assert seq != null : name;
     return FinLib.getReturns(seq, -nLookback, -1, iDim);
-  }
-
-  public double getPrediction(String name)
-  {
-    throw new RuntimeException("Predictors that generate a prediction should override getPrediction().");
   }
 }

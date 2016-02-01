@@ -11,6 +11,7 @@ import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive.TradeFreq;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive.Weighting;
+import org.minnen.retiretool.predictor.features.Momentum;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Library;
 
@@ -18,6 +19,7 @@ public class AdaptivePredictor extends Predictor
 {
   private final ConfigAdaptive config;
   private DiscreteDistribution prevDistribution = null;
+  private final Momentum       momentumFE;
 
   private static class MomScore implements Comparable<MomScore>
   {
@@ -50,6 +52,8 @@ public class AdaptivePredictor extends Predictor
     super("Adaptive", brokerAccess, assetChoices);
     this.config = config;
     this.predictorType = PredictorType.Distribution;
+    this.momentumFE = new Momentum(config.nTriggerA, config.nTriggerB, config.nBaseA, config.nBaseB, config.iPrice,
+        brokerAccess);
   }
 
   private double[] getEqualWeights(int n)
@@ -161,12 +165,13 @@ public class AdaptivePredictor extends Predictor
     final int n = distribution.size();
     List<MomScore> moms = new ArrayList<>();
     for (int i = 0; i < n; ++i) {
-      String name = assetChoices[i];
-      if (name.equals("cash")) {
+      String assetName = assetChoices[i];
+      if (assetName.equals("cash")) {
         moms.add(new MomScore("cash", -100.0));
       } else {
-        double score = getPrediction(name);
-        moms.add(new MomScore(name, score));
+        double momentum = momentumFE.calculate(assetName).get(0);
+        double score = FinLib.mul2ret(momentum);
+        moms.add(new MomScore(assetName, score));
       }
     }
     Collections.sort(moms, Collections.reverseOrder());
@@ -238,15 +243,5 @@ public class AdaptivePredictor extends Predictor
   {
     super.reset();
     prevDistribution = null;
-  }
-
-  public double getPrediction(String name)
-  {
-    // System.out.printf("[%s] (%d)\n", TimeLib.formatDate(brokerAccess.getTime()), brokerAccess.getTime());
-    Sequence seq = brokerAccess.getSeq(name);
-    double now = seq.average(-config.nTriggerA, -config.nTriggerB, config.iPrice);
-    double before = seq.average(-config.nBaseA, -config.nBaseB, config.iPrice);
-    double mul = now / before;
-    return FinLib.mul2ret(mul);
   }
 }

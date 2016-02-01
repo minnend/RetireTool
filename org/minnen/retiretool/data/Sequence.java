@@ -863,9 +863,13 @@ public class Sequence implements Iterable<FeatureVec>
     if (iStart < 0) {
       iStart += length();
     }
+    assert iStart >= 0;
+
     if (iEnd < 0) {
       iEnd += length();
     }
+    assert iEnd >= 0;
+
     final int N = iEnd - iStart + 1;
     assert N > 0;
 
@@ -889,9 +893,13 @@ public class Sequence implements Iterable<FeatureVec>
     if (iStart < 0) {
       iStart += length();
     }
+    assert iStart >= 0;
+
     if (iEnd < 0) {
       iEnd += length();
     }
+    assert iEnd >= 0;
+
     final int N = iEnd - iStart + 1;
     assert N > 0;
 

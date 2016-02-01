@@ -21,6 +21,9 @@ import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.data.Sequence.EndpointBehavior;
+import org.minnen.retiretool.ml.LinearRegression;
+import org.minnen.retiretool.ml.RegressionFV;
+import org.minnen.retiretool.ml.RegressionExample;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive.TradeFreq;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive.Weighting;
@@ -31,6 +34,9 @@ import org.minnen.retiretool.predictor.config.PredictorConfig;
 import org.minnen.retiretool.predictor.daily.AdaptivePredictor;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.predictor.daily.VolResPredictor;
+import org.minnen.retiretool.predictor.features.FeatureExtractor;
+import org.minnen.retiretool.predictor.features.FeatureSet;
+import org.minnen.retiretool.predictor.features.Momentum;
 import org.minnen.retiretool.predictor.optimize.AdaptiveScanner;
 import org.minnen.retiretool.predictor.optimize.ConfigScanner;
 import org.minnen.retiretool.predictor.optimize.Optimizer;
@@ -133,22 +139,34 @@ public class AdaptiveAlloc
     return wfSim;
   }
 
-  public static void genPredictionMap(PredictorConfig config, Sequence guideSeq, File outputDir) throws IOException
+  public static void genPredictionMap(Sequence guideSeq, File outputDir) throws IOException
   {
     Broker broker = new Broker(store, Slippage.None, guideSeq);
-    Predictor predictor = config.build(broker.accessObject, assetSymbols);
     final long key = Sequence.Lock.genKey();
 
-    // assert timePredict >= sim.getStartMS();
-    final long timeLearnStart = store.getCommonStartTime();
-    final long timeFirstAbleToPredict = TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(timeLearnStart)
-        .plusMonths(6))); // TODO pull requirements from config/predictor
-    // System.out.printf("First Able to Predict: [%s]\n", TimeLib.formatDate(timeFirstAbleToPredict));
+    final long timeDataStart = store.getCommonStartTime();
+
+    // TODO pull requirements from config/predictor
+    final long timeFirstAbleToPredict = TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(timeDataStart)
+        .plusWeeks(49)));
     long today = TimeLib.toLastBusinessDayOfWeek(timeFirstAbleToPredict);
+
+    // Early predictors need some examples so delay simulation.
+    final long timeStartSim = TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(timeFirstAbleToPredict)
+        .plusMonths(6)));
+    System.out.printf("Prediction Map: [%s] -> [%s]\n", TimeLib.formatDate(today),
+        TimeLib.formatDate(guideSeq.getEndMS()));
 
     Sequence scatterData = new Sequence();
     BinaryPredictionStats stats = new BinaryPredictionStats();
+    FeatureSet features = new FeatureSet(broker.accessObject);
+    for (int i = 2; i <= 12; ++i) {
+      Momentum momentum = new Momentum(20, 1, i * 20, (i - 1) * 20, FinLib.AdjClose, broker.accessObject);
+      features.add(momentum);
+    }
 
+    RegressionFV model = null;
+    List<RegressionExample> examples = new ArrayList<>();
     long ta = TimeLib.getTime();
     while (true) {
       final long timePredictStart = TimeLib.toNextBusinessDay(today);
@@ -160,14 +178,10 @@ public class AdaptiveAlloc
       // TimeLib.formatDate(today), TimeLib.formatDate(timePredictStart), TimeLib.formatDate(timePredictEnd));
 
       broker.setNewDay(new TimeInfo(today));
-      for (String name : fundSymbols) {
-        Sequence seq = store.get(name);
-        // store.lock(TimeLib.TIME_BEGIN, broker.getTime(), key);
-        seq.lock(0, seq.getClosestIndex(broker.getTime()), key);
-        double predictedReturn = predictor.getPrediction(name);
-        seq.unlock(key);
-        // store.unlock(key);
+      for (String assetName : fundSymbols) {
+        Sequence seq = store.get(assetName);
 
+        // Calculate actual return of following week.
         int index1 = seq.getIndexAt(timePredictStart);
         int index2 = seq.getIndexAt(timePredictEnd);
         if (index1 < 0 || index2 < 0) {
@@ -177,20 +191,34 @@ public class AdaptiveAlloc
         }
         double priceFrom = PriceModel.adjOpenModel.getPrice(seq.get(index1));
         double priceTo = PriceModel.adjOpenModel.getPrice(seq.get(index2));
-        double actualReturn = FinLib.mul2ret(priceTo / priceFrom);
+        double actualMul = priceTo / priceFrom;
+        double actualReturn = FinLib.mul2ret(actualMul);
 
-        String title = String.format("%s [%s]", name, TimeLib.formatDate(today));
-        FeatureVec scatter = new FeatureVec(title, 2, predictedReturn, actualReturn);
-        if (stats.size() % 29 == 0) {
-          scatterData.addData(scatter, today);
+        // Extract features for predicting the return.
+        // store.lock(TimeLib.TIME_BEGIN, broker.getTime(), key);
+        seq.lock(0, seq.getClosestIndex(broker.getTime()), key);
+        FeatureVec fv = features.calculate(assetName);
+        seq.unlock(key);
+        // store.unlock(key);
+
+        if (today >= timeStartSim) {
+          // double predictedReturn = FinLib.mul2ret(model.predict(fv));
+          double predictedReturn = FinLib.mul2ret(fv.get(5));
+          // System.out.printf("%s  %.3f [%s]\n", fe, fv.get(0), TimeLib.formatDate(fv.getTime()));
+
+          String title = String.format("%s [%s]", assetName, TimeLib.formatDate(today));
+          FeatureVec scatter = new FeatureVec(title, 2, predictedReturn, actualReturn);
+          if (stats.size() % 29 == 0) {
+            scatterData.addData(scatter, today);
+          }
+          stats.add(predictedReturn, actualReturn);
         }
-        stats.add(predictedReturn, actualReturn);
+
+        // Add the current week as an example for the future.
+        examples.add(new RegressionExample(fv, actualMul));
       }
-
-      // System.out.printf("[%s] %5.2f -> %5.2f  %s\n", TimeLib.formatDate2(today), predictedReturn, actualReturn,
-      // stats);
-      // System.out.println(stats);
-
+      // model = LinearRegression.learnRidge(examples, 0.01);
+      // System.out.printf("[%s] %s\n", TimeLib.formatDate(today), stats);
       today = TimeLib.toMs(TimeLib.toLastBusinessDayOfWeek(TimeLib.ms2date(today).plusWeeks(1)));
     }
     long tb = TimeLib.getTime();
@@ -228,11 +256,11 @@ public class AdaptiveAlloc
       System.out.printf("r = %f\n", r);
     }
 
-    Chart.saveScatterPlot(new File(outputDir, "predictions-raw.html"), "Predictions: " + config, 1000, 1000, 3,
-        new String[] { "Predicted", "Actual" }, scatterData);
+    Chart.saveScatterPlot(new File(outputDir, "predictions-raw.html"), "Predictions", 1000, 1000, 3, new String[] {
+        "Predicted", "Actual" }, scatterData);
 
-    Chart.saveScatterPlot(new File(outputDir, "predictions-aligned.html"), "Predictions: " + config, 1000, 1000, 3,
-        new String[] { "Predicted", "Actual" }, scatterAligned);
+    Chart.saveScatterPlot(new File(outputDir, "predictions-aligned.html"), "Predictions", 1000, 1000, 3, new String[] {
+        "Predicted", "Actual" }, scatterAligned);
   }
 
   public static void main(String[] args) throws IOException
@@ -280,7 +308,7 @@ public class AdaptiveAlloc
     long timeSimStart = TimeLib.toMs(TimeLib.ms2date(commonStart).plusMonths(12)
         .with(TemporalAdjusters.firstDayOfMonth()));
     double nSimMonths = TimeLib.monthsBetween(timeSimStart, commonEnd);
-    System.out.printf("Simulation Start: [%s] (%.1f months)\n", TimeLib.formatDate(timeSimStart), nSimMonths);
+    // System.out.printf("Simulation Start: [%s] (%.1f months)\n", TimeLib.formatDate(timeSimStart), nSimMonths);
 
     // Extract common subsequence from each data sequence and add to the sequence store.
     for (int i = 0; i < seqs.size(); ++i) {
@@ -387,13 +415,13 @@ public class AdaptiveAlloc
     // tradeFreq, FinLib.AdjClose);
 
     // Adaptive Asset Allocation (Equal Weight).
-    // PredictorConfig equalWeightConfig1 = ConfigAdaptive.buildEqualWeight(40, 100, 80, 0.5, 4, pctQuantum, tradeFreq,
-    // FinLib.AdjClose);
+    PredictorConfig equalWeightConfig1 = ConfigAdaptive.buildEqualWeight(40, 100, 80, 0.5, 4, pctQuantum, tradeFreq,
+        FinLib.AdjClose);
 
     // for (int x = 20; x <= 220; x += 20) {
     // System.out.printf("Month: %d\n", x / 20 + 1);
-    config = ConfigAdaptive.buildEqualWeight(20, 120, 100, 0.5, 4, pctQuantum, tradeFreq, FinLib.AdjClose);
-    genPredictionMap(config, guideSeq, outputDir);
+    // config = ConfigAdaptive.buildEqualWeight(20, 120, 100, 0.5, 4, pctQuantum, tradeFreq, FinLib.AdjClose);
+    genPredictionMap(guideSeq, outputDir);
 
     // PredictorConfig equalWeightConfig2 = new ConfigAdaptive(-1, -1, Weighting.Equal, 20, 120, 100, 0.5, 2,
     // pctQuantum,

@@ -107,9 +107,10 @@ public class FeatureVec
   }
 
   /** set the time stamp of this point (ms) */
-  public void setTime(long ms)
+  public FeatureVec setTime(long ms)
   {
     timestamp = ms;
+    return this;
   }
 
   /** @return time stamp for this point (ms) */
@@ -180,6 +181,11 @@ public class FeatureVec
     for (int i = 0; i < n; i++)
       vec[i] = fv.get(i);
     timestamp = fv.timestamp;
+  }
+
+  public FeatureVec dup()
+  {
+    return new FeatureVec(this);
   }
 
   /**
