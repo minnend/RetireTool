@@ -578,13 +578,13 @@ public final class FinLib
 
     final double monthlyExpenseRatio = (expenseRatio / 100.0) / 12.0;
     double balance = principal;
-    double totalDeposit = principal;
+    // double totalDeposit = principal;
     for (int i = iStart; i < iStart + nMonths; ++i) {
       // Make deposit at start of year.
       LocalDate date = TimeLib.ms2date(cumulativeReturns.getTimeMS(i));
       if (date.getMonth() == Month.JANUARY) {
         balance += depStartOfYear;
-        totalDeposit += depStartOfYear;
+        // totalDeposit += depStartOfYear;
       }
 
       // Update balance based on investment returns.
@@ -595,7 +595,7 @@ public final class FinLib
 
       // Deposit at end of the month.
       balance += depEndOfMonth;
-      totalDeposit += depEndOfMonth;
+      // totalDeposit += depEndOfMonth;
     }
 
     return balance;

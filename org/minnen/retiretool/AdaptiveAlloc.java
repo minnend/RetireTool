@@ -40,6 +40,8 @@ import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
+import org.ojalgo.matrix.BasicMatrix;
+import org.ojalgo.matrix.PrimitiveMatrix;
 
 public class AdaptiveAlloc
 {
@@ -141,13 +143,13 @@ public class AdaptiveAlloc
     final long timeLearnStart = store.getCommonStartTime();
     final long timeFirstAbleToPredict = TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(timeLearnStart)
         .plusMonths(6))); // TODO pull requirements from config/predictor
-    System.out.printf("First Able to Predict: [%s]\n", TimeLib.formatDate(timeFirstAbleToPredict));
+    // System.out.printf("First Able to Predict: [%s]\n", TimeLib.formatDate(timeFirstAbleToPredict));
     long today = TimeLib.toLastBusinessDayOfWeek(timeFirstAbleToPredict);
 
     Sequence scatterData = new Sequence();
     BinaryPredictionStats stats = new BinaryPredictionStats();
 
-    long a = TimeLib.getTime();
+    long ta = TimeLib.getTime();
     while (true) {
       final long timePredictStart = TimeLib.toNextBusinessDay(today);
       final long timePredictEnd = TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.toLastBusinessDayOfWeek(TimeLib
@@ -182,7 +184,7 @@ public class AdaptiveAlloc
         if (stats.size() % 29 == 0) {
           scatterData.addData(scatter, today);
         }
-        stats.add(predictedReturn > 0.0, actualReturn > 0.0);
+        stats.add(predictedReturn, actualReturn);
       }
 
       // System.out.printf("[%s] %5.2f -> %5.2f  %s\n", TimeLib.formatDate2(today), predictedReturn, actualReturn,
@@ -191,11 +193,46 @@ public class AdaptiveAlloc
 
       today = TimeLib.toMs(TimeLib.toLastBusinessDayOfWeek(TimeLib.ms2date(today).plusWeeks(1)));
     }
-    long b = TimeLib.getTime();
+    long tb = TimeLib.getTime();
 
-    System.out.printf("%s  (%s)\n", stats, TimeLib.formatDuration(b - a));
-    Chart.saveScatterPlot(new File(outputDir, "predictions.html"), "Predictions: " + config, 1000, 1000, 3,
+    System.out.printf("%s  (%s)\n", stats, TimeLib.formatDuration(tb - ta));
+    System.out.printf("Paired: %.2f%%\n", stats.weightedPairedAccuracy());
+
+    Sequence scatterAligned = scatterData.dup();
+    {
+      int nr = scatterData.size();
+      BasicMatrix.Builder<PrimitiveMatrix> builder = PrimitiveMatrix.getBuilder(nr, 1);
+      for (int i = 0; i < nr; ++i) {
+        double v = scatterData.get(i, 0);
+        builder.set(i, 0, v);
+      }
+      PrimitiveMatrix A = builder.build();
+
+      builder = PrimitiveMatrix.getBuilder(nr, 1);
+      for (int i = 0; i < nr; ++i) {
+        builder.set(i, 0, scatterData.get(i, 1));
+      }
+      PrimitiveMatrix b = builder.build();
+
+      PrimitiveMatrix x = A.solve(b);
+      // System.out.println(x);
+
+      PrimitiveMatrix m = A.multiply(x);
+      double r = 0.0;
+      for (int i = 0; i < nr; ++i) {
+        double v = m.get(i, 0);
+        double diff = v - b.get(i, 0);
+        r += diff * diff;
+        scatterAligned.get(i).set(0, v);
+      }
+      System.out.printf("r = %f\n", r);
+    }
+
+    Chart.saveScatterPlot(new File(outputDir, "predictions-raw.html"), "Predictions: " + config, 1000, 1000, 3,
         new String[] { "Predicted", "Actual" }, scatterData);
+
+    Chart.saveScatterPlot(new File(outputDir, "predictions-aligned.html"), "Predictions: " + config, 1000, 1000, 3,
+        new String[] { "Predicted", "Actual" }, scatterAligned);
   }
 
   public static void main(String[] args) throws IOException
@@ -350,13 +387,14 @@ public class AdaptiveAlloc
     // tradeFreq, FinLib.AdjClose);
 
     // Adaptive Asset Allocation (Equal Weight).
-    PredictorConfig equalWeightConfig1 = ConfigAdaptive.buildEqualWeight(40, 100, 80, 0.5, 4, pctQuantum, tradeFreq,
-        FinLib.AdjClose);
+    // PredictorConfig equalWeightConfig1 = ConfigAdaptive.buildEqualWeight(40, 100, 80, 0.5, 4, pctQuantum, tradeFreq,
+    // FinLib.AdjClose);
 
     // for (int x = 20; x <= 220; x += 20) {
+    // System.out.printf("Month: %d\n", x / 20 + 1);
     config = ConfigAdaptive.buildEqualWeight(20, 120, 100, 0.5, 4, pctQuantum, tradeFreq, FinLib.AdjClose);
     genPredictionMap(config, guideSeq, outputDir);
-    // }
+
     // PredictorConfig equalWeightConfig2 = new ConfigAdaptive(-1, -1, Weighting.Equal, 20, 120, 100, 0.5, 2,
     // pctQuantum,
     // tradeFreq, FinLib.AdjClose);

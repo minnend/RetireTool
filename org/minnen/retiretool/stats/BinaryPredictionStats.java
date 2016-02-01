@@ -1,14 +1,32 @@
 package org.minnen.retiretool.stats;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class BinaryPredictionStats
 {
-  private final int[][] counts = new int[2][2];
-
-  public void add(boolean predicted, boolean actual)
+  private static class Pair
   {
-    int iPred = predicted ? 1 : 0;
-    int iTrue = actual ? 1 : 0;
+    public double predicted, actual;
+
+    public Pair(double predicted, double actual)
+    {
+      this.predicted = predicted;
+      this.actual = actual;
+    }
+  }
+
+  private final int[][]    counts   = new int[2][2];
+  private final List<Pair> examples = new ArrayList<>();
+
+  public void add(double predicted, double actual)
+  {
+    boolean bPredicted = predicted > 0.0;
+    boolean bActual = actual > 0.0;
+    int iPred = bPredicted ? 1 : 0;
+    int iTrue = bActual ? 1 : 0;
     ++counts[iPred][iTrue];
+    examples.add(new Pair(predicted, actual));
   }
 
   public int numPred(boolean pred)
@@ -52,6 +70,36 @@ public class BinaryPredictionStats
 
     int i = pred ? 1 : 0;
     return 100.0 * counts[i][i] / nPred;
+  }
+
+  public double weightedPairedAccuracy()
+  {
+    final int N = examples.size();
+    if (N < 2) return 0.0;
+
+    int step = N > 5000 ? 2 : 1;
+    double nCorrect = 0;
+    double nPairs = 0;
+    for (int i = 0; i < N; i += step) {
+      Pair pi = examples.get(i);
+      for (int j = i + 1; j < N; j += step) {
+        Pair pj = examples.get(j);
+        double diff = Math.abs(pi.predicted - pj.predicted);
+        if (pi.predicted > pj.predicted) {
+          if (pi.actual > pj.actual) {
+            nCorrect += diff;
+          }
+        } else {
+          if (pi.actual < pj.actual) {
+            nCorrect += diff;
+          }
+        }
+        nPairs += diff;
+      }
+    }
+
+    // System.out.printf("Paired Accuracy: %.2f / %.2f\n", nCorrect, nPairs);
+    return 100.0 * nCorrect / nPairs;
   }
 
   @Override

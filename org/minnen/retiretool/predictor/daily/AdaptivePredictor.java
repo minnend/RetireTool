@@ -165,11 +165,7 @@ public class AdaptivePredictor extends Predictor
       if (name.equals("cash")) {
         moms.add(new MomScore("cash", -100.0));
       } else {
-        Sequence seq = brokerAccess.getSeq(name);
-        double now = seq.average(-config.nTriggerA, -config.nTriggerB, config.iPrice);
-        double before = seq.average(-config.nBaseA, -config.nBaseB, config.iPrice);
-        double mul = now / before;
-        double score = FinLib.mul2ret(mul);
+        double score = getPrediction(name);
         moms.add(new MomScore(name, score));
       }
     }
