@@ -34,7 +34,7 @@ public class RegressionModel implements Regression<FeatureVec>
   /**
    * Learn model parameters using the given trainer
    */
-  public static RegressionModel learn(List<RegressionExample> examples, RegressionTrainer<double[]> trainer)
+  public static RegressionModel learn(List<Example> examples, RegressionTrainer<double[]> trainer)
   {
     // Setup the data for learning.
     final int N = examples.size();
@@ -43,7 +43,8 @@ public class RegressionModel implements Regression<FeatureVec>
     double[][] x = new double[N][D];
     double[] y = new double[N];
     for (int i = 0; i < N; ++i) {
-      RegressionExample example = examples.get(i);
+      Example example = examples.get(i);
+      assert example.supportsRegression();
       System.arraycopy(example.x.get(), 0, x[i], 0, D);
       y[i] = example.y;
     }
@@ -53,19 +54,19 @@ public class RegressionModel implements Regression<FeatureVec>
     return new RegressionModel(model);
   }
 
-  public static RegressionModel learnRidge(List<RegressionExample> examples, double lambda)
+  public static RegressionModel learnRidge(List<Example> examples, double lambda)
   {
     RidgeRegression.Trainer trainer = new RidgeRegression.Trainer(lambda);
     return learn(examples, trainer);
   }
 
-  public static RegressionModel learnLasso(List<RegressionExample> examples, double lambda)
+  public static RegressionModel learnLasso(List<Example> examples, double lambda)
   {
     LASSO.Trainer trainer = new LASSO.Trainer(lambda);
     return learn(examples, trainer);
   }
 
-  public static RegressionModel learnRF(List<RegressionExample> examples, int nTrees, int nRandFeatures, int nNodes)
+  public static RegressionModel learnRF(List<Example> examples, int nTrees, int nRandFeatures, int nNodes)
   {
     if (nRandFeatures < 0) {
       int nFeatures = examples.get(0).x.getNumDims();
@@ -80,7 +81,7 @@ public class RegressionModel implements Regression<FeatureVec>
     return learn(examples, trainer);
   }
 
-  public static RegressionModel learnTree(List<RegressionExample> examples)
+  public static RegressionModel learnTree(List<Example> examples)
   {
     RegressionTree.Trainer trainer = new RegressionTree.Trainer(20).setNodeSize(5);
     return learn(examples, trainer);

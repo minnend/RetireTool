@@ -21,8 +21,9 @@ import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.data.Sequence.EndpointBehavior;
+import org.minnen.retiretool.ml.ClassificationModel;
 import org.minnen.retiretool.ml.RegressionModel;
-import org.minnen.retiretool.ml.RegressionExample;
+import org.minnen.retiretool.ml.Example;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive.TradeFreq;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive.Weighting;
@@ -167,7 +168,7 @@ public class AdaptiveAlloc
     // features.add(new Momentum(5, 1, 10, 5, FinLib.AdjClose, broker.accessObject));
 
     RegressionModel model = null;
-    List<RegressionExample> examples = new ArrayList<>();
+    List<Example> examples = new ArrayList<>();
     long ta = TimeLib.getTime();
     while (true) {
       final long timePredictStart = TimeLib.toNextBusinessDay(today);
@@ -215,7 +216,7 @@ public class AdaptiveAlloc
         }
 
         // Add the current week as an example for the future.
-        RegressionExample example = new RegressionExample(fv, actualMul);
+        Example example = Example.forRegression(fv, actualMul);
         // System.out.println(example);
         examples.add(example);
       }
@@ -268,8 +269,8 @@ public class AdaptiveAlloc
         "Predicted", "Actual" }, scatterAligned);
   }
 
-  public static void genPredictionData(Sequence guideSeq, List<RegressionExample> pointExamples,
-      List<RegressionExample> pairExamples, File outputDir) throws IOException
+  public static void genPredictionData(Sequence guideSeq, List<Example> pointExamples, List<Example> pairExamples,
+      File outputDir) throws IOException
   {
     final long key = Sequence.Lock.genKey();
     final long timeDataStart = store.getCommonStartTime();
@@ -298,7 +299,7 @@ public class AdaptiveAlloc
       if (timePredictEnd > guideSeq.getEndMS()) break;
 
       broker.setNewDay(new TimeInfo(today));
-      List<RegressionExample> examples = new ArrayList<>();
+      List<Example> examples = new ArrayList<>();
       for (String assetName : fundSymbols) {
         Sequence seq = store.get(assetName);
 
@@ -321,55 +322,87 @@ public class AdaptiveAlloc
         seq.unlock(key);
 
         // Add the current week as an example for the future.
-        RegressionExample example = new RegressionExample(fv, actualReturn);
+        Example example = Example.forBoth(fv, actualReturn, actualReturn > 0.0 ? 1 : 0);
         examples.add(example);
         // System.out.println(example);
       }
       pointExamples.addAll(examples);
       for (int i = 0; i < examples.size(); ++i) {
-        RegressionExample exi = examples.get(i);
+        Example exi = examples.get(i);
         for (int j = i + 1; j < examples.size(); ++j) {
-          RegressionExample exj = examples.get(j);
+          Example exj = examples.get(j);
           double dy = exj.y - exi.y;
           if (Math.abs(dy) < 0.5) continue;
           FeatureVec dx = exj.x.sub(exi.x);
-          RegressionExample pairExample = new RegressionExample(dx, dy);
+          Example pairExample = Example.forBoth(dx, dy, dy > 0.0 ? 1 : 0);
           pairExamples.add(pairExample);
         }
       }
 
       today = TimeLib.toMs(TimeLib.toLastBusinessDayOfWeek(TimeLib.ms2date(today).plusWeeks(1)));
     }
-    FeatureVec mean = RegressionExample.mean(pointExamples);
+    FeatureVec mean = Example.mean(pointExamples);
     System.out.printf("Pointwise Examples: %d\n", pointExamples.size());
     System.out.printf(" Mean: %s\n", mean);
 
-    mean = RegressionExample.mean(pairExamples);
+    mean = Example.mean(pairExamples);
     System.out.printf("Pairwise Examples: %d\n", pairExamples.size());
     System.out.printf(" Mean: %s\n", mean);
 
     if (outputDir != null) {
-      RegressionExample.save(pointExamples, new File(outputDir, "point-examples.txt"));
-      RegressionExample.save(pairExamples, new File(outputDir, "pair-examples.txt"));
+      Example.saveRegression(pointExamples, new File(outputDir, "point-examples.txt"));
+      Example.saveRegression(pairExamples, new File(outputDir, "pair-examples.txt"));
     }
   }
 
-  public static void predictRank(List<RegressionExample> examples)
+  public static void predictRank(List<Example> examples)
   {
     int kFolds = 5;
+    double accuracySum = 0.0;
     for (int iFold = 0; iFold < kFolds; ++iFold) {
-      List<RegressionExample> train = new ArrayList<RegressionExample>();
-      List<RegressionExample> test = new ArrayList<RegressionExample>();
-      RegressionExample.getFold(iFold, kFolds, train, test, examples);
-      RegressionModel model = RegressionModel.learnRF(train, 20, -1, 128);
+      List<Example> train = new ArrayList<Example>();
+      List<Example> test = new ArrayList<Example>();
+      Example.getFold(iFold, kFolds, train, test, examples);
+      // RegressionModel model = RegressionModel.learnRF(train, 10, -1, 128);
+      ClassificationModel model = ClassificationModel.learnRF(train, 10, -1, 128);
 
       int nc = 0;
-      for (RegressionExample example : test) {
-        double y = model.predict(example.x);
-        if (y * example.y > 0) ++nc;
+      for (Example example : test) {
+        assert example.supportsClassification();
+        int k = model.predict(example.x);
+        if (k == example.k) ++nc;
       }
-      System.out.printf(" %.3f\n", 100.0 * nc / test.size());
+      double accuracy = 100.0 * nc / test.size();
+      accuracySum += accuracy;
+      System.out.printf(" %.3f  (%d / %d)\n", accuracy, nc, test.size());
     }
+    accuracySum /= kFolds;
+    System.out.printf("Mean: %.3f\n", accuracySum);
+  }
+
+  public static void predictAbsolute(List<Example> examples)
+  {
+    int kFolds = 5;
+    double accuracySum = 0.0;
+    for (int iFold = 0; iFold < kFolds; ++iFold) {
+      List<Example> train = new ArrayList<Example>();
+      List<Example> test = new ArrayList<Example>();
+      Example.getFold(iFold, kFolds, train, test, examples);
+      ClassificationModel model = ClassificationModel.learnRF(train, 10, -1, 128);
+
+      int nc = 0;
+      for (Example example : test) {
+        assert example.supportsClassification();
+        int k = model.predict(example.x);
+        // int k = (example.x.get(10) >= 0.0 ? 1 : 0);
+        if (k == example.k) ++nc;
+      }
+      double accuracy = 100.0 * nc / test.size();
+      accuracySum += accuracy;
+      System.out.printf(" %.3f  (%d / %d)\n", accuracy, nc, test.size());
+    }
+    accuracySum /= kFolds;
+    System.out.printf("Mean: %.3f\n", accuracySum);
   }
 
   public static void main(String[] args) throws IOException
@@ -532,13 +565,14 @@ public class AdaptiveAlloc
     // config = ConfigAdaptive.buildEqualWeight(20, 120, 100, 0.5, 4, pctQuantum, tradeFreq, FinLib.AdjClose);
     // genPredictionMap(guideSeq, outputDir);
 
-    List<RegressionExample> pointExamples = new ArrayList<>();
-    List<RegressionExample> pairExamples = new ArrayList<>();
-    genPredictionData(guideSeq, pointExamples, pairExamples, outputDir);
+    List<Example> pointExamples = new ArrayList<>();
+    List<Example> pairExamples = new ArrayList<>();
+    genPredictionData(guideSeq, pointExamples, pairExamples, null); // outputDir);
 
     // predictRank(pairExamples);
+    predictAbsolute(pointExamples);
 
-    RegressionModel modelRank = RegressionModel.learnRF(pairExamples, 10, -1, 128);
+    // ClassificationModel modelRank = ClassificationModel.learnRF(pairExamples, 10, -1, 64);
 
     // PredictorConfig equalWeightConfig2 = new ConfigAdaptive(-1, -1, Weighting.Equal, 20, 120, 100, 0.5, 2,
     // pctQuantum,
