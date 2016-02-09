@@ -3,6 +3,7 @@ package org.minnen.retiretool.predictor.config;
 import org.minnen.retiretool.broker.BrokerInfoAccess;
 import org.minnen.retiretool.predictor.daily.AdaptivePredictor;
 import org.minnen.retiretool.predictor.daily.Predictor;
+import org.minnen.retiretool.predictor.features.Momentum;
 
 public class ConfigAdaptive extends PredictorConfig
 {
@@ -14,19 +15,21 @@ public class ConfigAdaptive extends PredictorConfig
     Weekly, Monthly
   }
 
-  public final int       nCorrelation;
-  public final double    minWeight;
-  public final double    maxWeight;
-  public final Weighting weighting;
-  public final int       nTriggerA;
-  public final int       nTriggerB;
-  public final int       nBaseA;
-  public final int       nBaseB;
-  public final double    maxKeepFrac;
-  public final int       maxKeep;
-  public final int       pctQuantum;
-  public final TradeFreq tradeFreq;
-  public final int       iPrice;
+  public final int                     nCorrelation;
+  public final double                  minWeight;
+  public final double                  maxWeight;
+  public final Weighting               weighting;
+  public final int                     nTriggerA;
+  public final int                     nTriggerB;
+  public final int                     nBaseA;
+  public final int                     nBaseB;
+  public final double                  maxKeepFrac;
+  public final int                     maxKeep;
+  public final int                     pctQuantum;
+  public final TradeFreq               tradeFreq;
+  public final Momentum.ReturnOrMul    returnOrMul;
+  public final Momentum.CompoundPeriod compoundPeriod;
+  public final int                     iPrice;
 
   public ConfigAdaptive(int nCorrelation, double maxWeight, Weighting weighting, int nTrigger, int nBaseA, int nBaseB,
       double maxKeepFrac, int maxKeep, int pctQuantum, TradeFreq tradeFreq, int iPrice)
@@ -44,6 +47,10 @@ public class ConfigAdaptive extends PredictorConfig
     this.pctQuantum = pctQuantum;
     this.tradeFreq = tradeFreq;
     this.iPrice = iPrice;
+
+    // TODO make configurable
+    returnOrMul = Momentum.ReturnOrMul.Return;
+    compoundPeriod = Momentum.CompoundPeriod.Total;
   }
 
   @Override

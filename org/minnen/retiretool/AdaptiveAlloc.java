@@ -21,8 +21,7 @@ import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.data.Sequence.EndpointBehavior;
-import org.minnen.retiretool.ml.LinearRegression;
-import org.minnen.retiretool.ml.RegressionFV;
+import org.minnen.retiretool.ml.RegressionModel;
 import org.minnen.retiretool.ml.RegressionExample;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive.TradeFreq;
@@ -161,11 +160,13 @@ public class AdaptiveAlloc
     BinaryPredictionStats stats = new BinaryPredictionStats();
     FeatureSet features = new FeatureSet(broker.accessObject);
     for (int i = 2; i <= 12; ++i) {
-      Momentum momentum = new Momentum(20, 1, i * 20, (i - 1) * 20, FinLib.AdjClose, broker.accessObject);
+      Momentum momentum = new Momentum(20, 1, i * 20, (i - 1) * 20, Momentum.ReturnOrMul.Return,
+          Momentum.CompoundPeriod.Weekly, FinLib.AdjClose, broker.accessObject);
       features.add(momentum);
     }
+    // features.add(new Momentum(5, 1, 10, 5, FinLib.AdjClose, broker.accessObject));
 
-    RegressionFV model = null;
+    RegressionModel model = null;
     List<RegressionExample> examples = new ArrayList<>();
     long ta = TimeLib.getTime();
     while (true) {
@@ -202,9 +203,8 @@ public class AdaptiveAlloc
         // store.unlock(key);
 
         if (today >= timeStartSim) {
-          // double predictedReturn = FinLib.mul2ret(model.predict(fv));
-          double predictedReturn = FinLib.mul2ret(fv.get(5));
-          // System.out.printf("%s  %.3f [%s]\n", fe, fv.get(0), TimeLib.formatDate(fv.getTime()));
+          double predictedMul = model.predict(fv);
+          double predictedReturn = FinLib.mul2ret(predictedMul);
 
           String title = String.format("%s [%s]", assetName, TimeLib.formatDate(today));
           FeatureVec scatter = new FeatureVec(title, 2, predictedReturn, actualReturn);
@@ -215,10 +215,15 @@ public class AdaptiveAlloc
         }
 
         // Add the current week as an example for the future.
-        examples.add(new RegressionExample(fv, actualMul));
+        RegressionExample example = new RegressionExample(fv, actualMul);
+        // System.out.println(example);
+        examples.add(example);
       }
-      // model = LinearRegression.learnRidge(examples, 0.01);
-      // System.out.printf("[%s] %s\n", TimeLib.formatDate(today), stats);
+      // model = RegressionModel.learnRidge(examples, 1.0);
+      // model = RegressionModel.learnLasso(examples, 20.0);
+      // model = RegressionModel.learnRF(examples, 20, -1);
+      model = RegressionModel.learnTree(examples);
+      System.out.printf("[%s] %s\n", TimeLib.formatDate(today), stats);
       today = TimeLib.toMs(TimeLib.toLastBusinessDayOfWeek(TimeLib.ms2date(today).plusWeeks(1)));
     }
     long tb = TimeLib.getTime();
@@ -261,6 +266,110 @@ public class AdaptiveAlloc
 
     Chart.saveScatterPlot(new File(outputDir, "predictions-aligned.html"), "Predictions", 1000, 1000, 3, new String[] {
         "Predicted", "Actual" }, scatterAligned);
+  }
+
+  public static void genPredictionData(Sequence guideSeq, List<RegressionExample> pointExamples,
+      List<RegressionExample> pairExamples, File outputDir) throws IOException
+  {
+    final long key = Sequence.Lock.genKey();
+    final long timeDataStart = store.getCommonStartTime();
+
+    // TODO pull requirements from config/predictor
+    final long timeFirstAbleToPredict = TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(timeDataStart)
+        .plusWeeks(49)));
+    long today = TimeLib.toLastBusinessDayOfWeek(timeFirstAbleToPredict);
+    System.out.printf("Prediction Data Range: [%s] -> [%s]\n", TimeLib.formatDate(today),
+        TimeLib.formatDate(guideSeq.getEndMS()));
+
+    Broker broker = new Broker(store, Slippage.None, guideSeq);
+    FeatureSet features = new FeatureSet(broker.accessObject);
+    for (int i = 2; i <= 12; ++i) {
+      Momentum momentum = new Momentum(20, 1, i * 20, (i - 1) * 20, Momentum.ReturnOrMul.Return,
+          Momentum.CompoundPeriod.Weekly, FinLib.AdjClose, broker.accessObject);
+      features.add(momentum);
+    }
+    // features.add(new Momentum(5, 1, 10, 5, FinLib.AdjClose, broker.accessObject));
+    System.out.printf("Features: %d\n", features.size());
+
+    while (true) {
+      final long timePredictStart = TimeLib.toNextBusinessDay(today);
+      final long timePredictEnd = TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.toLastBusinessDayOfWeek(TimeLib
+          .ms2date(today).plusWeeks(1))));
+      if (timePredictEnd > guideSeq.getEndMS()) break;
+
+      broker.setNewDay(new TimeInfo(today));
+      List<RegressionExample> examples = new ArrayList<>();
+      for (String assetName : fundSymbols) {
+        Sequence seq = store.get(assetName);
+
+        // Calculate actual return of following week.
+        int index1 = seq.getIndexAt(timePredictStart);
+        int index2 = seq.getIndexAt(timePredictEnd);
+        if (index1 < 0 || index2 < 0) {
+          // System.out.printf("[%s]=%d  [%s]=%d\n", TimeLib.formatDate(timePredictStart), index1,
+          // TimeLib.formatDate(timePredictEnd), index2);
+          break;
+        }
+        double priceFrom = PriceModel.adjOpenModel.getPrice(seq.get(index1));
+        double priceTo = PriceModel.adjOpenModel.getPrice(seq.get(index2));
+        double actualMul = priceTo / priceFrom;
+        double actualReturn = FinLib.mul2ret(actualMul);
+
+        // Extract features for predicting the return.
+        seq.lock(0, seq.getClosestIndex(broker.getTime()), key);
+        FeatureVec fv = features.calculate(assetName);
+        seq.unlock(key);
+
+        // Add the current week as an example for the future.
+        RegressionExample example = new RegressionExample(fv, actualReturn);
+        examples.add(example);
+        // System.out.println(example);
+      }
+      pointExamples.addAll(examples);
+      for (int i = 0; i < examples.size(); ++i) {
+        RegressionExample exi = examples.get(i);
+        for (int j = i + 1; j < examples.size(); ++j) {
+          RegressionExample exj = examples.get(j);
+          double dy = exj.y - exi.y;
+          if (Math.abs(dy) < 0.5) continue;
+          FeatureVec dx = exj.x.sub(exi.x);
+          RegressionExample pairExample = new RegressionExample(dx, dy);
+          pairExamples.add(pairExample);
+        }
+      }
+
+      today = TimeLib.toMs(TimeLib.toLastBusinessDayOfWeek(TimeLib.ms2date(today).plusWeeks(1)));
+    }
+    FeatureVec mean = RegressionExample.mean(pointExamples);
+    System.out.printf("Pointwise Examples: %d\n", pointExamples.size());
+    System.out.printf(" Mean: %s\n", mean);
+
+    mean = RegressionExample.mean(pairExamples);
+    System.out.printf("Pairwise Examples: %d\n", pairExamples.size());
+    System.out.printf(" Mean: %s\n", mean);
+
+    if (outputDir != null) {
+      RegressionExample.save(pointExamples, new File(outputDir, "point-examples.txt"));
+      RegressionExample.save(pairExamples, new File(outputDir, "pair-examples.txt"));
+    }
+  }
+
+  public static void predictRank(List<RegressionExample> examples)
+  {
+    int kFolds = 5;
+    for (int iFold = 0; iFold < kFolds; ++iFold) {
+      List<RegressionExample> train = new ArrayList<RegressionExample>();
+      List<RegressionExample> test = new ArrayList<RegressionExample>();
+      RegressionExample.getFold(iFold, kFolds, train, test, examples);
+      RegressionModel model = RegressionModel.learnRF(train, 20, -1, 128);
+
+      int nc = 0;
+      for (RegressionExample example : test) {
+        double y = model.predict(example.x);
+        if (y * example.y > 0) ++nc;
+      }
+      System.out.printf(" %.3f\n", 100.0 * nc / test.size());
+    }
   }
 
   public static void main(String[] args) throws IOException
@@ -421,7 +530,15 @@ public class AdaptiveAlloc
     // for (int x = 20; x <= 220; x += 20) {
     // System.out.printf("Month: %d\n", x / 20 + 1);
     // config = ConfigAdaptive.buildEqualWeight(20, 120, 100, 0.5, 4, pctQuantum, tradeFreq, FinLib.AdjClose);
-    genPredictionMap(guideSeq, outputDir);
+    // genPredictionMap(guideSeq, outputDir);
+
+    List<RegressionExample> pointExamples = new ArrayList<>();
+    List<RegressionExample> pairExamples = new ArrayList<>();
+    genPredictionData(guideSeq, pointExamples, pairExamples, outputDir);
+
+    // predictRank(pairExamples);
+
+    RegressionModel modelRank = RegressionModel.learnRF(pairExamples, 10, -1, 128);
 
     // PredictorConfig equalWeightConfig2 = new ConfigAdaptive(-1, -1, Weighting.Equal, 20, 120, 100, 0.5, 2,
     // pctQuantum,

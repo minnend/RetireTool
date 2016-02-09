@@ -52,8 +52,8 @@ public class AdaptivePredictor extends Predictor
     super("Adaptive", brokerAccess, assetChoices);
     this.config = config;
     this.predictorType = PredictorType.Distribution;
-    this.momentumFE = new Momentum(config.nTriggerA, config.nTriggerB, config.nBaseA, config.nBaseB, config.iPrice,
-        brokerAccess);
+    this.momentumFE = new Momentum(config.nTriggerA, config.nTriggerB, config.nBaseA, config.nBaseB,
+        config.returnOrMul, config.compoundPeriod, config.iPrice, brokerAccess);
   }
 
   private double[] getEqualWeights(int n)
@@ -170,7 +170,7 @@ public class AdaptivePredictor extends Predictor
         moms.add(new MomScore("cash", -100.0));
       } else {
         double momentum = momentumFE.calculate(assetName).get(0);
-        double score = FinLib.mul2ret(momentum);
+        double score = FinLib.mul2ret(momentum); // TODO should be part of momentumFE
         moms.add(new MomScore(assetName, score));
       }
     }

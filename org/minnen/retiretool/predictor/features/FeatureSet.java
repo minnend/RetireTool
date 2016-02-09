@@ -14,7 +14,7 @@ public class FeatureSet extends FeatureExtractor
   {
     super("FeatureSet", brokerAccess);
     for (int i = 0; i < extractors.length; ++i) {
-      assert extractors[i].getNumFeatures() == 1; // TODO remove restriction
+      assert extractors[i].size() == 1; // TODO remove restriction
       this.extractors.add(extractors[i]);
     }
   }
@@ -33,7 +33,7 @@ public class FeatureSet extends FeatureExtractor
   }
 
   @Override
-  public int getNumFeatures()
+  public int size()
   {
     // TODO assumes each internal extractor only generates one features.
     return extractors.size();

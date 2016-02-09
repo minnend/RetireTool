@@ -11,7 +11,7 @@ import org.minnen.retiretool.util.TimeLib;
 
 @RunWith(Suite.class)
 @SuiteClasses({ TestBond.class, TestFinLib.class, TestFixedPoint.class, TestInvestmentStats.class, TestLibrary.class,
-    TestLinearRegression.class, TestMixablePredictor.class, TestSequence.class, TestSequenceStore.class,
+    TestRegression.class, TestMixablePredictor.class, TestSequence.class, TestSequenceStore.class,
     TestSequenceStoreV1.class, TestSlippage.class, TestTimeLib.class, })
 public class AllTests
 {

@@ -20,7 +20,7 @@ public abstract class FeatureExtractor
   public abstract FeatureVec calculate(String assetName);
 
   /** @return number of features calculated by this extractor. */
-  public int getNumFeatures()
+  public int size()
   {
     return 1;
   }
