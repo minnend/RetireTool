@@ -31,7 +31,7 @@ import org.minnen.retiretool.predictor.config.ConfigConst;
 import org.minnen.retiretool.predictor.config.ConfigMixed;
 import org.minnen.retiretool.predictor.config.ConfigTactical;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
-import org.minnen.retiretool.predictor.daily.AdaptivePredictor;
+import org.minnen.retiretool.predictor.daily.AdaptiveMomentumPredictor;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.predictor.daily.VolResPredictor;
 import org.minnen.retiretool.predictor.features.FeatureExtractor;
@@ -284,12 +284,21 @@ public class AdaptiveAlloc
 
     Broker broker = new Broker(store, Slippage.None, guideSeq);
     FeatureSet features = new FeatureSet(broker.accessObject);
+    // Add monthly momentum features.
     for (int i = 2; i <= 12; ++i) {
       Momentum momentum = new Momentum(20, 1, i * 20, (i - 1) * 20, Momentum.ReturnOrMul.Return,
           Momentum.CompoundPeriod.Weekly, FinLib.AdjClose, broker.accessObject);
       features.add(momentum);
     }
-    // features.add(new Momentum(5, 1, 10, 5, FinLib.AdjClose, broker.accessObject));
+    // Add weekly momentum features.
+    for (int i = 2; i <= 4; ++i) {
+      Momentum momentum = new Momentum(5, 1, i * 5, (i - 1) * 5, Momentum.ReturnOrMul.Return,
+          Momentum.CompoundPeriod.Weekly, FinLib.AdjClose, broker.accessObject);
+      features.add(momentum);
+    }
+    // Add daily momentum features.
+    features.add(new Momentum(2, 1, 5, 4, Momentum.ReturnOrMul.Return, Momentum.CompoundPeriod.Weekly, FinLib.AdjClose,
+        broker.accessObject));
     System.out.printf("Features: %d\n", features.size());
 
     while (true) {
@@ -394,7 +403,7 @@ public class AdaptiveAlloc
       for (Example example : test) {
         assert example.supportsClassification();
         int k = model.predict(example.x);
-        // int k = (example.x.get(10) >= 0.0 ? 1 : 0);
+        // int k = (example.x.get(13) >= 0.0 ? 1 : 0);
         if (k == example.k) ++nc;
       }
       double accuracy = 100.0 * nc / test.size();

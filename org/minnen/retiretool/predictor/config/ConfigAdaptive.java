@@ -1,7 +1,7 @@
 package org.minnen.retiretool.predictor.config;
 
 import org.minnen.retiretool.broker.BrokerInfoAccess;
-import org.minnen.retiretool.predictor.daily.AdaptivePredictor;
+import org.minnen.retiretool.predictor.daily.AdaptiveMomentumPredictor;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.predictor.features.Momentum;
 
@@ -69,7 +69,7 @@ public class ConfigAdaptive extends PredictorConfig
   @Override
   public Predictor build(BrokerInfoAccess brokerAccess, String... assetNames)
   {
-    return new AdaptivePredictor(this, brokerAccess, assetNames);
+    return new AdaptiveMomentumPredictor(this, brokerAccess, assetNames);
   }
 
   @Override

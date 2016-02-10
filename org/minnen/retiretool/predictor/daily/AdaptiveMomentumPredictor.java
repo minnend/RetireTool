@@ -15,7 +15,7 @@ import org.minnen.retiretool.predictor.features.Momentum;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Library;
 
-public class AdaptivePredictor extends Predictor
+public class AdaptiveMomentumPredictor extends Predictor
 {
   private final ConfigAdaptive config;
   private DiscreteDistribution prevDistribution = null;
@@ -47,7 +47,7 @@ public class AdaptivePredictor extends Predictor
     }
   }
 
-  public AdaptivePredictor(ConfigAdaptive config, BrokerInfoAccess brokerAccess, String... assetChoices)
+  public AdaptiveMomentumPredictor(ConfigAdaptive config, BrokerInfoAccess brokerAccess, String... assetChoices)
   {
     super("Adaptive", brokerAccess, assetChoices);
     this.config = config;

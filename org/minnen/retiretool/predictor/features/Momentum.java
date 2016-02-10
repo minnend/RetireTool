@@ -49,7 +49,7 @@ public class Momentum extends FeatureExtractor
     // Adjust total multiplier for different compounding periods.
     if (compoundPeriod != CompoundPeriod.Total) {
       int nBusinessDays = ((nBaseA + nBaseB + 1) - (nTriggerA + nTriggerB)) / 2;
-      double nWeeks = nBusinessDays / 5;
+      double nWeeks = nBusinessDays / 5.0;
       // System.out.printf("%s  nbd=%d  nw=%.2f\n", this, nBusinessDays, nWeeks);
       if (compoundPeriod == CompoundPeriod.Annually) {
         double nYears = nWeeks / 52.0;
