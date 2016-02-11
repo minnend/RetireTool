@@ -10,10 +10,7 @@ import org.minnen.retiretool.ml.ClassificationModel;
 import org.minnen.retiretool.ml.rank.Ranker;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive.TradeFreq;
 import org.minnen.retiretool.predictor.features.FeatureExtractor;
-import org.minnen.retiretool.predictor.features.Momentum;
-import org.minnen.retiretool.predictor.features.Momentum.CompoundPeriod;
-import org.minnen.retiretool.predictor.features.Momentum.ReturnOrMul;
-import org.minnen.retiretool.util.FinLib;
+import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.TimeLib;
 
 public class AdaptivePredictor extends Predictor
@@ -59,7 +56,7 @@ public class AdaptivePredictor extends Predictor
     // Calculate features for each asset.
     int n = distribution.size();
     List<FeatureVec> features = new ArrayList<>();
-    double[] probs = new double[2];
+    List<double[]> posProbs = new ArrayList<>();
     for (int i = 0; i < n; ++i) {
       String assetName = assetChoices[i];
       if (assetName.equals("cash")) continue;
@@ -67,60 +64,74 @@ public class AdaptivePredictor extends Predictor
       assert x.getName().equals(assetName);
 
       // See if this asset passes the absolute test.
+      double[] probs = new double[2];
       int k = absoluteClassifier.predict(x, probs);
       // int k = (x.get(10) > 0.0 ? 1 : 0);
       if (DEBUG) {
-        System.out.printf(" %s: [%.1f, %.1f] %6.2f%% %s\n", x.getName(), 100.0 * probs[0], 100.0 * probs[1],
+        System.out.printf(" %s: [%.1f, %.1f] %6.2f%%  %s\n", x.getName(), 100.0 * probs[0], 100.0 * probs[1],
             futureReturns.get(assetName), k == 1 ? "Up" : "Down");
       }
       assert k == 0 || k == 1;
       if (k == 0) continue;
 
       features.add(x);
+      posProbs.add(probs);
     }
+    List<FeatureVec> origFeatureList = new ArrayList<>();
+    origFeatureList.addAll(features);
 
     // Sort the assets be predicted value.
     n = features.size();
+    int[] rank = null;
+    double[] scores = null;
     if (n > 1) {
-      // Compute win record for each remaining asset.
-      int[][] wins = new int[n][n];
-      for (int i = 0; i < n; ++i) {
-        FeatureVec fi = features.get(i);
-        for (int j = i + 1; j < n; ++j) {
-          FeatureVec fj = features.get(j);
-          FeatureVec fdiff = fi.sub(fj);
-          int k = pairwiseClassifier.predict(fdiff);
-          // int k = (fdiff.get(10) > 0.0 ? 1 : 0);
-          // System.out.printf("%f -> %d\n", fdiff.get(10), k);
-          if (k == 1) { // asset[i] beat asset[j]
-            wins[i][j] = 1;
-            wins[j][i] = -1;
-          } else { // asset[i] lost to asset[j]
-            assert k == 0;
-            wins[i][j] = -1;
-            wins[j][i] = 1;
-          }
-        }
-      }
-      if (DEBUG) {
+      if (pairwiseClassifier != null) {
+        // Compute win record for each remaining asset.
+        int[][] wins = new int[n][n];
         for (int i = 0; i < n; ++i) {
-          System.out.printf(" %s: ", features.get(i).getName());
-          for (int j = 0; j < n; ++j) {
-            System.out.printf(" %s", wins[i][j] > 0 ? "W" : wins[i][j] < 0 ? "L" : "-");
+          FeatureVec fi = features.get(i);
+          for (int j = i + 1; j < n; ++j) {
+            FeatureVec fj = features.get(j);
+            FeatureVec fdiff = fi.sub(fj);
+            int k = pairwiseClassifier.predict(fdiff);
+            // int k = (fdiff.get(10) > 0.0 ? 1 : 0);
+            // System.out.printf("%f -> %d\n", fdiff.get(10), k);
+            if (k == 1) { // asset[i] beat asset[j]
+              wins[i][j] = 1;
+              wins[j][i] = -1;
+            } else { // asset[i] lost to asset[j]
+              assert k == 0;
+              wins[i][j] = -1;
+              wins[j][i] = 1;
+            }
           }
-          System.out.printf(" %6.2f%%\n", futureReturns.get(features.get(i).getName()));
         }
-      }
+        if (DEBUG) {
+          for (int i = 0; i < n; ++i) {
+            System.out.printf(" %s: ", features.get(i).getName());
+            for (int j = 0; j < n; ++j) {
+              System.out.printf(" %s", wins[i][j] > 0 ? "W" : wins[i][j] < 0 ? "L" : "-");
+            }
+            System.out.printf(" %6.2f%%\n", futureReturns.get(features.get(i).getName()));
+          }
+        }
 
-      // Rank the assets based on their win record.
-      int[] rank = ranker.rank(wins);
-      double[] scores = ranker.getScores();
+        // Rank the assets based on their win record.
+        rank = ranker.rank(wins);
+        scores = ranker.getScores();
+
+      } else {
+        // No pairwise classifier so use the "positive" probability to rank.
+        scores = new double[posProbs.size()];
+        for (int i = 0; i < scores.length; ++i) {
+          scores[i] = posProbs.get(i)[1];
+        }
+        rank = Library.sort(scores.clone(), false);
+      }
 
       // Reorder features according to inferred ranking (best comes first).
-      List<FeatureVec> orig = new ArrayList<>();
-      orig.addAll(features);
       for (int i = 0; i < n; ++i) {
-        features.set(i, orig.get(rank[i]));
+        features.set(i, origFeatureList.get(rank[i]));
         if (DEBUG) {
           System.out.printf(" %d: %s (%.3f, %.2f%%)\n", i + 1, features.get(i).getName(), scores[rank[i]],
               futureReturns.get(features.get(i).getName()));

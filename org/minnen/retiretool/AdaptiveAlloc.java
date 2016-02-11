@@ -62,17 +62,19 @@ public class AdaptiveAlloc
   public static final double        PAIRWISE_THRESHOLD       = 0.0;
   public static final double        MIN_PAIRWISE_RETURN_DIFF = 0.5;
 
+  public static final boolean       GENERATE_PAIRWISE_DATA   = false;
+
   // These symbols go back to 13 May 1996.
-  // public static final String[] fundSymbols = new String[] { "SPY", "VTSMX", "VBMFX", "VGSIX", "VGTSX", "EWU",
-  // "EWG", "EWJ", "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX", "SGGDX", "VGPMX", "USAGX", "FSPCX",
-  // "FSRBX", "FPBFX", "ETGIX", "VDIGX", "MDY", "VBINX", "^IXIC" };
+  public static final String[]      fundSymbols              = new String[] { "SPY", "VTSMX", "VBMFX", "VGSIX",
+      "VGTSX", "EWU", "EWG", "EWJ", "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX", "SGGDX", "VGPMX",
+      "USAGX", "FSPCX", "FSRBX", "FPBFX", "ETGIX", "VDIGX", "MDY", "VBINX", "^IXIC" };
 
   // public static final String[] fundSymbols = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX", "VGENX", "WHOSX",
   // "USAGX" };
 
   // These symbols go back to 27 April 1992.
-  public static final String[]      fundSymbols              = new String[] { "VTSMX", "VBMFX", "VGENX", "WHOSX",
-      "FAGIX", "DFGBX", "VGPMX", "USAGX", "FSPCX", "FSRBX", "FPBFX" };
+  // public static final String[] fundSymbols = new String[] { "VTSMX", "VBMFX", "VGENX", "WHOSX",
+  // "FAGIX", "DFGBX", "VGPMX", "USAGX", "FSPCX", "FSRBX", "FPBFX" };
 
   // Funds in the my 401k.
   // public static final String[] fundSymbols = new String[] { "VEMPX", "VIIIX", "VTPSX", "VBMPX", "RGAGX", "CRISX",
@@ -357,18 +359,21 @@ public class AdaptiveAlloc
         // System.out.println(example);
       }
       pointExamples.addAll(examples);
-      for (int i = 0; i < examples.size(); ++i) {
-        Example exi = examples.get(i);
-        for (int j = i + 1; j < examples.size(); ++j) {
-          Example exj = examples.get(j);
-          double dy = exj.y - exi.y;
-          if (Math.abs(dy) < MIN_PAIRWISE_RETURN_DIFF) continue; // TODO
-          FeatureVec dx = exj.x.sub(exi.x);
-          int k = (dy > PAIRWISE_THRESHOLD ? 1 : 0);
-          Example pairExample = Example.forBoth(dx, dy, k);
-          pairExamples.add(pairExample);
-          // TODO also add inverse?
-          // TODO weighted examples?
+
+      if (GENERATE_PAIRWISE_DATA) {
+        for (int i = 0; i < examples.size(); ++i) {
+          Example exi = examples.get(i);
+          for (int j = i + 1; j < examples.size(); ++j) {
+            Example exj = examples.get(j);
+            double dy = exj.y - exi.y;
+            if (Math.abs(dy) < MIN_PAIRWISE_RETURN_DIFF) continue; // TODO
+            FeatureVec dx = exj.x.sub(exi.x);
+            int k = (dy > PAIRWISE_THRESHOLD ? 1 : 0);
+            Example pairExample = Example.forBoth(dx, dy, k);
+            pairExamples.add(pairExample);
+            // TODO also add inverse?
+            // TODO weighted examples?
+          }
         }
       }
 
@@ -379,13 +384,17 @@ public class AdaptiveAlloc
         / pointExamples.size());
     System.out.printf(" Mean: %s\n", mean);
 
-    mean = Example.mean(pairExamples);
-    System.out.printf("Pairwise Examples: %d\n", pairExamples.size());
-    System.out.printf(" Mean: %s\n", mean);
+    if (GENERATE_PAIRWISE_DATA) {
+      mean = Example.mean(pairExamples);
+      System.out.printf("Pairwise Examples: %d\n", pairExamples.size());
+      System.out.printf(" Mean: %s\n", mean);
+    }
 
     if (outputDir != null) {
       Example.saveRegression(pointExamples, new File(outputDir, "point-examples.txt"));
-      Example.saveRegression(pairExamples, new File(outputDir, "pair-examples.txt"));
+      if (GENERATE_PAIRWISE_DATA) {
+        Example.saveRegression(pairExamples, new File(outputDir, "pair-examples.txt"));
+      }
     }
   }
 
@@ -503,16 +512,16 @@ public class AdaptiveAlloc
     Simulation sim = simFactory.build();
 
     // Run simulation for buy-and-hold of individual assets.
-    List<Sequence> symbolReturns = new ArrayList<>();
-    for (int i = 0; i < fundSymbols.length; ++i) {
-      PredictorConfig config = new ConfigConst(fundSymbols[i]);
-      Predictor predictor = config.build(sim.broker.accessObject, assetSymbols);
-      sim.run(predictor, timeSimStart, timeSimEnd, fundSymbols[i]);
-      symbolReturns.add(sim.returnsMonthly);
-      System.out.println(CumulativeStats.calc(sim.returnsMonthly));
-    }
-    Chart.saveLineChart(new File(outputDir, "individual-symbols.html"), "Individual Returns", 1200, 900, true, true,
-        symbolReturns);
+    // List<Sequence> symbolReturns = new ArrayList<>();
+    // for (int i = 0; i < fundSymbols.length; ++i) {
+    // PredictorConfig config = new ConfigConst(fundSymbols[i]);
+    // Predictor predictor = config.build(sim.broker.accessObject, assetSymbols);
+    // sim.run(predictor, timeSimStart, timeSimEnd, fundSymbols[i]);
+    // symbolReturns.add(sim.returnsMonthly);
+    // System.out.println(CumulativeStats.calc(sim.returnsMonthly));
+    // }
+    // Chart.saveLineChart(new File(outputDir, "individual-symbols.html"), "Individual Returns", 1200, 900, true, true,
+    // symbolReturns);
 
     PredictorConfig config;
     Predictor predictor;
@@ -608,9 +617,9 @@ public class AdaptiveAlloc
     // predictAbsolute(pointExamples);
 
     System.out.printf("Learn absolute classifier...\n");
-    ClassificationModel absoluteClassifier = ClassificationModel.learnRF(pointExamples, 100, -1, 128);
-    System.out.printf("Learn pairwise classifier...\n");
-    ClassificationModel pairwiseClassifier = ClassificationModel.learnRF(pairExamples, 100, -1, 128);
+    ClassificationModel absoluteClassifier = ClassificationModel.learnRF(pointExamples, 100, -1, 64);
+    // System.out.printf("Learn pairwise classifier...\n");
+    ClassificationModel pairwiseClassifier = null; // ClassificationModel.learnRF(pairExamples, 100, -1, 128);
     Ranker ranker = new ColleyRanker();
     FeatureExtractor features = getFeatureExtractor();
     predictor = new AdaptivePredictor(features, absoluteClassifier, pairwiseClassifier, ranker,
