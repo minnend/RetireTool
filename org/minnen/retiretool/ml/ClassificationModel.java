@@ -7,8 +7,9 @@ import org.minnen.retiretool.data.FeatureVec;
 import smile.classification.Classifier;
 import smile.classification.ClassifierTrainer;
 import smile.classification.RandomForest;
+import smile.classification.SoftClassifier;
 
-public class ClassificationModel implements Classifier<FeatureVec>
+public class ClassificationModel implements SoftClassifier<FeatureVec>
 {
   public final Classifier<double[]> model;
 
@@ -26,6 +27,13 @@ public class ClassificationModel implements Classifier<FeatureVec>
   public int predict(FeatureVec x)
   {
     return model.predict(x.get());
+  }
+
+  @Override
+  public int predict(FeatureVec x, double[] probs)
+  {
+    SoftClassifier<double[]> softModel = (SoftClassifier<double[]>) model;
+    return softModel.predict(x.get(), probs);
   }
 
   /**

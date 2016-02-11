@@ -1,5 +1,7 @@
 package org.minnen.retiretool.predictor.daily;
 
+import java.util.Map;
+
 import org.minnen.retiretool.broker.BrokerInfoAccess;
 import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.Sequence;
@@ -43,6 +45,8 @@ public abstract class Predictor
 
   /** Reusable distribution array to reduce object creation. */
   private DiscreteDistribution  distribution;
+
+  public Map<String, Double>    futureReturns;
 
   public Predictor(String name, BrokerInfoAccess brokerAccess, String... assetChoices)
   {

@@ -11,6 +11,7 @@ import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.Sequence.EndpointBehavior;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.predictor.daily.Predictor;
+import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Fixed;
 import org.minnen.retiretool.util.Random;
 import org.minnen.retiretool.util.TimeLib;
@@ -285,6 +286,7 @@ public class Simulation
 
     Account account = broker.getAccount(AccountName);
     DiscreteDistribution targetDist = null;
+    PriceModel priceModel = PriceModel.adjOpenModel;
 
     // System.out.printf("Sim.runTo(Start,%d): [%s] -> [%s]\n", runIndex,
     // TimeLib.formatDate(guideSeq.getTimeMS(runIndex)),
@@ -292,7 +294,27 @@ public class Simulation
     while (runIndex < guideSeq.length() && guideSeq.getTimeMS(runIndex) <= timeEnd) {
       final TimeInfo timeInfo = new TimeInfo(runIndex, guideSeq);
       broker.setNewDay(timeInfo);
+
+      // TODO for debug
+      // Calculate return over next week.
+      long timeNextWeek = TimeLib.plusBusinessDays(timeInfo.time, 5);
+      Map<String, Double> futureReturns = new TreeMap<>();
+      for (String assetName : predictor.assetChoices) {
+        if (assetName.equals("cash")) continue;
+        Sequence seq = store.get(assetName);
+        IndexRange range = seq.getIndices(timeInfo.time, timeNextWeek, EndpointBehavior.Closest);
+        double p1 = priceModel.getPrice(seq.get(range.iStart));
+        double p2 = priceModel.getPrice(seq.get(range.iEnd));
+        double r = FinLib.mul2ret(p2 / p1);
+        futureReturns.put(assetName, r);
+      }
+      predictor.futureReturns = futureReturns;
+
       store.lock(TimeLib.TIME_BEGIN, timeInfo.time, runKey);
+
+      if (holdings.isEmpty()) {
+        holdings.put(timeInfo.date, account.getDistribution());
+      }
 
       // Handle case where we buy at the open, not the close.
       if (bNeedRebalance && targetDist != null && rebalanceDelay <= 0) {
@@ -350,7 +372,7 @@ public class Simulation
       if (timeInfo.isLastDayOfMonth || runIndex == guideSeq.length() - 1) {
         returnsMonthly.addData(value, timeInfo.time);
       }
-      if (timeInfo.isLastDayOfWeek) {
+      if (timeInfo.isFirstDayOfWeek) {
         holdings.put(timeInfo.date, account.getDistribution());
       }
 

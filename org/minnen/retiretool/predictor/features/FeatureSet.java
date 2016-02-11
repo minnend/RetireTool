@@ -10,9 +10,9 @@ public class FeatureSet extends FeatureExtractor
 {
   private final List<FeatureExtractor> extractors = new ArrayList<>();
 
-  public FeatureSet(BrokerInfoAccess brokerAccess, FeatureExtractor... extractors)
+  public FeatureSet(FeatureExtractor... extractors)
   {
-    super("FeatureSet", brokerAccess);
+    super("FeatureSet");
     for (int i = 0; i < extractors.length; ++i) {
       assert extractors[i].size() == 1; // TODO remove restriction
       this.extractors.add(extractors[i]);
@@ -40,13 +40,13 @@ public class FeatureSet extends FeatureExtractor
   }
 
   @Override
-  public FeatureVec calculate(String assetName)
+  public FeatureVec calculate(BrokerInfoAccess brokerAccess, String assetName)
   {
-    FeatureVec features = new FeatureVec(extractors.size());
+    FeatureVec features = new FeatureVec(assetName, extractors.size());
     features.setTime(brokerAccess.getTime());
     for (int i = 0; i < extractors.size(); ++i) {
       // TODO assumes each internal extractor only generates one features.
-      features.set(i, extractors.get(i).calculate(assetName).get(0));
+      features.set(i, extractors.get(i).calculate(brokerAccess, assetName).get(0));
     }
     return features;
   }

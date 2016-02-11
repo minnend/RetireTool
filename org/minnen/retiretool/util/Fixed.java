@@ -1,5 +1,7 @@
 package org.minnen.retiretool.util;
 
+import java.math.BigInteger;
+
 /**
  * Provides fixed-point arithmetic.
  * 
@@ -10,18 +12,19 @@ package org.minnen.retiretool.util;
 public class Fixed
 {
   /** SCALE => Base Unit: 1 = dollars, 10 = dimes, 100 = cents, etc. */
-  public static final long SCALE      = 100000;
-  public static final long HALF_SCALE = SCALE / 2L;
+  public static final long       SCALE      = 100000;
+  public static final long       HALF_SCALE = SCALE / 2L;
+  public static final BigInteger BIG_SCALE  = BigInteger.valueOf(SCALE);
 
-  public static final long ONE        = SCALE;
-  public static final long ZERO       = 0L;
+  public static final long       ONE        = SCALE;
+  public static final long       ZERO       = 0L;
 
-  public static final long PENNY      = SCALE / 100L;
-  public static final long DIME       = SCALE / 10L;
+  public static final long       PENNY      = SCALE / 100L;
+  public static final long       DIME       = SCALE / 10L;
 
-  public static final long THOUSANDTH = SCALE / 1000L;
-  public static final long HUNDREDTH  = SCALE / 100L;
-  public static final long TENTH      = SCALE / 10L;
+  public static final long       THOUSANDTH = SCALE / 1000L;
+  public static final long       HUNDREDTH  = SCALE / 100L;
+  public static final long       TENTH      = SCALE / 10L;
 
   public static long toFixed(double x)
   {
@@ -101,8 +104,15 @@ public class Fixed
       y = -y;
     }
 
-    long z = Math.multiplyExact(x, SCALE);
-    return sign * z / y;
+    try {
+      long z = Math.multiplyExact(x, SCALE);
+      return sign * z / y;
+    } catch (ArithmeticException e) {
+      BigInteger bigX = BigInteger.valueOf(x);
+      BigInteger bigY = BigInteger.valueOf(y);
+      BigInteger bigZ = bigX.multiply(BIG_SCALE).divide(bigY);
+      return sign * bigZ.longValue();
+    }
   }
 
   public static long sign(long x)

@@ -203,7 +203,8 @@ public class Broker
     assert dateTime.getHour() == 12 && dateTime.getMinute() == 0 && dateTime.getSecond() == 0
         && dateTime.getNano() == 0;
 
-    assert time <= getTime(); // No peeking into the future.
+    // TODO for debug
+    // assert time <= getTime(); // No peeking into the future.
     if (time == timeInfo.time && timeOfDay == TimeOfDay.MarketOpen) {
       // Price quotes may be semi-random but we want the same value for each request.
       PriceQuote quote = priceQuotes.getOrDefault(name, null);

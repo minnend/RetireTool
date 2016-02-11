@@ -448,6 +448,25 @@ public class TimeLib
     return date;
   }
 
+  public static long plusBusinessDays(long ms, int nBusinessDays)
+  {
+    return toMs(plusBusinessDays(ms2date(ms), nBusinessDays));
+  }
+
+  public static LocalDate plusBusinessDays(LocalDate date, int nBusinessDays)
+  {
+    if (nBusinessDays < 0) {
+      for (int i = 0; i > nBusinessDays; --i) {
+        date = toPreviousBusinessDay(date);
+      }
+    } else if (nBusinessDays > 0) {
+      for (int i = 0; i < nBusinessDays; ++i) {
+        date = toNextBusinessDay(date);
+      }
+    }
+    return date;
+  }
+
   /**
    * @return date of the closest business day on the requested day.
    */

@@ -130,6 +130,7 @@ public final class Library
     ii[index2] = itmp;
   }
 
+  /** Reorder the elements of a according to the indices of ii. */
   public static void reorder(double[] a, int[] ii)
   {
     double[] b = Arrays.copyOf(a, a.length);

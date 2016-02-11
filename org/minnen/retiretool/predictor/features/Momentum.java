@@ -24,9 +24,9 @@ public class Momentum extends FeatureExtractor
   public final CompoundPeriod compoundPeriod;
 
   public Momentum(int nTriggerA, int nTriggerB, int nBaseA, int nBaseB, ReturnOrMul returnOrMul,
-      CompoundPeriod compoundPeriod, int iPrice, BrokerInfoAccess brokerAccess)
+      CompoundPeriod compoundPeriod, int iPrice)
   {
-    super(String.format("Momentum[%d,%d]/[%d,%d]", nTriggerA, nTriggerB, nBaseA, nBaseB), brokerAccess);
+    super(String.format("Momentum[%d,%d]/[%d,%d]", nTriggerA, nTriggerB, nBaseA, nBaseB));
     this.nTriggerA = nTriggerA;
     this.nTriggerB = nTriggerB;
     this.nBaseA = nBaseA;
@@ -37,7 +37,7 @@ public class Momentum extends FeatureExtractor
   }
 
   @Override
-  public FeatureVec calculate(String assetName)
+  public FeatureVec calculate(BrokerInfoAccess brokerAccess, String assetName)
   {
     Sequence seq = brokerAccess.getSeq(assetName);
 
@@ -67,6 +67,6 @@ public class Momentum extends FeatureExtractor
       momentum = FinLib.mul2ret(momentum);
     }
 
-    return new FeatureVec(1, momentum).setTime(brokerAccess.getTime());
+    return new FeatureVec(assetName, 1, momentum).setTime(brokerAccess.getTime());
   }
 }
