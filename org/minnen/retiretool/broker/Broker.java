@@ -67,6 +67,21 @@ public class Broker
     this.timeInfo = origTimeInfo;
   }
 
+  public Broker(SequenceStore store, Slippage slippage, long timeStart)
+  {
+    this(store, PriceModel.closeModel, PriceModel.closeModel, slippage, timeStart);
+  }
+
+  public Broker(SequenceStore store, PriceModel valueModel, PriceModel quoteModel, Slippage slippage, long timeStart)
+  {
+    this.store = store;
+    this.valueModel = valueModel;
+    this.quoteModel = quoteModel;
+    this.slippage = slippage;
+    this.origTimeInfo = new TimeInfo(timeStart);
+    this.timeInfo = origTimeInfo;
+  }
+
   public void reset()
   {
     accounts.clear();

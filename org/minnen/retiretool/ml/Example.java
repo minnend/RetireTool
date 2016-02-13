@@ -39,6 +39,17 @@ public class Example
     this.k = k;
   }
 
+  public long getTime()
+  {
+    return x.getTime();
+  }
+
+  public Example setTime(long time)
+  {
+    x.setTime(time);
+    return this;
+  }
+
   public static Example forRegression(FeatureVec x, double y)
   {
     return new Example(x, y);

@@ -103,17 +103,20 @@ public class TimeLib
     LocalDate d1 = ms2date(t1);
     LocalDate d2 = ms2date(t2);
     long nWholeMonths = ChronoUnit.MONTHS.between(d1, d2);
-    d1 = d1.plusMonths(nWholeMonths);
-    assert d1.isBefore(d2) || d1.isEqual(d2);
+    LocalDate d1a = d1.plusMonths(nWholeMonths);
+    if (d1a.isEqual(d2)) return nWholeMonths;
 
-    long nDays1 = ChronoUnit.DAYS.between(d1, d2);
-    assert nDays1 >= 0;
-    d1 = d1.plusMonths(1);
-    long nDays2 = ChronoUnit.DAYS.between(d2, d1);
-    assert nDays2 >= 0;
+    LocalDate d1b = d1.plusMonths(nWholeMonths + 1);
+    if (d1b.isEqual(d2)) return nWholeMonths + 1;
+    assert d1a.isBefore(d2);
+    assert d1b.isAfter(d2);
+
+    long nDays1 = ChronoUnit.DAYS.between(d1a, d2);
+    assert nDays1 > 0;
+    long nDays2 = ChronoUnit.DAYS.between(d2, d1b);
+    assert nDays2 > 0;
 
     long nDays = nDays1 + nDays2;
-
     return nWholeMonths + (double) nDays1 / nDays;
   }
 

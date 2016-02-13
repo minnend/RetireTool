@@ -3,6 +3,7 @@ package org.minnen.retiretool.ml;
 import java.util.List;
 
 import org.minnen.retiretool.data.FeatureVec;
+import org.minnen.retiretool.util.Random;
 
 import smile.classification.Classifier;
 import smile.classification.ClassifierTrainer;
@@ -34,6 +35,31 @@ public class ClassificationModel implements SoftClassifier<FeatureVec>
   {
     SoftClassifier<double[]> softModel = (SoftClassifier<double[]>) model;
     return softModel.predict(x.get(), probs);
+  }
+
+  public double accuracy(List<Example> examples)
+  {
+    int nc = 0;
+    for (Example example : examples) {
+      assert example.supportsClassification();
+      int k = predict(example.x);
+      if (k == example.k) {
+        ++nc;
+      }
+    }
+    return 100.0 * nc / examples.size();
+  }
+
+  public double accuracy(double[][] x, int[] y)
+  {
+    int nc = 0;
+    for (int i = 0; i < x.length; ++i) {
+      int k = model.predict(x[i]);
+      if (k == y[i]) {
+        ++nc;
+      }
+    }
+    return 100.0 * nc / x.length;
   }
 
   /**
@@ -72,5 +98,24 @@ public class ClassificationModel implements SoftClassifier<FeatureVec>
     trainer.setNodeSize(8);
     trainer.setMaxNodes(nNodes);
     return learn(examples, trainer);
+  }
+
+  public static ClassificationModel learnStump(List<Example> examples, int nTryDims)
+  {
+    PositiveStump.Trainer trainer = new PositiveStump.Trainer(nTryDims);
+    return learn(examples, trainer);
+  }
+
+  public static ClassificationModel learnQuadrant(List<Example> examples, int nStumps, int nRandomTries)
+  {
+    PositiveQuadrant.Trainer trainer = new PositiveQuadrant.Trainer(nStumps, nRandomTries);
+    return learn(examples, trainer);
+  }
+
+  public static ClassificationModel learnBaggedQuadrant(List<Example> examples, int nWeak, int nStumps, int nRandomTries)
+  {
+    PositiveQuadrant.Trainer weakTrainer = new PositiveQuadrant.Trainer(nStumps, nRandomTries);
+    BaggedClassifier.Trainer bagTrainer = new BaggedClassifier.Trainer(nWeak, weakTrainer);
+    return learn(examples, bagTrainer);
   }
 }

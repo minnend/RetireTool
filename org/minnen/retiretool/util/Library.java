@@ -31,6 +31,8 @@ public final class Library
   public static final String        os           = System.getProperty("os.name");
   public static final boolean       bWindows     = os.startsWith("Win");
 
+  public static final Random        rng          = new Random();
+
   static {
     df.setMaximumFractionDigits(4);
   }
@@ -66,6 +68,29 @@ public final class Library
     }
   }
 
+  /** @return array of length n with a[i] == i */
+  public static int[] genIdentityArray(int n)
+  {
+    int[] a = new int[n];
+    for (int i = 0; i < n; i++) {
+      a[i] = i;
+    }
+    return a;
+  }
+
+  /** @return array of length n with values [0,n-1] in random order. */
+  public static int[] shuffle(int n)
+  {
+    int[] a = genIdentityArray(n);
+    for (int i = a.length - 1; i > 0; i--) {
+      int index = rng.nextInt(i + 1);
+      int t = a[index];
+      a[index] = a[i];
+      a[i] = t;
+    }
+    return a;
+  }
+
   /**
    * Sort the given array and return the resulting indices
    * 
@@ -76,10 +101,7 @@ public final class Library
   public static int[] sort(double[] a, boolean bAscending)
   {
     int n = a.length;
-    int[] ii = new int[n];
-    for (int i = 0; i < n; i++) {
-      ii[i] = i;
-    }
+    int[] ii = genIdentityArray(n);
     sort(a, ii, 0, n - 1);
     if (!bAscending) {
       for (int i = 0; i < n - i - 1; ++i) {
@@ -150,10 +172,7 @@ public final class Library
   public static <T extends Comparable<T>> int[] sort(T[] a, boolean bAscending)
   {
     int n = a.length;
-    int[] ii = new int[n];
-    for (int i = 0; i < n; i++) {
-      ii[i] = i;
-    }
+    int[] ii = genIdentityArray(n);
     sort(a, ii, 0, n - 1);
     if (!bAscending) {
       for (int i = 0; i < n - i - 1; ++i) {
@@ -420,5 +439,13 @@ public final class Library
     x = x - ((x >>> 1) & 0x55555555);
     x = (x & 0x33333333) + ((x >>> 2) & 0x33333333);
     return (((x + (x >>> 4)) & 0x0F0F0F0F) * 0x01010101) >>> 24;
+  }
+
+  /** @return 1.0 / (1 + e^[-k*(x - x0)]) */
+  public static double sigmoid(double x, double k, double x0)
+  {
+    double t = k * (x - x0);
+    double y = 1.0 + Math.exp(-t);
+    return 1.0 / y;
   }
 }

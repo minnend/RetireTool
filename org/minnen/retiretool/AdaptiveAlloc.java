@@ -25,6 +25,7 @@ import org.minnen.retiretool.data.Sequence.EndpointBehavior;
 import org.minnen.retiretool.ml.ClassificationModel;
 import org.minnen.retiretool.ml.RegressionModel;
 import org.minnen.retiretool.ml.Example;
+import org.minnen.retiretool.ml.PositiveStump;
 import org.minnen.retiretool.ml.rank.ColleyRanker;
 import org.minnen.retiretool.ml.rank.Ranker;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive;
@@ -36,6 +37,7 @@ import org.minnen.retiretool.predictor.config.ConfigTactical;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
 import org.minnen.retiretool.predictor.daily.AdaptiveMomentumPredictor;
 import org.minnen.retiretool.predictor.daily.AdaptivePredictor;
+import org.minnen.retiretool.predictor.daily.MixedPredictor;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.predictor.daily.VolResPredictor;
 import org.minnen.retiretool.predictor.features.FeatureExtractor;
@@ -92,7 +94,7 @@ public class AdaptiveAlloc
     System.setProperty("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.NoOpLog");
   }
 
-  public static Simulation walkForwadOptimization(long timeSimStart, SimFactory simFactory)
+  public static Simulation walkForwardOptimizationOld(long timeSimStart, SimFactory simFactory)
   {
     final int stepMonths = 3;
     final int maxOptMonths = 12 * 5;
@@ -137,7 +139,7 @@ public class AdaptiveAlloc
 
       // Report results for this test period.
       CumulativeStats stats = CumulativeStats.calc(wfSim.returnsMonthly);
-      System.out.printf("Test: [%s] -> [%s]: %.3f, %.2f  %s\n", TimeLib.formatDate(testStart),
+      System.out.printf("Stats: [%s] -> [%s]: %.3f, %.2f  %s\n", TimeLib.formatDate(testStart),
           TimeLib.formatDate(testEnd), stats.cagr, stats.drawdown, config);
 
       // Advance test start time by N months.
@@ -146,6 +148,140 @@ public class AdaptiveAlloc
     }
     wfSim.finishRun();
     return wfSim;
+  }
+
+  public static void extendPredictionData(long timeStart, long timeEnd, FeatureExtractor featureExtractor,
+      List<Example> pointExamples)
+  {
+    final long key = Sequence.Lock.genKey();
+    long today = TimeLib.toLastBusinessDayOfWeek(timeStart);
+    assert today < timeEnd;
+
+    long lastTime = TimeLib.TIME_ERROR;
+    if (!pointExamples.isEmpty()) {
+      lastTime = pointExamples.get(pointExamples.size() - 1).getTime();
+      assert lastTime != TimeLib.TIME_ERROR;
+      long time = TimeLib.toLastBusinessDayOfWeek(lastTime);
+      if (time <= lastTime) {
+        time = TimeLib.toMs(TimeLib.ms2date(lastTime).plusWeeks(1));
+        time = TimeLib.toLastBusinessDayOfWeek(time);
+      }
+      assert time > lastTime;
+      today = Math.max(today, time);
+    }
+    // System.out.printf("Gen Data Range: [%s] -> [%s]\n", TimeLib.formatDate(today), TimeLib.formatDate(timeEnd));
+
+    Broker broker = new Broker(store, Slippage.None, today);
+    while (true) {
+      final long timePredictStart = TimeLib.toNextBusinessDay(today);
+      final long timePredictEnd = TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.toLastBusinessDayOfWeek(TimeLib
+          .ms2date(today).plusWeeks(1))));
+      if (timePredictEnd > timeEnd) break;
+
+      // System.out.printf("GenPredData: [%s] -> [%s]\n", TimeLib.formatDate(timePredictStart),
+      // TimeLib.formatDate(timePredictEnd));
+
+      broker.setNewDay(new TimeInfo(today));
+      for (String assetName : fundSymbols) {
+        Sequence seq = store.get(assetName);
+
+        // Calculate actual return of following week.
+        int index1 = seq.getIndexAt(timePredictStart);
+        int index2 = seq.getIndexAt(timePredictEnd);
+        if (index1 < 0 || index2 < 0) {
+          // System.out.printf("[%s]=%d  [%s]=%d\n", TimeLib.formatDate(timePredictStart), index1,
+          // TimeLib.formatDate(timePredictEnd), index2);
+          break;
+        }
+        double priceFrom = PriceModel.adjOpenModel.getPrice(seq.get(index1));
+        double priceTo = PriceModel.adjOpenModel.getPrice(seq.get(index2));
+        double actualMul = priceTo / priceFrom;
+        double actualReturn = FinLib.mul2ret(actualMul);
+
+        // Extract features for predicting the return.
+        seq.lock(0, seq.getClosestIndex(broker.getTime()), key);
+        FeatureVec fv = featureExtractor.calculate(broker.accessObject, assetName);
+        seq.unlock(key);
+        assert fv.getTime() == today;
+        assert fv.getName().equals(assetName);
+
+        // Add the current week as an example for the future.
+        int k = (actualReturn > POINTWISE_THRESHOLD ? 1 : 0);
+        Example example = Example.forBoth(fv, actualReturn, k);
+        pointExamples.add(example);
+      }
+      today = TimeLib.toMs(TimeLib.toLastBusinessDayOfWeek(TimeLib.ms2date(today).plusWeeks(1)));
+    }
+  }
+
+  public static Simulation walkForwardOptimization(long timeSimStart, long timeSimEnd, SimFactory simFactory)
+  {
+    final int stepMonths = 3;
+    final int maxOptMonths = 12 * 50;
+
+    // Simulator used for tracking walk-forward results.
+    Simulation sim = simFactory.build();
+    sim.setupRun(null, timeSimStart, TimeLib.TIME_END, "WalkForward");
+
+    long testStart = timeSimStart;
+    assert testStart >= sim.getStartMS();
+    final long timeFirstAbleToPredict = TimeLib.toMs(TimeLib.toFirstBusinessDayOfMonth(TimeLib.ms2date(
+        store.getCommonStartTime()).plusWeeks(53))); // TODO pull requirements from config/predictor
+    System.out.printf("First Able to Predict: [%s]\n", TimeLib.formatDate(timeFirstAbleToPredict));
+
+    FeatureExtractor featureExtractor = getFeatureExtractor();
+    List<Example> pointExamples = new ArrayList<>();
+
+    // extendPredictionData(timeFirstAbleToPredict, timeSimEnd, featureExtractor, pointExamples);
+    // System.out.printf("#Examples: %d\n", pointExamples.size());
+    // ClassificationModel absoluteClassifier = ClassificationModel.learnRF(pointExamples, 100, -1, 64);
+
+    Predictor volres = new VolResPredictor("VTSMX", "VBMFX", sim.broker.accessObject);
+
+    while (testStart < sim.getEndMS()) {
+      // New test period is extends N months beyond test start time.
+      final long testEnd = Math.min(
+          TimeLib.toPreviousBusinessDay(TimeLib.toMs(TimeLib.ms2date(testStart).plusMonths(stepMonths))),
+          sim.getEndMS());
+
+      // Optimization period extends backward from test start time.
+      final long optEnd = TimeLib.toPreviousBusinessDay(testStart);
+      final long optStart = Math.max(timeFirstAbleToPredict,
+          TimeLib.toMs(TimeLib.ms2date(optEnd).minusMonths(maxOptMonths).with(TemporalAdjusters.firstDayOfMonth())));
+      // System.out.printf("Optm: [%s] -> [%s]\n", TimeLib.formatDate(optStart), TimeLib.formatDate(optEnd));
+      // System.out.printf("Test: [%s] -> [%s]\n", TimeLib.formatDate(testStart), TimeLib.formatDate(testEnd));
+      assert optStart < optEnd;
+      assert optEnd < testStart;
+
+      // Find best predictor parameters.
+      extendPredictionData(optStart, optEnd, featureExtractor, pointExamples);
+      // System.out.printf("#Examples: %d\n", pointExamples.size());
+      // ClassificationModel absoluteClassifier = ClassificationModel.learnRF(pointExamples, 100, -1, 32);
+      // int nDims = pointExamples.get(0).x.getNumDims();
+      // ClassificationModel absoluteClassifier = ClassificationModel.learnStump(pointExamples, -1);
+      ClassificationModel absoluteClassifier = ClassificationModel.learnQuadrant(pointExamples, 2, -1);
+      // ClassificationModel absoluteClassifier = ClassificationModel.learnBaggedQuadrant(pointExamples, 20, 2, 10);
+      Predictor adaptive = new AdaptivePredictor(featureExtractor, absoluteClassifier, null, null,
+          sim.broker.accessObject, assetSymbols);
+      // Predictor mixed = new MixedPredictor(new Predictor[] { adaptive, volres },
+      // new DiscreteDistribution(0.5, 0.5), sim.broker.accessObject, assetSymbols);
+      Predictor predictor = adaptive;
+
+      // Run the predictor over the test period.
+      sim.setPredictor(predictor);
+      sim.runTo(testEnd);
+
+      // Report results for this test period.
+      CumulativeStats stats = CumulativeStats.calc(sim.returnsMonthly);
+      System.out.printf("Stats: [%s] -> [%s]: %.2f, %.2f\n", TimeLib.formatDate(testStart),
+          TimeLib.formatDate(testEnd), stats.cagr, stats.drawdown);
+
+      // Advance test start time by N months.
+      testStart = TimeLib.toMs(TimeLib.ms2date(testStart).plusMonths(stepMonths)
+          .with(TemporalAdjusters.firstDayOfMonth()));
+    }
+    sim.finishRun();
+    return sim;
   }
 
   public static FeatureExtractor getFeatureExtractor()
@@ -159,16 +295,16 @@ public class AdaptiveAlloc
       features.add(momentum);
     }
 
-    // Add weekly momentum features.
-    for (int i = 2; i <= 4; ++i) {
-      Momentum momentum = new Momentum(5, 1, i * 5, (i - 1) * 5, Momentum.ReturnOrMul.Return,
-          Momentum.CompoundPeriod.Weekly, FinLib.AdjClose);
-      features.add(momentum);
-    }
-
-    // Add daily momentum features.
-    features
-        .add(new Momentum(2, 1, 5, 4, Momentum.ReturnOrMul.Return, Momentum.CompoundPeriod.Weekly, FinLib.AdjClose));
+    // // Add weekly momentum features.
+    // for (int i = 2; i <= 4; ++i) {
+    // Momentum momentum = new Momentum(5, 1, i * 5, (i - 1) * 5, Momentum.ReturnOrMul.Return,
+    // Momentum.CompoundPeriod.Weekly, FinLib.AdjClose);
+    // features.add(momentum);
+    // }
+    //
+    // // Add daily momentum features.
+    // features
+    // .add(new Momentum(2, 1, 5, 4, Momentum.ReturnOrMul.Return, Momentum.CompoundPeriod.Weekly, FinLib.AdjClose));
 
     // features.add(new Momentum(30, 1, 110, 60, Momentum.ReturnOrMul.Return, Momentum.CompoundPeriod.Weekly,
     // FinLib.AdjClose));
@@ -490,11 +626,11 @@ public class AdaptiveAlloc
     System.out.printf("Common[%d]: [%s] -> [%s]\n", seqs.size(), TimeLib.formatDate(commonStart),
         TimeLib.formatDate(commonEnd));
 
-    long timeSimStart = TimeLib.toMs(TimeLib.ms2date(commonStart).plusWeeks(53)
+    long timeSimStart = TimeLib.toMs(TimeLib.ms2date(commonStart).plusWeeks(53 + 51)
         .with(TemporalAdjusters.firstDayOfMonth()));
     long timeSimEnd = commonEnd; // TimeLib.toMs(2005, Month.DECEMBER, 31); // TODO
-    // double nSimMonths = TimeLib.monthsBetween(timeSimStart, timeSimEnd);
-    // System.out.printf("Simulation Start: [%s] (%.1f months)\n", TimeLib.formatDate(timeSimStart), nSimMonths);
+    double nSimMonths = TimeLib.monthsBetween(timeSimStart, timeSimEnd);
+    System.out.printf("Simulation Start: [%s] (%.1f months)\n", TimeLib.formatDate(timeSimStart), nSimMonths);
 
     // Extract common subsequence from each data sequence and add to the sequence store.
     for (int i = 0; i < seqs.size(); ++i) {
@@ -571,10 +707,10 @@ public class AdaptiveAlloc
     // returns.add(returnsBonds);
 
     // Volatility-Responsive Asset Allocation.
-    // predictor = new VolResPredictor("VTSMX", "VBMFX", sim.broker.accessObject);
-    // Sequence returnsVolRes = sim.run(predictor, timeSimStart, timeSimEnd, "VolRes");
-    // System.out.println(CumulativeStats.calc(returnsVolRes));
-    // returns.add(returnsVolRes);
+    predictor = new VolResPredictor("VTSMX", "VBMFX", sim.broker.accessObject);
+    Sequence returnsVolRes = sim.run(predictor, timeSimStart, timeSimEnd, "VolRes");
+    System.out.println(CumulativeStats.calc(returnsVolRes));
+    returns.add(returnsVolRes);
 
     // PredictorConfig tacticalConfig = new ConfigTactical(FinLib.AdjClose, "SPY", "VTSMX", "VGSIX", "VGTSX", "EWU",
     // "EWG", "EWJ",
@@ -609,26 +745,27 @@ public class AdaptiveAlloc
     // config = ConfigAdaptive.buildEqualWeight(20, 120, 100, 0.5, 4, pctQuantum, tradeFreq, FinLib.AdjClose);
     // genPredictionMap(guideSeq, outputDir);
 
-    List<Example> pointExamples = new ArrayList<>();
-    List<Example> pairExamples = new ArrayList<>();
-    genPredictionData(guideSeq, pointExamples, pairExamples, outputDir);
+    // List<Example> pointExamples = new ArrayList<>();
+    // List<Example> pairExamples = new ArrayList<>();
+    // genPredictionData(guideSeq, pointExamples, pairExamples, outputDir);
 
     // predictRank(pairExamples);
     // predictAbsolute(pointExamples);
 
-    System.out.printf("Learn absolute classifier...\n");
-    ClassificationModel absoluteClassifier = ClassificationModel.learnRF(pointExamples, 100, -1, 64);
-    // System.out.printf("Learn pairwise classifier...\n");
-    ClassificationModel pairwiseClassifier = null; // ClassificationModel.learnRF(pairExamples, 100, -1, 128);
-    Ranker ranker = new ColleyRanker();
-    FeatureExtractor features = getFeatureExtractor();
-    predictor = new AdaptivePredictor(features, absoluteClassifier, pairwiseClassifier, ranker,
-        sim.broker.accessObject, assetSymbols);
-    sim.run(predictor, timeSimStart, timeSimEnd, "Adaptive");
-    // sim.broker.getAccount(Simulation.AccountName).printTransactions();
-    System.out.println(CumulativeStats.calc(sim.returnsMonthly));
-    returns.add(sim.returnsMonthly);
-    Chart.saveHoldings(new File(outputDir, "holdings-adaptive.html"), sim.holdings, sim.store);
+    // System.out.printf("Learn absolute classifier...\n");
+    // ClassificationModel absoluteClassifier = ClassificationModel.learnRF(pointExamples, 100, -1, 64);
+    // ClassificationModel absoluteClassifier = new ClassificationModel(new Stump(10, 0.0, 1.0));
+    // // System.out.printf("Learn pairwise classifier...\n");
+    // ClassificationModel pairwiseClassifier = null; // ClassificationModel.learnRF(pairExamples, 100, -1, 128);
+    // Ranker ranker = null; // new ColleyRanker();
+    // FeatureExtractor features = getFeatureExtractor();
+    // predictor = new AdaptivePredictor(features, absoluteClassifier, pairwiseClassifier, ranker,
+    // sim.broker.accessObject, assetSymbols);
+    // sim.run(predictor, timeSimStart, timeSimEnd, "Adaptive");
+    // // sim.broker.getAccount(Simulation.AccountName).printTransactions();
+    // System.out.println(CumulativeStats.calc(sim.returnsMonthly));
+    // returns.add(sim.returnsMonthly);
+    // Chart.saveHoldings(new File(outputDir, "holdings-adaptive-prelearn.html"), sim.holdings, sim.store);
 
     // PredictorConfig equalWeightConfig2 = new ConfigAdaptive(-1, -1, Weighting.Equal, 20, 120, 100, 0.5, 2,
     // pctQuantum,
@@ -687,10 +824,10 @@ public class AdaptiveAlloc
     // System.out.println(CumulativeStats.calc(ret));
     // }
 
-    // Simulation wfSim = walkForwadOptimization(timeSimStart, simFactory);
-    // System.out.println(CumulativeStats.calc(wfSim.returnsMonthly));
-    // returns.add(wfSim.returnsMonthly);
-    // Chart.saveHoldings(new File(outputDir, "holdings-adaptive.html"), wfSim.holdings, wfSim.store);
+    Simulation wfSim = walkForwardOptimization(timeSimStart, timeSimEnd, simFactory);
+    System.out.println(CumulativeStats.calc(wfSim.returnsMonthly));
+    returns.add(wfSim.returnsMonthly);
+    Chart.saveHoldings(new File(outputDir, "holdings-adaptive-wf.html"), wfSim.holdings, wfSim.store);
 
     // AdaptiveScanner scanner = new AdaptiveScanner();
     // List<CumulativeStats> cstats = new ArrayList<CumulativeStats>();

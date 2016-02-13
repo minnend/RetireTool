@@ -22,7 +22,7 @@ public class AdaptivePredictor extends Predictor
   public final ClassificationModel pairwiseClassifier;
   public final Ranker              ranker;
   public final TradeFreq           tradeFreq        = TradeFreq.Weekly;
-  public final double              maxKeepFrac      = 0.9;
+  public final double              maxKeepFrac      = 0.5;
   public final int                 maxKeep          = 4;
   public final int                 pctQuantum       = 1;
 
