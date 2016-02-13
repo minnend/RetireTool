@@ -3,7 +3,6 @@ package org.minnen.retiretool.ml;
 import java.util.List;
 
 import org.minnen.retiretool.data.FeatureVec;
-import org.minnen.retiretool.util.Random;
 
 import smile.classification.Classifier;
 import smile.classification.ClassifierTrainer;
@@ -12,46 +11,79 @@ import smile.classification.SoftClassifier;
 
 public class ClassificationModel implements SoftClassifier<FeatureVec>
 {
-  public final Classifier<double[]> model;
+  public final Classifier<double[]>   model;
+  public final Classifier<FeatureVec> modelFV;
 
-  public ClassificationModel(Classifier<double[]> model)
+  public ClassificationModel(Classifier<double[]> model, Classifier<FeatureVec> modelFV)
   {
     this.model = model;
+    this.modelFV = modelFV;
   }
 
   public int predict(double x)
   {
-    return model.predict(new double[] { x });
+    if (model != null) {
+      return model.predict(new double[] { x });
+    } else {
+      return modelFV.predict(new FeatureVec(1, x));
+    }
   }
 
   @Override
   public int predict(FeatureVec x)
   {
-    return model.predict(x.get());
+    if (model != null) {
+      return model.predict(x.get());
+    } else {
+      return modelFV.predict(x);
+    }
+
   }
 
   @Override
   public int predict(FeatureVec x, double[] probs)
   {
-    SoftClassifier<double[]> softModel = (SoftClassifier<double[]>) model;
-    return softModel.predict(x.get(), probs);
+    if (model != null) {
+      SoftClassifier<double[]> softModel = (SoftClassifier<double[]>) model;
+      return softModel.predict(x.get(), probs);
+    } else {
+      SoftClassifier<FeatureVec> softModel = (SoftClassifier<FeatureVec>) modelFV;
+      return softModel.predict(x, probs);
+    }
   }
 
-  public double accuracy(List<Example> examples)
+  public double accuracy(List<Example> examples, boolean useWeights)
   {
+    FeatureVec[] x = Example.getFeatureArray(examples);
+    int[] y = Example.getClassArray(examples);
+    return accuracy(x, y, useWeights);
+  }
+
+  public double accuracy(FeatureVec[] x, int[] y, boolean useWeights)
+  {
+    assert x.length == y.length;
     int nc = 0;
-    for (Example example : examples) {
-      assert example.supportsClassification();
-      int k = predict(example.x);
-      if (k == example.k) {
+    double wc = 0.0;
+    double ww = 0.0;
+    for (int i = 0; i < x.length; ++i) {
+      int k = predict(x[i]);
+      if (k == y[i]) {
+        wc += x[i].getWeight();
         ++nc;
+      } else {
+        ww += x[i].getWeight();
       }
     }
-    return 100.0 * nc / examples.size();
+    if (useWeights) {
+      return 100.0 * wc / (wc + ww);
+    } else {
+      return 100.0 * nc / x.length;
+    }
   }
 
   public double accuracy(double[][] x, int[] y)
   {
+    assert x.length == y.length;
     int nc = 0;
     for (int i = 0; i < x.length; ++i) {
       int k = model.predict(x[i]);
@@ -82,7 +114,21 @@ public class ClassificationModel implements SoftClassifier<FeatureVec>
 
     // Learn the model parameters.
     Classifier<double[]> model = trainer.train(x, y);
-    return new ClassificationModel(model);
+    return new ClassificationModel(model, null);
+  }
+
+  /**
+   * Learn model parameters using the given trainer
+   */
+  public static ClassificationModel learnFV(List<Example> examples, ClassifierTrainer<FeatureVec> trainer)
+  {
+    // Setup the data for learning.
+    FeatureVec[] featuresArray = Example.getFeatureArray(examples);
+    int[] y = Example.getClassArray(examples);
+
+    // Learn the model parameters.
+    Classifier<FeatureVec> model = trainer.train(featuresArray, y);
+    return new ClassificationModel(null, model);
   }
 
   public static ClassificationModel learnRF(List<Example> examples, int nTrees, int nRandFeatures, int nNodes)
@@ -100,10 +146,10 @@ public class ClassificationModel implements SoftClassifier<FeatureVec>
     return learn(examples, trainer);
   }
 
-  public static ClassificationModel learnStump(List<Example> examples, int nTryDims)
+  public static ClassificationModel learnStump(List<Example> examples, int nTryDims, boolean useWeights)
   {
-    PositiveStump.Trainer trainer = new PositiveStump.Trainer(nTryDims);
-    return learn(examples, trainer);
+    PositiveStump.Trainer trainer = new PositiveStump.Trainer(nTryDims, useWeights);
+    return learnFV(examples, trainer);
   }
 
   public static ClassificationModel learnQuadrant(List<Example> examples, int nStumps, int nRandomTries)

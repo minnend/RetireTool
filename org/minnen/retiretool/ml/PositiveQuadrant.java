@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.util.Library;
-import org.minnen.retiretool.util.Random;
 
 import smile.classification.Classifier;
 import smile.classification.ClassifierTrainer;
@@ -20,7 +20,7 @@ public class PositiveQuadrant implements SoftClassifier<double[]>
   public int predict(double[] x)
   {
     for (PositiveStump stump : stumps) {
-      if (stump.predict(x) == 0) return 0;
+      if (stump.predict(new FeatureVec(x)) == 0) return 0;
     }
     return 1;
   }
@@ -31,7 +31,7 @@ public class PositiveQuadrant implements SoftClassifier<double[]>
     assert posteriori.length == 2;
     double minPos = 1.0;
     for (PositiveStump stump : stumps) {
-      stump.predict(x, posteriori);
+      stump.predict(new FeatureVec(x), posteriori);
       if (posteriori[1] < minPos) {
         minPos = posteriori[1];
       }
@@ -86,7 +86,7 @@ public class PositiveQuadrant implements SoftClassifier<double[]>
             if (used[d]) continue;
             PositiveStump stump = new PositiveStump(d, threshold, 1.0);
             posQuad.stumps.add(stump);
-            ClassificationModel model = new ClassificationModel(posQuad);
+            ClassificationModel model = new ClassificationModel(posQuad, null);
             double accuracy = model.accuracy(x, y);
             // System.out.printf("%s: %.2f\n", posQuad, accuracy);
             if (bestStump == null || accuracy > bestAccuracy) {
@@ -122,7 +122,7 @@ public class PositiveQuadrant implements SoftClassifier<double[]>
             posQuad.stumps.add(stump);
           }
           assert posQuad.stumps.size() == nStumps;
-          ClassificationModel model = new ClassificationModel(posQuad);
+          ClassificationModel model = new ClassificationModel(posQuad, null);
           double accuracy = model.accuracy(x, y);
           if (best == null || accuracy > bestAccuracy) {
             best = model;

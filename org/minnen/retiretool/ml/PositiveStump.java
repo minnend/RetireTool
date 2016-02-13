@@ -1,5 +1,6 @@
 package org.minnen.retiretool.ml;
 
+import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.util.Library;
 
 import smile.classification.Classifier;
@@ -7,7 +8,7 @@ import smile.classification.ClassifierTrainer;
 import smile.classification.SoftClassifier;
 
 /** Binary Classifier: k = (x[i] > threshold). */
-public class PositiveStump implements SoftClassifier<double[]>
+public class PositiveStump implements SoftClassifier<FeatureVec>
 {
   public final int    iDim;
   public final double threshold;
@@ -21,17 +22,17 @@ public class PositiveStump implements SoftClassifier<double[]>
   }
 
   @Override
-  public int predict(double[] x)
+  public int predict(FeatureVec x)
   {
-    return x[iDim] > threshold ? 1 : 0;
+    return x.get(iDim) > threshold ? 1 : 0;
   }
 
   @Override
-  public int predict(double[] x, double[] posteriori)
+  public int predict(FeatureVec x, double[] posteriori)
   {
-    posteriori[1] = Library.sigmoid(x[iDim], sigma, threshold);
+    posteriori[1] = Library.sigmoid(x.get(iDim), sigma, threshold);
     posteriori[0] = 1.0 - posteriori[1];
-    int k = x[iDim] > threshold ? 1 : 0;
+    int k = x.get(iDim) > threshold ? 1 : 0;
     // System.out.printf("%f -> %d [%.1f, %.1f]\n", x[iDim], k, 100.0 * posteriori[0], 100.0 * posteriori[1]);
     return k;
   }
@@ -42,19 +43,21 @@ public class PositiveStump implements SoftClassifier<double[]>
     return String.format("[PosStump: %d, %.2f]", iDim, threshold);
   }
 
-  public static class Trainer extends ClassifierTrainer<double[]>
+  public static class Trainer extends ClassifierTrainer<FeatureVec>
   {
-    private int nTryDims = -1;
+    private int     nTryDims = -1;
+    private boolean useWeights;
 
-    public Trainer(int nTryDims)
+    public Trainer(int nTryDims, boolean useWeights)
     {
       this.nTryDims = nTryDims;
+      this.useWeights = useWeights;
     }
 
     @Override
-    public Classifier<double[]> train(double[][] x, int[] y)
+    public Classifier<FeatureVec> train(FeatureVec[] x, int[] y)
     {
-      final int D = x[0].length;
+      final int D = x[0].getNumDims();
       int nTryDims = this.nTryDims;
       assert nTryDims <= D;
       if (nTryDims <= 0) {
@@ -75,15 +78,16 @@ public class PositiveStump implements SoftClassifier<double[]>
       for (int i = 0; i < nTryDims; ++i) {
         int d = ii[i];
         double threshold = 0.0;
-        ClassificationModel model = new ClassificationModel(new PositiveStump(d, threshold, 1.0));
-        double accuracy = model.accuracy(x, y);
+        PositiveStump stump = new PositiveStump(d, threshold, 1.0);
+        ClassificationModel model = new ClassificationModel(null, stump);
+        double accuracy = model.accuracy(x, y, useWeights);
         if (best == null || accuracy > bestAccuracy) {
           best = model;
           bestAccuracy = accuracy;
         }
       }
       // System.out.println(best.model);
-      return (PositiveStump) best.model;
+      return (PositiveStump) best.modelFV;
     }
   }
 }

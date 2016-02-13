@@ -80,7 +80,7 @@ public class AdaptivePredictor extends Predictor
     List<FeatureVec> origFeatureList = new ArrayList<>();
     origFeatureList.addAll(features);
 
-    // Sort the assets be predicted value.
+    // Sort the assets by predicted value.
     n = features.size();
     int[] rank = null;
     double[] scores = null;

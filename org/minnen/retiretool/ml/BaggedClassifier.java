@@ -57,6 +57,7 @@ public class BaggedClassifier implements SoftClassifier<double[]>
     {
       BaggedClassifier bag = new BaggedClassifier();
       for (int iWeak = 0; iWeak < nWeak; ++iWeak) {
+        // TODO need to take a bootstrap sample.
         bag.weakClassifiers.add((SoftClassifier<double[]>) trainer.train(x, y));
       }
       return bag;

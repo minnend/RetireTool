@@ -1,6 +1,8 @@
 package org.minnen.retiretool.broker;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -43,6 +45,8 @@ public class Simulation
   private int                                 rebalanceDelay;
   private DiscreteDistribution                prevDist;
   private Predictor                           predictor;
+
+  public List<TimeInfo>                       days;
 
   public Simulation(SequenceStore store, Sequence guideSeq, Slippage slippage, int maxDelay, PriceModel valueModel,
       PriceModel quoteModel)
@@ -271,6 +275,8 @@ public class Simulation
     broker.reset();
     broker.openAccount(AccountName, Fixed.toFixed(startingBalance), Account.Type.Roth, true);
 
+    days = new ArrayList<>();
+
     // TODO support prediction at start instead of on second tick
     // if (predictor != null) {
     // store.lock(TimeLib.TIME_BEGIN, guideSeq.getStartMS(), runKey);
@@ -294,6 +300,7 @@ public class Simulation
     while (runIndex < guideSeq.length() && guideSeq.getTimeMS(runIndex) <= timeEnd) {
       final TimeInfo timeInfo = new TimeInfo(runIndex, guideSeq);
       broker.setNewDay(timeInfo);
+      days.add(timeInfo);
 
       // TODO for debug
       // Calculate return over next week.

@@ -10,6 +10,7 @@ public class FeatureVec
 {
   /** actual data */
   private double[] vec;
+  private double   weight    = 1.0;
   private long     timestamp = TimeLib.TIME_ERROR;
   private String   name;
 
@@ -117,6 +118,17 @@ public class FeatureVec
   public long getTime()
   {
     return timestamp;
+  }
+
+  public FeatureVec setWeight(double weight)
+  {
+    this.weight = weight;
+    return this;
+  }
+
+  public double getWeight()
+  {
+    return weight;
   }
 
   /** @return true if the timestamp for this point is valid */

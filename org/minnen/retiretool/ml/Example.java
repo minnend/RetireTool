@@ -50,6 +50,11 @@ public class Example
     return this;
   }
 
+  public double getWeight()
+  {
+    return x.getWeight();
+  }
+
   public static Example forRegression(FeatureVec x, double y)
   {
     return new Example(x, y);
@@ -101,6 +106,39 @@ public class Example
       v[D] += example.y;
     }
     return sum._div(N);
+  }
+
+  /** @return array of feature vectors from the examples. */
+  public static FeatureVec[] getFeatureArray(List<Example> examples)
+  {
+    final int N = examples.size();
+    FeatureVec[] features = new FeatureVec[N];
+    for (int i = 0; i < N; ++i) {
+      features[i] = examples.get(i).x;
+    }
+    return features;
+  }
+
+  /** @return array of real-valued regressor values from the examples. */
+  public static int[] getClassArray(List<Example> examples)
+  {
+    final int N = examples.size();
+    int[] y = new int[N];
+    for (int i = 0; i < N; ++i) {
+      y[i] = examples.get(i).k;
+    }
+    return y;
+  }
+
+  /** @return array of real-valued regressor values from the examples. */
+  public static double[] getRegressorArray(List<Example> examples)
+  {
+    final int N = examples.size();
+    double[] y = new double[N];
+    for (int i = 0; i < N; ++i) {
+      y[i] = examples.get(i).y;
+    }
+    return y;
   }
 
   public static void saveRegression(List<Example> examples, File file) throws IOException
