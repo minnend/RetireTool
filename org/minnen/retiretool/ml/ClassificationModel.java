@@ -148,20 +148,22 @@ public class ClassificationModel implements SoftClassifier<FeatureVec>
 
   public static ClassificationModel learnStump(List<Example> examples, int nTryDims, boolean useWeights)
   {
-    PositiveStump.Trainer trainer = new PositiveStump.Trainer(nTryDims, useWeights);
+    Stump.Trainer trainer = new Stump.Trainer(nTryDims, useWeights);
     return learnFV(examples, trainer);
   }
 
-  public static ClassificationModel learnQuadrant(List<Example> examples, int nStumps, int nRandomTries)
+  public static ClassificationModel learnQuadrant(List<Example> examples, int nStumps, int nRandomTries,
+      boolean useWeights)
   {
-    PositiveQuadrant.Trainer trainer = new PositiveQuadrant.Trainer(nStumps, nRandomTries);
-    return learn(examples, trainer);
+    PositiveQuadrant.Trainer trainer = new PositiveQuadrant.Trainer(nStumps, nRandomTries, useWeights);
+    return learnFV(examples, trainer);
   }
 
-  public static ClassificationModel learnBaggedQuadrant(List<Example> examples, int nWeak, int nStumps, int nRandomTries)
+  public static ClassificationModel learnBaggedQuadrant(List<Example> examples, int nWeak, int nStumps,
+      int nRandomTries, boolean useWeights)
   {
-    PositiveQuadrant.Trainer weakTrainer = new PositiveQuadrant.Trainer(nStumps, nRandomTries);
+    PositiveQuadrant.Trainer weakTrainer = new PositiveQuadrant.Trainer(nStumps, nRandomTries, useWeights);
     BaggedClassifier.Trainer bagTrainer = new BaggedClassifier.Trainer(nWeak, weakTrainer);
-    return learn(examples, bagTrainer);
+    return learnFV(examples, bagTrainer);
   }
 }

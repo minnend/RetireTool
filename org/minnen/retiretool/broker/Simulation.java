@@ -309,11 +309,13 @@ public class Simulation
       for (String assetName : predictor.assetChoices) {
         if (assetName.equals("cash")) continue;
         Sequence seq = store.get(assetName);
-        IndexRange range = seq.getIndices(timeInfo.time, timeNextWeek, EndpointBehavior.Closest);
-        double p1 = priceModel.getPrice(seq.get(range.iStart));
-        double p2 = priceModel.getPrice(seq.get(range.iEnd));
-        double r = FinLib.mul2ret(p2 / p1);
-        futureReturns.put(assetName, r);
+        if (seq.getNumDims() > 1) {
+          IndexRange range = seq.getIndices(timeInfo.time, timeNextWeek, EndpointBehavior.Closest);
+          double p1 = priceModel.getPrice(seq.get(range.iStart));
+          double p2 = priceModel.getPrice(seq.get(range.iEnd));
+          double r = FinLib.mul2ret(p2 / p1);
+          futureReturns.put(assetName, r);
+        }
       }
       predictor.futureReturns = futureReturns;
 

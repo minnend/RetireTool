@@ -29,6 +29,12 @@ public class AdaptivePredictor extends Predictor
   private DiscreteDistribution     prevDistribution = null;
 
   public AdaptivePredictor(FeatureExtractor featureExtractor, ClassificationModel absoluteClassifier,
+      BrokerInfoAccess brokerAccess, String[] assetChoices)
+  {
+    this(featureExtractor, absoluteClassifier, null, null, brokerAccess, assetChoices);
+  }
+
+  public AdaptivePredictor(FeatureExtractor featureExtractor, ClassificationModel absoluteClassifier,
       ClassificationModel pairwiseClassifier, Ranker ranker, BrokerInfoAccess brokerAccess, String[] assetChoices)
   {
     super("Adaptive", brokerAccess, assetChoices);
@@ -68,7 +74,7 @@ public class AdaptivePredictor extends Predictor
       int k = absoluteClassifier.predict(x, probs);
       // int k = (x.get(10) > 0.0 ? 1 : 0);
       if (DEBUG) {
-        System.out.printf(" %s: [%.1f, %.1f] %6.2f%%  %s\n", x.getName(), 100.0 * probs[0], 100.0 * probs[1],
+        System.out.printf(" %s: %s [%.1f, %.1f] %6.2f%%  %s\n", x.getName(), x, 100.0 * probs[0], 100.0 * probs[1],
             futureReturns.get(assetName), k == 1 ? "Up" : "Down");
       }
       assert k == 0 || k == 1;

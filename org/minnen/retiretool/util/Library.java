@@ -441,10 +441,10 @@ public final class Library
     return (((x + (x >>> 4)) & 0x0F0F0F0F) * 0x01010101) >>> 24;
   }
 
-  /** @return 1.0 / (1 + e^[-k*(x - x0)]) */
-  public static double sigmoid(double x, double k, double x0)
+  /** @return 1.0 / (1 + e^[-(x - x0) / sigma]) */
+  public static double sigmoid(double x, double sigma, double x0)
   {
-    double t = k * (x - x0);
+    double t = (x - x0) / sigma;
     double y = 1.0 + Math.exp(-t);
     return 1.0 / y;
   }

@@ -65,6 +65,8 @@ public class Broker
     this.slippage = slippage;
     this.origTimeInfo = new TimeInfo(0, guideSeq);
     this.timeInfo = origTimeInfo;
+
+    System.out.printf("Broker: value=%s   quote=%s\n", valueModel, quoteModel);
   }
 
   public Broker(SequenceStore store, Slippage slippage, long timeStart)

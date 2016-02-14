@@ -25,7 +25,7 @@ import org.minnen.retiretool.data.Sequence.EndpointBehavior;
 import org.minnen.retiretool.ml.ClassificationModel;
 import org.minnen.retiretool.ml.RegressionModel;
 import org.minnen.retiretool.ml.Example;
-import org.minnen.retiretool.ml.PositiveStump;
+import org.minnen.retiretool.ml.Stump;
 import org.minnen.retiretool.ml.rank.ColleyRanker;
 import org.minnen.retiretool.ml.rank.Ranker;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive;
@@ -43,6 +43,7 @@ import org.minnen.retiretool.predictor.daily.VolResPredictor;
 import org.minnen.retiretool.predictor.features.FeatureExtractor;
 import org.minnen.retiretool.predictor.features.FeatureSet;
 import org.minnen.retiretool.predictor.features.Momentum;
+import org.minnen.retiretool.predictor.features.StdDev;
 import org.minnen.retiretool.predictor.optimize.AdaptiveScanner;
 import org.minnen.retiretool.predictor.optimize.ConfigScanner;
 import org.minnen.retiretool.predictor.optimize.Optimizer;
@@ -217,7 +218,7 @@ public class AdaptiveAlloc
   public static void reweightExamples(List<Example> examples)
   {
     final int N = examples.size();
-    // final int nMonthsFlatWeight = 60;
+    // final int nMonthsFlatWeight = 36;
     // final long timeStart = examples.get(0).getTime();
     // final long timeEnd = examples.get(N - 1).getTime();
 
@@ -234,7 +235,8 @@ public class AdaptiveAlloc
       // timeWeight = alpha * 0.5 + beta;
       // }
       double absReturn = Math.abs(example.y);
-      double returnWeight = 8.0 + absReturn;
+      // double returnWeight = 10.0 + Math.sqrt(1.0 + absReturn);
+      double returnWeight = 1.0;// 10.0 + absReturn;
       double w = returnWeight; // * timeWeight;
       example.x.setWeight(w);
     }
@@ -242,7 +244,7 @@ public class AdaptiveAlloc
 
   public static Simulation walkForwardOptimization(long timeSimStart, long timeSimEnd, SimFactory simFactory)
   {
-    final int stepMonths = 3;
+    final int stepMonths = 1;
     final int maxOptMonths = 12 * 50;
     final boolean useWeights = true;
 
@@ -265,7 +267,7 @@ public class AdaptiveAlloc
 
     // For comparison to non-wf version.
     // PositiveStump stump = new PositiveStump(0, 0.0, 1.0);
-    // Predictor adaptive = new AdaptivePredictor(featureExtractor, new ClassificationModel(null, stump), null, null,
+    // Predictor adaptive = new AdaptivePredictor(featureExtractor, new ClassificationModel(null, stump),
     // sim.broker.accessObject, assetSymbols);
     // sim.setPredictor(adaptive);
 
@@ -291,10 +293,11 @@ public class AdaptiveAlloc
       // ClassificationModel absoluteClassifier = ClassificationModel.learnRF(pointExamples, 100, -1, 32);
       int nDims = pointExamples.get(0).x.getNumDims();
       ClassificationModel absoluteClassifier = ClassificationModel.learnStump(pointExamples, -1, useWeights);
-      // ClassificationModel absoluteClassifier = ClassificationModel.learnQuadrant(pointExamples, 2, -1);
-      // ClassificationModel absoluteClassifier = ClassificationModel.learnBaggedQuadrant(pointExamples, 20, 2, 10);
-      Predictor adaptive = new AdaptivePredictor(featureExtractor, absoluteClassifier, null, null,
-          sim.broker.accessObject, assetSymbols);
+      // ClassificationModel absoluteClassifier = ClassificationModel.learnQuadrant(pointExamples, 2, -1, useWeights);
+      // ClassificationModel absoluteClassifier = ClassificationModel.learnBaggedQuadrant(pointExamples, 20, 2, 10,
+      // useWeights);
+      Predictor adaptive = new AdaptivePredictor(featureExtractor, absoluteClassifier, sim.broker.accessObject,
+          assetSymbols);
 
       // Run the predictor over the test period.
       sim.setPredictor(adaptive);
@@ -318,13 +321,13 @@ public class AdaptiveAlloc
     FeatureSet features = new FeatureSet();
 
     // Add monthly momentum features.
-    int[] ii = new int[] { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
-    for (int i = 0; i < ii.length; ++i) {
-      int x = ii[i];
-      Momentum momentum = new Momentum(20, 1, x * 20, (x - 1) * 20, Momentum.ReturnOrMul.Return,
-          Momentum.CompoundPeriod.Weekly, FinLib.AdjClose);
-      features.add(momentum);
-    }
+    // int[] ii = new int[] { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
+    // for (int i = 0; i < ii.length; ++i) {
+    // int x = ii[i];
+    // Momentum momentum = new Momentum(20, 1, x * 20, (x - 1) * 20, Momentum.ReturnOrMul.Return,
+    // Momentum.CompoundPeriod.Weekly, FinLib.AdjClose);
+    // features.add(momentum);
+    // }
 
     // // Add weekly momentum features.
     // for (int i = 2; i <= 4; ++i) {
@@ -341,6 +344,10 @@ public class AdaptiveAlloc
     // FinLib.AdjClose));
     // features.add(new Momentum(40, 1, 100, 80, Momentum.ReturnOrMul.Return, Momentum.CompoundPeriod.Weekly,
     // FinLib.AdjClose));
+
+    StdDev dev = new StdDev(60, Math.sqrt(252), FinLib.AdjClose);
+    features.add(dev);
+
     return features;
   }
 
@@ -650,15 +657,16 @@ public class AdaptiveAlloc
     // TimeLib.formatDate(seq.getEndMS()));
     // }
     long commonStart = TimeLib.calcCommonStart(seqs);
-    // long commonStart = TimeLib.toMs(2011, Month.AUGUST, 1);
+    // long commonStart = TimeLib.toMs(2006, Month.JANUARY, 1);
     // long commonEnd = TimeLib.calcCommonEnd(seqs);
-    long commonEnd = TimeLib.toMs(2012, Month.DECEMBER, 31); // TODO
+    long commonEnd = TimeLib.toMs(2005, Month.DECEMBER, 31); // TODO
     store.setCommonTimes(commonStart, commonEnd);
     System.out.printf("Common[%d]: [%s] -> [%s]\n", seqs.size(), TimeLib.formatDate(commonStart),
         TimeLib.formatDate(commonEnd));
 
     long timeSimStart = TimeLib.toMs(TimeLib.ms2date(commonStart).plusWeeks(53 + 51)
         .with(TemporalAdjusters.firstDayOfMonth()));
+    // long timeSimStart = TimeLib.toMs(2010, Month.JANUARY, 1); // TODO
     long timeSimEnd = commonEnd; // TimeLib.toMs(2005, Month.DECEMBER, 31); // TODO
     double nSimMonths = TimeLib.monthsBetween(timeSimStart, timeSimEnd);
     System.out.printf("Simulation Start: [%s] (%.1f months)\n", TimeLib.formatDate(timeSimStart), nSimMonths);
@@ -714,14 +722,14 @@ public class AdaptiveAlloc
     // returns.add(returnsLazy3);
 
     // Lazy 4-fund portfolio.
-    // String[] lazy4 = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX" };
-    // // String[] lazy4 = new String[] { "VIIIX", "VEMPX", "VBMPX", "VGSNX", "VTPSX" };
-    // config = new ConfigMixed(new DiscreteDistribution(lazy4, new double[] { 0.4, 0.2, 0.1, 0.3 }), new ConfigConst(
-    // lazy4[0]), new ConfigConst(lazy4[1]), new ConfigConst(lazy4[2]), new ConfigConst(lazy4[3]));
-    // predictor = config.build(sim.broker.accessObject, lazy4);
-    // Sequence returnsLazy4 = sim.run(predictor, timeSimStart, timeSimEnd, "Lazy4");
-    // System.out.println(CumulativeStats.calc(returnsLazy4));
-    // returns.add(returnsLazy4);
+    String[] lazy4 = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX" };
+    // String[] lazy4 = new String[] { "VIIIX", "VEMPX", "VBMPX", "VGSNX", "VTPSX" };
+    config = new ConfigMixed(new DiscreteDistribution(lazy4, new double[] { 0.4, 0.2, 0.1, 0.3 }), new ConfigConst(
+        lazy4[0]), new ConfigConst(lazy4[1]), new ConfigConst(lazy4[2]), new ConfigConst(lazy4[3]));
+    predictor = config.build(sim.broker.accessObject, lazy4);
+    Sequence returnsLazy4 = sim.run(predictor, timeSimStart, timeSimEnd, "Lazy4");
+    System.out.println(CumulativeStats.calc(returnsLazy4));
+    returns.add(returnsLazy4);
 
     // All stock.
     PredictorConfig stockConfig = new ConfigConst("VTSMX");
@@ -738,26 +746,25 @@ public class AdaptiveAlloc
     // returns.add(returnsBonds);
 
     // Volatility-Responsive Asset Allocation.
-    predictor = new VolResPredictor("VTSMX", "VBMFX", sim.broker.accessObject);
+    predictor = new VolResPredictor(60, "VTSMX", "VBMFX", sim.broker.accessObject, FinLib.Close);
     Sequence returnsVolRes = sim.run(predictor, timeSimStart, timeSimEnd, "VolRes");
     System.out.println(CumulativeStats.calc(returnsVolRes));
     returns.add(returnsVolRes);
+    // Chart.saveHoldings(new File(outputDir, "holdings-volres.html"), sim.holdings, sim.store);
 
     // PredictorConfig tacticalConfig = new ConfigTactical(FinLib.AdjClose, "SPY", "VTSMX", "VGSIX", "VGTSX", "EWU",
-    // "EWG", "EWJ",
-    // "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX", "SGGDX", "VGPMX", "USAGX", "FSPCX", "FSRBX",
-    // "FPBFX", "ETGIX", "VBMFX", "cash");
+    // "EWG", "EWJ", "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX", "SGGDX", "VGPMX", "USAGX",
+    // "FSPCX", "FSRBX", "FPBFX", "ETGIX", "VBMFX", "cash");
 
     // PredictorConfig tacticalConfig = new ConfigTactical(FinLib.AdjClose, "VTSMX", "MDY", "VGSIX", "VGTSX", "VGENX",
-    // "WHOSX",
-    // "VGPMX",
-    // "USAGX", "VBMFX", "cash");
+    // "WHOSX", "VGPMX", "USAGX", "VBMFX", "cash");
 
     // PredictorConfig tacticalConfig = new ConfigTactical(FinLib.AdjClose, "VTSMX", "SPY", "VBMFX");
 
     // predictor = tacticalConfig.build(sim.broker.accessObject, assetSymbols);
     // Sequence returnsTactical = sim.run(predictor, timeSimStart, timeSimEnd, "Tactical");
     // System.out.println(CumulativeStats.calc(returnsTactical));
+    // returns.add(returnsTactical);
 
     // Run adaptive asset allocation.
     final TradeFreq tradeFreq = TradeFreq.Weekly;
@@ -798,16 +805,26 @@ public class AdaptiveAlloc
     // returns.add(sim.returnsMonthly);
     // Chart.saveHoldings(new File(outputDir, "holdings-adaptive-prelearn.html"), sim.holdings, sim.store);
 
+    FeatureExtractor features = getFeatureExtractor();
+    Stump stump = new Stump(0, 10.0, true, 10.0);
+    ClassificationModel absoluteClassifier = new ClassificationModel(null, stump);
+    predictor = new AdaptivePredictor(features, absoluteClassifier, sim.broker.accessObject, assetSymbols);
+    sim.run(predictor, timeSimStart, timeSimEnd, "SDev");
+    // sim.broker.getAccount(Simulation.AccountName).printTransactions();
+    System.out.println(CumulativeStats.calc(sim.returnsMonthly));
+    returns.add(sim.returnsMonthly);
+    Chart.saveHoldings(new File(outputDir, "holdings-sdev.html"), sim.holdings, sim.store);
+
     // PredictorConfig equalWeightConfig2 = new ConfigAdaptive(-1, -1, Weighting.Equal, 20, 120, 100, 0.5, 2,
     // pctQuantum,
     // tradeFreq, FinLib.AdjClose);
-    predictor = equalWeightConfig1.build(sim.broker.accessObject, assetSymbols);
-    // config = new ConfigMixed(new DiscreteDistribution(0.5, 0.5), equalWeightConfig1, equalWeightConfig2);
-    // predictor = config.build(sim.broker.accessObject, assetSymbols);
-    sim.run(predictor, timeSimStart, timeSimEnd, "Adaptive-40/80/100");
-    // System.out.printf("Days: %d\n", sim.days.size());
-    System.out.println(CumulativeStats.calc(sim.returnsMonthly));
-    returns.add(sim.returnsMonthly);
+    // predictor = equalWeightConfig1.build(sim.broker.accessObject, assetSymbols);
+    // // config = new ConfigMixed(new DiscreteDistribution(0.5, 0.5), equalWeightConfig1, equalWeightConfig2);
+    // // predictor = config.build(sim.broker.accessObject, assetSymbols);
+    // sim.run(predictor, timeSimStart, timeSimEnd, "Adaptive-40/80/100");
+    // // System.out.printf("Days: %d\n", sim.days.size());
+    // System.out.println(CumulativeStats.calc(sim.returnsMonthly));
+    // returns.add(sim.returnsMonthly);
     // Chart.saveHoldings(new File(outputDir, "holdings-adaptive.html"), sim.holdings, sim.store);
 
     // for (int i = 0; i <= 100; i += 101) {
@@ -856,11 +873,11 @@ public class AdaptiveAlloc
     // System.out.println(CumulativeStats.calc(ret));
     // }
 
-    Simulation wfSim = walkForwardOptimization(timeSimStart, timeSimEnd, simFactory);
-    // System.out.printf("Days: %d\n", wfSim.days.size());
-    System.out.println(CumulativeStats.calc(wfSim.returnsMonthly));
-    returns.add(wfSim.returnsMonthly);
-    Chart.saveHoldings(new File(outputDir, "holdings-adaptive-wf.html"), wfSim.holdings, wfSim.store);
+    // Simulation wfSim = walkForwardOptimization(timeSimStart, timeSimEnd, simFactory);
+    // // System.out.printf("Days: %d\n", wfSim.days.size());
+    // System.out.println(CumulativeStats.calc(wfSim.returnsMonthly));
+    // returns.add(wfSim.returnsMonthly);
+    // Chart.saveHoldings(new File(outputDir, "holdings-adaptive-wf.html"), wfSim.holdings, wfSim.store);
 
     // AdaptiveScanner scanner = new AdaptiveScanner();
     // List<CumulativeStats> cstats = new ArrayList<CumulativeStats>();

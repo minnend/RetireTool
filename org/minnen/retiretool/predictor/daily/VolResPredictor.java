@@ -2,6 +2,8 @@ package org.minnen.retiretool.predictor.daily;
 
 import org.minnen.retiretool.broker.BrokerInfoAccess;
 import org.minnen.retiretool.data.DiscreteDistribution;
+import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Library;
 
 /**
@@ -11,15 +13,19 @@ import org.minnen.retiretool.util.Library;
 public class VolResPredictor extends Predictor
 {
   private DiscreteDistribution prevDistribution = null;
+  public final int             nLookback;
   public final String          assetRisky;
   public final String          assetSafe;
+  public final int             iPrice;
 
-  public VolResPredictor(String assetRisky, String assetSafe, BrokerInfoAccess brokerAccess)
+  public VolResPredictor(int nLookback, String assetRisky, String assetSafe, BrokerInfoAccess brokerAccess, int iPrice)
   {
     super("VolatilityResponsive", brokerAccess, assetRisky, assetSafe);
     this.predictorType = PredictorType.Distribution;
+    this.nLookback = nLookback;
     this.assetRisky = assetRisky;
     this.assetSafe = assetSafe;
+    this.iPrice = iPrice;
   }
 
   @Override
@@ -32,7 +38,8 @@ public class VolResPredictor extends Predictor
 
     distribution.clear();
 
-    double[] rets = getReturns(assetRisky, 60, 0);
+    Sequence seq = brokerAccess.getSeq(assetRisky);
+    double[] rets = FinLib.getReturns(seq, -nLookback, -1, iPrice);
     double sdev = Library.stdev(rets) * Math.sqrt(252);
 
     final double tv5 = 7.8;

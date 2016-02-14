@@ -12,25 +12,25 @@ import smile.classification.ClassifierTrainer;
 import smile.classification.SoftClassifier;
 
 /** Combination of stumps that predicts True only if all stumps predict True. */
-public class PositiveQuadrant implements SoftClassifier<double[]>
+public class PositiveQuadrant implements SoftClassifier<FeatureVec>
 {
-  private final List<PositiveStump> stumps = new ArrayList<>();
+  private final List<Stump> stumps = new ArrayList<>();
 
   @Override
-  public int predict(double[] x)
+  public int predict(FeatureVec x)
   {
-    for (PositiveStump stump : stumps) {
+    for (Stump stump : stumps) {
       if (stump.predict(new FeatureVec(x)) == 0) return 0;
     }
     return 1;
   }
 
   @Override
-  public int predict(double[] x, double[] posteriori)
+  public int predict(FeatureVec x, double[] posteriori)
   {
     assert posteriori.length == 2;
     double minPos = 1.0;
-    for (PositiveStump stump : stumps) {
+    for (Stump stump : stumps) {
       stump.predict(new FeatureVec(x), posteriori);
       if (posteriori[1] < minPos) {
         minPos = posteriori[1];
@@ -46,28 +46,30 @@ public class PositiveQuadrant implements SoftClassifier<double[]>
   {
     StringBuilder sb = new StringBuilder();
     sb.append("[PosQuad:");
-    for (PositiveStump stump : stumps) {
+    for (Stump stump : stumps) {
       sb.append(String.format(" [%d,%.2f]", stump.iDim, stump.threshold));
     }
     sb.append("]");
     return sb.toString();
   }
 
-  public static class Trainer extends ClassifierTrainer<double[]>
+  public static class Trainer extends ClassifierTrainer<FeatureVec>
   {
-    private int nStumps      = -1;
-    private int nRandomTries = 10;
+    private int     nStumps      = -1;
+    private int     nRandomTries = 10;
+    private boolean useWeights;        ;
 
-    public Trainer(int nStumps, int nRandomTries)
+    public Trainer(int nStumps, int nRandomTries, boolean useWeights)
     {
       this.nStumps = nStumps;
       this.nRandomTries = nRandomTries;
+      this.useWeights = useWeights;
     }
 
     @Override
-    public Classifier<double[]> train(double[][] x, int[] y)
+    public Classifier<FeatureVec> train(FeatureVec[] x, int[] y)
     {
-      final int D = x[0].length;
+      final int D = x[0].getNumDims();
       int nStumps = this.nStumps;
       if (nStumps < 0) {
         nStumps = D;
@@ -79,15 +81,15 @@ public class PositiveQuadrant implements SoftClassifier<double[]>
         double threshold = 0.0;
         PositiveQuadrant posQuad = new PositiveQuadrant();
         while (posQuad.stumps.size() < nStumps) {
-          PositiveStump bestStump = null;
+          Stump bestStump = null;
           double bestAccuracy = -1.0;
 
           for (int d = 0; d < D; ++d) {
             if (used[d]) continue;
-            PositiveStump stump = new PositiveStump(d, threshold, 1.0);
+            Stump stump = new Stump(d, threshold);
             posQuad.stumps.add(stump);
-            ClassificationModel model = new ClassificationModel(posQuad, null);
-            double accuracy = model.accuracy(x, y);
+            ClassificationModel model = new ClassificationModel(null, posQuad);
+            double accuracy = model.accuracy(x, y, useWeights);
             // System.out.printf("%s: %.2f\n", posQuad, accuracy);
             if (bestStump == null || accuracy > bestAccuracy) {
               bestStump = stump;
@@ -118,19 +120,19 @@ public class PositiveQuadrant implements SoftClassifier<double[]>
           for (int i = 0; i < nStumps; ++i) {
             // System.out.printf("Try=%d  Stump %d: %d (%d)\n", iTry, i, ii[i], D);
             double threshold = 0.1;// rng.nextDouble() * 0.1;
-            PositiveStump stump = new PositiveStump(ii[i], threshold, 1.0);
+            Stump stump = new Stump(ii[i], threshold);
             posQuad.stumps.add(stump);
           }
           assert posQuad.stumps.size() == nStumps;
-          ClassificationModel model = new ClassificationModel(posQuad, null);
-          double accuracy = model.accuracy(x, y);
+          ClassificationModel model = new ClassificationModel(null, posQuad);
+          double accuracy = model.accuracy(x, y, useWeights);
           if (best == null || accuracy > bestAccuracy) {
             best = model;
             bestAccuracy = accuracy;
           }
         }
-        System.out.println(best.model);
-        return (PositiveQuadrant) best.model;
+        // System.out.println(best.modelFV);
+        return (PositiveQuadrant) best.modelFV;
       }
     }
   }

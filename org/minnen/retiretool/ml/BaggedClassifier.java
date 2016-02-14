@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.Random;
 
@@ -12,24 +13,24 @@ import smile.classification.ClassifierTrainer;
 import smile.classification.SoftClassifier;
 import smile.math.Math;
 
-public class BaggedClassifier implements SoftClassifier<double[]>
+public class BaggedClassifier implements SoftClassifier<FeatureVec>
 {
-  private final List<SoftClassifier<double[]>> weakClassifiers = new ArrayList<>();
+  private final List<SoftClassifier<FeatureVec>> weakClassifiers = new ArrayList<>();
 
   @Override
-  public int predict(double[] x)
+  public int predict(FeatureVec x)
   {
     return predict(x, new double[2]);
   }
 
   @Override
-  public int predict(double[] x, double[] posteriori)
+  public int predict(FeatureVec x, double[] posteriori)
   {
     assert weakClassifiers.size() > 0;
     assert posteriori.length == 2;
     Arrays.fill(posteriori, 0.0);
     double[] pos = new double[2];
-    for (SoftClassifier<double[]> weak : weakClassifiers) {
+    for (SoftClassifier<FeatureVec> weak : weakClassifiers) {
       weak.predict(x, pos);
       for (int i = 0; i < posteriori.length; ++i) {
         posteriori[i] += pos[i];
@@ -41,24 +42,24 @@ public class BaggedClassifier implements SoftClassifier<double[]>
     return Math.whichMax(posteriori);
   }
 
-  public static class Trainer extends ClassifierTrainer<double[]>
+  public static class Trainer extends ClassifierTrainer<FeatureVec>
   {
-    private int                         nWeak = 10;
-    private ClassifierTrainer<double[]> trainer;
+    private int                           nWeak = 10;
+    private ClassifierTrainer<FeatureVec> trainer;
 
-    public Trainer(int nWeak, ClassifierTrainer<double[]> trainer)
+    public Trainer(int nWeak, ClassifierTrainer<FeatureVec> trainer)
     {
       this.nWeak = nWeak;
       this.trainer = trainer;
     }
 
     @Override
-    public Classifier<double[]> train(double[][] x, int[] y)
+    public Classifier<FeatureVec> train(FeatureVec[] x, int[] y)
     {
       BaggedClassifier bag = new BaggedClassifier();
       for (int iWeak = 0; iWeak < nWeak; ++iWeak) {
         // TODO need to take a bootstrap sample.
-        bag.weakClassifiers.add((SoftClassifier<double[]>) trainer.train(x, y));
+        bag.weakClassifiers.add((SoftClassifier<FeatureVec>) trainer.train(x, y));
       }
       return bag;
     }

@@ -8,39 +8,60 @@ import smile.classification.ClassifierTrainer;
 import smile.classification.SoftClassifier;
 
 /** Binary Classifier: k = (x[i] > threshold). */
-public class PositiveStump implements SoftClassifier<FeatureVec>
+public class Stump implements SoftClassifier<FeatureVec>
 {
-  public final int    iDim;
-  public final double threshold;
-  public final double sigma;
+  public final int     iDim;
+  public final double  threshold;
+  public final boolean invert;
+  public final double  sigma;
 
-  public PositiveStump(int iDim, double threshold, double sigma)
+  public Stump(int iDim, double threshold)
+  {
+    this(iDim, threshold, false);
+  }
+
+  public Stump(int iDim, double threshold, boolean invert)
+  {
+    this(iDim, threshold, invert, 1.0);
+  }
+
+  public Stump(int iDim, double threshold, boolean invert, double sigma)
   {
     this.iDim = iDim;
     this.threshold = threshold;
+    this.invert = invert;
     this.sigma = sigma;
   }
 
   @Override
   public int predict(FeatureVec x)
   {
-    return x.get(iDim) > threshold ? 1 : 0;
+    double v = x.get(iDim);
+    if (invert) {
+      return v < threshold ? 1 : 0;
+    } else {
+      return v > threshold ? 1 : 0;
+    }
   }
 
   @Override
   public int predict(FeatureVec x, double[] posteriori)
   {
-    posteriori[1] = Library.sigmoid(x.get(iDim), sigma, threshold);
+    double v = x.get(iDim);
+    if (invert) {
+      posteriori[1] = Library.sigmoid(-v, sigma, -threshold);
+    } else {
+      posteriori[1] = Library.sigmoid(v, sigma, threshold);
+    }
     posteriori[0] = 1.0 - posteriori[1];
-    int k = x.get(iDim) > threshold ? 1 : 0;
     // System.out.printf("%f -> %d [%.1f, %.1f]\n", x[iDim], k, 100.0 * posteriori[0], 100.0 * posteriori[1]);
-    return k;
+    return predict(x);
   }
 
   @Override
   public String toString()
   {
-    return String.format("[PosStump: %d, %.2f]", iDim, threshold);
+    return String.format("[Stump: %d, %.2f%s]", iDim, threshold, invert ? ", inv" : "");
   }
 
   public static class Trainer extends ClassifierTrainer<FeatureVec>
@@ -78,7 +99,7 @@ public class PositiveStump implements SoftClassifier<FeatureVec>
       for (int i = 0; i < nTryDims; ++i) {
         int d = ii[i];
         double threshold = 0.0;
-        PositiveStump stump = new PositiveStump(d, threshold, 1.0);
+        Stump stump = new Stump(d, threshold);
         ClassificationModel model = new ClassificationModel(null, stump);
         double accuracy = model.accuracy(x, y, useWeights);
         if (best == null || accuracy > bestAccuracy) {
@@ -87,7 +108,7 @@ public class PositiveStump implements SoftClassifier<FeatureVec>
         }
       }
       // System.out.println(best.model);
-      return (PositiveStump) best.modelFV;
+      return (Stump) best.modelFV;
     }
   }
 }
