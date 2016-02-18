@@ -35,20 +35,25 @@ public class FeatureSet extends FeatureExtractor
   @Override
   public int size()
   {
-    // TODO assumes each internal extractor only generates one features.
-    return extractors.size();
+    int n = 0;
+    for (FeatureExtractor fe : extractors) {
+      n += fe.size();
+    }
+    return n;
   }
 
   @Override
   public FeatureVec calculate(BrokerInfoAccess brokerAccess, String assetName)
   {
-    FeatureVec features = new FeatureVec(assetName, extractors.size());
+    FeatureVec features = new FeatureVec(assetName, size());
     features.setTime(brokerAccess.getTime());
+    int iDim = 0;
     for (int i = 0; i < extractors.size(); ++i) {
-      // TODO assumes each internal extractor only generates one features.
-      features.set(i, extractors.get(i).calculate(brokerAccess, assetName).get(0));
+      FeatureExtractor fe = extractors.get(i);
+      FeatureVec fv = fe.calculate(brokerAccess, assetName);
+      assert fv.getNumDims() == fe.size();
+      iDim = features.set(iDim, fv);
     }
     return features;
   }
-
 }

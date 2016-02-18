@@ -76,7 +76,7 @@ public class AdaptiveMomentumPredictor extends Predictor
       assert !name.equals("cash");
       Sequence seq = brokerAccess.getSeq(name);
       assert seq != null : moms.get(i).name;
-      returns[i] = FinLib.getReturns(seq, -nLookback, -1, config.iPrice);
+      returns[i] = FinLib.getDailyReturns(seq, -nLookback, -1, config.iPrice);
       assert returns[i].length == returns[0].length;
     }
     return returns;

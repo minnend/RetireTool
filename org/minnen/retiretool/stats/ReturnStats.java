@@ -17,6 +17,10 @@ public class ReturnStats implements Comparable<ReturnStats>
   public final double percentile75;
   public final double percentile90;
   public final double max;
+  public final double percentUp;
+  public final double percentDown;
+  public final double meanUp;
+  public final double meanDown;
 
   public static ReturnStats calc(String name, double[] r)
   {
@@ -39,6 +43,22 @@ public class ReturnStats implements Comparable<ReturnStats>
     percentile75 = r[Math.min(Math.round(r.length * 0.75f), r.length - 1)];
     percentile90 = r[Math.min(Math.round(r.length * 0.9f), r.length - 1)];
     max = r[r.length - 1];
+
+    // Calculate percent positive returns
+    int index = Arrays.binarySearch(r, 0.0);
+    if (index < 0) {
+      index = -index - 1;
+    }
+    while (index < r.length && r[index] < 1e-8) {
+      ++index;
+    }
+    assert index == r.length || (r[index] > 0.0 && (index == 0 || r[index - 1] <= 0.0));
+    int nDown = index;
+    int nUp = r.length - index;
+    percentUp = 100.0 * nUp / r.length;
+    percentDown = 100.0 - percentUp;
+    meanUp = (nUp == 0 ? 0.0 : Library.sum(r, index, r.length - 1) / nUp);
+    meanDown = (nDown == 0 ? 0.0 : Library.sum(r, 0, index - 1) / nDown);
   }
 
   @Override
@@ -47,26 +67,25 @@ public class ReturnStats implements Comparable<ReturnStats>
     return String.format("%.2f [%.2f, %.2f, %.2f, %.2f, %.2f]", mean, min, percentile10, median, percentile90, max);
   }
 
+  public String toLongString()
+  {
+    return String.format("%.2f (sdev=%.2f, up=%.1f%%) [%6.2f, %6.2f, %6.2f, %6.2f, %6.2f, %6.2f, %6.2f]", mean, sdev,
+        percentUp, min, percentile10, percentile25, median, percentile75, percentile90, max);
+  }
+
   @Override
   public int compareTo(ReturnStats other)
   {
-    if (this == other)
-      return 0;
+    if (this == other) return 0;
 
-    if (mean < other.mean)
-      return -1;
-    if (mean > other.mean)
-      return 1;
+    if (mean < other.mean) return -1;
+    if (mean > other.mean) return 1;
 
-    if (median < other.median)
-      return -1;
-    if (median > other.median)
-      return 1;
+    if (median < other.median) return -1;
+    if (median > other.median) return 1;
 
-    if (sdev > other.sdev)
-      return -1;
-    if (sdev < other.sdev)
-      return 1;
+    if (sdev > other.sdev) return -1;
+    if (sdev < other.sdev) return 1;
 
     return 0;
   }

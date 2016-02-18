@@ -176,6 +176,14 @@ public class FeatureVec
     vec[d] = v;
   }
 
+  /** Copy features from FV starting at dimension d. */
+  public int set(int d, FeatureVec fv)
+  {
+    final int D = fv.getNumDims();
+    System.arraycopy(fv.get(), 0, vec, d, D);
+    return d + D;
+  }
+
   /** set the value of all dimensions to x */
   public void fill(double x)
   {

@@ -13,6 +13,8 @@ import org.minnen.retiretool.predictor.features.FeatureExtractor;
 import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.TimeLib;
 
+import smile.classification.SoftClassifier;
+
 public class AdaptivePredictor extends Predictor
 {
   public final boolean             DEBUG            = false;
@@ -22,8 +24,8 @@ public class AdaptivePredictor extends Predictor
   public final ClassificationModel pairwiseClassifier;
   public final Ranker              ranker;
   public final TradeFreq           tradeFreq        = TradeFreq.Weekly;
-  public final double              maxKeepFrac      = 0.5;
-  public final int                 maxKeep          = 4;
+  public final double              maxKeepFrac      = 0.9;
+  public final int                 maxKeep          = 2;
   public final int                 pctQuantum       = 1;
 
   private DiscreteDistribution     prevDistribution = null;
@@ -32,6 +34,12 @@ public class AdaptivePredictor extends Predictor
       BrokerInfoAccess brokerAccess, String[] assetChoices)
   {
     this(featureExtractor, absoluteClassifier, null, null, brokerAccess, assetChoices);
+  }
+
+  public AdaptivePredictor(FeatureExtractor featureExtractor, SoftClassifier<FeatureVec> absoluteClassifier,
+      BrokerInfoAccess brokerAccess, String[] assetChoices)
+  {
+    this(featureExtractor, new ClassificationModel(null, absoluteClassifier), null, null, brokerAccess, assetChoices);
   }
 
   public AdaptivePredictor(FeatureExtractor featureExtractor, ClassificationModel absoluteClassifier,
@@ -139,7 +147,7 @@ public class AdaptivePredictor extends Predictor
       for (int i = 0; i < n; ++i) {
         features.set(i, origFeatureList.get(rank[i]));
         if (DEBUG) {
-          System.out.printf(" %d: %s (%.3f, %.2f%%)\n", i + 1, features.get(i).getName(), scores[rank[i]],
+          System.out.printf(" %d: %s -> (%.3f, %.2f%%)\n", i + 1, features.get(i).getName(), scores[rank[i]],
               futureReturns.get(features.get(i).getName()));
         }
       }

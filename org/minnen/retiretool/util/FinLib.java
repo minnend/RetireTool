@@ -208,98 +208,6 @@ public final class FinLib
   }
 
   /**
-   * Compute histogram for the given returns.
-   * 
-   * @param rois sequence containing list of ROIs for some strategy
-   * @param binWidth width of each bin
-   * @param binCenter center bin has this value
-   * @return sequence of 3D vectors: [center of bin, count, frequence]
-   */
-  public static Sequence computeHistogram(Sequence rois, double binWidth, double binCenter)
-  {
-    return computeHistogram(rois, Double.NaN, Double.NaN, binWidth, binCenter);
-  }
-
-  /**
-   * Compute histogram for the given returns.
-   * 
-   * @param rois sequence containing list of ROIs for some strategy
-   * @param vmin histogram starts with bin containing this value (NaN to compute from ROIs)
-   * @param vmax histogram ends with bin containing this value (NaN to compute from ROIs)
-   * @param binWidth width of each bin
-   * @param binCenter center bin has this value
-   * @return sequence of 3D vectors: [center of bin, count, frequence]
-   */
-  public static Sequence computeHistogram(Sequence rois, double vmin, double vmax, double binWidth, double binCenter)
-  {
-    // Sort ROIs to find min/max and ease histogram generation.
-    double[] a = rois.extractDim(0);
-    Arrays.sort(a);
-    int na = a.length;
-    if (Double.isNaN(vmin)) {
-      vmin = a[0];
-    }
-    if (Double.isNaN(vmax)) {
-      vmax = a[na - 1];
-    }
-    // System.out.printf("Data: %d entries in [%.2f%%, %.2f%%]\n", na, vmin, vmax);
-
-    // figure out where to start
-    double hleftCenter = binCenter - binWidth / 2.0;
-    double hleft = hleftCenter + Math.floor((vmin - hleftCenter) / binWidth) * binWidth;
-    // System.out.printf("binCenter=%f   binWidth=%f  hleft=%f\n", binCenter, binWidth, hleft);
-    Sequence h = new Sequence("Histogram: " + rois.getName());
-    int i = 0;
-    while (i < na) {
-      assert (i == 0 || a[i] >= hleft);
-      double hright = hleft + binWidth;
-      double hrightTest = hright;
-
-      // Did we reach the requested end?
-      if (hright >= vmax) {
-        hrightTest = Double.POSITIVE_INFINITY;
-      }
-
-      // Find all data points in [hleft, hright).
-      int j = i;
-      while (j < na) {
-        if (a[j] < hrightTest) {
-          ++j;
-        } else {
-          break;
-        }
-      }
-
-      // Add data point for this bin.
-      int n = j - i;
-      double frac = (double) n / na;
-      h.addData(new FeatureVec(3, (hleft + hright) / 2, n, frac));
-
-      // Move to next bin.
-      i = j;
-      hleft = hright;
-    }
-
-    // Add zeroes to reach vmax.
-    while (hleft <= vmax) {
-      double hright = hleft + binWidth;
-      h.addData(new FeatureVec(3, (hleft + hright) / 2, 0, 0));
-      hleft = hright;
-    }
-
-    return h;
-  }
-
-  public static String[] getLabelsFromHistogram(Sequence histogram)
-  {
-    String[] labels = new String[histogram.length()];
-    for (int i = 0; i < labels.length; ++i) {
-      labels[i] = String.format("%.1f", histogram.get(i, 0));
-    }
-    return labels;
-  }
-
-  /**
    * Append dimension that stores likelihood of meeting or exceeding the current ROI
    * 
    * @param h histogram sequence (frequencies expected in dim=2)
@@ -395,7 +303,7 @@ public final class FinLib
     int[] years = new int[] { 1, 2, 5, 10, 20, 30, 40 };
     for (int i = 0; i < years.length; i++) {
       Sequence r = calcReturnsForDuration(cumulativeReturns, years[i] * 12);
-      Sequence h = computeHistogram(r, 0.5, 0.0);
+      Sequence h = Histogram.computeHistogram(r, 0.5, 0.0, 0);
       h = addReturnLikelihoods(h, bInvert);
       seqLik = appendROISeq(seqLik, h);
     }
@@ -845,8 +753,8 @@ public final class FinLib
 
   public static double calcCorrelation(Sequence prices1, Sequence prices2, int iStart, int iEnd, int iDim)
   {
-    double[] r1 = getReturns(prices1, iStart, iEnd, iDim);
-    double[] r2 = getReturns(prices2, iStart, iEnd, iDim);
+    double[] r1 = getDailyReturns(prices1, iStart, iEnd, iDim);
+    double[] r2 = getDailyReturns(prices2, iStart, iEnd, iDim);
     return Library.correlation(r1, r2);
   }
 
@@ -861,19 +769,37 @@ public final class FinLib
    * @param iDim dimension of <code>prices</code> to extract
    * @return array containing per-tick returns (1.2 = 1.2% return)
    */
-  public static double[] getReturns(Sequence prices, int iStart, int iEnd, int iDim)
+  public static double[] getDailyReturns(Sequence prices, int iStart, int iEnd, int iDim)
   {
+    return getReturns(prices, 1, iStart, iEnd, iDim);
+  }
+
+  /**
+   * Calculate the tick-by-tick returns from the given sequence of prices.
+   * 
+   * There will be N = iEnd - iStart returns. The first one is from (iStart) to (iStart+1).
+   * 
+   * @param prices sequence of prices
+   * @param delay number of days over which to calculate returns
+   * @param iStart first index to include
+   * @param iEnd last index to include
+   * @param iDim dimension of <code>prices</code> to extract
+   * @return array containing per-tick returns (1.2 = 1.2% return)
+   */
+  public static double[] getReturns(Sequence prices, int delay, int iStart, int iEnd, int iDim)
+  {
+    assert delay > 0;
     if (iStart < 0) iStart += prices.length();
     if (iEnd < 0) iEnd += prices.length();
     assert iEnd > iStart;
     final int N = iEnd - iStart;
     double[] r = new double[N];
     int ir = 0;
-    for (int i = iStart + 1; i <= iEnd; ++i) {
-      double mul = prices.get(i, iDim) / prices.get(i - 1, iDim);
+    for (int i = iStart + delay; i <= iEnd; ++i) {
+      double mul = prices.get(i, iDim) / prices.get(i - delay, iDim);
       r[ir++] = FinLib.mul2ret(mul);
     }
-    assert ir == N;
+    assert ir == (N - delay + 1);
     return r;
   }
 

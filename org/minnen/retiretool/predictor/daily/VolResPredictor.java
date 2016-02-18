@@ -39,7 +39,7 @@ public class VolResPredictor extends Predictor
     distribution.clear();
 
     Sequence seq = brokerAccess.getSeq(assetRisky);
-    double[] rets = FinLib.getReturns(seq, -nLookback, -1, iPrice);
+    double[] rets = FinLib.getDailyReturns(seq, -nLookback, -1, iPrice);
     double sdev = Library.stdev(rets) * Math.sqrt(252);
 
     final double tv5 = 7.8;

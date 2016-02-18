@@ -378,6 +378,7 @@ public final class Library
     return sum(a, 0, -1);
   }
 
+  /** @return sum of values in [iStart, iEnd]. */
   public static double sum(double[] a, int iStart, int iEnd)
   {
     if (iStart < 0) {

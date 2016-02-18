@@ -24,8 +24,8 @@ public class StdDev extends FeatureExtractor
   public FeatureVec calculate(BrokerInfoAccess brokerAccess, String assetName)
   {
     Sequence seq = brokerAccess.getSeq(assetName);
-    double[] rets = FinLib.getReturns(seq, -nLookback, -1, iPrice);
+    double[] rets = FinLib.getDailyReturns(seq, -nLookback, -1, iPrice);
     double sdev = Library.stdev(rets) * Math.sqrt(252);
-    return new FeatureVec(1, sdev);
+    return new FeatureVec(assetName, 1, sdev);
   }
 }

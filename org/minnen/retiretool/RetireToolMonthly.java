@@ -39,6 +39,7 @@ import org.minnen.retiretool.stats.RetirementStats;
 import org.minnen.retiretool.stats.ReturnStats;
 import org.minnen.retiretool.stats.WinStats;
 import org.minnen.retiretool.util.FinLib;
+import org.minnen.retiretool.util.Histogram;
 import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.Random;
 import org.minnen.retiretool.util.TimeLib;
@@ -848,12 +849,12 @@ public class RetireToolMonthly
       liks[i] = returnLiks.extractDims(i + 1);
       liks[i].setName(String.format("%d year%s", years[i], years[i] == 1 ? "" : "s"));
       Chart.saveHighChart(new File(String.format("g:/web/return-likelihoods-%d-years.html", years[i])),
-          Chart.ChartType.Area, "Return Likelihoods", FinLib.getLabelsFromHistogram(returnLiks), null, GRAPH_WIDTH,
+          Chart.ChartType.Area, "Return Likelihoods", Histogram.getLabelsFromHistogram(returnLiks), null, GRAPH_WIDTH,
           GRAPH_HEIGHT, 0.0, 1.0, Double.NaN, false, true, 0, liks[i]);
     }
     Chart.saveHighChart(new File(dir, "return-likelihoods.html"), Chart.ChartType.Line, "Return Likelihoods",
-        FinLib.getLabelsFromHistogram(returnLiks), null, GRAPH_WIDTH, GRAPH_HEIGHT, 0.0, 1.0, Double.NaN, false, true,
-        0, liks);
+        Histogram.getLabelsFromHistogram(returnLiks), null, GRAPH_WIDTH, GRAPH_HEIGHT, 0.0, 1.0, Double.NaN, false,
+        true, 0, liks);
 
     // Sequence[] assets = new Sequence[] { multiSmaAggressive, daa, multiMomDefensive, momentum, sma, raa, stock,
     // bonds, mixed };
@@ -883,12 +884,12 @@ public class RetireToolMonthly
 
     Sequence[] histograms = new Sequence[assets.length];
     for (int i = 0; i < assets.length; ++i) {
-      histograms[i] = FinLib.computeHistogram(returns[i], vmin, vmax, 0.5, 0.0);
+      histograms[i] = Histogram.computeHistogram(returns[i], vmin, vmax, 0.5, 0.0, 0);
       histograms[i].setName(assets[i].getName());
     }
 
     String title = "Histogram of Returns - " + TimeLib.formatDurationMonths(nMonths);
-    String[] labels = FinLib.getLabelsFromHistogram(histograms[0]);
+    String[] labels = Histogram.getLabelsFromHistogram(histograms[0]);
     Chart.saveHighChart(new File(dir, "histogram-returns.html"), Chart.ChartType.Bar, title, labels, null, GRAPH_WIDTH,
         GRAPH_HEIGHT, Double.NaN, Double.NaN, Double.NaN, false, true, 1, histograms);
 
@@ -935,7 +936,7 @@ public class RetireToolMonthly
     // Generate histogram summarizing excess returns of B over A.
     title = String.format("Excess Returns: %s vs. %s (%s)", name1, name2, TimeLib.formatDurationMonths(duration));
     Sequence excessReturns = dstatsA.durationReturns.sub(dstatsB.durationReturns);
-    Sequence histogramExcess = FinLib.computeHistogram(excessReturns, 0.5, 0.0);
+    Sequence histogramExcess = Histogram.computeHistogram(excessReturns, 0.5, 0.0, 0);
     histogramExcess.setName(String.format("%s vs. %s", name1, name2));
     String[] colors = new String[excessReturns.length()];
     for (int i = 0; i < colors.length; ++i) {
@@ -948,7 +949,7 @@ public class RetireToolMonthly
     Chart.saveHighChart(new File(dir, "duel-excess-histogram.html"), Chart.ChartType.PosNegArea, title, null, null,
         GRAPH_WIDTH, GRAPH_HEIGHT, Double.NaN, Double.NaN, 1.0, false, true, 0, excessReturns);
 
-    String[] labels = FinLib.getLabelsFromHistogram(histogramExcess);
+    String[] labels = Histogram.getLabelsFromHistogram(histogramExcess);
     colors = new String[labels.length];
     for (int i = 0; i < colors.length; ++i) {
       double x = histogramExcess.get(i, 0);
