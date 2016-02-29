@@ -62,14 +62,16 @@ public final class FinLib
   // VBTLX = Total Bond Market (US)
   // VGSLX = REITs
   // VTIAX = International Stock
+  // VWIAX = Wellesley Income
   public static final String[] VANGUARD_ADMIRAL_FUNDS  = new String[] { "VFIAX", "VEXAX", "VTSAX", "VBTLX", "VGSLX",
-      "VTIAX"                                         };
+      "VTIAX", "VWIAX"                                };
 
   // VTSMX = Total Stock Market (~3800 stocks)
   // VBMFX = Total Bond Market (~7650 bonds)
   // VGSIX = REITs
   // VGTSX = International Stock
-  public static final String[] VANGUARD_INVESTOR_FUNDS = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX" };
+  // VWINX = Wellesley Income
+  public static final String[] VANGUARD_INVESTOR_FUNDS = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX", "VWINX" };
 
   public static final String[] STOCK_MARKET_FUNDS      = new String[] { "^GSPC" };
 

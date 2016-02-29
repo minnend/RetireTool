@@ -25,25 +25,28 @@ public class AdaptivePredictor extends Predictor
   public final Ranker              ranker;
   public final TradeFreq           tradeFreq        = TradeFreq.Weekly;
   public final double              maxKeepFrac      = 0.9;
-  public final int                 maxKeep          = 2;
+  public final int                 maxKeep          = 1;
   public final int                 pctQuantum       = 1;
+  public final String              safeAsset;
 
   private DiscreteDistribution     prevDistribution = null;
 
-  public AdaptivePredictor(FeatureExtractor featureExtractor, ClassificationModel absoluteClassifier,
+  public AdaptivePredictor(FeatureExtractor featureExtractor, ClassificationModel absoluteClassifier, String safeAsset,
       BrokerInfoAccess brokerAccess, String[] assetChoices)
   {
-    this(featureExtractor, absoluteClassifier, null, null, brokerAccess, assetChoices);
+    this(featureExtractor, absoluteClassifier, null, null, safeAsset, brokerAccess, assetChoices);
   }
 
   public AdaptivePredictor(FeatureExtractor featureExtractor, SoftClassifier<FeatureVec> absoluteClassifier,
-      BrokerInfoAccess brokerAccess, String[] assetChoices)
+      String safeAsset, BrokerInfoAccess brokerAccess, String[] assetChoices)
   {
-    this(featureExtractor, new ClassificationModel(null, absoluteClassifier), null, null, brokerAccess, assetChoices);
+    this(featureExtractor, new ClassificationModel(null, absoluteClassifier), null, null, safeAsset, brokerAccess,
+        assetChoices);
   }
 
   public AdaptivePredictor(FeatureExtractor featureExtractor, ClassificationModel absoluteClassifier,
-      ClassificationModel pairwiseClassifier, Ranker ranker, BrokerInfoAccess brokerAccess, String[] assetChoices)
+      ClassificationModel pairwiseClassifier, Ranker ranker, String safeAsset, BrokerInfoAccess brokerAccess,
+      String[] assetChoices)
   {
     super("Adaptive", brokerAccess, assetChoices);
     this.featureExtractor = featureExtractor;
@@ -51,6 +54,7 @@ public class AdaptivePredictor extends Predictor
     this.pairwiseClassifier = pairwiseClassifier;
     this.ranker = ranker;
     this.predictorType = PredictorType.Distribution;
+    this.safeAsset = safeAsset;
   }
 
   @Override
@@ -180,7 +184,7 @@ public class AdaptivePredictor extends Predictor
       distribution.clean(pctQuantum);
     } else {
       // If nothing looks good, hold all cash.
-      distribution.set("cash", 1.0);
+      distribution.set(safeAsset, 1.0);
     }
     if (DEBUG) {
       // System.out.printf("[%s] %s\n", TimeLib.formatDate2(brokerAccess.getTime()), distribution.toStringWithNames(2));

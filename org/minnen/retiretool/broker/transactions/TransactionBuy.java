@@ -1,6 +1,7 @@
 package org.minnen.retiretool.broker.transactions;
 
 import org.minnen.retiretool.broker.Account;
+import org.minnen.retiretool.broker.transactions.Transaction.Flow;
 import org.minnen.retiretool.util.Fixed;
 import org.minnen.retiretool.util.TimeLib;
 
@@ -13,7 +14,7 @@ public class TransactionBuy extends Transaction
 
   public TransactionBuy(Account account, long time, String name, long nShares, long price, String memo)
   {
-    super(account, time, memo);
+    super(account, time, Flow.Internal, memo);
     this.name = name;
     this.nShares = nShares;
     this.price = price;

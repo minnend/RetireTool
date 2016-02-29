@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.minnen.retiretool.broker.transactions.Transaction;
+import org.minnen.retiretool.broker.transactions.Transaction.Flow;
 import org.minnen.retiretool.broker.transactions.TransactionBuy;
 import org.minnen.retiretool.broker.transactions.TransactionDeposit;
 import org.minnen.retiretool.broker.transactions.TransactionOpen;
@@ -69,22 +70,22 @@ public class Account
     for (Position position : positions.values()) {
       String divName = position.name + "-dividends";
       Sequence divs = store.tryGet(divName);
-      if (divs != null) {
-        int index = divs.getClosestIndex(timeInfo.time);
-        long divTime = divs.getTimeMS(index);
-        if (timeInfo.time >= divTime && TimeLib.isSameMonth(TimeLib.ms2date(timeInfo.time), TimeLib.ms2date(divTime))) {
-          // Did we already pay this dividend?
-          long lastDivTime = lastDivPaid.getOrDefault(position.name, TimeLib.TIME_ERROR);
-          if (divTime > lastDivTime) {
-            lastDivPaid.put(position.name, divTime);
+      if (divs == null) continue;
 
-            double div = divs.get(index, 0);
-            long value = Math.round(position.getNumShares() * div);
-            // System.out.printf("Dividend! %d = [%s] div=%.2f\n", index, TimeLib.formatDate(timeInfo.time), div);
-            deposit(value, "Dividend Payment");
-            if (bReinvestDividends) {
-              buyValue(position.name, value, "Dividend Reinvestment");
-            }
+      int index = divs.getClosestIndex(timeInfo.time);
+      long divTime = divs.getTimeMS(index);
+      if (timeInfo.time >= divTime && TimeLib.isSameMonth(TimeLib.ms2date(timeInfo.time), TimeLib.ms2date(divTime))) {
+        // Did we already pay this dividend?
+        long lastDivTime = lastDivPaid.getOrDefault(position.name, TimeLib.TIME_ERROR);
+        if (divTime > lastDivTime) {
+          lastDivPaid.put(position.name, divTime);
+
+          double div = divs.get(index, 0);
+          long value = Math.round(position.getNumShares() * div);
+          // System.out.printf("Dividend! %d = [%s] div=%.2f\n", index, TimeLib.formatDate(timeInfo.time), div);
+          deposit(value, Flow.Internal, "Dividend Payment");
+          if (bReinvestDividends) {
+            buyValue(position.name, value, "Dividend Reinvestment");
           }
         }
       }
@@ -111,7 +112,7 @@ public class Account
     long interest = Math.round(avgCash * (mul - 1.0));
     if (interest >= Fixed.PENNY) {
       // System.out.printf("Interest! $%s\n", Fixed.formatCurrency(interest));
-      deposit(interest, "Interest");
+      deposit(interest, Flow.Internal, "Interest");
     }
 
     // Reset accumulators.
@@ -198,18 +199,18 @@ public class Account
     assert cash == sell.postBalance;
   }
 
-  public void deposit(long amount, String memo)
+  public void deposit(long amount, Transaction.Flow flow, String memo)
   {
     assert amount > 0;
-    TransactionDeposit deposit = new TransactionDeposit(this, broker.getTime(), amount, memo);
+    TransactionDeposit deposit = new TransactionDeposit(this, broker.getTime(), flow, amount, memo);
     transactions.add(deposit);
     apply(deposit);
   }
 
-  public void withdraw(long amount, String memo)
+  public void withdraw(long amount, Transaction.Flow flow, String memo)
   {
     assert amount > 0;
-    TransactionWithdraw withdraw = new TransactionWithdraw(this, broker.getTime(), amount, memo);
+    TransactionWithdraw withdraw = new TransactionWithdraw(this, broker.getTime(), flow, amount, memo);
     transactions.add(withdraw);
     apply(withdraw);
   }
@@ -332,8 +333,16 @@ public class Account
   public void printBuySell()
   {
     for (Transaction transaction : transactions) {
-      if ((transaction instanceof TransactionBuy || transaction instanceof TransactionSell)
-          && !transaction.memo.contains("Interest") && !transaction.memo.contains("Dividend")) {
+      if (transaction instanceof TransactionBuy || transaction instanceof TransactionSell) {
+        System.out.println(transaction);
+      }
+    }
+  }
+
+  public void printInOutFlow()
+  {
+    for (Transaction transaction : transactions) {
+      if (transaction.flow == Flow.InFlow || transaction.flow == Flow.OutFlow) {
         System.out.println(transaction);
       }
     }

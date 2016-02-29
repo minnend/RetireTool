@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.minnen.retiretool.Slippage;
+import org.minnen.retiretool.broker.transactions.Transaction.Flow;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.util.Fixed;
@@ -195,7 +196,7 @@ public class Broker
     Account account = new Account(name, this, accountType, bReinvestDividends);
     accounts.add(account);
     if (startingBalance > 0L) {
-      account.deposit(startingBalance, "Initial Deposit");
+      account.deposit(startingBalance, Flow.InFlow, "Initial Deposit");
     }
     return account;
   }

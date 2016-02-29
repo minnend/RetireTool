@@ -32,6 +32,7 @@ public class MixedPredictor extends Predictor
         distribution.weights[iName] += wi * dist.weights[j];
       }
     }
+    // System.out.printf("[%s] %s\n", brokerAccess.getTimeInfo().date, distribution.toStringWithNames(2));
     distribution.normalize();
   }
 }

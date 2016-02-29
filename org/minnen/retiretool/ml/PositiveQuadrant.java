@@ -16,6 +16,11 @@ public class PositiveQuadrant implements SoftClassifier<FeatureVec>
 {
   private final List<Stump> stumps = new ArrayList<>();
 
+  public void add(Stump stump)
+  {
+    stumps.add(stump);
+  }
+
   @Override
   public int predict(FeatureVec x)
   {
@@ -87,7 +92,7 @@ public class PositiveQuadrant implements SoftClassifier<FeatureVec>
           for (int d = 0; d < D; ++d) {
             if (used[d]) continue;
             Stump stump = new Stump(d, threshold);
-            posQuad.stumps.add(stump);
+            posQuad.add(stump);
             ClassificationModel model = new ClassificationModel(null, posQuad);
             double accuracy = model.accuracy(x, y, useWeights);
             // System.out.printf("%s: %.2f\n", posQuad, accuracy);
@@ -99,7 +104,7 @@ public class PositiveQuadrant implements SoftClassifier<FeatureVec>
           }
 
           used[bestStump.iDim] = true;
-          posQuad.stumps.add(bestStump);
+          posQuad.add(bestStump);
         }
         // System.out.println(posQuad);
         return posQuad;
@@ -121,7 +126,7 @@ public class PositiveQuadrant implements SoftClassifier<FeatureVec>
             // System.out.printf("Try=%d  Stump %d: %d (%d)\n", iTry, i, ii[i], D);
             double threshold = 0.1;// rng.nextDouble() * 0.1;
             Stump stump = new Stump(ii[i], threshold);
-            posQuad.stumps.add(stump);
+            posQuad.add(stump);
           }
           assert posQuad.stumps.size() == nStumps;
           ClassificationModel model = new ClassificationModel(null, posQuad);

@@ -32,6 +32,7 @@ import org.minnen.retiretool.broker.Account;
 import org.minnen.retiretool.broker.Broker;
 import org.minnen.retiretool.broker.PriceModel;
 import org.minnen.retiretool.broker.TimeInfo;
+import org.minnen.retiretool.broker.transactions.Transaction.Flow;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.Sequence;
@@ -145,7 +146,7 @@ public class RetireTool
 
       // Handle initialization issues at t==0.
       if (t == 0) {
-        account.deposit(principal, "Initial Deposit");
+        account.deposit(principal, Flow.InFlow, "Initial Deposit");
       }
 
       // Handle case where we buy at the open, not the close.

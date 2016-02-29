@@ -23,6 +23,7 @@ import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.data.Sequence.EndpointBehavior;
 import org.minnen.retiretool.ml.ClassificationModel;
+import org.minnen.retiretool.ml.PositiveQuadrant;
 import org.minnen.retiretool.ml.RegressionModel;
 import org.minnen.retiretool.ml.Example;
 import org.minnen.retiretool.ml.Stump;
@@ -73,25 +74,33 @@ public class AdaptiveAlloc
   public static final boolean       GENERATE_PAIRWISE_DATA   = false;
 
   // These symbols go back to 13 May 1996.
-  // public static final String[] fundSymbols = new String[] { "SPY", "VTSMX", "VBMFX", "VGSIX",
-  // "VGTSX", "EWU", "EWG", "EWJ", "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX", "SGGDX", "VGPMX",
-  // "USAGX", "FSPCX", "FSRBX", "FPBFX", "ETGIX", "VDIGX", "MDY", "VBINX", "^IXIC" };
+  public static final String[]      fundSymbols              = new String[] { "SPY", "VTSMX", "VBMFX", "VGSIX",
+      "VGTSX", "EWU", "EWG", "EWJ", "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX", "SGGDX", "VGPMX",
+      "USAGX", "FSPCX", "FSRBX", "FPBFX", "ETGIX", "VDIGX", "MDY", "VBINX", "VWINX", "^IXIC" };
+
+  // public static final String[] fundSymbols = FinLib.VANGUARD_INVESTOR_FUNDS;
+
+  // public static final String[] fundSymbols = new String[] { "VTSMX", "VBMFX", "VGTSX", "VWINX",
+  // "FPBFX", "USAGX" };
+
+  // public static final String[] fundSymbols = new String[] { "VTSMX", "VBMFX", "VGSIX",
+  // "VGTSX", "VGENX", "WHOSX", "FAGIX", "DFGBX", "VGPMX", "VDIGX", "USAGX", "FSPCX", "FSRBX", "FPBFX" };
 
   // public static final String[] fundSymbols = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX",
   // "VGENX", "WHOSX", "USAGX" };
 
-  // public static final String[] fundSymbols = new String[] { "VTSMX", "VBMFX" };
+  // public static final String[] fundSymbols = new String[] { "VTSMX", "VGTSX", "VBMFX" };
 
   // These symbols go back to 27 April 1992.
   // public static final String[] fundSymbols = new String[] { "VTSMX", "VBMFX", "VGENX", "WHOSX",
-  // "FAGIX", "DFGBX", "VGPMX", "USAGX", "FSPCX", "FSRBX", "FPBFX" };
+  // "FAGIX", "DFGBX", "VGPMX", "USAGX", "FSPCX", "FSRBX", "FPBFX", "VWINX" };
 
-  public static final String[]      fundSymbols              = new String[] { "VTSMX", "VBMFX", "VGENX", "VGPMX",
-      "FPBFX"                                               };
+  // public static final String[] fundSymbols = new String[] { "VTSMX", "VBMFX", "VGENX", "WHOSX",
+  // "USAGX", "FPBFX", "VWINX" };
 
   // Funds in the my 401k.
-  // public static final String[] fundSymbols = new String[] { "VEMPX", "VIIIX", "VTPSX", "VBMPX", "RGAGX", "CRISX",
-  // "DODGX", "FDIKX", "MWTSX", "TISCX", "VGSNX", "VWIAX" };
+  // public static final String[] fundSymbols = new String[] { "VEMPX", "VIIIX", "VTPSX", "VBMPX",
+  // "RGAGX", "CRISX", "DODGX", "FDIKX", "MWTSX", "TISCX", "VGSNX", "VWIAX" };
 
   // QQQ, XLK, AAPL, MSFT
   public static final String[]      assetSymbols             = new String[fundSymbols.length + 1];
@@ -306,7 +315,7 @@ public class AdaptiveAlloc
       // ClassificationModel absoluteClassifier = ClassificationModel.learnQuadrant(pointExamples, 2, -1, useWeights);
       // ClassificationModel absoluteClassifier = ClassificationModel.learnBaggedQuadrant(pointExamples, 20, 2, 10,
       // useWeights);
-      Predictor adaptive = new AdaptivePredictor(featureExtractor, absoluteClassifier, sim.broker.accessObject,
+      Predictor adaptive = new AdaptivePredictor(featureExtractor, absoluteClassifier, "cash", sim.broker.accessObject,
           assetSymbols);
 
       // Run the predictor over the test period.
@@ -420,12 +429,14 @@ public class AdaptiveAlloc
         seq.unlock(key);
         // store.unlock(key);
 
+        String title = String.format("%s [%s]", assetName, TimeLib.formatDate(today));
+        fv.setName(title);
+
         if (today >= timeStartSim) {
           double predictedMul = model.predict(fv);
           double predictedReturn = FinLib.mul2ret(predictedMul);
 
-          String title = String.format("%s [%s]", assetName, TimeLib.formatDate(today));
-          FeatureVec scatter = new FeatureVec(title, 2, predictedReturn, actualReturn);
+          FeatureVec scatter = new FeatureVec(fv.getName(), 2, predictedReturn, actualReturn);
           if (stats.size() % 29 == 0) {
             scatterData.addData(scatter, today);
           }
@@ -703,15 +714,15 @@ public class AdaptiveAlloc
     // }
     long commonStart = TimeLib.calcCommonStart(seqs);
     // long commonStart = TimeLib.toMs(2006, Month.JANUARY, 1);
-    // long commonEnd = TimeLib.calcCommonEnd(seqs);
-    long commonEnd = TimeLib.toMs(2005, Month.DECEMBER, 31); // TODO
+    long commonEnd = TimeLib.calcCommonEnd(seqs);
+    commonEnd = TimeLib.toMs(2012, Month.DECEMBER, 31); // TODO
     store.setCommonTimes(commonStart, commonEnd);
     System.out.printf("Common[%d]: [%s] -> [%s]\n", seqs.size(), TimeLib.formatDate(commonStart),
         TimeLib.formatDate(commonEnd));
 
     long timeSimStart = TimeLib.toMs(TimeLib.ms2date(commonStart).plusWeeks(53 + 51)
         .with(TemporalAdjusters.firstDayOfMonth()));
-    // long timeSimStart = TimeLib.toMs(2010, Month.JANUARY, 1); // TODO
+    // timeSimStart = TimeLib.toMs(1998, Month.MAY, 1); // TODO
     long timeSimEnd = commonEnd; // TimeLib.toMs(2005, Month.DECEMBER, 31); // TODO
     double nSimMonths = TimeLib.monthsBetween(timeSimStart, timeSimEnd);
     System.out.printf("Simulation Start: [%s] (%.1f months)\n", TimeLib.formatDate(timeSimStart), nSimMonths);
@@ -728,13 +739,16 @@ public class AdaptiveAlloc
     Sequence guideSeq = store.get(fundSymbols[0]).dup();
     PriceModel valueModel = PriceModel.adjCloseModel;
     PriceModel quoteModel = new PriceModel(PriceModel.Type.Open, true);
-    SimFactory simFactory = new SimFactory(store, guideSeq, slippage, 0, valueModel, quoteModel);
+    double startingBalance = 10000.0;
+    double monthlyDeposit = 0.0;
+    SimFactory simFactory = new SimFactory(store, guideSeq, slippage, 0, startingBalance, monthlyDeposit, valueModel,
+        quoteModel);
     Simulation sim = simFactory.build();
 
-    for (String assetName : assetSymbols) {
-      if (assetName.equals("cash")) continue;
-      explore(assetName, outputDir);
-    }
+    // for (String assetName : assetSymbols) {
+    // if (assetName.equals("cash")) continue;
+    // explore(assetName, outputDir);
+    // }
 
     // Run simulation for buy-and-hold of individual assets.
     // List<Sequence> symbolReturns = new ArrayList<>();
@@ -753,14 +767,13 @@ public class AdaptiveAlloc
     List<Sequence> returns = new ArrayList<>();
 
     // Lazy 2-fund portfolio.
-    // String[] lazy2 = new String[] { "VTSMX", "VBMFX" };
-    // config = new ConfigMixed(new DiscreteDistribution(lazy2, new double[] { 0.7, 0.3 }), new ConfigConst(lazy2[0]),
-    // new ConfigConst(lazy2[1]));
-    // predictor = config.build(sim.broker.accessObject, lazy2);
-    // sim.run(predictor, timeSimStart, timeSimEnd, "Lazy2");
-    // System.out.println(CumulativeStats.calc(sim.returnsMonthly));
-    // returns.add(sim.returnsMonthly);
-    // Chart.saveHoldings(new File(outputDir, "holdings-lazy2.html"), sim.holdings);
+    String[] assetsLazy2 = new String[] { "VTSMX", "VBMFX" };
+    config = new ConfigMixed(new DiscreteDistribution(assetsLazy2, new double[] { 0.7, 0.3 }), new ConfigConst(
+        assetsLazy2[0]), new ConfigConst(assetsLazy2[1]));
+    Predictor lazy2 = config.build(sim.broker.accessObject, assetsLazy2);
+    Sequence returnsLazy2 = sim.run(lazy2, timeSimStart, timeSimEnd, "Lazy2");
+    System.out.println(CumulativeStats.calc(returnsLazy2));
+    returns.add(returnsLazy2);
 
     // Lazy 3-fund portfolio.
     // String[] lazy3 = new String[] { "VTSMX", "VBMFX", "VGTSX" };
@@ -796,11 +809,18 @@ public class AdaptiveAlloc
     returns.add(returnsBonds);
 
     // Volatility-Responsive Asset Allocation.
-    predictor = new VolResPredictor(60, "VTSMX", "VBMFX", sim.broker.accessObject, FinLib.Close);
-    Sequence returnsVolRes = sim.run(predictor, timeSimStart, timeSimEnd, "VolRes");
+    Predictor volres = new VolResPredictor(60, "VTSMX", "VBMFX", sim.broker.accessObject, FinLib.Close);
+    Sequence returnsVolRes = sim.run(volres, timeSimStart, timeSimEnd, "VolRes");
     System.out.println(CumulativeStats.calc(returnsVolRes));
     returns.add(returnsVolRes);
     // Chart.saveHoldings(new File(outputDir, "holdings-volres.html"), sim.holdings, sim.store);
+
+    List<ComparisonStats> compStats = new ArrayList<>();
+    // Sequence[] defenders = new Sequence[] { returnsStock, returnsBonds, returnsLazy2, returnsLazy3, returnsLazy4 };
+    Sequence[] defenders = new Sequence[] { returnsStock, returnsBonds, returnsLazy2, returnsVolRes };
+    for (Sequence ret : defenders) {
+      compStats.add(ComparisonStats.calc(ret, 0.5, defenders));
+    }
 
     // PredictorConfig tacticalConfig = new ConfigTactical(FinLib.AdjClose, "SPY", "VTSMX", "VGSIX", "VGTSX", "EWU",
     // "EWG", "EWJ", "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX", "SGGDX", "VGPMX", "USAGX",
@@ -809,12 +829,13 @@ public class AdaptiveAlloc
     // PredictorConfig tacticalConfig = new ConfigTactical(FinLib.AdjClose, "VTSMX", "MDY", "VGSIX", "VGTSX", "VGENX",
     // "WHOSX", "VGPMX", "USAGX", "VBMFX", "cash");
 
-    // PredictorConfig tacticalConfig = new ConfigTactical(FinLib.AdjClose, "VTSMX", "SPY", "VBMFX");
+    PredictorConfig tacticalConfig = new ConfigTactical(FinLib.Close, "VTSMX", "VBMFX");
 
-    // predictor = tacticalConfig.build(sim.broker.accessObject, assetSymbols);
-    // Sequence returnsTactical = sim.run(predictor, timeSimStart, timeSimEnd, "Tactical");
-    // System.out.println(CumulativeStats.calc(returnsTactical));
-    // returns.add(returnsTactical);
+    Predictor tactical = tacticalConfig.build(sim.broker.accessObject, assetSymbols);
+    sim.run(tactical, timeSimStart, timeSimEnd, "Tactical");
+    System.out.println(CumulativeStats.calc(sim.returnsMonthly));
+    returns.add(sim.returnsMonthly);
+    compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
 
     // Run adaptive asset allocation.
     final TradeFreq tradeFreq = TradeFreq.Weekly;
@@ -854,14 +875,43 @@ public class AdaptiveAlloc
 
     // FeatureExtractor features = getFeatureExtractor();
     // RiskAdjustedReturn fe = new RiskAdjustedReturn(120, 1.0, FinLib.AdjClose);
-    FeatureExtractor fe = new BasicStats(180, BasicStats.Period.Weekly, FinLib.Close);
+    FeatureExtractor fe1 = new Momentum(40, 1, 110, 70, Momentum.ReturnOrMul.Return, Momentum.CompoundPeriod.Weekly,
+        FinLib.Close);
+    FeatureExtractor fe2 = new Momentum(10, 1, 180, 140, Momentum.ReturnOrMul.Return, Momentum.CompoundPeriod.Weekly,
+        FinLib.Close);
+    FeatureExtractor fe3 = new Momentum(40, 1, 220, 180, Momentum.ReturnOrMul.Return, Momentum.CompoundPeriod.Weekly,
+        FinLib.Close);
     Stump stump = new Stump(0, 0.0, false, 5.0);
-    predictor = new AdaptivePredictor(fe, stump, sim.broker.accessObject, assetSymbols);
-    sim.run(predictor, timeSimStart, timeSimEnd, fe.toString());
-    // sim.broker.getAccount(Simulation.AccountName).printTransactions();
+    String safeAsset = "VBMFX";
+    Predictor predictor1 = new AdaptivePredictor(fe1, stump, safeAsset, sim.broker.accessObject, assetSymbols);
+    Predictor predictor2 = new AdaptivePredictor(fe2, stump, safeAsset, sim.broker.accessObject, assetSymbols);
+    Predictor predictor3 = new AdaptivePredictor(fe3, stump, safeAsset, sim.broker.accessObject, assetSymbols);
+    Predictor[] predictors = new Predictor[] { predictor1, predictor2, predictor3, tactical };
+    DiscreteDistribution distribution = new DiscreteDistribution(0.2, 0.2, 0.3, 0.3);
+    // DiscreteDistribution distribution = new DiscreteDistribution(0.2, 0.5, 0.3, 0.0);
+    predictor = new MixedPredictor(predictors, distribution, sim.broker.accessObject, assetSymbols);
+
+    sim.run(predictor1, timeSimStart, timeSimEnd, fe1.name);
+    System.out.println(CumulativeStats.calc(sim.returnsMonthly));
+    // returns.add(sim.returnsMonthly);
+    compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
+
+    sim.run(predictor2, timeSimStart, timeSimEnd, fe2.name);
+    System.out.println(CumulativeStats.calc(sim.returnsMonthly));
+    // returns.add(sim.returnsMonthly);
+    compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
+
+    sim.run(predictor3, timeSimStart, timeSimEnd, fe3.name);
+    System.out.println(CumulativeStats.calc(sim.returnsMonthly));
+    // returns.add(sim.returnsMonthly);
+    compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
+
+    sim.run(predictor, timeSimStart, timeSimEnd, "Mixed");
     System.out.println(CumulativeStats.calc(sim.returnsMonthly));
     returns.add(sim.returnsMonthly);
     Chart.saveHoldings(new File(outputDir, "holdings.html"), sim.holdings, sim.store);
+    // sim.broker.getAccount(Simulation.AccountName).printTransactions();
+    compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
 
     // PredictorConfig equalWeightConfig1 = ConfigAdaptive.buildEqualWeight(40, 100, 80, 0.5, 4, pctQuantum, tradeFreq,
     // FinLib.AdjClose);
@@ -893,12 +943,6 @@ public class AdaptiveAlloc
     // Sequence ret = sim.run(predictor, timeSimStart, timeSimEnd, name);
     // returns.add(ret);
     // System.out.println(CumulativeStats.calc(ret));
-    // }
-
-    // List<ComparisonStats> compStats = new ArrayList<>();
-    // Sequence[] defenders = new Sequence[] { returnsStock, returnsBonds, returnsLazy2, returnsLazy3, returnsLazy4 };
-    // for (Sequence ret : defenders) {
-    // compStats.add(ComparisonStats.calc(ret, 0.5, defenders));
     // }
 
     // Combination of EqualWeight and Tactical.
@@ -951,7 +995,7 @@ public class AdaptiveAlloc
         returns);
 
     // Chart.saveAnnualStatsTable(new File(outputDir, "annual-stats.html"), 1000, false, returns);
-    // Chart.saveComparisonTable(new File(outputDir, "comparison.html"), 1000, compStats);
+    Chart.saveComparisonTable(new File(outputDir, "comparison.html"), 1000, compStats);
 
     // Account account = sim.broker.getAccount(0);
     // account.printTransactions();//TimeLib.TIME_BEGIN, TimeLib.toMs(1996, Month.DECEMBER, 31));

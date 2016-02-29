@@ -2,11 +2,13 @@ package org.minnen.retiretool.broker;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
 import org.minnen.retiretool.Slippage;
+import org.minnen.retiretool.broker.transactions.Transaction.Flow;
 import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.IndexRange;
 import org.minnen.retiretool.data.Sequence;
@@ -32,7 +34,8 @@ public class Simulation
   public final int                            maxDelay;
   public final Broker                         broker;
 
-  private final double                        startingBalance = 10000.0;
+  private final double                        startingBalance;
+  private final double                        monthlyDeposit;
 
   public Sequence                             returnsDaily;
   public Sequence                             returnsMonthly;
@@ -46,15 +49,21 @@ public class Simulation
   private DiscreteDistribution                prevDist;
   private Predictor                           predictor;
 
-  public List<TimeInfo>                       days;
-
   public Simulation(SequenceStore store, Sequence guideSeq, Slippage slippage, int maxDelay, PriceModel valueModel,
       PriceModel quoteModel)
+  {
+    this(store, guideSeq, slippage, maxDelay, 10000.0, 0.0, valueModel, quoteModel);
+  }
+
+  public Simulation(SequenceStore store, Sequence guideSeq, Slippage slippage, int maxDelay, double startingBalance,
+      double monthlyDeposit, PriceModel valueModel, PriceModel quoteModel)
   {
     this.store = store;
     this.guideSeq = guideSeq;
     this.slippage = slippage;
     this.maxDelay = maxDelay;
+    this.startingBalance = startingBalance;
+    this.monthlyDeposit = monthlyDeposit;
     this.broker = new Broker(store, valueModel, quoteModel, slippage, guideSeq);
   }
 
@@ -273,15 +282,72 @@ public class Simulation
     holdings = new TreeMap<>();
 
     broker.reset();
+    broker.setNewDay(new TimeInfo(runIndex, guideSeq));
     broker.openAccount(AccountName, Fixed.toFixed(startingBalance), Account.Type.Roth, true);
-
-    days = new ArrayList<>();
 
     // TODO support prediction at start instead of on second tick
     // if (predictor != null) {
     // store.lock(TimeLib.TIME_BEGIN, guideSeq.getStartMS(), runKey);
     // DiscreteDistribution targetDist = predictor.selectDistribution();
     // }
+  }
+
+  private void buyTowardTargetAllocation(DiscreteDistribution targetDist, Account account)
+  {
+    if (targetDist == null) return;
+
+    Map<String, Long> cashToAdd = new HashMap<>();
+    long totalToAdd = Fixed.ZERO;
+    DiscreteDistribution currentDist = account.getDistribution();
+    long currentValue = account.getValue();
+    for (int i = 0; i < targetDist.size(); ++i) {
+      String name = targetDist.names[i];
+      double targetWeight = targetDist.weights[i];
+      int j = currentDist.find(name);
+      double currentWeight = j < 0 ? 0.0 : currentDist.weights[j];
+      double missingWeight = Math.max(targetWeight - currentWeight, 0.0);
+
+      long valueNeeded = Math.round(currentValue * missingWeight);
+      totalToAdd += valueNeeded;
+      cashToAdd.put(name, valueNeeded);
+    }
+
+    final long cash = account.getCash();
+    if (totalToAdd > cash) {
+      long remaining = cash;
+      for (Map.Entry<String, Long> entry : cashToAdd.entrySet()) {
+        double percent = (double) entry.getValue() / totalToAdd;
+        long adjustedValue = (long) Math.ceil(percent * cash);
+        adjustedValue = Math.min(adjustedValue, remaining);
+        assert adjustedValue >= 0;
+        remaining -= adjustedValue;
+        assert remaining >= 0;
+        entry.setValue(adjustedValue);
+      }
+    } else if (totalToAdd < cash) {
+      long totalExcess = cash - totalToAdd;
+      long remaining = totalExcess;
+      for (Map.Entry<String, Long> entry : cashToAdd.entrySet()) {
+        long add = (long) Math.round(totalExcess * targetDist.get(entry.getKey()));
+        add = Math.min(add, remaining);
+        entry.setValue(entry.getValue() + add);
+        remaining -= add;
+      }
+    }
+
+    // Buy extra assets.
+    long sum = 0;
+    for (Map.Entry<String, Long> entry : cashToAdd.entrySet()) {
+      long value = entry.getValue();
+      assert value >= 0;
+      if (value > 0) {
+        assert value <= cash;
+        account.buyValue(entry.getKey(), value, "Buy toward target allocation");
+        sum += value;
+      }
+    }
+    assert sum >= 0;
+    assert sum <= cash;
   }
 
   public void runTo(long timeEnd)
@@ -300,32 +366,15 @@ public class Simulation
     while (runIndex < guideSeq.length() && guideSeq.getTimeMS(runIndex) <= timeEnd) {
       final TimeInfo timeInfo = new TimeInfo(runIndex, guideSeq);
       broker.setNewDay(timeInfo);
-      days.add(timeInfo);
 
-      // TODO for debug
       // Calculate return over next week.
-      long timeNextWeek = TimeLib.plusBusinessDays(timeInfo.time, 5);
-      Map<String, Double> futureReturns = new TreeMap<>();
-      for (String assetName : predictor.assetChoices) {
-        if (assetName.equals("cash")) continue;
-        Sequence seq = store.get(assetName);
-        if (seq.getNumDims() > 1) {
-          IndexRange range = seq.getIndices(timeInfo.time, timeNextWeek, EndpointBehavior.Closest);
-          double p1 = priceModel.getPrice(seq.get(range.iStart));
-          double p2 = priceModel.getPrice(seq.get(range.iEnd));
-          double r = FinLib.mul2ret(p2 / p1);
-          futureReturns.put(assetName, r);
-        }
-      }
-      predictor.futureReturns = futureReturns;
-
-      store.lock(TimeLib.TIME_BEGIN, timeInfo.time, runKey);
+      predictor.futureReturns = calcFutureReturns(timeInfo, 5, priceModel);
 
       if (holdings.isEmpty()) {
         holdings.put(timeInfo.date, account.getDistribution());
       }
 
-      // Handle case where we buy at the open, not the close.
+      store.lock(TimeLib.TIME_BEGIN, timeInfo.time, runKey);
       if (bNeedRebalance && targetDist != null && rebalanceDelay <= 0) {
         DiscreteDistribution curDist = account.getDistribution(targetDist.names);
         // TODO figure out better approach for minimizing transactions. Some predictors may want to turn this off.
@@ -347,9 +396,20 @@ public class Simulation
         prevDist = new DiscreteDistribution(submitDist);
       }
 
+      // If we have cash, buy shares to move closer to target allocation
+      if (account.getCash() > Fixed.ONE) {
+        // System.out.printf("[%s] %s\n", TimeLib.formatDate(timeInfo.time),
+        // account.getDistribution().toStringWithNames(2));
+        buyTowardTargetAllocation(targetDist, account);
+        // System.out.printf("             %s\n", account.getDistribution().toStringWithNames(2));
+      }
+
       // End of day business.
       if (rebalanceDelay > 0) --rebalanceDelay;
       broker.doEndOfDayBusiness();
+      if (timeInfo.isLastDayOfMonth && monthlyDeposit > 0.0) {
+        account.deposit(Fixed.toFixed(monthlyDeposit), Flow.InFlow, "Monthly Deposit");
+      }
 
       // Time for a prediction and possible asset change.
       targetDist = predictor.selectDistribution();
@@ -365,7 +425,7 @@ public class Simulation
           || !targetDist.isSimilar(prevDist, DistributionEPS) || !targetDist.isSimilar(curDist, TargetEPS));
       // if (bNeedRebalance) {
       // System.out.printf("Need Rebalance: [%s] vs [%s]   %s vs %s / %s\n", TimeLib.formatDate(timeInfo.time),
-      // TimeLib.formatDate(lastRebalance), targetDist, prevDist, curDist);
+      // TimeLib.formatDate(lastRebalance), targetDist, prevDist, curDist.toStringWithNames(2));
       // }
 
       if (maxDelay > 0) {
@@ -394,5 +454,23 @@ public class Simulation
   public void finishRun()
   {
     guideSeq.unlock(runKey);
+  }
+
+  private Map<String, Double> calcFutureReturns(TimeInfo timeInfo, int daysInFuture, PriceModel priceModel)
+  {
+    long timeNextWeek = TimeLib.plusBusinessDays(timeInfo.time, daysInFuture);
+    Map<String, Double> futureReturns = new TreeMap<>();
+    for (String assetName : predictor.assetChoices) {
+      if (assetName.equals("cash")) continue;
+      Sequence seq = store.get(assetName);
+      if (seq.getNumDims() > 1) {
+        IndexRange range = seq.getIndices(timeInfo.time, timeNextWeek, EndpointBehavior.Closest);
+        double p1 = priceModel.getPrice(seq.get(range.iStart));
+        double p2 = priceModel.getPrice(seq.get(range.iEnd));
+        double r = FinLib.mul2ret(p2 / p1);
+        futureReturns.put(assetName, r);
+      }
+    }
+    return futureReturns;
   }
 }

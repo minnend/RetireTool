@@ -1,6 +1,7 @@
 package org.minnen.retiretool.broker.transactions;
 
 import org.minnen.retiretool.broker.Account;
+import org.minnen.retiretool.broker.transactions.Transaction.Flow;
 import org.minnen.retiretool.util.Fixed;
 import org.minnen.retiretool.util.TimeLib;
 
@@ -15,7 +16,7 @@ public class TransactionSell extends Transaction
   public TransactionSell(Account account, long time, String name, long nSharesHeld, long nSharesToSell, long price,
       String memo)
   {
-    super(account, time, memo);
+    super(account, time, Flow.Internal, memo);
     assert nSharesToSell <= nSharesHeld;
     assert nSharesToSell > 0;
     assert price > 0;

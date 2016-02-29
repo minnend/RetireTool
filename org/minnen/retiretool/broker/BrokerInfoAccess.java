@@ -2,7 +2,6 @@ package org.minnen.retiretool.broker;
 
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
-import org.minnen.retiretool.util.FinLib;
 
 /**
  * Provides limited access to information in a broker.
