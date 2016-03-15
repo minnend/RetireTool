@@ -7,9 +7,11 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.Month;
 import java.time.MonthDay;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
 import java.util.List;
@@ -500,6 +502,18 @@ public class TimeLib
     assert fartherDate != closestDate;
     assert isSameMonth(date, fartherDate);
     return fartherDate;
+  }
+
+  /** @return number of business days in the given month. */
+  public static int getNumBusinessDays(YearMonth month)
+  {
+    int n = 0;
+    LocalDate date = month.atDay(1);
+    while (date.get(ChronoField.MONTH_OF_YEAR) == month.getMonthValue()) {
+      if (isBusinessDay(date)) ++n;
+      date = date.plusDays(1);
+    }
+    return n;
   }
 
   /**

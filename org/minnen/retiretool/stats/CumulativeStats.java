@@ -146,7 +146,8 @@ public class CumulativeStats implements Comparable<CumulativeStats>
     // percentDown10);
 
     // return String.format("[%s: %5.2f, %4.1f |%.2f]", FinLib.getBaseName(name()), cagr, drawdown, scoreSimple());
-    return String.format("[%s: %5.2f, %4.1f]", FinLib.getBaseName(name()), cagr, drawdown);
+    // return String.format("[%s: %5.2f, %4.1f]", FinLib.getBaseName(name()), cagr, drawdown);
+    return String.format("[%s: %.2f |%.1f]", FinLib.getBaseName(name()), totalReturn, drawdown);
   }
 
   public String toRowString()

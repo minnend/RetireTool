@@ -25,28 +25,28 @@ public class AdaptivePredictor extends Predictor
   public final Ranker              ranker;
   public final TradeFreq           tradeFreq        = TradeFreq.Weekly;
   public final double              maxKeepFrac      = 0.9;
-  public final int                 maxKeep          = 1;
   public final int                 pctQuantum       = 1;
   public final String              safeAsset;
+  public final int                 nMaxKeep;
 
   private DiscreteDistribution     prevDistribution = null;
 
-  public AdaptivePredictor(FeatureExtractor featureExtractor, ClassificationModel absoluteClassifier, String safeAsset,
-      BrokerInfoAccess brokerAccess, String[] assetChoices)
+  public AdaptivePredictor(FeatureExtractor featureExtractor, ClassificationModel absoluteClassifier, int nMaxKeep,
+      String safeAsset, BrokerInfoAccess brokerAccess, String[] assetChoices)
   {
-    this(featureExtractor, absoluteClassifier, null, null, safeAsset, brokerAccess, assetChoices);
+    this(featureExtractor, absoluteClassifier, null, null, nMaxKeep, safeAsset, brokerAccess, assetChoices);
   }
 
   public AdaptivePredictor(FeatureExtractor featureExtractor, SoftClassifier<FeatureVec> absoluteClassifier,
-      String safeAsset, BrokerInfoAccess brokerAccess, String[] assetChoices)
+      int nMaxKeep, String safeAsset, BrokerInfoAccess brokerAccess, String[] assetChoices)
   {
-    this(featureExtractor, new ClassificationModel(null, absoluteClassifier), null, null, safeAsset, brokerAccess,
-        assetChoices);
+    this(featureExtractor, new ClassificationModel(null, absoluteClassifier), null, null, nMaxKeep, safeAsset,
+        brokerAccess, assetChoices);
   }
 
   public AdaptivePredictor(FeatureExtractor featureExtractor, ClassificationModel absoluteClassifier,
-      ClassificationModel pairwiseClassifier, Ranker ranker, String safeAsset, BrokerInfoAccess brokerAccess,
-      String[] assetChoices)
+      ClassificationModel pairwiseClassifier, Ranker ranker, int nMaxKeep, String safeAsset,
+      BrokerInfoAccess brokerAccess, String[] assetChoices)
   {
     super("Adaptive", brokerAccess, assetChoices);
     this.featureExtractor = featureExtractor;
@@ -54,6 +54,7 @@ public class AdaptivePredictor extends Predictor
     this.pairwiseClassifier = pairwiseClassifier;
     this.ranker = ranker;
     this.predictorType = PredictorType.Distribution;
+    this.nMaxKeep = nMaxKeep;
     this.safeAsset = safeAsset;
   }
 
@@ -77,7 +78,7 @@ public class AdaptivePredictor extends Predictor
     List<double[]> posProbs = new ArrayList<>();
     for (int i = 0; i < n; ++i) {
       String assetName = assetChoices[i];
-      if (assetName.equals("cash")) continue;
+      if (assetName.equals("cash") || assetName.equals(safeAsset)) continue;
       FeatureVec x = featureExtractor.calculate(brokerAccess, assetName);
       assert x.getName().equals(assetName);
 
@@ -162,8 +163,8 @@ public class AdaptivePredictor extends Predictor
     if (maxKeepFrac > 0.0) {
       nMaxKeep = Math.min(nMaxKeep, (int) Math.round(n * maxKeepFrac));
     }
-    if (maxKeep > 0) {
-      nMaxKeep = Math.min(nMaxKeep, maxKeep);
+    if (this.nMaxKeep > 0) {
+      nMaxKeep = Math.min(nMaxKeep, this.nMaxKeep);
     }
     int nKeep = Math.min(n, nMaxKeep);
 

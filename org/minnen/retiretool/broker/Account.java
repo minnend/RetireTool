@@ -1,5 +1,6 @@
 package org.minnen.retiretool.broker;
 
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -40,7 +41,7 @@ public class Account
   private long                        cash;
 
   private long                        cashSumForMonth;
-  private int                         numDaysInMonth;
+  private int                         numDaysForCashSum;
 
   public Account(String name, Broker broker, Type type, boolean bReinvestDividends)
   {
@@ -57,7 +58,7 @@ public class Account
     valueAtTime.put(timeInfo.time, getValue());
 
     cashSumForMonth += cash;
-    ++numDaysInMonth;
+    ++numDaysForCashSum;
   }
 
   public void doEndOfMonthBusiness(TimeInfo timeInfo, SequenceStore store)
@@ -96,11 +97,17 @@ public class Account
   {
     // No cash => no interest payment.
     assert cashSumForMonth >= 0;
-    if (cashSumForMonth <= 0) return true;
+    if (cashSumForMonth <= 0) {
+      numDaysForCashSum = 0;
+      return true;
+    }
 
     // Make sure we have interest rate data.
     Sequence rates = store.tryGet("interest-rates");
-    if (rates == null) return false;
+    if (rates == null) {
+      numDaysForCashSum = 0;
+      return false;
+    }
 
     int index = rates.getIndexAtOrBefore(timeInfo.time);
     double annualRate = rates.get(index, 0);
@@ -108,16 +115,19 @@ public class Account
 
     // Convert annual multiplier to monthly multiplier.
     mul = Math.pow(mul, Library.ONE_TWELFTH);
-    long avgCash = Math.round((double) cashSumForMonth / numDaysInMonth);
+    int nBusinessDaysInMonth = TimeLib.getNumBusinessDays(YearMonth.from(timeInfo.date));
+    assert nBusinessDaysInMonth >= numDaysForCashSum : String.format("nbdim=%d, ndfcs=%d", nBusinessDaysInMonth,
+        numDaysForCashSum);
+    long avgCash = Math.round((double) cashSumForMonth / nBusinessDaysInMonth);
     long interest = Math.round(avgCash * (mul - 1.0));
     if (interest >= Fixed.PENNY) {
       // System.out.printf("Interest! $%s\n", Fixed.formatCurrency(interest));
-      deposit(interest, Flow.Internal, "Interest");
+      deposit(interest, Flow.Internal, String.format("Interest=%.2f%%", annualRate));
     }
 
     // Reset accumulators.
     cashSumForMonth = 0;
-    numDaysInMonth = 0;
+    numDaysForCashSum = 0;
     return true;
   }
 
@@ -301,6 +311,16 @@ public class Account
   {
     Position position = getPosition(name);
     sellShares(name, position.getNumShares(), memo);
+  }
+
+  /** Sell all positions. */
+  public void liquidate(String memo)
+  {
+    // Make copy of positions to avoid concurrent modification.
+    String[] names = positions.keySet().toArray(new String[positions.size()]);
+    for (String name : names) {
+      sellAll(name, memo);
+    }
   }
 
   public DiscreteDistribution getDistribution()

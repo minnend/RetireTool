@@ -5,6 +5,7 @@ import static org.junit.Assert.*;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.Month;
+import java.time.YearMonth;
 
 import org.junit.Test;
 import org.minnen.retiretool.util.TimeLib;
@@ -395,6 +396,13 @@ public class TestTimeLib
     // MLK Day.
     date = LocalDate.of(2015, 1, 19);
     assertTrue(TimeLib.isHoliday(date));
+    date = LocalDate.of(1995, 1, 16);
+    assertTrue(TimeLib.isHoliday(date));
+    date = LocalDate.of(1986, 1, 20);
+    assertTrue(TimeLib.isHoliday(date));
+
+    date = LocalDate.of(1985, 1, 21);
+    assertFalse(TimeLib.isHoliday(date)); // MLK Day start in 1986
 
     // Washington's Birthday.
     date = LocalDate.of(2015, 2, 16);
@@ -474,5 +482,13 @@ public class TestTimeLib
 
     date = LocalDate.of(2016, Month.FEBRUARY, 29);
     assertEquals(LocalDate.of(2016, Month.MARCH, 4), TimeLib.toLastBusinessDayOfWeek(date));
+  }
+
+  @Test
+  public void testGetNumBusinessDays()
+  {
+    assertEquals(19, TimeLib.getNumBusinessDays(YearMonth.of(2016, Month.JANUARY)));
+    assertEquals(20, TimeLib.getNumBusinessDays(YearMonth.of(2016, Month.FEBRUARY)));
+    assertEquals(22, TimeLib.getNumBusinessDays(YearMonth.of(2016, Month.MARCH)));
   }
 }

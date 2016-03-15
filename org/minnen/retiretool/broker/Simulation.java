@@ -1,9 +1,7 @@
 package org.minnen.retiretool.broker;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -302,6 +300,7 @@ public class Simulation
     long currentValue = account.getValue();
     for (int i = 0; i < targetDist.size(); ++i) {
       String name = targetDist.names[i];
+      if (name.equals("cash")) continue;
       double targetWeight = targetDist.weights[i];
       int j = currentDist.find(name);
       double currentWeight = j < 0 ? 0.0 : currentDist.weights[j];
@@ -365,6 +364,10 @@ public class Simulation
     // TimeLib.formatDate(timeEnd));
     while (runIndex < guideSeq.length() && guideSeq.getTimeMS(runIndex) <= timeEnd) {
       final TimeInfo timeInfo = new TimeInfo(runIndex, guideSeq);
+      if (!TimeLib.isBusinessDay(timeInfo.date)) {
+        ++runIndex;
+        continue;
+      }
       broker.setNewDay(timeInfo);
 
       // Calculate return over next week.
@@ -407,7 +410,7 @@ public class Simulation
       // End of day business.
       if (rebalanceDelay > 0) --rebalanceDelay;
       broker.doEndOfDayBusiness();
-      if (timeInfo.isLastDayOfMonth && monthlyDeposit > 0.0) {
+      if (timeInfo.isLastDayOfMonth && monthlyDeposit > 0.0 && runIndex > 0) {
         account.deposit(Fixed.toFixed(monthlyDeposit), Flow.InFlow, "Monthly Deposit");
       }
 
@@ -453,6 +456,8 @@ public class Simulation
 
   public void finishRun()
   {
+    Account account = broker.getAccount(AccountName);
+    account.liquidate("Liquidate Account");
     guideSeq.unlock(runKey);
   }
 

@@ -76,7 +76,7 @@ public class AdaptiveAlloc
   // These symbols go back to 13 May 1996.
   public static final String[]      fundSymbols              = new String[] { "SPY", "VTSMX", "VBMFX", "VGSIX",
       "VGTSX", "EWU", "EWG", "EWJ", "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX", "SGGDX", "VGPMX",
-      "USAGX", "FSPCX", "FSRBX", "FPBFX", "ETGIX", "VDIGX", "MDY", "VBINX", "VWINX", "^IXIC" };
+      "USAGX", "FSPCX", "FSRBX", "FPBFX", "ETGIX", "VDIGX", "MDY", "VBINX", "VWINX", "MCA", "^IXIC" };
 
   // public static final String[] fundSymbols = FinLib.VANGUARD_INVESTOR_FUNDS;
 
@@ -315,8 +315,8 @@ public class AdaptiveAlloc
       // ClassificationModel absoluteClassifier = ClassificationModel.learnQuadrant(pointExamples, 2, -1, useWeights);
       // ClassificationModel absoluteClassifier = ClassificationModel.learnBaggedQuadrant(pointExamples, 20, 2, 10,
       // useWeights);
-      Predictor adaptive = new AdaptivePredictor(featureExtractor, absoluteClassifier, "cash", sim.broker.accessObject,
-          assetSymbols);
+      Predictor adaptive = new AdaptivePredictor(featureExtractor, absoluteClassifier, 1, "cash",
+          sim.broker.accessObject, assetSymbols);
 
       // Run the predictor over the test period.
       sim.setPredictor(adaptive);
@@ -722,8 +722,9 @@ public class AdaptiveAlloc
 
     long timeSimStart = TimeLib.toMs(TimeLib.ms2date(commonStart).plusWeeks(53 + 51)
         .with(TemporalAdjusters.firstDayOfMonth()));
-    // timeSimStart = TimeLib.toMs(1998, Month.MAY, 1); // TODO
-    long timeSimEnd = commonEnd; // TimeLib.toMs(2005, Month.DECEMBER, 31); // TODO
+    // timeSimStart = TimeLib.toMs(1999, Month.JANUARY, 1); // TODO
+    long timeSimEnd = commonEnd;
+    // timeSimEnd = TimeLib.toMs(1999, Month.DECEMBER, 31); // TODO
     double nSimMonths = TimeLib.monthsBetween(timeSimStart, timeSimEnd);
     System.out.printf("Simulation Start: [%s] (%.1f months)\n", TimeLib.formatDate(timeSimStart), nSimMonths);
 
@@ -740,10 +741,19 @@ public class AdaptiveAlloc
     PriceModel valueModel = PriceModel.adjCloseModel;
     PriceModel quoteModel = new PriceModel(PriceModel.Type.Open, true);
     double startingBalance = 10000.0;
-    double monthlyDeposit = 0.0;
+    double monthlyDeposit = 1000.0;
     SimFactory simFactory = new SimFactory(store, guideSeq, slippage, 0, startingBalance, monthlyDeposit, valueModel,
         quoteModel);
     Simulation sim = simFactory.build();
+
+    // {
+    // // Test monthly deposits.
+    // PredictorConfig stockConfig = new ConfigConst("VTSMX");
+    // Predictor predictor = stockConfig.build(sim.broker.accessObject, assetSymbols);
+    // sim.run(predictor, timeSimStart, timeSimEnd, "Stock");
+    // sim.broker.getAccount(Simulation.AccountName).printTransactions();
+    // System.exit(0);
+    // }
 
     // for (String assetName : assetSymbols) {
     // if (assetName.equals("cash")) continue;
@@ -751,16 +761,17 @@ public class AdaptiveAlloc
     // }
 
     // Run simulation for buy-and-hold of individual assets.
-    // List<Sequence> symbolReturns = new ArrayList<>();
-    // for (int i = 0; i < fundSymbols.length; ++i) {
-    // PredictorConfig config = new ConfigConst(fundSymbols[i]);
-    // Predictor predictor = config.build(sim.broker.accessObject, assetSymbols);
-    // sim.run(predictor, timeSimStart, timeSimEnd, fundSymbols[i]);
-    // symbolReturns.add(sim.returnsMonthly);
-    // System.out.println(CumulativeStats.calc(sim.returnsMonthly));
-    // }
-    // Chart.saveLineChart(new File(outputDir, "individual-symbols.html"), "Individual Returns", 1200, 900, true, true,
-    // symbolReturns);
+    List<Sequence> symbolReturns = new ArrayList<>();
+    for (int i = 0; i < fundSymbols.length; ++i) {
+      System.out.printf("Indiv: " + fundSymbols[i]);
+      PredictorConfig config = new ConfigConst(fundSymbols[i]);
+      Predictor predictor = config.build(sim.broker.accessObject, assetSymbols);
+      sim.run(predictor, timeSimStart, timeSimEnd, fundSymbols[i]);
+      symbolReturns.add(sim.returnsMonthly);
+      System.out.println(CumulativeStats.calc(sim.returnsMonthly));
+    }
+    Chart.saveLineChart(new File(outputDir, "individual-symbols.html"), "Individual Returns", 1200, 900, true, true,
+        symbolReturns);
 
     PredictorConfig config;
     Predictor predictor;
@@ -837,6 +848,18 @@ public class AdaptiveAlloc
     returns.add(sim.returnsMonthly);
     compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
 
+    // Dual Momentum
+    FeatureExtractor feDualMom = new Momentum(20, 1, 240, 220, Momentum.ReturnOrMul.Return,
+        Momentum.CompoundPeriod.Weekly, FinLib.Close);
+    Stump stump = new Stump(0, 0.0, false, 5.0);
+    Predictor dualMom = new AdaptivePredictor(feDualMom, stump, 1, "VBMFX", sim.broker.accessObject, new String[] {
+        "VTSMX", "VGTSX", "VBMFX" });
+    sim.run(dualMom, timeSimStart, timeSimEnd, "Dual Momentum");
+    System.out.println(CumulativeStats.calc(sim.returnsMonthly));
+    returns.add(sim.returnsMonthly);
+    compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
+    // Chart.saveHoldings(new File(outputDir, "holdings-dual-momentum.html"), sim.holdings, sim.store);
+
     // Run adaptive asset allocation.
     final TradeFreq tradeFreq = TradeFreq.Weekly;
     final int pctQuantum = 1;
@@ -881,11 +904,12 @@ public class AdaptiveAlloc
         FinLib.Close);
     FeatureExtractor fe3 = new Momentum(40, 1, 220, 180, Momentum.ReturnOrMul.Return, Momentum.CompoundPeriod.Weekly,
         FinLib.Close);
-    Stump stump = new Stump(0, 0.0, false, 5.0);
+    stump = new Stump(0, 0.0, false, 5.0);
+    int nMaxKeep = 1;
     String safeAsset = "VBMFX";
-    Predictor predictor1 = new AdaptivePredictor(fe1, stump, safeAsset, sim.broker.accessObject, assetSymbols);
-    Predictor predictor2 = new AdaptivePredictor(fe2, stump, safeAsset, sim.broker.accessObject, assetSymbols);
-    Predictor predictor3 = new AdaptivePredictor(fe3, stump, safeAsset, sim.broker.accessObject, assetSymbols);
+    Predictor predictor1 = new AdaptivePredictor(fe1, stump, nMaxKeep, safeAsset, sim.broker.accessObject, assetSymbols);
+    Predictor predictor2 = new AdaptivePredictor(fe2, stump, nMaxKeep, safeAsset, sim.broker.accessObject, assetSymbols);
+    Predictor predictor3 = new AdaptivePredictor(fe3, stump, nMaxKeep, safeAsset, sim.broker.accessObject, assetSymbols);
     Predictor[] predictors = new Predictor[] { predictor1, predictor2, predictor3, tactical };
     DiscreteDistribution distribution = new DiscreteDistribution(0.2, 0.2, 0.3, 0.3);
     // DiscreteDistribution distribution = new DiscreteDistribution(0.2, 0.5, 0.3, 0.0);
