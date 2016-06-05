@@ -11,6 +11,7 @@ import org.minnen.retiretool.broker.transactions.Transaction.Flow;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.util.Fixed;
+import org.minnen.retiretool.util.PriceModel;
 import org.minnen.retiretool.util.TimeLib;
 
 /**

@@ -304,7 +304,7 @@ public final class FinLib
     Sequence seqLik = null;
     int[] years = new int[] { 1, 2, 5, 10, 20, 30, 40 };
     for (int i = 0; i < years.length; i++) {
-      Sequence r = calcReturnsForDuration(cumulativeReturns, years[i] * 12);
+      Sequence r = calcReturnsForMonths(cumulativeReturns, years[i] * 12);
       Sequence h = Histogram.computeHistogram(r, 0.5, 0.0, 0);
       h = addReturnLikelihoods(h, bInvert);
       seqLik = appendROISeq(seqLik, h);
@@ -316,11 +316,33 @@ public final class FinLib
    * Calculate returns for all periods with the given duration.
    * 
    * @param cumulativeReturns sequence of cumulative returns for the investment strategy
-   * @param months number of months in the market
+   * @param nDays number of days invested
+   * @param priceModel price model touse with cumulativeReturns
+   * @return sequence containing total returns for each time period of the given duration
+   */
+  public static Sequence calcReturnsForDays(Sequence cumulativeReturns, int nDays, PriceModel priceModel)
+  {
+    final int N = cumulativeReturns.size();
+    assert nDays <= N;
+    String name = String.format("%s (%d Days)", cumulativeReturns.getName(), nDays);
+    Sequence rois = new Sequence(name);
+    for (int i = 0; i + nDays < N; i++) {
+      double roi = getTotalReturn(cumulativeReturns, i, i + nDays, priceModel);
+      rois.addData(mul2ret(roi), cumulativeReturns.getTimeMS(i));
+    }
+    assert rois.size() > 0;
+    return rois;
+  }
+
+  /**
+   * Calculate returns for all periods with the given duration.
+   * 
+   * @param cumulativeReturns sequence of cumulative returns for the investment strategy
+   * @param nMonths number of months in the market
    * @return sequence containing returns for each time period of the given duration, if nMonths<12 then the returns are
    *         raw, else they are CAGRs.
    */
-  public static Sequence calcReturnsForDuration(Sequence cumulativeReturns, int nMonths)
+  public static Sequence calcReturnsForMonths(Sequence cumulativeReturns, int nMonths)
   {
     // TODO update to use timestamps instead of assuming monthly data.
     final int N = cumulativeReturns.size();
@@ -379,6 +401,22 @@ public final class FinLib
   public static double getTotalReturn(Sequence cumulativeReturns)
   {
     return getTotalReturn(cumulativeReturns, 0, -1);
+  }
+
+  /**
+   * Calculate total return for the given segment.
+   * 
+   * @param cumulativeReturns sequence of cumulative returns for the investment strategy
+   * @param iFrom index of starting point for calculation
+   * @param iTo index of ending point for calculation (inclusive)
+   * @param priceModel use this price model to get price data from cumulativeReturns
+   * @return total return from iFrom to iTo.
+   */
+  public static double getTotalReturn(Sequence cumulativeReturns, int iFrom, int iTo, PriceModel priceModel)
+  {
+    double priceTo = priceModel.getPrice(cumulativeReturns.get(iTo));
+    double priceFrom = priceModel.getPrice(cumulativeReturns.get(iFrom));
+    return priceTo / priceFrom;
   }
 
   /**

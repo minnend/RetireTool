@@ -1159,4 +1159,49 @@ public class Chart
 
     return aligned;
   }
+
+  public static void saveHighChartKDE(File file, String title, double xstart, double xstep, int width, int height,
+      Sequence... seqs) throws IOException
+  {
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+      writer.write("<html><head>\n");
+      writer.write("<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js\"></script>\n");
+      writer.write("<script src=\"js/highcharts.js\"></script>\n");
+      writer.write("  <script type=\"text/javascript\">\n");
+
+      writer.write("$(function () {\n");
+      writer.write(" $('#chart').highcharts({\n");
+      writer.write("  title: { text: '" + title + "' },\n");
+      writer.write(String.format("  chart: { type: 'area' },\n"));
+      writer.write("  plotOptions: {\n");
+      writer.write("   area: {\n");
+      writer.write(String.format("    pointStart: %.4f,\n", xstart));
+      writer.write(String.format("    pointInterval: %.4f,\n", xstep));
+      writer.write("     marker: { enabled: false }\n");
+      writer.write("   }\n");
+      writer.write("  },\n");
+
+      writer.write("  series: [\n");
+      for (int iSeq = 0; iSeq < seqs.length; ++iSeq) {
+        Sequence seq = seqs[iSeq];
+        writer.write("  { name: '" + seq.getName() + "',\n");
+        writer.write("    data: [");
+        for (int i = 0; i < seqs[iSeq].length(); ++i) {
+          writer.write(String.format("%.4f%s", seqs[iSeq].get(i, 0), i == seqs[iSeq].size() - 1 ? "" : ", "));
+        }
+        writer.write("] }");
+        if (iSeq < seqs.length - 1) {
+          writer.write(',');
+        }
+        writer.write("\n");
+      }
+      writer.write("  ]\n");
+      writer.write(" });\n");
+      writer.write("});\n");
+
+      writer.write("</script></head><body style=\"width:" + width + "px;\">\n");
+      writer.write("<div id=\"chart\" style=\"width:100%; height:" + height + "px;\" />\n");
+      writer.write("</body></html>\n");
+    }
+  }
 }

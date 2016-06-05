@@ -9,7 +9,7 @@ import java.util.List;
 import org.minnen.retiretool.data.FeatureVec;
 
 /**
- * A single example for a regression problem: y = f(x).
+ * A single example for a regression (y = f(x)) and/or classification problem (k = f(x)).
  */
 public class Example
 {

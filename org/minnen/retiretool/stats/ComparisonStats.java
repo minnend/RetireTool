@@ -82,8 +82,8 @@ public class ComparisonStats
   {
     assert cumulativeReturns1.length() == cumulativeReturns2.length();
 
-    Sequence returns1 = FinLib.calcReturnsForDuration(cumulativeReturns1, nMonths);
-    Sequence returns2 = FinLib.calcReturnsForDuration(cumulativeReturns2, nMonths);
+    Sequence returns1 = FinLib.calcReturnsForMonths(cumulativeReturns1, nMonths);
+    Sequence returns2 = FinLib.calcReturnsForMonths(cumulativeReturns2, nMonths);
 
     return calcFromDurationReturns(returns1, returns2, nMonths, diffMargin);
   }
@@ -91,12 +91,12 @@ public class ComparisonStats
   public static Results calcFromCumulative(Sequence cumulativeReturns, Sequence[] defenders, int nMonths,
       double diffMargin)
   {
-    Sequence returns1 = FinLib.calcReturnsForDuration(cumulativeReturns, nMonths);
+    Sequence returns1 = FinLib.calcReturnsForMonths(cumulativeReturns, nMonths);
     Sequence returns2 = null;
     for (int i = 0; i < defenders.length; ++i) {
       if (cumulativeReturns == defenders[i]) continue;
       assert cumulativeReturns.length() == defenders[i].length();
-      Sequence returns = FinLib.calcReturnsForDuration(defenders[i], nMonths);
+      Sequence returns = FinLib.calcReturnsForMonths(defenders[i], nMonths);
       if (returns2 == null) {
         returns2 = returns;
       } else {
@@ -110,7 +110,7 @@ public class ComparisonStats
   public static Results calcFromCumulative(Sequence cumulativeReturns, double targetReturn, int nMonths,
       double diffMargin)
   {
-    Sequence returns = FinLib.calcReturnsForDuration(cumulativeReturns, nMonths);
+    Sequence returns = FinLib.calcReturnsForMonths(cumulativeReturns, nMonths);
     return calcFromDurationReturns(returns, targetReturn, nMonths, diffMargin);
   }
 

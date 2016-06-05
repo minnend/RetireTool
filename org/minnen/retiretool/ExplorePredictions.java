@@ -9,7 +9,6 @@ import java.util.Comparator;
 import java.util.List;
 
 import org.minnen.retiretool.broker.Broker;
-import org.minnen.retiretool.broker.PriceModel;
 import org.minnen.retiretool.broker.TimeInfo;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.FeatureVec;
@@ -20,6 +19,7 @@ import org.minnen.retiretool.ml.Example;
 import org.minnen.retiretool.predictor.features.FeatureExtractor;
 import org.minnen.retiretool.predictor.features.Momentum;
 import org.minnen.retiretool.util.FinLib;
+import org.minnen.retiretool.util.PriceModel;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
 

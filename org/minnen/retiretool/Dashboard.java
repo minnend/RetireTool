@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.time.Month;
 import java.time.ZoneId;
 
-import org.minnen.retiretool.broker.PriceModel;
 import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.DiscreteDistribution;
@@ -23,26 +22,39 @@ import org.minnen.retiretool.predictor.daily.TimeCode;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.LinearFunc;
+import org.minnen.retiretool.util.PriceModel;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.util.Writer;
 import org.minnen.retiretool.viz.Chart;
 
 public class Dashboard
 {
-  public final static SequenceStore store      = new SequenceStore();
+  public final static SequenceStore     store         = new SequenceStore();
 
   /** Dimension to use in the price sequence for SMA predictions. */
-  public static int                 iPriceSMA  = 0;
+  public static int                     iPriceSMA     = 0;
 
-  public static final Slippage      slippage   = Slippage.None;
-  public static final LinearFunc    PriceSDev  = LinearFunc.Zero;
+  public static final Slippage          slippage      = Slippage.None;
+  public static final LinearFunc        PriceSDev     = LinearFunc.Zero;
 
-  public static final int           maxDelay   = 0;
-  public static final long          gap        = 2 * TimeLib.MS_IN_DAY;
+  public static final int               maxDelay      = 0;
+  public static final long              gap           = 2 * TimeLib.MS_IN_DAY;
 
-  public static final String        riskyName  = "stock";
-  public static final String        safeName   = "cash";
-  public static final String[]      assetNames = new String[] { riskyName, safeName };
+  public static final String            riskyName     = "stock";
+  public static final String            safeName      = "cash";
+  public static final String[]          assetNames    = new String[] { riskyName, safeName };
+
+//  public static final PredictorConfig[] singleConfigs = new PredictorConfig[] {
+//      new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap), new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap),
+//      new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap) };
+//  public static final int[][]           allParams     = new int[][] { { 20, 0, 240, 150, 25 }, { 50, 0, 180, 30, 100 },
+//      { 10, 0, 220, 0, 200 }                         };
+
+  public static final PredictorConfig[] singleConfigs = new PredictorConfig[] {
+      new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap), new ConfigSMA(25, 0, 155, 125, 0.75, FinLib.Close, gap),
+      new ConfigSMA(5, 0, 165, 5, 0.5, FinLib.Close, gap) };
+  public static final int[][]           allParams     = new int[][] { { 20, 0, 240, 150, 25 }, { 25, 0, 155, 125, 75 },
+      { 5, 0, 165, 5, 50 } };
 
   public static void setupData() throws IOException
   {
@@ -222,14 +234,6 @@ public class Dashboard
     CumulativeStats stats = CumulativeStats.calc(sim.returnsMonthly);
     System.out.println(stats);
 
-    // List of all single-SMA configs.
-    // PredictorConfig[] singleConfigs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close,
-    // gap),
-    // new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap), new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap) };
-
-    PredictorConfig[] singleConfigs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap),
-        new ConfigSMA(25, 0, 155, 125, 0.75, FinLib.Close, gap), new ConfigSMA(5, 0, 165, 5, 0.5, FinLib.Close, gap) };
-
     // Multi-predictor to make final decisions.
     PredictorConfig configStrategy = new ConfigMulti(254, singleConfigs);
     MultiPredictor predStrategy = (MultiPredictor) configStrategy.build(sim.broker.accessObject, assetNames);
@@ -360,12 +364,10 @@ public class Dashboard
     Simulation sim = new Simulation(store, guideSeq, slippage, maxDelay, PriceModel.closeModel, PriceModel.closeModel);
     runMulti3(sim, dir);
 
-    int[][] allParams = new int[][] { { 20, 0, 240, 150, 25 }, { 50, 0, 180, 30, 100 }, { 10, 0, 200, 0, 200 } };
-
     // Generate graphs.
     for (int i = 0; i < allParams.length; ++i) {
       int[] params = allParams[i];
-      final long startMs = TimeLib.toMs(2015, Month.JANUARY, 1);
+      final long startMs = TimeLib.toMs(2014, Month.JANUARY, 1);
       final long endMs = TimeLib.TIME_END;
       Sequence trigger = FinLib.sma(stock, params[0], params[1], FinLib.Close).subseq(startMs, endMs);
       Sequence base = FinLib.sma(stock, params[2], params[3], FinLib.Close).subseq(startMs, endMs);
@@ -374,8 +376,8 @@ public class Dashboard
       Sequence raw = stock.subseq(startMs, endMs);
       trigger.setName("Trigger");
       base.setName("Base");
-      Chart.saveLineChart(new File(dir, String.format("sma%d.html", i + 1)), String.format("SMA-%d", i + 1), 1000, 600,
-          true, false, trigger, baseLow, baseHigh, raw);
+      Chart.saveLineChart(new File(dir, String.format("sma%d.html", i + 1)), String.format("SMA-%d", i + 1), 1200, 600,
+          false, false, trigger, baseLow, baseHigh, raw);
     }
   }
 }

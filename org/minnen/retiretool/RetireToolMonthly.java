@@ -71,8 +71,8 @@ public class RetireToolMonthly
     // Sequence nikkeiDaily = DataIO.loadDateValueCSV(new File(dataDir, "nikkei225-daily.csv"));
     // Sequence nikkei = FinLib.daily2monthly(nikkeiDaily);
 
-    // long commonStart = Library.calcCommonStart(shiller, tbillData);
-    // long commonEnd = Library.calcCommonEnd(shiller, tbillData);
+    long commonStart = TimeLib.calcCommonStart(shiller, tbillData);
+    long commonEnd = TimeLib.calcCommonEnd(shiller, tbillData);
     // System.out.printf("Shiller: [%s] -> [%s]\n", TimeLib.formatDate(shiller.getStartMS()),
     // TimeLib.formatDate(shiller.getEndMS()));
     // System.out.printf("Stock: [%s] -> [%s]\n", TimeLib.formatMonth(nikkei.getStartMS()),
@@ -83,8 +83,6 @@ public class RetireToolMonthly
 
     // long commonStart = TimeLib.getTime(1, 1, 1872);
     // long commonEnd = TimeLib.getTime(31, 12, 2014);
-    long commonStart = TimeLib.toMs(1950, 1, 1);
-    long commonEnd = TimeLib.toMs(2015, 9, 31);
     shiller = shiller.subseq(commonStart, commonEnd);
     tbillData = tbillData.subseq(commonStart, commonEnd);
     // nikkei = nikkei.subseq(commonStart, commonEnd);
@@ -115,15 +113,27 @@ public class RetireToolMonthly
     store.addMisc(bondData, "BondData");
 
     // Add CPI data.
-    store.addMisc(Shiller.getData(Shiller.CPI, "cpi", shiller, iStartData, iEndData));
+    Sequence cpi = Shiller.getData(Shiller.CPI, "cpi", shiller, iStartData, iEndData);
+    store.addMisc(cpi);
     store.alias("inflation", "cpi");
 
     // Calculate cumulative returns for full stock, bond, and t-bill data.
+    Sequence stockNoDiv = FinLib.calcSnpReturns(stockData, 0, -1, DividendMethod.IGNORE_DIVIDENDS);
     Sequence stockAll = FinLib.calcSnpReturns(stockData, 0, -1, DividendMethod.QUARTERLY);
     Sequence bondsAll = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, -1);
     assert stockAll.matches(bondsAll);
     store.addMisc(stockAll, "Stock-All");
     store.addMisc(bondsAll, "Bonds-All");
+
+    assert cpi.matches(stockAll);
+    for (int i = 0; i < cpi.length(); ++i) {
+      System.out.printf("%s,%.4f,%.4f,%.4f,%.4f\n", TimeLib.formatYM(cpi.getTimeMS(i)), stockAll.get(i, 0),
+          stockNoDiv.get(i, 0), bondsAll.get(i, 0), cpi.get(i, 0));
+    }
+    double nMonths = TimeLib.monthsBetween(stockAll.getStartMS(), stockAll.getEndMS());
+    System.out.printf("%.3f, %.3f, %.3f\n", FinLib.getAnnualReturn(stockAll.getLast(0), nMonths),
+        FinLib.getAnnualReturn(stockNoDiv.getLast(0), nMonths), FinLib.getAnnualReturn(bondsAll.getLast(0), nMonths));
+    System.exit(0);
 
     Sequence tbillsAll = null;
     if (tbillData != null) {
@@ -175,7 +185,7 @@ public class RetireToolMonthly
     // Setup risky and safe assets for use with dynamic asset allocation strategies.
     if (buildComplexStrategies) {
       Sequence risky = stockAll;
-      Sequence safe = store.getMisc("Cash"); // Bonds-All
+      Sequence safe = store.getMisc("cash"); // Bonds-All
       Sequence prices = store.getMisc("StockData");
       // Strategy.calcSmaStats(prices, risky, safe, store);
       addStrategiesToStore(risky, safe, prices, iStartSimulation);
@@ -863,7 +873,7 @@ public class RetireToolMonthly
     double vmin = 0.0, vmax = 0.0;
     for (int i = 0; i < assets.length; ++i) {
       DurationalStats.printDurationTable(assets[i]);
-      returns[i] = FinLib.calcReturnsForDuration(assets[i], nMonths);
+      returns[i] = FinLib.calcReturnsForMonths(assets[i], nMonths);
 
       // for (int j = 0; j < returns[i].length(); ++j) {
       // FeatureVec v = returns[i].get(j);

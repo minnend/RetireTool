@@ -33,6 +33,7 @@ public class TimeLib
   public final static DateTimeFormatter dtfDate2   = DateTimeFormatter.ofPattern("dd MMM yyyy");
   public final static DateTimeFormatter dtfMonth   = DateTimeFormatter.ofPattern("MMM yyyy");
   public final static DateTimeFormatter dtfYMD     = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+  public final static DateTimeFormatter dtfYM     = DateTimeFormatter.ofPattern("yyyy-MM");
 
   /**
    * Return the current time in milliseconds. This function just forwards the request to System.currentTimeMillis();
@@ -268,6 +269,13 @@ public class TimeLib
   {
     if (ms == TIME_ERROR || ms == Long.MAX_VALUE) return null;
     return ms2date(ms).format(dtfYMD);
+  }
+  
+  /** @return string representation of the given time as year-month */
+  public static String formatYM(long ms)
+  {
+    if (ms == TIME_ERROR || ms == Long.MAX_VALUE) return null;
+    return ms2date(ms).format(dtfYM);
   }
 
   /** @return LocalDate for the given date moved to the first business day of the month. */

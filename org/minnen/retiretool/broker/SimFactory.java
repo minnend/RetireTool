@@ -3,6 +3,7 @@ package org.minnen.retiretool.broker;
 import org.minnen.retiretool.Slippage;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.util.PriceModel;
 
 /**
  * Factory class for creating simulations.

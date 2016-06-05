@@ -1,8 +1,6 @@
-package org.minnen.retiretool.broker;
+package org.minnen.retiretool.util;
 
 import org.minnen.retiretool.data.FeatureVec;
-import org.minnen.retiretool.util.FinLib;
-import org.minnen.retiretool.util.Random;
 
 /**
  * Provides various methods for calculating trade price from an OLHC vector.
@@ -91,6 +89,18 @@ public class PriceModel
   public static double adjustPrice(double price, FeatureVec priceData)
   {
     return priceData.get(FinLib.AdjClose) / priceData.get(FinLib.Close) * price;
+  }
+
+  /** Given OHLC+Adj, return adjusted OHLC/ */
+  public static FeatureVec adjust(FeatureVec priceData)
+  {
+    double factor = priceData.get(FinLib.AdjClose) / priceData.get(FinLib.Close);
+    FeatureVec x = new FeatureVec(4);
+    for (int i = 0; i < 4; ++i) {
+      x.set(i, priceData.get(i) * factor);
+    }
+    x.setTime(priceData.getTime());
+    return x;
   }
 
   @Override

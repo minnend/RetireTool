@@ -15,6 +15,7 @@ import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Fixed;
+import org.minnen.retiretool.util.PriceModel;
 import org.minnen.retiretool.util.Random;
 import org.minnen.retiretool.util.TimeLib;
 
