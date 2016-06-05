@@ -27,6 +27,7 @@ import org.minnen.retiretool.util.Fixed;
 import org.minnen.retiretool.util.LinearFunc;
 import org.minnen.retiretool.util.PriceModel;
 import org.minnen.retiretool.util.Random;
+import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.util.FinLib.DividendMethod;
 import org.minnen.retiretool.broker.Account;

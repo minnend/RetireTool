@@ -5,8 +5,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.minnen.retiretool.data.FeatureVec;
-import org.minnen.retiretool.util.Library;
-import org.minnen.retiretool.util.Random;
 
 import smile.classification.Classifier;
 import smile.classification.ClassifierTrainer;

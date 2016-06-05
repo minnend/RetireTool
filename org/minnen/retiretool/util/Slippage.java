@@ -1,7 +1,6 @@
-package org.minnen.retiretool;
+package org.minnen.retiretool.util;
 
 import org.minnen.retiretool.data.Sequence;
-import org.minnen.retiretool.util.Fixed;
 
 /**
  * Model that adjusts trade price to simulate slippage/spread.

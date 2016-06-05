@@ -10,7 +10,6 @@ import java.util.List;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.minnen.retiretool.Slippage;
 import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.DiscreteDistribution;
@@ -29,6 +28,7 @@ import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.PriceModel;
+import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
 
 public class TestMixablePredictor

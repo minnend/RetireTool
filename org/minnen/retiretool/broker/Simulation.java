@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.minnen.retiretool.Slippage;
 import org.minnen.retiretool.broker.transactions.Transaction.Flow;
 import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.IndexRange;
@@ -17,6 +16,7 @@ import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Fixed;
 import org.minnen.retiretool.util.PriceModel;
 import org.minnen.retiretool.util.Random;
+import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
 
 public class Simulation

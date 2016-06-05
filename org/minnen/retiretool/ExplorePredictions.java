@@ -20,6 +20,7 @@ import org.minnen.retiretool.predictor.features.FeatureExtractor;
 import org.minnen.retiretool.predictor.features.Momentum;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.PriceModel;
+import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
 

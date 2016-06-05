@@ -6,12 +6,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.minnen.retiretool.Slippage;
 import org.minnen.retiretool.broker.transactions.Transaction.Flow;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.util.Fixed;
 import org.minnen.retiretool.util.PriceModel;
+import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
 
 /**
