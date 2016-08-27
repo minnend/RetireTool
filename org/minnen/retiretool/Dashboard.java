@@ -40,32 +40,36 @@ public class Dashboard
 
   public static final int               maxDelay      = 0;
   public static final long              gap           = 2 * TimeLib.MS_IN_DAY;
+  public static final PriceModel        priceModel    = PriceModel.closeModel;
 
   public static final String            riskyName     = "stock";
   public static final String            safeName      = "cash";
   public static final String[]          assetNames    = new String[] { riskyName, safeName };
 
-//  public static final PredictorConfig[] singleConfigs = new PredictorConfig[] {
-//      new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap), new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap),
-//      new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap) };
-//  public static final int[][]           allParams     = new int[][] { { 20, 0, 240, 150, 25 }, { 50, 0, 180, 30, 100 },
-//      { 10, 0, 220, 0, 200 }                         };
+  // public static final PredictorConfig[] singleConfigs = new PredictorConfig[] {
+  // new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap), new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap),
+  // new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap) };
+  // public static final int[][] allParams = new int[][] { { 20, 0, 240, 150, 25 }, { 50, 0, 180, 30, 100 },
+  // { 10, 0, 220, 0, 200 } };
 
   public static final PredictorConfig[] singleConfigs = new PredictorConfig[] {
       new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap), new ConfigSMA(25, 0, 155, 125, 0.75, FinLib.Close, gap),
       new ConfigSMA(5, 0, 165, 5, 0.5, FinLib.Close, gap) };
   public static final int[][]           allParams     = new int[][] { { 20, 0, 240, 150, 25 }, { 25, 0, 155, 125, 75 },
-      { 5, 0, 165, 5, 50 } };
+      { 5, 0, 165, 5, 50 }                           };
 
   public static void setupData() throws IOException
   {
-    File dataDir = new File("g:/research/finance/yahoo/");
-    if (!dataDir.exists()) {
-      dataDir.mkdirs();
+    File dataDir = new File("g:/research/finance");
+    assert dataDir.exists();
+
+    File yahooDir = new File(dataDir, "yahoo");
+    if (!yahooDir.exists()) {
+      yahooDir.mkdirs();
     }
 
     String symbol = "^GSPC";
-    File file = DataIO.getYahooFile(dataDir, symbol);
+    File file = DataIO.getYahooFile(yahooDir, symbol);
     DataIO.updateDailyDataFromYahoo(file, symbol, 8 * TimeLib.MS_IN_HOUR);
 
     Sequence stock = DataIO.loadYahooData(file);
@@ -230,7 +234,7 @@ public class Dashboard
     // MixedPredictor predBaseline = new MixedPredictor(new Predictor[] { predRisky, predSafe }, new
     // DiscreteDistribution(
     // 0.8, 0.2), sim.broker.accessObject);
-    sim.run(predRisky);
+    sim.run(predRisky, "Buy & Hold");
     Sequence baselineReturns = sim.returnsDaily;
     CumulativeStats stats = CumulativeStats.calc(sim.returnsMonthly);
     System.out.println(stats);
@@ -238,7 +242,7 @@ public class Dashboard
     // Multi-predictor to make final decisions.
     PredictorConfig configStrategy = new ConfigMulti(254, singleConfigs);
     MultiPredictor predStrategy = (MultiPredictor) configStrategy.build(sim.broker.accessObject, assetNames);
-    sim.run(predStrategy);
+    sim.run(predStrategy, "Tactical");
     Sequence strategyReturns = sim.returnsDaily;
     assert strategyReturns.matches(baselineReturns);
 
@@ -362,7 +366,7 @@ public class Dashboard
     Sequence stock = store.get(riskyName);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stock.subseq(iStart);
-    Simulation sim = new Simulation(store, guideSeq, slippage, maxDelay, PriceModel.closeModel, PriceModel.closeModel);
+    Simulation sim = new Simulation(store, guideSeq, slippage, maxDelay, priceModel, priceModel);
     runMulti3(sim, dir);
 
     // Generate graphs.

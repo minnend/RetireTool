@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.Month;
+import java.time.temporal.TemporalAdjusters;
 
 import org.apache.commons.io.IOUtils;
 import org.minnen.retiretool.util.FinLib;
@@ -72,6 +73,19 @@ public class DataIO
     }
     in.close();
     return data;
+  }
+
+  public static Sequence loadRecessionData(File file) throws IOException
+  {
+    if (file.isDirectory()) {
+      file = new File(file, "RECPROUSM156N.csv");
+      if (!file.canRead()) {
+        throw new IOException("Missing recession probability data file.");
+      }
+    }
+    Sequence seq = loadDateValueCSV(file);
+    seq.adjustDatesToEndOfMonth();
+    return seq;
   }
 
   /**
@@ -294,6 +308,8 @@ public class DataIO
   public static URL buildYahooURL(String symbol, LocalDate startDate)
   {
     try {
+      // http://stackoverflow.com/questions/754593/source-of-historical-stock-data
+      // http://web.archive.org/web/20140325063520/http://www.gummy-stuff.org/Yahoo-data.htm
       String address = String.format(
           "http://ichart.yahoo.com/table.csv?s=%s&a=%d&b=%d&c=%d&d=11&e=31&f=2050&g=d&ignore=.csv", symbol,
           startDate.getMonthValue() - 1, startDate.getDayOfMonth(), startDate.getYear());

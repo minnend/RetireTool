@@ -91,6 +91,16 @@ public class DiscreteDistribution
     return ix < 0 ? 0.0 : weights[ix];
   }
 
+  /** @return number of non-zero weights */
+  public int getNumNonZero()
+  {
+    int n = 0;
+    for (int i = 0; i < weights.length; ++i) {
+      if (Math.abs(weights[i]) > 1e-7) ++n;
+    }
+    return n;
+  }
+
   public int find(String name)
   {
     for (int i = 0; i < names.length; ++i) {
@@ -164,7 +174,7 @@ public class DiscreteDistribution
             iBest = i;
             bestGap = gap;
           }
-        }        
+        }
         wlong[iBest] += change;
         diff += change;
       } else {
@@ -263,14 +273,19 @@ public class DiscreteDistribution
     return sb.toString();
   }
 
-  @Override
-  public String toString()
+  public String toString(String format)
   {
-    StringBuilder sb = new StringBuilder(String.format("[%4.1f", weights[0] * 100));
+    StringBuilder sb = new StringBuilder(String.format("[" + format, weights[0] * 100));
     for (int i = 1; i < weights.length; ++i) {
-      sb.append(String.format(",%4.1f", weights[i] * 100));
+      sb.append(String.format("," + format, weights[i] * 100));
     }
     sb.append("]");
     return sb.toString();
+  }
+
+  @Override
+  public String toString()
+  {
+    return toString("%4.1f");
   }
 }

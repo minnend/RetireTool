@@ -67,8 +67,7 @@ public class Broker
     this.slippage = slippage;
     this.origTimeInfo = new TimeInfo(0, guideSeq);
     this.timeInfo = origTimeInfo;
-
-    System.out.printf("Broker: value=%s   quote=%s\n", valueModel, quoteModel);
+    // System.out.printf("Broker: value=%s   quote=%s\n", valueModel, quoteModel);
   }
 
   public Broker(SequenceStore store, Slippage slippage, long timeStart)
@@ -179,7 +178,7 @@ public class Broker
    */
   public void finishDay()
   {
-    assert timeOfDay == TimeOfDay.AfterMarketClosed; // Dont't "finish" until after end-of-day business.
+    assert timeOfDay == TimeOfDay.AfterMarketClosed; // Don't "finish" until after end-of-day business.
 
     // Price quotes are only valid for one day.
     priceQuotes.clear();

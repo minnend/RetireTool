@@ -33,7 +33,7 @@ public class TimeLib
   public final static DateTimeFormatter dtfDate2   = DateTimeFormatter.ofPattern("dd MMM yyyy");
   public final static DateTimeFormatter dtfMonth   = DateTimeFormatter.ofPattern("MMM yyyy");
   public final static DateTimeFormatter dtfYMD     = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-  public final static DateTimeFormatter dtfYM     = DateTimeFormatter.ofPattern("yyyy-MM");
+  public final static DateTimeFormatter dtfYM      = DateTimeFormatter.ofPattern("yyyy-MM");
 
   /**
    * Return the current time in milliseconds. This function just forwards the request to System.currentTimeMillis();
@@ -146,6 +146,7 @@ public class TimeLib
    * Returns index corresponding to first entry of new year (e.g. January 1881).
    * 
    * @param seq Sequence with timestamps
+   * @param bCheckData require that date is first business day of January.
    * @return index for first year or -1 if none
    */
   public static int findStartofFirstYear(Sequence seq, boolean bCheckDate)
@@ -270,7 +271,7 @@ public class TimeLib
     if (ms == TIME_ERROR || ms == Long.MAX_VALUE) return null;
     return ms2date(ms).format(dtfYMD);
   }
-  
+
   /** @return string representation of the given time as year-month */
   public static String formatYM(long ms)
   {

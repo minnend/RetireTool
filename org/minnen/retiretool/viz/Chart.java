@@ -35,6 +35,8 @@ import org.minnen.retiretool.util.TimeLib;
 
 public class Chart
 {
+  public final static boolean bVerticalLine = true;
+
   public enum ChartType {
     Line, Bar, Area, PosNegArea
   };
@@ -79,6 +81,16 @@ public class Chart
       writer.write("$(function () {\n");
       writer.write(" $('#chart').highcharts({\n");
       writer.write("  title: { text: '" + title + "' },\n");
+      if (bVerticalLine) {
+        writer.write("  tooltip: {\n");
+        writer.write("    crosshairs: {\n");
+        writer.write("      color: 'green',\n");
+        writer.write("      dashStyle: 'solid'\n");
+        writer.write("    },\n");
+        writer.write("    shared: true,\n");
+        writer.write("    enabled: false\n");
+        writer.write("  },\n");
+      }
       if (chartType != ChartType.Line) {
         writer.write(String.format("  chart: { type: '%s' },\n", chart2name(chartType)));
       }
@@ -190,7 +202,9 @@ public class Chart
         writer.write("  { name: '" + seq.getName() + "',\n");
         writer.write("    data: [");
         for (int t = 0; t < seqs[i].length(); ++t) {
-          writer.write(String.format("%.4f%s", seqs[i].get(t, dim), t == seqs[i].size() - 1 ? "" : ", "));
+          double x = seqs[i].get(t, dim);
+          // x = FinLib.mul2ret(x); // TODO
+          writer.write(String.format("%.4f%s", x, t == seqs[i].size() - 1 ? "" : ", "));
         }
         writer.write("] }");
         if (i < seqs.length - 1) {
@@ -971,13 +985,13 @@ public class Chart
     return sb.toString();
   }
 
-  public static void saveAnnualStatsTable(File file, int width, boolean bCheckDate, List<Sequence> seqs)
+  public static void saveAnnualStatsTable(File file, int width, boolean bCheckDate, int iPrice, List<Sequence> seqs)
       throws IOException
   {
-    saveAnnualStatsTable(file, width, bCheckDate, seqs.toArray(new Sequence[seqs.size()]));
+    saveAnnualStatsTable(file, width, bCheckDate, iPrice, seqs.toArray(new Sequence[seqs.size()]));
   }
 
-  public static void saveAnnualStatsTable(File file, int width, boolean bCheckDate, Sequence... seqs)
+  public static void saveAnnualStatsTable(File file, int width, boolean bCheckDate, int iPrice, Sequence... seqs)
       throws IOException
   {
     final double diffMargin = 0.5;
@@ -1018,7 +1032,7 @@ public class Chart
 
         for (int i = 0; i < seqs.length; ++i) {
           Sequence seq = seqs[i];
-          double tr = FinLib.getTotalReturn(seq, iStart - 1, iNext);
+          double tr = FinLib.getTotalReturn(seq, Math.max(iStart - 1, 0), iNext, iPrice);
           double ar = FinLib.getAnnualReturn(tr, 12);
           returns[i] = ar;
         }

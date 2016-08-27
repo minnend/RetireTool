@@ -41,6 +41,7 @@ public class Example
 
   public long getTime()
   {
+    assert x.hasTime();
     return x.getTime();
   }
 

@@ -21,11 +21,12 @@ import org.minnen.retiretool.util.TimeLib;
 
 public class Simulation
 {
-  public static final double                  DistributionEPS = 0.02;
-  public static final double                  TargetEPS       = 0.1;
+  public static final double                  DistributionEPS        = 0.02;
+  public static final double                  TargetEPS              = 0.1;
+  public static final int                     REBALANCE_AFTER_N_DAYS = 363;
 
-  public static final Random                  rng             = new Random();
-  public static final String                  AccountName     = "SimAccount";
+  public static final Random                  rng                    = new Random();
+  public static final String                  AccountName            = "SimAccount";
 
   public final SequenceStore                  store;
   public final Sequence                       guideSeq;
@@ -41,8 +42,8 @@ public class Simulation
   public Map<LocalDate, DiscreteDistribution> holdings;
 
   private long                                runKey;
-  private int                                 runIndex        = -1;
-  private long                                lastRebalance   = TimeLib.TIME_BEGIN;
+  private int                                 runIndex               = -1;
+  private long                                lastRebalance          = TimeLib.TIME_BEGIN;
   private boolean                             bNeedRebalance;
   private int                                 rebalanceDelay;
   private DiscreteDistribution                prevDist;
@@ -425,7 +426,7 @@ public class Simulation
       // distribution in the account, which could change due to price movement.
       boolean bPrevRebalance = bNeedRebalance;
       DiscreteDistribution curDist = account.getDistribution();
-      bNeedRebalance = ((timeInfo.time - lastRebalance) / TimeLib.MS_IN_DAY > 363
+      bNeedRebalance = ((timeInfo.time - lastRebalance) / TimeLib.MS_IN_DAY > REBALANCE_AFTER_N_DAYS
           || !targetDist.isSimilar(prevDist, DistributionEPS) || !targetDist.isSimilar(curDist, TargetEPS));
       // if (bNeedRebalance) {
       // System.out.printf("Need Rebalance: [%s] vs [%s]   %s vs %s / %s\n", TimeLib.formatDate(timeInfo.time),

@@ -184,6 +184,13 @@ public class FeatureVec
     return d + D;
   }
 
+  /** Set all values at once. */
+  public void set(double[] values)
+  {
+    assert values.length == vec.length;
+    System.arraycopy(values, 0, vec, 0, values.length);
+  }
+
   /** set the value of all dimensions to x */
   public void fill(double x)
   {

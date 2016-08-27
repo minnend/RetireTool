@@ -1431,4 +1431,19 @@ public final class FinLib
     }
     return sma;
   }
+
+  /**
+   * Takes an array of returns (1.2 = 1.2% return = 1.012x) and returns cumulative returns.
+   */
+  public static Sequence cumulativeFromReturns(double[] r)
+  {
+    Sequence seq = new Sequence("Cumulative Returns");
+    double balance = 1.0;
+    seq.addData(balance);
+    for (int i = 0; i < r.length; ++i) {
+      balance *= ret2mul(r[i]);
+      seq.addData(balance);
+    }
+    return seq;
+  }
 }
