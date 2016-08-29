@@ -262,11 +262,12 @@ public class DiscreteDistribution
   {
     StringBuilder sb = new StringBuilder("[");
     int nPrinted = 0;
-    String format = String.format("%%s:%%.%df", nSigDig);
+    String format = nSigDig >= 0 ? String.format("%%s:%%.%df", nSigDig) : null;
     for (int i = 0; i < weights.length; ++i) {
       if (Math.abs(weights[i]) < 1e-4) continue;
       if (nPrinted > 0) sb.append(",");
-      sb.append(String.format(format, names[i], weights[i] * 100));
+      String s = nSigDig < 0 ? names[i] : String.format(format, names[i], weights[i] * 100);
+      sb.append(s);
       ++nPrinted;
     }
     sb.append("]");

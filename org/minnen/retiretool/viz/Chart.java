@@ -331,6 +331,15 @@ public class Chart
   {
     assert scatter.getNumDims() >= 2;
 
+    // Determine if any point has a name.
+    boolean hasNames = false;
+    for (FeatureVec v : scatter) {
+      if (v.getName() != null && !v.getName().isEmpty()) {
+        hasNames = true;
+        break;
+      }
+    }
+
     // Write HTML to generate the graph.
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
       writer.write("<html><head>\n");
@@ -360,26 +369,32 @@ public class Chart
       writer.write("   scatter: {\n");
       writer.write(String.format("    marker: { radius: %d, symbol: 'circle' },\n", radius));
       writer.write("    dataLabels: {\n");
-      writer.write("      enabled: false,\n");
-      writer.write("      format: '{point.name}'\n");
+      writer.write("      enabled: false\n");
       writer.write("    },\n");
       writer.write("    tooltip: {\n");
       writer.write("     headerFormat: '',\n");
-      writer.write(String.format(
-          "     pointFormat: '<b>{point.name}</b><br/>%s: <b>{point.x}</b><br/>%s: <b>{point.y}</b>'\n",
+      String prefix = hasNames ? "<b>{point.name}</b><br/>" : "";
+      writer.write(String.format("     pointFormat: '%s%s: <b>{point.x}</b><br/>%s: <b>{point.y}</b>'\n", prefix,
           dimNames == null ? "x" : dimNames[0], dimNames == null ? "y" : dimNames[1]));
       writer.write("    }\n");
+      writer.write("   },\n");
+      writer.write("   series:{\n");
+      writer.write("     turboThreshold: 0\n");
       writer.write("   }\n");
       writer.write("  },\n");
       writer.write("  series: [{\n");
-      writer.write("   data: [");
+      writer.write("   data: [\n");
       for (int i = 0; i < scatter.size(); ++i) {
         FeatureVec v = scatter.get(i);
         // writer.write(String.format("[%.3f,%.3f]", v.get(0), v.get(1)));
         double x = v.get(0);
         double y = v.get(1);
-        String name = v.getName();
-        writer.write(String.format("{x:%.3f, y:%.3f, name: '%s'}", x, y, FinLib.getBaseName(name)));
+        if (hasNames) {
+          String name = FinLib.getBaseName(v.getName());
+          writer.write(String.format("{x:%.3f, y:%.3f, name: '%s'}", x, y, FinLib.getBaseName(name)));
+        } else {
+          writer.write(String.format("{x:%.3f, y:%.3f}", x, y));
+        }
         if (i < scatter.length() - 1) {
           writer.write(",\n");
         }

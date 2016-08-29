@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Stack;
+import java.util.function.Predicate;
 
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.util.Random;
@@ -251,6 +252,11 @@ public class Sequence implements Iterable<FeatureVec>
     return locks.peek().key == key;
   }
 
+  public List<FeatureVec> getData()
+  {
+    return data;
+  }
+
   /** @return First real (internal) index that respects lock. */
   private int getFirstIndex()
   {
@@ -492,6 +498,32 @@ public class Sequence implements Iterable<FeatureVec>
   public int addData(double x, LocalDate date)
   {
     return addData(x, TimeLib.toMs(date));
+  }
+
+  /**
+   * Add `x` to each element of each frame.
+   * 
+   * @param x value to add
+   * @return this data set
+   */
+  public Sequence _add(double x)
+  {
+    for (FeatureVec fv : data)
+      fv._add(x);
+    return this;
+  }
+
+  /**
+   * Subtract `x` to each element of each frame.
+   * 
+   * @param x value to subtract
+   * @return this data set
+   */
+  public Sequence _sub(double x)
+  {
+    for (FeatureVec fv : data)
+      fv._sub(x);
+    return this;
   }
 
   /**
