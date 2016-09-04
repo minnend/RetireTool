@@ -37,40 +37,23 @@ public class Chart
 {
   public final static boolean bVerticalLine = true;
 
-  public enum ChartType {
-    Line, Bar, Area, PosNegArea
-  };
-
-  public static String chart2name(ChartType chartType)
-  {
-    if (chartType == ChartType.Line) {
-      return "line";
-    } else if (chartType == ChartType.Bar) {
-      return "column";
-    } else if (chartType == ChartType.Area || chartType == ChartType.PosNegArea) {
-      return "area";
-    } else {
-      return "ERROR";
-    }
-  }
-
   public static void saveLineChart(File file, String title, int width, int height, boolean logarithmic,
       boolean monthly, Sequence... seqs) throws IOException
   {
-    saveHighChart(file, ChartType.Line, title, null, null, width, height, Double.NaN, Double.NaN, logarithmic ? 0.5
-        : Double.NaN, logarithmic, monthly, 0, seqs);
+    saveHighChart(file, ChartConfig.Type.Line, title, null, null, width, height, Double.NaN, Double.NaN,
+        logarithmic ? 0.5 : Double.NaN, logarithmic, monthly, 0, seqs);
   }
 
   public static void saveLineChart(File file, String title, int width, int height, boolean logarithmic,
       boolean monthly, List<Sequence> seqs) throws IOException
   {
-    saveHighChart(file, ChartType.Line, title, null, null, width, height, Double.NaN, Double.NaN, logarithmic ? 0.5
-        : Double.NaN, logarithmic, monthly, 0, seqs.toArray(new Sequence[seqs.size()]));
+    saveHighChart(file, ChartConfig.Type.Line, title, null, null, width, height, Double.NaN, Double.NaN,
+        logarithmic ? 0.5 : Double.NaN, logarithmic, monthly, 0, seqs.toArray(new Sequence[seqs.size()]));
   }
 
-  public static void saveHighChart(File file, ChartType chartType, String title, String[] labels, String[] colors,
-      int width, int height, double ymin, double ymax, double minorTickInterval, boolean logarithmic, boolean monthly,
-      int dim, Sequence... seqs) throws IOException
+  public static void saveHighChart(File file, ChartConfig.Type chartType, String title, String[] labels,
+      String[] colors, int width, int height, double ymin, double ymax, double minorTickInterval, boolean logarithmic,
+      boolean monthly, int dim, Sequence... seqs) throws IOException
   {
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
       writer.write("<html><head>\n");
@@ -91,8 +74,8 @@ public class Chart
         writer.write("    enabled: false\n");
         writer.write("  },\n");
       }
-      if (chartType != ChartType.Line) {
-        writer.write(String.format("  chart: { type: '%s' },\n", chart2name(chartType)));
+      if (chartType != ChartConfig.Type.Line) {
+        writer.write(String.format("  chart: { type: '%s' },\n", ChartConfig.chart2name(chartType)));
       }
       writer.write("  xAxis: { categories: [");
       if (labels != null) {
@@ -133,7 +116,7 @@ public class Chart
       writer.write("   title: { text: null }\n");
       writer.write("  },\n");
 
-      if (chartType == ChartType.Line) {
+      if (chartType == ChartConfig.Type.Line) {
         writer.write("  chart: {\n");
         writer.write("   zoomType: 'xy'\n");
         writer.write("  },\n");
@@ -151,7 +134,7 @@ public class Chart
       }
 
       writer.write("  plotOptions: {\n");
-      if (chartType == ChartType.Bar) {
+      if (chartType == ChartConfig.Type.Bar) {
         writer.write("   column: {\n");
         if (colors != null) {
           writer.write("    colorByPoint: true,\n");
@@ -160,16 +143,16 @@ public class Chart
         writer.write("    groupPadding: 0.1,\n");
         writer.write("    borderWidth: 0\n");
         writer.write("   }\n");
-      } else if (chartType == ChartType.Area || chartType == ChartType.PosNegArea) {
+      } else if (chartType == ChartConfig.Type.Area || chartType == ChartConfig.Type.PosNegArea) {
         writer.write("   area: {\n");
         writer.write("    fillColor: {\n");
         writer.write("      linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },\n");
         writer.write("      stops: [\n");
-        if (chartType == ChartType.Area) {
+        if (chartType == ChartConfig.Type.Area) {
           writer.write("        [0, Highcharts.getOptions().colors[0]],\n");
           writer.write("        [1, Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]\n");
         } else {
-          assert chartType == ChartType.PosNegArea;
+          assert chartType == ChartConfig.Type.PosNegArea;
           FeatureVec vmin = seqs[0].getMin();
           FeatureVec vmax = seqs[0].getMax();
           for (int i = 1; i < seqs.length; ++i) {
@@ -191,7 +174,7 @@ public class Chart
         writer.write("    },\n");
         // writer.write("    threshold: null\n");
         writer.write("   }\n");
-      } else if (chartType == ChartType.Line) {
+      } else if (chartType == ChartConfig.Type.Line) {
         writer.write("    line: { marker: { enabled: false } }\n");
       }
       writer.write("  },\n");
