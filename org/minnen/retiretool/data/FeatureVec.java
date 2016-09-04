@@ -881,6 +881,16 @@ public class FeatureVec
     return new FeatureVec(this)._appendDim(x);
   }
 
+  /** @return FeatureVec with a subset of dimensions in this vector. */
+  public FeatureVec subspace(int... dims)
+  {
+    double[] a = new double[dims.length];
+    for (int i = 0; i < dims.length; ++i) {
+      a[i] = this.vec[dims[i]];
+    }
+    return new FeatureVec(getName(), dims.length, a);
+  }
+
   public String toString()
   {
     StringBuffer sb = new StringBuffer();
