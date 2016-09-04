@@ -312,6 +312,14 @@ public class Chart
   public static void saveScatterPlot(File file, String title, int width, int height, int radius, String[] dimNames,
       Sequence scatter) throws IOException
   {
+    ChartConfig config = new ChartConfig(file).setTitle(title).setSize(width, height).setRadius(radius)
+        .setDimNames(dimNames).setData(scatter);
+    saveScatterPlot(config);
+  }
+
+  public static void saveScatterPlot(ChartConfig config) throws IOException
+  {
+    Sequence scatter = config.data;
     assert scatter.getNumDims() >= 2;
 
     // Determine if any point has a name.
@@ -324,33 +332,39 @@ public class Chart
     }
 
     // Write HTML to generate the graph.
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter(config.file))) {
       writer.write("<html><head>\n");
       writer.write("<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js\"></script>\n");
       writer.write("<script src=\"js/highcharts.js\"></script>\n");
       writer.write("  <script type=\"text/javascript\">\n");
       writer.write("$(function () {\n");
       writer.write(" $('#chart').highcharts({\n");
-      writer.write("  title: { text: '" + title + "' },\n");
+      writer.write("  title: { text: " + ChartConfig.getQuotedString(config.title) + " },\n");
       writer.write("  chart: {\n");
       writer.write("   type: 'scatter',\n");
       writer.write("   zoomType: 'xy'\n");
       writer.write("  },\n");
       writer.write("  xAxis: {\n");
-      writer.write("   gridLineWidth: 1\n");
+      writer.write("   gridLineWidth: 1,\n");
+      writer.write("   title: {\n");
+      writer.write("    text: " + ChartConfig.getQuotedString(config.xAxisTitle) + ",\n");
+      writer.write("    style: {\n");
+      writer.write("     fontSize: '" + config.axisTitleFontSize + "px'\n");
+      writer.write("    }\n");
+      writer.write("   }\n");
       writer.write("  },\n");
       writer.write("  yAxis: {\n");
       writer.write("   title: {\n");
-      writer.write("    text: null,\n");// Compound Annual Growth Rate',\n");
+      writer.write("    text: " + ChartConfig.getQuotedString(config.yAxisTitle) + ",\n");
       writer.write("    style: {\n");
-      writer.write("     fontSize: '18px'\n");
+      writer.write("     fontSize: '" + config.axisTitleFontSize + "px'\n");
       writer.write("    }\n");
       writer.write("   }\n");
       writer.write("  },\n");
       writer.write("  legend: { enabled: false },\n");
       writer.write("  plotOptions: {\n");
       writer.write("   scatter: {\n");
-      writer.write(String.format("    marker: { radius: %d, symbol: 'circle' },\n", radius));
+      writer.write(String.format("    marker: { radius: %d, symbol: 'circle' },\n", config.radius));
       writer.write("    dataLabels: {\n");
       writer.write("      enabled: false\n");
       writer.write("    },\n");
@@ -358,7 +372,7 @@ public class Chart
       writer.write("     headerFormat: '',\n");
       String prefix = hasNames ? "<b>{point.name}</b><br/>" : "";
       writer.write(String.format("     pointFormat: '%s%s: <b>{point.x}</b><br/>%s: <b>{point.y}</b>'\n", prefix,
-          dimNames == null ? "x" : dimNames[0], dimNames == null ? "y" : dimNames[1]));
+          config.dimNames == null ? "x" : config.dimNames[0], config.dimNames == null ? "y" : config.dimNames[1]));
       writer.write("    }\n");
       writer.write("   },\n");
       writer.write("   series:{\n");
@@ -386,8 +400,8 @@ public class Chart
       writer.write(" });\n");
       writer.write("});\n");
 
-      writer.write("</script></head><body style=\"width:" + width + "px;\">\n");
-      writer.write("<div id=\"chart\" style=\"width:100%; height:" + height + "px;\" />\n");
+      writer.write("</script></head><body style=\"width:" + config.width + "px;\">\n");
+      writer.write("<div id=\"chart\" style=\"width:100%; height:" + config.height + "px;\" />\n");
       writer.write("</body></html>\n");
     }
   }

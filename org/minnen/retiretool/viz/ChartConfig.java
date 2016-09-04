@@ -12,16 +12,17 @@ public class ChartConfig
 
   public File     file;
   public Sequence data;
-  public Type     type   = Type.Unknown;
+  public Type     type              = Type.Unknown;
   public String   title;
   public String   xAxisTitle;
   public String   yAxisTitle;
-  public int      width  = 1200;
-  public int      height = 600;
+  public int      width             = 1200;
+  public int      height            = 600;
+  public int      axisTitleFontSize = 16;
   public String[] dimNames;
 
   // Specific to scatter plots.
-  public int      radius = 3;
+  public int      radius            = 3;
 
   public static String chart2name(Type chartType)
   {
@@ -34,6 +35,17 @@ public class ChartConfig
     } else {
       return "ERROR";
     }
+  }
+
+  public static String getQuotedString(String s)
+  {
+    return getQuotedString(s, "null");
+  }
+
+  public static String getQuotedString(String s, String defaultIfNull)
+  {
+    if (s == null) return defaultIfNull;
+    return "'" + s + "'";
   }
 
   public ChartConfig(File file)
@@ -94,6 +106,12 @@ public class ChartConfig
   {
     this.width = width;
     this.height = height;
+    return this;
+  }
+
+  public ChartConfig setRadius(int radius)
+  {
+    this.radius = radius;
     return this;
   }
 

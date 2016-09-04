@@ -21,6 +21,7 @@ import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
+import org.minnen.retiretool.viz.ChartConfig;
 
 // TODO
 // Removing wellington and other balanced fund
@@ -483,9 +484,12 @@ public class SimbaPortfolios
 
     // Chart.saveScatterPlot(new File(outputDir, "simba-filtered.html"), "CAGR vs. Standard Deviation", 1200, 600, 3,
     // new String[] { "Std Dev", "CAGR" }, scatter);
-    Chart.saveScatterPlot(new File(outputDir, "simba-filtered.html"), descriptions[yindex] + " vs. "
-        + descriptions[xindex], 1200, 600, 3, new String[] { descriptions[xindex], descriptions[yindex],
-        descriptions[zindex], descriptions[zindex] }, scatter);
+    ChartConfig chartConfig = new ChartConfig(new File(outputDir, "simba-filtered.html"))
+        .setTitle(descriptions[yindex] + " vs. " + descriptions[xindex]).setYAxisTitle(descriptions[yindex])
+        .setXAxisTitle(descriptions[xindex]).setSize(1200, 600).setRadius(3)
+        .setDimNames(new String[] { descriptions[xindex], descriptions[yindex], descriptions[zindex] })
+        .setData(scatter);
+    Chart.saveScatterPlot(chartConfig);
 
     // Sort by Sharpe Ratio.
     portfolioStats.getData().sort(new Comparator<FeatureVec>()

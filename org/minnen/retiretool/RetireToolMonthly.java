@@ -46,7 +46,7 @@ import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.util.FinLib.DividendMethod;
 import org.minnen.retiretool.viz.Chart;
-import org.minnen.retiretool.viz.Chart.ChartType;
+import org.minnen.retiretool.viz.ChartConfig;
 
 public class RetireToolMonthly
 {
@@ -860,10 +860,10 @@ public class RetireToolMonthly
       liks[i] = returnLiks.extractDims(i + 1);
       liks[i].setName(String.format("%d year%s", years[i], years[i] == 1 ? "" : "s"));
       Chart.saveHighChart(new File(String.format("g:/web/return-likelihoods-%d-years.html", years[i])),
-          Chart.ChartType.Area, "Return Likelihoods", Histogram.getLabelsFromHistogram(returnLiks), null, GRAPH_WIDTH,
+          ChartConfig.Type.Area, "Return Likelihoods", Histogram.getLabelsFromHistogram(returnLiks), null, GRAPH_WIDTH,
           GRAPH_HEIGHT, 0.0, 1.0, Double.NaN, false, true, 0, liks[i]);
     }
-    Chart.saveHighChart(new File(dir, "return-likelihoods.html"), Chart.ChartType.Line, "Return Likelihoods",
+    Chart.saveHighChart(new File(dir, "return-likelihoods.html"), ChartConfig.Type.Line, "Return Likelihoods",
         Histogram.getLabelsFromHistogram(returnLiks), null, GRAPH_WIDTH, GRAPH_HEIGHT, 0.0, 1.0, Double.NaN, false,
         true, 0, liks);
 
@@ -901,12 +901,12 @@ public class RetireToolMonthly
 
     String title = "Histogram of Returns - " + TimeLib.formatDurationMonths(nMonths);
     String[] labels = Histogram.getLabelsFromHistogram(histograms[0]);
-    Chart.saveHighChart(new File(dir, "histogram-returns.html"), Chart.ChartType.Bar, title, labels, null, GRAPH_WIDTH,
-        GRAPH_HEIGHT, Double.NaN, Double.NaN, Double.NaN, false, true, 1, histograms);
+    Chart.saveHighChart(new File(dir, "histogram-returns.html"), ChartConfig.Type.Bar, title, labels, null,
+        GRAPH_WIDTH, GRAPH_HEIGHT, Double.NaN, Double.NaN, Double.NaN, false, true, 1, histograms);
 
     // Generate histogram showing future returns.
     title = String.format("Future CAGR: %s (%s)", returns[0].getName(), TimeLib.formatDurationMonths(nMonths));
-    Chart.saveHighChart(new File(dir, "future-returns.html"), Chart.ChartType.Area, title, null, null, GRAPH_WIDTH,
+    Chart.saveHighChart(new File(dir, "future-returns.html"), ChartConfig.Type.Area, title, null, null, GRAPH_WIDTH,
         GRAPH_HEIGHT, Double.NaN, Double.NaN, Double.NaN, false, true, 0, returns[0]);
   }
 
@@ -930,8 +930,8 @@ public class RetireToolMonthly
     Chart.saveComparisonTable(new File(dir, "duel-comparison.html"), GRAPH_WIDTH, comparison);
     Chart.saveStatsTable(new File(dir, "duel-chart.html"), GRAPH_WIDTH, false, store.getCumulativeStats(name1, name2));
 
-    Chart.saveHighChart(new File(dir, "duel-cumulative.html"), Type.Line, "Cumulative Market Returns", null, null,
-        GRAPH_WIDTH, GRAPH_HEIGHT, 1, Double.NaN, 1.0, true, true, 0, player2, player1);
+    Chart.saveHighChart(new File(dir, "duel-cumulative.html"), ChartConfig.Type.Line, "Cumulative Market Returns",
+        null, null, GRAPH_WIDTH, GRAPH_HEIGHT, 1, Double.NaN, 1.0, true, true, 0, player2, player1);
 
     DurationalStats dstatsA = store.getDurationalStats(name1);
     DurationalStats dstatsB = store.getDurationalStats(name2);
@@ -955,9 +955,9 @@ public class RetireToolMonthly
       colors[i] = x < -0.001 ? "#df5353" : (x > 0.001 ? "#53df53" : "#dfdf53");
     }
 
-    Chart.saveHighChart(new File(dir, "duel-returns.html"), Chart.ChartType.Line, title, null, null, GRAPH_WIDTH,
+    Chart.saveHighChart(new File(dir, "duel-returns.html"), ChartConfig.Type.Line, title, null, null, GRAPH_WIDTH,
         GRAPH_HEIGHT, Double.NaN, Double.NaN, 2.0, false, true, 0, dstatsB.durationReturns, dstatsA.durationReturns);
-    Chart.saveHighChart(new File(dir, "duel-excess-histogram.html"), Chart.ChartType.PosNegArea, title, null, null,
+    Chart.saveHighChart(new File(dir, "duel-excess-histogram.html"), ChartConfig.Type.PosNegArea, title, null, null,
         GRAPH_WIDTH, GRAPH_HEIGHT, Double.NaN, Double.NaN, 1.0, false, true, 0, excessReturns);
 
     String[] labels = Histogram.getLabelsFromHistogram(histogramExcess);
@@ -966,7 +966,7 @@ public class RetireToolMonthly
       double x = histogramExcess.get(i, 0);
       colors[i] = x < -0.001 ? "#df5353" : (x > 0.001 ? "#53df53" : "#dfdf53");
     }
-    Chart.saveHighChart(new File(dir, "duel-histogram.html"), Chart.ChartType.Bar, title, labels, colors, GRAPH_WIDTH,
+    Chart.saveHighChart(new File(dir, "duel-histogram.html"), ChartConfig.Type.Bar, title, labels, colors, GRAPH_WIDTH,
         GRAPH_HEIGHT, Double.NaN, Double.NaN, 32, false, true, 1, histogramExcess);
 
     // double[] a = excessReturns.extractDim(0);
@@ -1013,7 +1013,7 @@ public class RetireToolMonthly
       }
     }
 
-    Chart.saveHighChart(new File(dir, "stock-bond-sweep.html"), Type.Line,
+    Chart.saveHighChart(new File(dir, "stock-bond-sweep.html"), ChartConfig.Type.Line,
         "Cumulative Market Returns: Stock/Bond Mix", null, null, GRAPH_WIDTH, GRAPH_HEIGHT, 1.0, 262144.0, 1.0, true,
         true, 0, all);
     Chart.saveStatsTable(new File(dir, "chart-stock-bond-sweep.html"), GRAPH_WIDTH, false, cumulativeStats);
@@ -1217,8 +1217,8 @@ public class RetireToolMonthly
   public static void genInterestRateGraph(Sequence shiller, Sequence tbills, File file) throws IOException
   {
     Sequence bonds = Shiller.getData(Shiller.GS10, "Bonds", shiller);
-    Chart.saveHighChart(file, Type.Line, "Interest Rates", null, null, GRAPH_WIDTH, GRAPH_HEIGHT, 0.0, 16.0, 1.0,
-        false, true, 0, bonds, tbills);
+    Chart.saveHighChart(file, ChartConfig.Type.Line, "Interest Rates", null, null, GRAPH_WIDTH, GRAPH_HEIGHT, 0.0,
+        16.0, 1.0, false, true, 0, bonds, tbills);
   }
 
   public static void genCorrelationGraph(Sequence shiller, File dir) throws IOException
@@ -1235,8 +1235,8 @@ public class RetireToolMonthly
     stock.setName("Stock");
 
     Sequence corr = FinLib.calcCorrelation(stock, bonds, 3 * 12);
-    Chart.saveHighChart(new File(dir, "stock-bond-correlation.html"), Type.Area, corr.getName(), null, null,
-        GRAPH_WIDTH, GRAPH_HEIGHT, -1.0, 1.0, 0.25, false, true, 0, corr);
+    Chart.saveHighChart(new File(dir, "stock-bond-correlation.html"), ChartConfig.Type.Area, corr.getName(), null,
+        null, GRAPH_WIDTH, GRAPH_HEIGHT, -1.0, 1.0, 0.25, false, true, 0, corr);
   }
 
   public static void genSavingsTargetChart(File dir) throws IOException
@@ -1355,8 +1355,9 @@ public class RetireToolMonthly
       }
       String title = String.format("[%s] - [%s]", TimeLib.formatMonth(timePeriod[0]),
           TimeLib.formatMonth(timePeriod[1]));
-      Chart.saveHighChart(new File(dir, String.format("time-period-%02d.html", iTimePeriod + 1)), Type.Line,
-          title, null, null, GRAPH_WIDTH, GRAPH_HEIGHT, Double.NaN, Double.NaN, 1.0, true, true, 0, returns);
+      Chart.saveHighChart(new File(dir, String.format("time-period-%02d.html", iTimePeriod + 1)),
+          ChartConfig.Type.Line, title, null, null, GRAPH_WIDTH, GRAPH_HEIGHT, Double.NaN, Double.NaN, 1.0, true, true,
+          0, returns);
     }
   }
 
