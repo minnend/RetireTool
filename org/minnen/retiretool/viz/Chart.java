@@ -331,6 +331,8 @@ public class Chart
       }
     }
 
+    String[] dimNames = config.dimNames == null ? new String[] { "x", "y" } : config.dimNames;
+
     // Write HTML to generate the graph.
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(config.file))) {
       writer.write("<html><head>\n");
@@ -361,39 +363,46 @@ public class Chart
       writer.write("    }\n");
       writer.write("   }\n");
       writer.write("  },\n");
-      writer.write("  legend: { enabled: false },\n");
+      writer.write("  legend: { enabled: " + config.showLegend + " },\n");
       writer.write("  plotOptions: {\n");
       writer.write("   scatter: {\n");
       writer.write(String.format("    marker: { radius: %d, symbol: 'circle' },\n", config.radius));
       writer.write("    dataLabels: {\n");
-      writer.write("      enabled: false\n");
+      writer.write("     enabled: " + config.showDataLabels + "\n");
       writer.write("    },\n");
-      writer.write("    tooltip: {\n");
-      writer.write("     headerFormat: '',\n");
-      String prefix = hasNames ? "<b>{point.name}</b><br/>" : "";
-      writer.write(String.format("     pointFormat: '%s%s: <b>{point.x}</b><br/>%s: <b>{point.y}</b>'\n", prefix,
-          config.dimNames == null ? "x" : config.dimNames[0], config.dimNames == null ? "y" : config.dimNames[1]));
-      writer.write("    }\n");
       writer.write("   },\n");
-      writer.write("   series:{\n");
-      writer.write("     turboThreshold: 0\n");
+      writer.write("   series: {\n");
+      writer.write("    turboThreshold: 0\n");
       writer.write("   }\n");
+      writer.write("  },\n");
+      writer.write("  tooltip: {\n");
+      writer.write("   enabled: " + config.showToolTips + ",\n");
+      if (config.showToolTips) {
+        writer.write("    headerFormat: '',\n");
+        String header = hasNames ? "<b>{point.name}</b><br/>" : "";
+        StringBuilder zs = new StringBuilder();
+        for (int i = 2; i < dimNames.length; ++i) {
+          zs.append(String.format("<br/>%s: <b>{point.z%d}</b>", dimNames[i], i - 1));
+        }
+        String format = String.format("    pointFormat: '%s%s: <b>{point.x}</b><br/>%s: <b>{point.y}</b>%s'\n", header,
+            dimNames[0], config.dimNames[1], zs);
+        writer.write(format);
+      }
       writer.write("  },\n");
       writer.write("  series: [{\n");
       writer.write("   data: [\n");
-      for (int i = 0; i < scatter.size(); ++i) {
-        FeatureVec v = scatter.get(i);
+      for (FeatureVec v : scatter) {
         // writer.write(String.format("[%.3f,%.3f]", v.get(0), v.get(1)));
-        double x = v.get(0);
-        double y = v.get(1);
+        StringBuilder dataString = new StringBuilder(String.format("x:%.3f,y:%.3f", v.get(0), v.get(1)));
+        int nExtra = Math.max(0, Math.min(v.getNumDims(), config.dimNames.length) - 2);
+        for (int i = 0; i < nExtra; ++i) {
+          dataString.append(String.format(",z%d:%.3f", i + 1, v.get(i + 2)));
+        }
         if (hasNames) {
           String name = FinLib.getBaseName(v.getName());
-          writer.write(String.format("{x:%.3f, y:%.3f, name: '%s'}", x, y, FinLib.getBaseName(name)));
+          writer.write(String.format("{%s,name:'%s'},\n", dataString, FinLib.getBaseName(name)));
         } else {
-          writer.write(String.format("{x:%.3f, y:%.3f}", x, y));
-        }
-        if (i < scatter.length() - 1) {
-          writer.write(",\n");
+          writer.write(String.format("{%s},\n", dataString));
         }
       }
       writer.write("]}]\n");

@@ -488,7 +488,7 @@ public class SimbaPortfolios
         .setTitle(descriptions[yindex] + " vs. " + descriptions[xindex]).setYAxisTitle(descriptions[yindex])
         .setXAxisTitle(descriptions[xindex]).setSize(1200, 600).setRadius(3)
         .setDimNames(new String[] { descriptions[xindex], descriptions[yindex], descriptions[zindex] })
-        .setData(scatter);
+        .setData(scatter).showToolTips(true);
     Chart.saveScatterPlot(chartConfig);
 
     // Sort by Sharpe Ratio.

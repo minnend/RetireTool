@@ -7,7 +7,7 @@ import org.minnen.retiretool.data.Sequence;
 public class ChartConfig
 {
   public static enum Type {
-    Unknown, Line, Bar, Area, PosNegArea
+    Unknown, Line, Bar, Area, PosNegArea, Scatter
   };
 
   public File     file;
@@ -19,6 +19,9 @@ public class ChartConfig
   public int      width             = 1200;
   public int      height            = 600;
   public int      axisTitleFontSize = 16;
+  public boolean  showLegend        = false;
+  public boolean  showDataLabels    = false;
+  public boolean  showToolTips      = true;
   public String[] dimNames;
 
   // Specific to scatter plots.
@@ -32,6 +35,8 @@ public class ChartConfig
       return "column";
     } else if (chartType == Type.Area || chartType == Type.PosNegArea) {
       return "area";
+    } else if (chartType == Type.Scatter) {
+      return "scatter";
     } else {
       return "ERROR";
     }
@@ -118,6 +123,24 @@ public class ChartConfig
   public ChartConfig setDimNames(String... names)
   {
     this.dimNames = names;
+    return this;
+  }
+
+  public ChartConfig showDataLabels(boolean show)
+  {
+    this.showDataLabels = show;
+    return this;
+  }
+
+  public ChartConfig showLegend(boolean show)
+  {
+    this.showLegend = show;
+    return this;
+  }
+
+  public ChartConfig showToolTips(boolean show)
+  {
+    this.showToolTips = show;
     return this;
   }
 }
