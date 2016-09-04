@@ -2,8 +2,10 @@ package org.minnen.retiretool.data;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Stack;
 import java.util.function.Predicate;
 
@@ -54,13 +56,16 @@ public class Sequence implements Iterable<FeatureVec>
   }
 
   /** Data stored in this data set. */
-  private final List<FeatureVec> data  = new ArrayList<>();
+  private final List<FeatureVec>    data  = new ArrayList<>();
 
   /** Name of this sequence. */
-  private String                 name;
+  private String                    name;
 
   /** Locks applied to this sequence. */
-  private final Stack<Lock>      locks = new Stack<>();
+  private final Stack<Lock>         locks = new Stack<>();
+
+  /** Holds metadata associated with this sequence. */
+  private final Map<Object, Object> meta  = new HashMap<>();
 
   /**
    * Defines behavior when searching for an index matching a given time.
@@ -119,6 +124,26 @@ public class Sequence implements Iterable<FeatureVec>
   public String getName()
   {
     return name;
+  }
+
+  public Object getMeta(Object key)
+  {
+    return meta.get(key);
+  }
+
+  public String getMetaString(Object key)
+  {
+    return (String) meta.get(key);
+  }
+
+  public void setMeta(Object key, Object value)
+  {
+    meta.put(key, value);
+  }
+
+  public void copyMeta(Sequence seq)
+  {
+    meta.putAll(seq.meta);
   }
 
   public Sequence setName(String name)

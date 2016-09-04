@@ -1433,16 +1433,21 @@ public final class FinLib
   }
 
   /**
-   * Takes an array of returns (1.2 = 1.2% return = 1.012x) and returns cumulative returns.
+   * Takes a sequence of returns (1.2 = 1.2% return) and returns sequence of cumulative returns.
    */
-  public static Sequence cumulativeFromReturns(double[] r)
+  public static Sequence cumulativeFromReturns(Sequence returnSeq)
   {
-    Sequence seq = new Sequence("Cumulative Returns");
+    Sequence seq = new Sequence("Cumulative " + returnSeq.getName());
+    seq.copyMeta(returnSeq);
     double balance = 1.0;
-    seq.addData(balance);
-    for (int i = 0; i < r.length; ++i) {
-      balance *= ret2mul(r[i]);
-      seq.addData(balance);
+
+    // Infer time one step before `returnSeq` starts.
+    long t0 = returnSeq.getStartMS();
+    long t1 = returnSeq.getTimeMS(1);
+    seq.addData(balance, t0 - (t1 - t0));
+    for (FeatureVec fv : returnSeq) {
+      balance *= ret2mul(fv.get(0));
+      seq.addData(new FeatureVec(1, balance), fv.getTime());
     }
     return seq;
   }

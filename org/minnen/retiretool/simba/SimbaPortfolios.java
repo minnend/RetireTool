@@ -18,11 +18,21 @@ import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.ReturnStats;
 import org.minnen.retiretool.util.FinLib;
+import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
 
+// TODO
+// Removing wellington and other balanced fund
+// look at other period returns -- how much are we giving up by optimizing for worst?
+// reduce returns for best years
+// generate synthetic data
+
 public class SimbaPortfolios
 {
+  public static final int                  nLongYears = 15;
+  public static final int                  nSigDig    = 0;
+
   public static final Map<String, Integer> name2index = new HashMap<>();
   public static String[]                   names;
   public static String[]                   descriptions;
@@ -113,6 +123,12 @@ public class SimbaPortfolios
     in.close();
   }
 
+  /** @return time (in ms) for the given year index */
+  public static long index2ms(int iYear)
+  {
+    return returnData[0].getTimeMS(iYear);
+  }
+
   public static void keepAssets(int nKeep)
   {
     if (nKeep >= names.length) return;
@@ -161,13 +177,14 @@ public class SimbaPortfolios
     return r;
   }
 
-  public static double[] runPortfolio(DiscreteDistribution targetAllocation)
+  public static Sequence runPortfolio(DiscreteDistribution targetAllocation)
   {
     int nYears = returnData[0].size();
-    double[] returns = new double[nYears];
+    Sequence returns = new Sequence(targetAllocation.toStringWithNames(nSigDig));
+    returns.setMeta("portfolio", targetAllocation);
     for (int iYear = 0; iYear < nYears; ++iYear) {
       double r = returnForYear(iYear, targetAllocation);
-      returns[iYear] = FinLib.mul2ret(r);
+      returns.addData(FinLib.mul2ret(r), index2ms(iYear));
     }
     return returns;
   }
@@ -271,13 +288,79 @@ public class SimbaPortfolios
     scanDistributions(weights, index + 1, nAssetsSoFar, minAssets, maxAssets, portfolios);
   }
 
-  public static boolean dominates(FeatureVec x, FeatureVec y, double[] domdir)
+  /** @return true if x dominates y */
+  public static boolean dominates(FeatureVec x, FeatureVec y, double[] domdir, double[] threshold)
   {
+    int nLoss = 0;
+    int nTiePlus = 0;
+    int nTieMinus = 0;
+    int nWin = 0;
     for (int i = 0; i < domdir.length; ++i) {
-      double v = domdir[i] * (x.get(i) - y.get(i));
-      if (v < 0.0) return false;
+      if (Math.abs(domdir[i]) < 0.1) continue; // skip this feature
+      double v = x.get(i) - y.get(i);
+      if (domdir[i] > 0) {
+        if (v < -threshold[i]) ++nLoss;
+        else if (v < threshold[i]) {
+          if (v >= 0) ++nTiePlus;
+          else ++nTieMinus;
+        } else ++nWin;
+      } else {
+        if (v > threshold[i]) ++nLoss;
+        else if (v > -threshold[i]) {
+          if (v <= 0) ++nTiePlus;
+          else ++nTieMinus;
+        } else ++nWin;
+      }
     }
-    return true;
+    return nLoss == 0 && nWin > 0 && nTiePlus >= nTieMinus;
+  }
+
+  /** @return Sequence containing CAGR for each `nYears` period. */
+  public static Sequence calcLongReturns(Sequence cumulativeReturns, int nYears)
+  {
+    Sequence seq = new Sequence(cumulativeReturns.getName() + String.format(" %d year returns", nYears));
+    seq.copyMeta(cumulativeReturns);
+    int nMonths = (int) Math.round(TimeLib.monthsBetween(cumulativeReturns.getTimeMS(0),
+        cumulativeReturns.getTimeMS(nYears)));
+    assert nMonths == nYears * 12;
+    final int n = cumulativeReturns.length();
+    for (int i = 0; i + nYears < n; ++i) {
+      double tr = FinLib.getTotalReturn(cumulativeReturns, i, i + nYears);
+      double cagr = FinLib.getAnnualReturn(tr, nMonths);
+      seq.addData(cagr, cumulativeReturns.getTimeMS(i));
+    }
+    return seq;
+  }
+
+  public static void findWinners(List<Sequence> durationReturns, double diffMargin)
+  {
+    int nPortfolios = durationReturns.size();
+    int[] wins = new int[nPortfolios];
+    int nYears = durationReturns.get(0).size();
+    System.out.printf("Start Years: %d\n", nYears);
+    for (int iYear = 0; iYear < nYears; ++iYear) {
+      double[] returns = new double[nPortfolios];
+      for (int i = 0; i < nPortfolios; ++i) {
+        returns[i] = durationReturns.get(i).get(iYear, 0);
+      }
+      double rmax = returns[Library.argmax(returns)];
+      for (int i = 0; i < nPortfolios; ++i) {
+        if (returns[i] >= rmax - diffMargin) ++wins[i];
+      }
+    }
+
+    int nWithWins = 0;
+    for (int i = 0; i < nPortfolios; ++i) {
+      if (wins[i] > 0) ++nWithWins;
+    }
+    System.out.printf("Portfolios with wins: %d\n", nWithWins);
+
+    int[] ii = Library.sort(wins, false);
+    for (int i = 0; i < wins.length && wins[i] > 0; ++i) {
+      Sequence returns = durationReturns.get(ii[i]);
+      DiscreteDistribution dist = (DiscreteDistribution) returns.getMeta("portfolio");
+      System.out.printf("%d: %d  %s\n", i, wins[i], dist.toStringWithNames(nSigDig));
+    }
   }
 
   public static void main(String[] args) throws IOException
@@ -291,7 +374,7 @@ public class SimbaPortfolios
     loadInflationData(new File(dataDir, "simba-inflation-1972.csv"));
     subtractExpenseRatios();
     subtractInflation();
-    // keepAssets(12); // TODO for debugging
+    // keepAssets(15); // TODO for debugging
     System.out.printf("Assets: %d\n", returnData.length);
 
     names = new String[returnData.length];
@@ -307,53 +390,83 @@ public class SimbaPortfolios
     System.out.printf("Months: %d\n", nMonths);
 
     List<DiscreteDistribution> portfolios = new ArrayList<>();
-    // scanDistributions(1, 5, 20, 100, 20, portfolios);
-    scanDistributionsEW(1, 5, portfolios);
+    // scanDistributions(3, 5, 10, 40, 5, portfolios);
+    scanDistributionsEW(1, 4, portfolios);
     System.out.printf("Portfolios: %d\n", portfolios.size());
 
     System.out.println("Calculate Returns...");
-    Sequence scatter = new Sequence();
-    for (DiscreteDistribution dist : portfolios) {
+    long start = TimeLib.getTime();
+    Sequence portfolioStats = new Sequence();
+    // List<Sequence> portfolioAnnualReturns = new ArrayList<>();
+    // List<Sequence> portfolioLongReturns = new ArrayList<>();
+    for (int i = 0; i < portfolios.size(); ++i) {
+      DiscreteDistribution dist = portfolios.get(i);
       // String name = dist.toStringWithNames(-1);
-      String name = dist.toStringWithNames(0);
-      double[] returns = runPortfolio(dist);
-      ReturnStats rstats = ReturnStats.calc(name, returns);
-      Sequence cumulativeReturns = FinLib.cumulativeFromReturns(returns);
-      double tr = FinLib.getTotalReturn(cumulativeReturns);
-      double cagr = FinLib.getAnnualReturn(tr, nMonths);
-      // scatter.addData(new FeatureVec(name, 2, rstats.min, cagr));
-      scatter.addData(new FeatureVec(name, 2, rstats.sdev, cagr));
-    }
+      String name = dist.toStringWithNames(nSigDig);
+      Sequence returnSeq = runPortfolio(dist);
+      // portfolioAnnualReturns.add(returnSeq);
+      Sequence cumulativeReturns = FinLib.cumulativeFromReturns(returnSeq);
+      Sequence longReturns = calcLongReturns(cumulativeReturns, nLongYears);
+      // portfolioLongReturns.add(longReturns);
+      double worstPeriod = longReturns.getMin().get(0);
+      ReturnStats rstats = ReturnStats.calc(name, returnSeq.extractDim(0));
+      CumulativeStats cstats = CumulativeStats.calc(cumulativeReturns, false);
+      // FeatureVec fv = new FeatureVec(name, 5, cstats.cagr, rstats.sdev, cstats.drawdown, rstats.min, worstPeriod);
+      FeatureVec fv = new FeatureVec(name, 5, worstPeriod, cstats.cagr, rstats.sdev, rstats.min, -cstats.drawdown);
+      portfolioStats.addData(fv);
 
-    System.out.println("Save...");
-    Chart.saveScatterPlot(new File(outputDir, "simba-all.html"), "CAGR vs. Standard Deviation", 1200, 600, 1,
-        new String[] { "Std Dev", "CAGR" }, scatter);
+      if (i % 100000 == 0 && i > 0) System.out.printf("%d  (%.2f%%)\n", i, 100.0 * (i + 1) / portfolios.size());
+    }
+    System.out.printf("Time: %s  (%d)\n", TimeLib.formatDuration(TimeLib.getTime() - start), portfolios.size());
+
+    // findWinners(new ArrayList<>(portfolioLongReturns), 1.0);
+    // System.exit(0);
+
+    int xindex = 4;
+    int yindex = 0;
+    int zindex = 1;
+    String[] descriptions = new String[] { String.format("Worst %d-year Period", nLongYears), "CAGR", "Std Dev",
+        "Worst Year", "Max Drawdown" };
+
+    Sequence scatter = new Sequence();
+    // System.out.println("Save...");
+    // for (FeatureVec v : portfolioStats) {
+    // scatter.addData(new FeatureVec(v.getName(), 3, v.get(xindex), v.get(yindex), v.get(zindex)));
+    // }
+
+    // Chart.saveScatterPlot(new File(outputDir, "simba-all.html"), descriptions[yindex] + " vs. " +
+    // descriptions[xindex],
+    // 1200, 600, 1, new String[] { descriptions[xindex], descriptions[yindex], descriptions[zindex] }, scatter);
 
     // Filter results.
-    double[] domdir = new double[] { -1.0, 1.0 };
+    double[] domdir = new double[] { 1, 0, 0, 0, 1 };
+    double[] thresholds = new double[] { 0.01, 0.01, 0.01, 0.1, 0.1 };
     System.out.println("Filter...");
-    int n = scatter.size();
+    start = TimeLib.getTime();
+    int n = portfolioStats.size();
     for (int i = 0; i < n; ++i) {
-      FeatureVec v1 = scatter.get(i);
+      FeatureVec v1 = portfolioStats.get(i);
       if (v1 == null) continue;
       for (int j = i + 1; j < n; ++j) {
-        FeatureVec v2 = scatter.get(j);
+        FeatureVec v2 = portfolioStats.get(j);
         if (v2 == null) continue;
 
-        if (dominates(v1, v2, domdir)) {
-          scatter.set(j, null);
+        if (dominates(v1, v2, domdir, thresholds)) {
+          portfolioStats.set(j, null);
           continue;
         }
 
-        if (dominates(v2, v1, domdir)) {
-          scatter.set(i, null);
+        if (dominates(v2, v1, domdir, thresholds)) {
+          portfolioStats.set(i, null);
           break;
         }
       }
+      // System.out.printf("%d / %d (%d)\n", i + 1, n, nDrop);
     }
+    System.out.printf("Time: %s\n", TimeLib.formatDuration(TimeLib.getTime() - start));
 
     // Remove all null entries.
-    scatter.getData().removeIf(new Predicate<FeatureVec>()
+    portfolioStats.getData().removeIf(new Predicate<FeatureVec>()
     {
       @Override
       public boolean test(FeatureVec v)
@@ -361,27 +474,39 @@ public class SimbaPortfolios
         return v == null;
       }
     });
-    System.out.printf("Filtered: %d\n", scatter.size());
+    System.out.printf("Filtered: %d\n", portfolioStats.size());
 
-    Chart.saveScatterPlot(new File(outputDir, "simba-filtered.html"), "CAGR vs. Standard Deviation", 1200, 600, 3,
-        new String[] { "Std Dev", "CAGR" }, scatter);
+    scatter = new Sequence();
+    for (FeatureVec v : portfolioStats) {
+      scatter.addData(new FeatureVec(v.getName(), 3, v.get(xindex), v.get(yindex), v.get(zindex)));
+    }
+
+    // Chart.saveScatterPlot(new File(outputDir, "simba-filtered.html"), "CAGR vs. Standard Deviation", 1200, 600, 3,
+    // new String[] { "Std Dev", "CAGR" }, scatter);
+    Chart.saveScatterPlot(new File(outputDir, "simba-filtered.html"), descriptions[yindex] + " vs. "
+        + descriptions[xindex], 1200, 600, 3, new String[] { descriptions[xindex], descriptions[yindex],
+        descriptions[zindex], descriptions[zindex] }, scatter);
 
     // Sort by Sharpe Ratio.
-    scatter.getData().sort(new Comparator<FeatureVec>()
+    portfolioStats.getData().sort(new Comparator<FeatureVec>()
     {
       @Override
       public int compare(FeatureVec x, FeatureVec y)
       {
-        double sharpe1 = x.get(1) / (x.get(0) + 1e-7);
-        double sharpe2 = y.get(1) / (y.get(0) + 1e-7);
-        if (sharpe1 > sharpe2) return -1;
-        if (sharpe1 < sharpe2) return 1;
+        double a = x.get(0);
+        double b = y.get(0);
+        // double sharpe1 = x.get(0) / (x.get(1) + 1e-7);
+        // double sharpe2 = y.get(0) / (y.get(1) + 1e-7);
+        // if (sharpe1 > sharpe2) return -1;
+        // if (sharpe1 < sharpe2) return 1;
+        if (a < b) return 1;
+        if (a > b) return -1;
         return 0;
       }
     });
-    for (FeatureVec v : scatter) {
-      double sharpe = v.get(1) / (v.get(0) + 1e-7);
-      System.out.printf("%.3f  (%.2f, %.3f)  %s\n", sharpe, v.get(1), v.get(0), v.getName());
+    for (FeatureVec v : portfolioStats) {
+      double sharpe = v.get(1) / (v.get(2) + 1e-7);
+      System.out.printf("%.3f %-32s %s\n", sharpe, v, v.getName());
     }
   }
 }

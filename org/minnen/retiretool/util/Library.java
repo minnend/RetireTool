@@ -134,9 +134,51 @@ public final class Library
   }
 
   /**
+   * Sort the given array and return the resulting indices
+   * 
+   * @param a data to sort
+   * @param bAscending true = ascending sort, false = descending
+   * @return index of original location of data
+   */
+  public static int[] sort(int[] a, boolean bAscending)
+  {
+    int n = a.length;
+    int[] ii = genIdentityArray(n);
+    sort(a, ii, 0, n - 1);
+    if (!bAscending) {
+      for (int i = 0; i < n - i - 1; ++i) {
+        swap(a, ii, i, n - i - 1);
+      }
+    }
+    return ii;
+  }
+
+  /**
+   * Internal insertion sort routine for subarrays that is used by quicksort.
+   * 
+   * @param a an array of Comparable items.
+   * @param ii array of indices that will be rearranged to match sort
+   * @param low the left-most index of the subarray.
+   * @param n the number of items to sort.
+   */
+  private static void sort(int[] a, int[] ii, int low, int high)
+  {
+    for (int p = low + 1; p <= high; p++) {
+      int tmp = a[p];
+      int j;
+      for (j = p; j > low && tmp < a[j - 1]; j--) {
+        a[j] = a[j - 1];
+        ii[j] = ii[j - 1];
+      }
+      a[j] = tmp;
+      ii[j] = p;
+    }
+  }
+
+  /**
    * Method to swap to elements in an array.
    * 
-   * @param a an array of objects.
+   * @param a an array of doubles.
    * @param ii array of indices that will be rearranged to match sort
    * @param index1 the index of the first object.
    * @param index2 the index of the second object.
@@ -144,6 +186,25 @@ public final class Library
   public static void swap(double[] a, int[] ii, int index1, int index2)
   {
     double tmp = a[index1];
+    a[index1] = a[index2];
+    a[index2] = tmp;
+
+    int itmp = ii[index1];
+    ii[index1] = ii[index2];
+    ii[index2] = itmp;
+  }
+
+  /**
+   * Method to swap to elements in an array.
+   * 
+   * @param a an array of ints.
+   * @param ii array of indices that will be rearranged to match sort
+   * @param index1 the index of the first object.
+   * @param index2 the index of the second object.
+   */
+  public static void swap(int[] a, int[] ii, int index1, int index2)
+  {
+    int tmp = a[index1];
     a[index1] = a[index2];
     a[index2] = tmp;
 
