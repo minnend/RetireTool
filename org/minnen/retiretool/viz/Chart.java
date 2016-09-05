@@ -337,13 +337,18 @@ public class Chart
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(config.file))) {
       writer.write("<html><head>\n");
       writer.write("<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js\"></script>\n");
-      writer.write("<script src=\"js/highcharts.js\"></script>\n");
+      if (config.type == ChartConfig.Type.Scatter) {
+        writer.write("<script src=\"js/highcharts.js\"></script>\n");
+      } else {
+        writer.write("<script src=\"https://code.highcharts.com/highcharts.js\"></script>\n");
+        writer.write("<script src=\"https://code.highcharts.com/highcharts-more.js\"></script>\n");
+      }
       writer.write("  <script type=\"text/javascript\">\n");
       writer.write("$(function () {\n");
       writer.write(" $('#chart').highcharts({\n");
       writer.write("  title: { text: " + ChartConfig.getQuotedString(config.title) + " },\n");
       writer.write("  chart: {\n");
-      writer.write("   type: 'scatter',\n");
+      writer.write("   type: '" + ChartConfig.chart2name(config.type) + "',\n");
       writer.write("   zoomType: 'xy'\n");
       writer.write("  },\n");
       writer.write("  xAxis: {\n");
@@ -365,15 +370,22 @@ public class Chart
       writer.write("  },\n");
       writer.write("  legend: { enabled: " + config.showLegend + " },\n");
       writer.write("  plotOptions: {\n");
-      writer.write("   scatter: {\n");
-      writer.write(String.format("    marker: { radius: %d, symbol: 'circle' },\n", config.radius));
-      writer.write("    dataLabels: {\n");
-      writer.write("     enabled: " + config.showDataLabels + "\n");
-      writer.write("    },\n");
-      writer.write("   },\n");
-      writer.write("   series: {\n");
-      writer.write("    turboThreshold: 0\n");
-      writer.write("   }\n");
+      if (config.type == ChartConfig.Type.Scatter) {
+        writer.write("   scatter: {\n");
+        writer.write(String.format("    marker: { radius: %d, symbol: 'circle' },\n", config.radius));
+        writer.write("    dataLabels: {\n");
+        writer.write("     enabled: " + config.showDataLabels + "\n");
+        writer.write("    },\n");
+        writer.write("   },\n");
+        writer.write("   series: {\n");
+        writer.write("    turboThreshold: 0\n");
+        writer.write("   }\n");
+      } else if (config.type == ChartConfig.Type.Bubble) {
+        writer.write("   bubble: {\n");
+        writer.write("    minSize:7,\n");
+        writer.write("    maxSize:'10%',\n");
+        writer.write("   },\n");
+      }
       writer.write("  },\n");
       writer.write("  tooltip: {\n");
       writer.write("   enabled: " + config.showToolTips + ",\n");
@@ -382,7 +394,7 @@ public class Chart
         String header = hasNames ? "<b>{point.name}</b><br/>" : "";
         StringBuilder zs = new StringBuilder();
         for (int i = 2; i < dimNames.length; ++i) {
-          zs.append(String.format("<br/>%s: <b>{point.z%d}</b>", dimNames[i], i - 1));
+          zs.append(String.format("<br/>%s: <b>{point.z%s}</b>", dimNames[i], i == 2 ? "" : String.format("%d", i - 1)));
         }
         String format = String.format("    pointFormat: '%s%s: <b>{point.x}</b><br/>%s: <b>{point.y}</b>%s'\n", header,
             dimNames[0], config.dimNames[1], zs);
@@ -396,7 +408,7 @@ public class Chart
         StringBuilder dataString = new StringBuilder(String.format("x:%.3f,y:%.3f", v.get(0), v.get(1)));
         int nExtra = Math.max(0, Math.min(v.getNumDims(), config.dimNames.length) - 2);
         for (int i = 0; i < nExtra; ++i) {
-          dataString.append(String.format(",z%d:%.3f", i + 1, v.get(i + 2)));
+          dataString.append(String.format(",z%s:%.3f", i == 0 ? "" : String.format("%d", i + 1), v.get(i + 2)));
         }
         if (hasNames) {
           String name = FinLib.getBaseName(v.getName());

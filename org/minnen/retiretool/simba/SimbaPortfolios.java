@@ -390,8 +390,8 @@ public class SimbaPortfolios
     System.out.printf("Months: %d\n", nMonths);
 
     List<DiscreteDistribution> portfolios = new ArrayList<>();
-    // scanDistributions(3, 5, 10, 40, 5, portfolios);
-    scanDistributionsEW(1, 5, portfolios);
+    scanDistributions(1, 5, 10, 50, 10, portfolios);
+    // scanDistributionsEW(1, 6, portfolios);
     System.out.printf("Portfolios: %d\n", portfolios.size());
 
     System.out.println("Calculate Returns...");
@@ -491,7 +491,7 @@ public class SimbaPortfolios
       dimNames[i] = descriptions[indices[i]];
     }
     ChartConfig chartConfig = new ChartConfig(new File(outputDir, "simba-filtered.html"))
-        .setTitle(descriptions[indices[1]] + " vs. " + descriptions[indices[0]])
+        .setType(ChartConfig.Type.Bubble).setTitle(descriptions[indices[1]] + " vs. " + descriptions[indices[0]])
         .setYAxisTitle(descriptions[indices[1]]).setXAxisTitle(descriptions[indices[0]]).setSize(1200, 600)
         .setRadius(3).setDimNames(dimNames).setData(scatter).showToolTips(true);
     Chart.saveScatterPlot(chartConfig);

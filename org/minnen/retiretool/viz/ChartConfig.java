@@ -7,7 +7,7 @@ import org.minnen.retiretool.data.Sequence;
 public class ChartConfig
 {
   public static enum Type {
-    Unknown, Line, Bar, Area, PosNegArea, Scatter
+    Unknown, Line, Bar, Area, PosNegArea, Scatter, Bubble
   };
 
   public File     file;
@@ -37,6 +37,8 @@ public class ChartConfig
       return "area";
     } else if (chartType == Type.Scatter) {
       return "scatter";
+    } else if (chartType == Type.Bubble) {
+      return "bubble";
     } else {
       return "ERROR";
     }
