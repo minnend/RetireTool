@@ -30,7 +30,7 @@ import org.minnen.retiretool.viz.ChartConfig;
 
 public class SimbaPortfolios
 {
-  public static final int                  nLongYears = 15;
+  public static final int                  nLongYears = 10;
   public static final int                  nSigDig    = 0;
 
   public static final Map<String, Integer> name2index = new HashMap<>();
@@ -391,7 +391,7 @@ public class SimbaPortfolios
 
     List<DiscreteDistribution> portfolios = new ArrayList<>();
     // scanDistributions(3, 5, 10, 40, 5, portfolios);
-    scanDistributionsEW(1, 6, portfolios);
+    scanDistributionsEW(1, 5, portfolios);
     System.out.printf("Portfolios: %d\n", portfolios.size());
 
     System.out.println("Calculate Returns...");
@@ -423,10 +423,11 @@ public class SimbaPortfolios
     // findWinners(new ArrayList<>(portfolioLongReturns), 1.0);
     // System.exit(0);
 
-    int[] indices = new int[] { 1, 3, 0, 5, 4, 7 };
+    int[] indices = new int[] { 7, 1, 3, 0, 5, 4 };
     String sPeriodLength = String.format("%d-year Period", nLongYears);
-    String[] descriptions = new String[] { "Worst " + sPeriodLength, "10% " + sPeriodLength, "25%  " + sPeriodLength,
-        "Median " + sPeriodLength, "Long-term CAGR", "Std Dev (" + sPeriodLength + "s)", "Worst Year", "Max Drawdown" };
+    String[] descriptions = new String[] { "Worst " + sPeriodLength, "10th Percentile for " + sPeriodLength + "s",
+        "25th Percentile for " + sPeriodLength + "s", "Median for " + sPeriodLength + "s", "Long-term CAGR",
+        "Std Dev (" + sPeriodLength + "s)", "Worst Year", "Max Drawdown" };
 
     Sequence scatter = new Sequence();
     // System.out.println("Save...");
@@ -439,8 +440,8 @@ public class SimbaPortfolios
     // 1200, 600, 1, new String[] { descriptions[xindex], descriptions[yindex], descriptions[zindex] }, scatter);
 
     // Filter results.
-    double[] domdir = new double[] { 0, 1, 0, 1, 0, 0, 0, 0 };
-    double[] thresholds = new double[] { 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.1, 0.1 };
+    double[] domdir = new double[] { 0, 1, 0, 1, 0, 0, 0, 1 };
+    double[] thresholds = new double[] { 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 2.0 };
     assert domdir.length == thresholds.length;
     assert domdir.length == descriptions.length;
     System.out.println("Filter...");
