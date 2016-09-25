@@ -16,6 +16,8 @@ public class ChartConfig
   public String   title;
   public String   xAxisTitle;
   public String   yAxisTitle;
+  public int      xIndex            = 0;
+  public int      yIndex            = 1;
   public int      width             = 1200;
   public int      height            = 600;
   public int      axisTitleFontSize = 16;
@@ -23,6 +25,8 @@ public class ChartConfig
   public boolean  showDataLabels    = false;
   public boolean  showToolTips      = true;
   public String[] dimNames;
+  public String   minBubble         = "7";
+  public String   maxBubble         = "10%";
 
   // Specific to scatter plots.
   public int      radius            = 3;
@@ -143,6 +147,44 @@ public class ChartConfig
   public ChartConfig showToolTips(boolean show)
   {
     this.showToolTips = show;
+    return this;
+  }
+
+  public ChartConfig setIndexX(int index)
+  {
+    this.xIndex = index;
+    return this;
+  }
+
+  public ChartConfig setIndexY(int index)
+  {
+    this.yIndex = index;
+    return this;
+  }
+
+  public ChartConfig setIndexXY(int xIndex, int yIndex)
+  {
+    this.xIndex = xIndex;
+    this.yIndex = yIndex;
+    return this;
+  }
+
+  public ChartConfig setMinBubble(String size)
+  {
+    this.minBubble = size;
+    return this;
+  }
+
+  public ChartConfig setMaxBubble(String size)
+  {
+    this.maxBubble = size;
+    return this;
+  }
+
+  public ChartConfig setBubbleSizes(String minSize, String maxSize)
+  {
+    this.minBubble = minSize;
+    this.maxBubble = maxSize;
     return this;
   }
 }

@@ -1,16 +1,23 @@
 package org.minnen.retiretool.simba;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.time.Month;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.FeatureVec;
@@ -24,7 +31,6 @@ import org.minnen.retiretool.viz.Chart;
 import org.minnen.retiretool.viz.ChartConfig;
 
 // TODO
-// Removing wellington and other balanced fund (VWELX & VWINX) from search.
 // reduce returns for best years
 // generate synthetic data
 
@@ -32,6 +38,10 @@ public class SimbaPortfolios
 {
   public static final int                  nLongYears = 10;
   public static final int                  nSigDig    = 0;
+  public static final File                 outputDir  = new File("g:/web");
+  public static final Map<String, Integer> stat2index = new HashMap<>();
+  public static final String[]             stats      = new String[] { "Worst Period", "10th Percentile",
+      "25th Percentile", "Median", "CAGR", "Std Dev", "Worst Year", "Max Drawdown" };
 
   public static final Map<String, Integer> name2index = new HashMap<>();
   public static String[]                   names;
@@ -39,6 +49,22 @@ public class SimbaPortfolios
   public static Sequence[]                 returnData;
   public static double[]                   expenseRatios;
   public static Map<Integer, Double>       inflation;
+
+  static {
+    // Build reverse map from stat name to index.
+    for (int i = 0; i < stats.length; ++i) {
+      stat2index.put(stats[i], i);
+    }
+  }
+
+  public static boolean[] buildAvoidMask(String... avoidNames)
+  {
+    boolean[] avoid = new boolean[names.length];
+    for (String name : avoidNames) {
+      avoid[name2index.get(name)] = true;
+    }
+    return avoid;
+  }
 
   public static void loadSimbaData(File file) throws IOException
   {
@@ -121,6 +147,49 @@ public class SimbaPortfolios
       }
     }
     in.close();
+  }
+
+  public static List<DiscreteDistribution> loadPortfolios(File file) throws IOException
+  {
+    if (!file.canRead()) {
+      throw new IOException(String.format("Can't read portfolio file (%s)", file.getPath()));
+    }
+    System.out.printf("Loading portfolio data file: [%s]\n", file.getPath());
+    List<DiscreteDistribution> portfolios = new ArrayList<>();
+    Set<String> portfolioNames = new HashSet<>();
+    BufferedReader in = new BufferedReader(new FileReader(file));
+
+    Pattern pattern = Pattern.compile("\\[(.*?)\\]");
+
+    int[] weights = new int[returnData.length];
+    String line;
+    while ((line = in.readLine()) != null) {
+      line = line.trim();
+      if (line.isEmpty() || line.startsWith("\"") || line.toLowerCase().startsWith("date")) {
+        continue;
+      }
+
+      Matcher m = pattern.matcher(line);
+      if (!m.find()) continue;
+
+      Arrays.fill(weights, 0);
+      String[] assets = m.group(1).split(",");
+      for (String s : assets) {
+        String[] toks = s.split(":");
+        String name = toks[0];
+        int weight = Integer.parseInt(toks[1]);
+        weights[name2index.get(name)] = weight;
+      }
+      DiscreteDistribution dist = buildDistribution(weights);
+      dist.normalize();
+
+      String name = dist.toStringWithNames(0);
+      if (portfolioNames.contains(name)) continue;
+      portfolioNames.add(name);
+      portfolios.add(dist);
+    }
+    in.close();
+    return portfolios;
   }
 
   /** @return time (in ms) for the given year index */
@@ -217,14 +286,15 @@ public class SimbaPortfolios
   }
 
   public static void scanDistributions(int minAssets, int maxAssets, int minWeight, int maxWeight, int weightStep,
-      List<DiscreteDistribution> portfolios)
+      boolean[] avoid, List<DiscreteDistribution> portfolios)
   {
     int[] weights = new int[returnData.length];
-    scanDistributions(weights, 0, 0, 100, minAssets, maxAssets, minWeight, maxWeight, weightStep, portfolios);
+    scanDistributions(weights, 0, 0, 100, minAssets, maxAssets, minWeight, maxWeight, weightStep, avoid, portfolios);
   }
 
   public static void scanDistributions(int[] weights, int index, int nAssetsSoFar, int weightLeft, int minAssets,
-      int maxAssets, int minWeight, int maxWeight, int weightStep, List<DiscreteDistribution> portfolios)
+      int maxAssets, int minWeight, int maxWeight, int weightStep, boolean[] avoid,
+      List<DiscreteDistribution> portfolios)
   {
     assert weightLeft >= 0;
     if (weightLeft == 0) {
@@ -243,27 +313,30 @@ public class SimbaPortfolios
     if (weightLeft < minWeight) return;
     if (nAssetsSoFar >= maxAssets) return;
 
-    // Try assigning all valid weights to asset[index].
-    for (int w = Math.min(maxWeight, weightLeft); w >= minWeight; w -= weightStep) {
-      weights[index] = w;
-      scanDistributions(weights, index + 1, nAssetsSoFar + 1, weightLeft - w, minAssets, maxAssets, minWeight,
-          maxWeight, weightStep, portfolios);
+    if (avoid == null | !avoid[index]) {
+      // Try assigning all valid weights to asset[index].
+      for (int w = Math.min(maxWeight, weightLeft); w >= minWeight; w -= weightStep) {
+        weights[index] = w;
+        scanDistributions(weights, index + 1, nAssetsSoFar + 1, weightLeft - w, minAssets, maxAssets, minWeight,
+            maxWeight, weightStep, avoid, portfolios);
+      }
     }
 
     // Skip asset[index].
     weights[index] = 0;
     scanDistributions(weights, index + 1, nAssetsSoFar, weightLeft, minAssets, maxAssets, minWeight, maxWeight,
-        weightStep, portfolios);
+        weightStep, avoid, portfolios);
   }
 
-  public static void scanDistributionsEW(int minAssets, int maxAssets, List<DiscreteDistribution> portfolios)
+  public static void scanDistributionsEW(int minAssets, int maxAssets, boolean[] avoid,
+      List<DiscreteDistribution> portfolios)
   {
     int[] weights = new int[returnData.length];
-    scanDistributions(weights, 0, 0, minAssets, maxAssets, portfolios);
+    scanDistributionsEW(weights, 0, 0, minAssets, maxAssets, avoid, portfolios);
   }
 
-  public static void scanDistributions(int[] weights, int index, int nAssetsSoFar, int minAssets, int maxAssets,
-      List<DiscreteDistribution> portfolios)
+  public static void scanDistributionsEW(int[] weights, int index, int nAssetsSoFar, int minAssets, int maxAssets,
+      boolean[] avoid, List<DiscreteDistribution> portfolios)
   {
     if (index >= weights.length) {
       if (nAssetsSoFar >= minAssets && nAssetsSoFar <= maxAssets) {
@@ -279,13 +352,15 @@ public class SimbaPortfolios
     }
     if (nAssetsSoFar > maxAssets) return;
 
-    // Include asset[index].
-    weights[index] = 1;
-    scanDistributions(weights, index + 1, nAssetsSoFar + 1, minAssets, maxAssets, portfolios);
+    if (avoid == null || !avoid[index]) {
+      // Include asset[index].
+      weights[index] = 1;
+      scanDistributionsEW(weights, index + 1, nAssetsSoFar + 1, minAssets, maxAssets, avoid, portfolios);
+    }
 
     // Skip asset[index].
     weights[index] = 0;
-    scanDistributions(weights, index + 1, nAssetsSoFar, minAssets, maxAssets, portfolios);
+    scanDistributionsEW(weights, index + 1, nAssetsSoFar, minAssets, maxAssets, avoid, portfolios);
   }
 
   /** @return true if x dominates y */
@@ -363,59 +438,50 @@ public class SimbaPortfolios
     }
   }
 
-  public static void main(String[] args) throws IOException
+  public static void savePortfolios(File file, Sequence portfolioStats) throws IOException
   {
-    // Inspiration: https://portfoliocharts.com/2016/03/07/the-ultimate-portfolio-guide-for-all-types-of-investors/
-    File outputDir = new File("g:/web");
-    File dataDir = new File("g:/research/finance/");
-    assert dataDir.isDirectory();
-
-    loadSimbaData(new File(dataDir, "simba-1972.csv"));
-    loadInflationData(new File(dataDir, "simba-inflation-1972.csv"));
-    subtractExpenseRatios();
-    subtractInflation();
-    // keepAssets(15); // TODO for debugging
-    System.out.printf("Assets: %d\n", returnData.length);
-
-    names = new String[returnData.length];
-    descriptions = new String[returnData.length];
-    for (int i = 0; i < returnData.length; ++i) {
-      String name = returnData[i].getName();
-      name2index.put(name, i);
-      names[i] = name;
-      // System.out.printf("%d: %s\n", i + 1, name);
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+      for (FeatureVec v : portfolioStats) {
+        writer.write(String.format("%-60s %s\n", v.getName(), v));
+      }
     }
+  }
 
-    int nMonths = (int) Math.round(TimeLib.monthsBetween(returnData[0].getStartMS(), returnData[0].getEndMS()));
-    System.out.printf("Months: %d\n", nMonths);
+  public static FeatureVec getStats(DiscreteDistribution dist)
+  {
+    String name = dist.toStringWithNames(nSigDig);
+    Sequence returnSeq = runPortfolio(dist);
+    Sequence cumulativeReturns = FinLib.cumulativeFromReturns(returnSeq);
+    Sequence longReturns = calcLongReturns(cumulativeReturns, nLongYears);
+    ReturnStats rstatsLong = ReturnStats.calc(name, longReturns.extractDim(0));
+    ReturnStats rstatsAnnual = ReturnStats.calc(name, returnSeq.extractDim(0));
+    CumulativeStats cstats = CumulativeStats.calc(cumulativeReturns, false);
+    FeatureVec v = new FeatureVec(name, 8);
+    v.set(stat2index.get("Worst Period"), rstatsLong.min);
+    v.set(stat2index.get("10th Percentile"), rstatsLong.percentile10);
+    v.set(stat2index.get("25th Percentile"), rstatsLong.percentile25);
+    v.set(stat2index.get("Median"), rstatsLong.median);
+    v.set(stat2index.get("CAGR"), cstats.cagr);
+    v.set(stat2index.get("Std Dev"), rstatsLong.sdev);
+    v.set(stat2index.get("Worst Year"), rstatsAnnual.min);
+    v.set(stat2index.get("Max Drawdown"), -cstats.drawdown);
+    return v;
+  }
 
+  public static void generate() throws IOException
+  {
     List<DiscreteDistribution> portfolios = new ArrayList<>();
-    scanDistributions(1, 5, 10, 50, 10, portfolios);
-    // scanDistributionsEW(1, 6, portfolios);
+    boolean[] avoid = buildAvoidMask("VWELX", "VWINX");
+    scanDistributions(3, 5, 10, 40, 10, avoid, portfolios);
+    // scanDistributionsEW(1, 8, avoid, portfolios);
     System.out.printf("Portfolios: %d\n", portfolios.size());
 
     System.out.println("Calculate Returns...");
     long start = TimeLib.getTime();
     Sequence portfolioStats = new Sequence();
-    // List<Sequence> portfolioAnnualReturns = new ArrayList<>();
-    // List<Sequence> portfolioLongReturns = new ArrayList<>();
     for (int i = 0; i < portfolios.size(); ++i) {
       DiscreteDistribution dist = portfolios.get(i);
-      // String name = dist.toStringWithNames(-1);
-      String name = dist.toStringWithNames(nSigDig);
-      Sequence returnSeq = runPortfolio(dist);
-      // portfolioAnnualReturns.add(returnSeq);
-      Sequence cumulativeReturns = FinLib.cumulativeFromReturns(returnSeq);
-      Sequence longReturns = calcLongReturns(cumulativeReturns, nLongYears);
-      // portfolioLongReturns.add(longReturns);
-      ReturnStats rstatsLong = ReturnStats.calc(name, longReturns.extractDim(0));
-      ReturnStats rstatsAnnual = ReturnStats.calc(name, returnSeq.extractDim(0));
-      CumulativeStats cstats = CumulativeStats.calc(cumulativeReturns, false);
-      // FeatureVec fv = new FeatureVec(name, 5, cstats.cagr, rstats.sdev, cstats.drawdown, rstats.min, worstPeriod);
-      FeatureVec fv = new FeatureVec(name, 8, rstatsLong.min, rstatsLong.percentile10, rstatsLong.percentile25,
-          rstatsLong.median, cstats.cagr, rstatsLong.sdev, rstatsAnnual.min, -cstats.drawdown);
-      portfolioStats.addData(fv);
-
+      portfolioStats.addData(getStats(dist));
       if (i % 100000 == 0 && i > 0) System.out.printf("%d  (%.1f%%)\n", i, 100.0 * (i + 1) / portfolios.size());
     }
     System.out.printf("Time: %s  (%d)\n", TimeLib.formatDuration(TimeLib.getTime() - start), portfolios.size());
@@ -440,7 +506,7 @@ public class SimbaPortfolios
     // 1200, 600, 1, new String[] { descriptions[xindex], descriptions[yindex], descriptions[zindex] }, scatter);
 
     // Filter results.
-    double[] domdir = new double[] { 0, 1, 0, 1, 0, 0, 0, 1 };
+    double[] domdir = new double[] { 1, 1, 1, 1, 0, -1, 1, 1 };
     double[] thresholds = new double[] { 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 2.0 };
     assert domdir.length == thresholds.length;
     assert domdir.length == descriptions.length;
@@ -496,7 +562,6 @@ public class SimbaPortfolios
         .setRadius(3).setDimNames(dimNames).setData(scatter).showToolTips(true);
     Chart.saveScatterPlot(chartConfig);
 
-    // Sort by Sharpe Ratio.
     portfolioStats.getData().sort(new Comparator<FeatureVec>()
     {
       @Override
@@ -513,9 +578,126 @@ public class SimbaPortfolios
         return 0;
       }
     });
-    for (FeatureVec v : portfolioStats) {
-      double sharpe = v.get(2) / (v.get(3) + 1e-7);
-      System.out.printf("%.3f %-32s %s\n", sharpe, v, v.getName());
+    // for (FeatureVec v : portfolioStats) {
+    // double sharpe = v.get(2) / (v.get(3) + 1e-7);
+    // System.out.printf("%.3f %-32s %s\n", sharpe, v, v.getName());
+    // }
+    savePortfolios(new File(outputDir, "simba-filtered.txt"), portfolioStats);
+  }
+
+  public static void filterPortfolios(File file) throws IOException
+  {
+    List<DiscreteDistribution> portfolios = loadPortfolios(file);
+    System.out.printf("Portfolios: %d\n", portfolios.size());
+
+    Sequence portfolioStats = new Sequence();
+    for (DiscreteDistribution dist : portfolios) {
+      portfolioStats.addData(getStats(dist));
     }
+
+    String[] stats = new String[] { "Max Drawdown", "10th Percentile", "25th Percentile", "Median", "Worst Period",
+        "Std Dev", "CAGR", "Worst Year" };
+    int[] indices = new int[stats.length];
+    Map<String, Integer> name2index = new HashMap<>();
+    for (int i = 0; i < stats.length; ++i) {
+      indices[i] = stat2index.get(stats[i]);
+      name2index.put(stats[i], i);
+    }
+    Map<String, String> name2desc = new HashMap<>();
+    String sPeriodLength = String.format("%d-year Period", nLongYears);
+    name2desc.put("Worst Period", "Worst " + sPeriodLength);
+    name2desc.put("10th Percentile", "10th Percentile for " + sPeriodLength + "s");
+    name2desc.put("25th Percentile", "25th Percentile for " + sPeriodLength + "s");
+    name2desc.put("Median", "Median for " + sPeriodLength + "s");
+    name2desc.put("CAGR", "Long-term CAGR");
+    name2desc.put("Std Dev", "Std Dev (" + sPeriodLength + "s)");
+    name2desc.put("Worst Year", "Worst Year");
+    name2desc.put("Max Drawdown", "Max Drawdown");
+
+    Sequence scatter = new Sequence();
+    for (FeatureVec v : portfolioStats) {
+      scatter.addData(v.subspace(indices));
+    }
+
+    String[] dimNames = new String[indices.length];
+    for (int i = 0; i < dimNames.length; ++i) {
+      dimNames[i] = name2desc.get(stats[i]);
+    }
+
+    final int[][] goodCharts = new int[][] { { 0, 1 }, { 0, 2 }, { 0, 3 }, { 1, 3 }, { 1, 7 }, { 2, 5 }, { 3, 4 },
+        { 3, 7 }, { 4, 7 } };
+
+    for (int iChart = 0; iChart < goodCharts.length; ++iChart) {
+      int i = goodCharts[iChart][0];
+      int j = goodCharts[iChart][1];
+      String descX = name2desc.get(stats[i]);
+      String descY = name2desc.get(stats[j]);
+      String filename = String.format("simba-filtered-%d-%d.html", i, j);
+      ChartConfig chartConfig = new ChartConfig(new File(outputDir, filename)).setType(ChartConfig.Type.Scatter)
+          .setTitle("<b>" + descY + "</b> vs. <b>" + descX + "</b>").setYAxisTitle(descY).setXAxisTitle(descX)
+          .setSize(1200, 800).setRadius(2).setDimNames(dimNames).setData(scatter).showToolTips(true).setIndexXY(i, j);
+      Chart.saveScatterPlot(chartConfig);
+    }
+
+    scatter = portfolioStats.dup();
+    for (int i = 0; i < scatter.length(); ++i) {
+      FeatureVec v = scatter.get(i);
+      if (v.get(stat2index.get("Max Drawdown")) < -50.0 || v.get(stat2index.get("Median")) < 9.0
+          || v.get(stat2index.get("10th Percentile")) < 6.0 || v.get(stat2index.get("25th Percentile")) < 7.0
+          || v.get(stat2index.get("Worst Period")) < 3.0) {
+        scatter.set(i, null);
+      }
+    }
+    scatter.getData().removeIf(new Predicate<FeatureVec>()
+    {
+      @Override
+      public boolean test(FeatureVec v)
+      {
+        return v == null;
+      }
+    });
+    for (int i = 0; i < scatter.size(); ++i) {
+      scatter.set(i, scatter.get(i).subspace(indices));
+    }
+    System.out.printf("Portfolios Left: %d\n", scatter.size());
+
+    int xIndex = name2index.get("Max Drawdown");
+    int yIndex = name2index.get("Median");
+    String descX = name2desc.get(stats[xIndex]);
+    String descY = name2desc.get(stats[yIndex]);
+    ChartConfig chartConfig = new ChartConfig(new File(outputDir, "simba-filtered.html"))
+        .setType(ChartConfig.Type.Bubble).setTitle("<b>" + descY + "</b> vs. <b>" + descX + "</b>")
+        .setYAxisTitle(descY).setXAxisTitle(descX).setSize(1200, 800).setRadius(3).setBubbleSizes("7", "20")
+        .setDimNames(dimNames).setData(scatter).showToolTips(true).setIndexXY(xIndex, yIndex);
+    Chart.saveScatterPlot(chartConfig);
+  }
+
+  public static void main(String[] args) throws IOException
+  {
+    // Inspiration: https://portfoliocharts.com/2016/03/07/the-ultimate-portfolio-guide-for-all-types-of-investors/
+    File dataDir = new File("g:/research/finance/");
+    assert dataDir.isDirectory();
+
+    loadSimbaData(new File(dataDir, "simba-1972.csv"));
+    loadInflationData(new File(dataDir, "simba-inflation-1972.csv"));
+    subtractExpenseRatios();
+    subtractInflation();
+    // keepAssets(15); // TODO for debugging
+    System.out.printf("Assets: %d\n", returnData.length);
+
+    names = new String[returnData.length];
+    descriptions = new String[returnData.length];
+    for (int i = 0; i < returnData.length; ++i) {
+      String name = returnData[i].getName();
+      name2index.put(name, i);
+      names[i] = name;
+      // System.out.printf("%d: %s\n", i + 1, name);
+    }
+
+    int nMonths = (int) Math.round(TimeLib.monthsBetween(returnData[0].getStartMS(), returnData[0].getEndMS()));
+    System.out.printf("Months: %d\n", nMonths);
+
+    // generate();
+    filterPortfolios(new File(outputDir, "simba-filtered-all.txt"));
   }
 }

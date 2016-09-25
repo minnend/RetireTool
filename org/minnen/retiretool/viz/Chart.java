@@ -35,7 +35,7 @@ import org.minnen.retiretool.util.TimeLib;
 
 public class Chart
 {
-  public final static boolean bVerticalLine = true;
+  public final static boolean bVerticalLine = false;
 
   public static void saveLineChart(File file, String title, int width, int height, boolean logarithmic,
       boolean monthly, Sequence... seqs) throws IOException
@@ -187,7 +187,7 @@ public class Chart
         for (int t = 0; t < seqs[i].length(); ++t) {
           double x = seqs[i].get(t, dim);
           // x = FinLib.mul2ret(x); // TODO
-          writer.write(String.format("%.4f%s", x, t == seqs[i].size() - 1 ? "" : ", "));
+          writer.write(String.format("%.6f%s", x, t == seqs[i].size() - 1 ? "" : ", "));
         }
         writer.write("] }");
         if (i < seqs.length - 1) {
@@ -382,8 +382,8 @@ public class Chart
         writer.write("   }\n");
       } else if (config.type == ChartConfig.Type.Bubble) {
         writer.write("   bubble: {\n");
-        writer.write("    minSize:7,\n");
-        writer.write("    maxSize:'10%',\n");
+        writer.write("    minSize: '" + config.minBubble + "',\n");
+        writer.write("    maxSize:'" + config.maxBubble + "',\n");
         writer.write("   },\n");
       }
       writer.write("  },\n");
@@ -393,22 +393,29 @@ public class Chart
         writer.write("    headerFormat: '',\n");
         String header = hasNames ? "<b>{point.name}</b><br/>" : "";
         StringBuilder zs = new StringBuilder();
-        for (int i = 2; i < dimNames.length; ++i) {
-          zs.append(String.format("<br/>%s: <b>{point.z%s}</b>", dimNames[i], i == 2 ? "" : String.format("%d", i - 1)));
+        int zIndex = 0;
+        for (int i = 0; i < dimNames.length; ++i) {
+          if (i == config.xIndex || i == config.yIndex) continue;
+          zs.append(String.format("<br/>%s: <b>{point.z%s}</b>", dimNames[i],
+              zIndex == 0 ? "" : String.format("%d", zIndex + 1)));
+          ++zIndex;
         }
         String format = String.format("    pointFormat: '%s%s: <b>{point.x}</b><br/>%s: <b>{point.y}</b>%s'\n", header,
-            dimNames[0], config.dimNames[1], zs);
+            dimNames[config.xIndex], config.dimNames[config.yIndex], zs);
         writer.write(format);
       }
       writer.write("  },\n");
       writer.write("  series: [{\n");
       writer.write("   data: [\n");
       for (FeatureVec v : scatter) {
-        // writer.write(String.format("[%.3f,%.3f]", v.get(0), v.get(1)));
-        StringBuilder dataString = new StringBuilder(String.format("x:%.3f,y:%.3f", v.get(0), v.get(1)));
-        int nExtra = Math.max(0, Math.min(v.getNumDims(), config.dimNames.length) - 2);
-        for (int i = 0; i < nExtra; ++i) {
-          dataString.append(String.format(",z%s:%.3f", i == 0 ? "" : String.format("%d", i + 1), v.get(i + 2)));
+        StringBuilder dataString = new StringBuilder(String.format("x:%.3f,y:%.3f", v.get(config.xIndex),
+            v.get(config.yIndex)));
+        int nDims = Math.min(v.getNumDims(), config.dimNames.length);
+        int zIndex = 0;
+        for (int i = 0; i < nDims; ++i) {
+          if (i == config.xIndex || i == config.yIndex) continue;
+          dataString.append(String.format(",z%s:%.3f", zIndex == 0 ? "" : String.format("%d", zIndex + 1), v.get(i)));
+          ++zIndex;
         }
         if (hasNames) {
           String name = FinLib.getBaseName(v.getName());

@@ -83,6 +83,7 @@ public class TimeLib
     return time.toInstant(ZeroOffset).toEpochMilli();
   }
 
+  /** @return time in ms for the given year, month, day (January = 1) */
   public static long toMs(int year, int month, int day)
   {
     return toMs(LocalDate.of(year, month, day));
