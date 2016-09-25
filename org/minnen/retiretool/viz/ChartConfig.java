@@ -1,6 +1,7 @@
 package org.minnen.retiretool.viz;
 
 import java.io.File;
+import java.util.List;
 
 import org.minnen.retiretool.data.Sequence;
 
@@ -10,26 +11,33 @@ public class ChartConfig
     Unknown, Line, Bar, Area, PosNegArea, Scatter, Bubble
   };
 
-  public File     file;
-  public Sequence data;
-  public Type     type              = Type.Unknown;
-  public String   title;
-  public String   xAxisTitle;
-  public String   yAxisTitle;
-  public int      xIndex            = 0;
-  public int      yIndex            = 1;
-  public int      width             = 1200;
-  public int      height            = 600;
-  public int      axisTitleFontSize = 16;
-  public boolean  showLegend        = false;
-  public boolean  showDataLabels    = false;
-  public boolean  showToolTips      = true;
-  public String[] dimNames;
-  public String   minBubble         = "7";
-  public String   maxBubble         = "10%";
+  public File       file;
+  public Sequence[] data;
+  public Type       type               = Type.Unknown;
+  public boolean    isMonthlyData;
+  public boolean    logarthimicYAxis;
+  public double     minorTickIntervalY = Double.NaN;
+  public String[]   labels;
+  public String[]   colors;
+  public String     title;
+  public String     xAxisTitle;
+  public String     yAxisTitle;
+  public double     ymin               = Double.NaN;
+  public double     ymax               = Double.NaN;
+  public int        xIndex             = 0;
+  public int        yIndex             = 1;
+  public int        width              = 1200;
+  public int        height             = 600;
+  public int        axisTitleFontSize  = 16;
+  public boolean    showLegend         = false;
+  public boolean    showDataLabels     = false;
+  public boolean    showToolTips       = true;
+  public String[]   dimNames;
+  public String     minBubble          = "7";
+  public String     maxBubble          = "10%";
 
   // Specific to scatter plots.
-  public int      radius            = 3;
+  public int        radius             = 3;
 
   public static String chart2name(Type chartType)
   {
@@ -64,15 +72,70 @@ public class ChartConfig
     this.file = file;
   }
 
-  public ChartConfig setData(Sequence data)
+  public ChartConfig setData(Sequence... data)
   {
     this.data = data;
+    return this;
+  }
+
+  public ChartConfig setData(List<Sequence> data)
+  {
+    this.data = data.toArray(new Sequence[data.size()]);
     return this;
   }
 
   public ChartConfig setType(Type type)
   {
     this.type = type;
+    return this;
+  }
+
+  public ChartConfig setMinY(double ymin)
+  {
+    this.ymin = ymin;
+    return this;
+  }
+
+  public ChartConfig setMaxY(double ymax)
+  {
+    this.ymax = ymax;
+    return this;
+  }
+
+  public ChartConfig setMinMaxY(double ymin, double ymax)
+  {
+    this.ymin = ymin;
+    this.ymax = ymax;
+    return this;
+  }
+
+  public ChartConfig setIsMonthlyData(boolean isMonthlyData)
+  {
+    this.isMonthlyData = isMonthlyData;
+    return this;
+  }
+
+  public ChartConfig setLogarthimicYAxis(boolean logarthimicYAxis)
+  {
+    this.logarthimicYAxis = logarthimicYAxis;
+    return this;
+  }
+
+  public ChartConfig setMinorTickIntervalY(double minorTickIntervalY)
+  {
+    this.minorTickIntervalY = minorTickIntervalY;
+    return this;
+  }
+
+  public ChartConfig setLabels(String[] labels)
+  {
+    this.labels = labels;
+    return this;
+  }
+
+  public ChartConfig setColors(String[] colors)
+  {
+    this.colors = colors;
     return this;
   }
 

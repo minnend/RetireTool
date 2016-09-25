@@ -52,10 +52,18 @@ public class Chart
   }
 
   public static void saveHighChart(File file, ChartConfig.Type chartType, String title, String[] labels,
-      String[] colors, int width, int height, double ymin, double ymax, double minorTickInterval, boolean logarithmic,
-      boolean monthly, int dim, Sequence... seqs) throws IOException
+      String[] colors, int width, int height, double ymin, double ymax, double minorTickIntervalY,
+      boolean logarthimicYAxis, boolean isMonthlyData, int dim, Sequence... seqs) throws IOException
   {
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+    ChartConfig config = new ChartConfig(file).setType(chartType).setTitle(title).setLabels(labels).setColors(colors)
+        .setSize(width, height).setMinMaxY(ymin, ymax).setMinorTickIntervalY(minorTickIntervalY)
+        .setLogarthimicYAxis(logarthimicYAxis).setIsMonthlyData(isMonthlyData).setIndexY(dim);
+    saveHighChart(config, seqs);
+  }
+
+  public static void saveHighChart(ChartConfig config, Sequence... seqs) throws IOException
+  {
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter(config.file))) {
       writer.write("<html><head>\n");
       writer.write("<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js\"></script>\n");
       writer.write("<script src=\"js/highcharts.js\"></script>\n");
@@ -63,7 +71,7 @@ public class Chart
 
       writer.write("$(function () {\n");
       writer.write(" $('#chart').highcharts({\n");
-      writer.write("  title: { text: '" + title + "' },\n");
+      writer.write("  title: { text: '" + config.title + "' },\n");
       if (bVerticalLine) {
         writer.write("  tooltip: {\n");
         writer.write("    crosshairs: {\n");
@@ -74,21 +82,21 @@ public class Chart
         writer.write("    enabled: false\n");
         writer.write("  },\n");
       }
-      if (chartType != ChartConfig.Type.Line) {
-        writer.write(String.format("  chart: { type: '%s' },\n", ChartConfig.chart2name(chartType)));
+      if (config.type != ChartConfig.Type.Line) {
+        writer.write(String.format("  chart: { type: '%s' },\n", ChartConfig.chart2name(config.type)));
       }
       writer.write("  xAxis: { categories: [");
-      if (labels != null) {
-        assert labels.length == seqs[0].size();
-        for (int i = 0; i < labels.length; ++i) {
-          writer.write("'" + labels[i] + "'");
-          if (i < labels.length - 1) {
+      if (config.labels != null) {
+        assert config.labels.length == seqs[0].size();
+        for (int i = 0; i < config.labels.length; ++i) {
+          writer.write("'" + config.labels[i] + "'");
+          if (i < config.labels.length - 1) {
             writer.write(",");
           }
         }
       } else {
         for (int i = 0; i < seqs[0].size(); ++i) {
-          if (monthly) {
+          if (config.isMonthlyData) {
             writer.write("'" + TimeLib.formatMonth(seqs[0].getTimeMS(i)) + "'");
           } else {
             writer.write("'" + TimeLib.formatDate(seqs[0].getTimeMS(i)) + "'");
@@ -101,32 +109,32 @@ public class Chart
       writer.write("] },\n");
 
       writer.write("  yAxis: {\n");
-      if (logarithmic) {
+      if (config.logarthimicYAxis) {
         writer.write("   type: 'logarithmic',\n");
       }
-      if (!Double.isNaN(minorTickInterval)) {
-        writer.write(String.format("   minorTickInterval: %.3f,\n", minorTickInterval));
+      if (!Double.isNaN(config.minorTickIntervalY)) {
+        writer.write(String.format("   minorTickInterval: %.3f,\n", config.minorTickIntervalY));
       }
-      if (!Double.isNaN(ymin)) {
-        writer.write(String.format("   min: %.3f,\n", ymin));
+      if (!Double.isNaN(config.ymin)) {
+        writer.write(String.format("   min: %.3f,\n", config.ymin));
       }
-      if (!Double.isNaN(ymax)) {
-        writer.write(String.format("   max: %.3f,\n", ymax));
+      if (!Double.isNaN(config.ymax)) {
+        writer.write(String.format("   max: %.3f,\n", config.ymax));
       }
       writer.write("   title: { text: null }\n");
       writer.write("  },\n");
 
-      if (chartType == ChartConfig.Type.Line) {
+      if (config.type == ChartConfig.Type.Line) {
         writer.write("  chart: {\n");
         writer.write("   zoomType: 'xy'\n");
         writer.write("  },\n");
       }
 
-      if (colors != null) {
+      if (config.colors != null) {
         writer.write("  colors: [");
-        for (int i = 0; i < colors.length; ++i) {
-          writer.write(String.format("'%s'", colors[i]));
-          if (i < colors.length - 1) {
+        for (int i = 0; i < config.colors.length; ++i) {
+          writer.write(String.format("'%s'", config.colors[i]));
+          if (i < config.colors.length - 1) {
             writer.write(',');
           }
         }
@@ -134,25 +142,25 @@ public class Chart
       }
 
       writer.write("  plotOptions: {\n");
-      if (chartType == ChartConfig.Type.Bar) {
+      if (config.type == ChartConfig.Type.Bar) {
         writer.write("   column: {\n");
-        if (colors != null) {
+        if (config.colors != null) {
           writer.write("    colorByPoint: true,\n");
         }
         writer.write("    pointPadding: 0,\n");
         writer.write("    groupPadding: 0.1,\n");
         writer.write("    borderWidth: 0\n");
         writer.write("   }\n");
-      } else if (chartType == ChartConfig.Type.Area || chartType == ChartConfig.Type.PosNegArea) {
+      } else if (config.type == ChartConfig.Type.Area || config.type == ChartConfig.Type.PosNegArea) {
         writer.write("   area: {\n");
         writer.write("    fillColor: {\n");
         writer.write("      linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },\n");
         writer.write("      stops: [\n");
-        if (chartType == ChartConfig.Type.Area) {
+        if (config.type == ChartConfig.Type.Area) {
           writer.write("        [0, Highcharts.getOptions().colors[0]],\n");
           writer.write("        [1, Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]\n");
         } else {
-          assert chartType == ChartConfig.Type.PosNegArea;
+          assert config.type == ChartConfig.Type.PosNegArea;
           FeatureVec vmin = seqs[0].getMin();
           FeatureVec vmax = seqs[0].getMax();
           for (int i = 1; i < seqs.length; ++i) {
@@ -174,7 +182,7 @@ public class Chart
         writer.write("    },\n");
         // writer.write("    threshold: null\n");
         writer.write("   }\n");
-      } else if (chartType == ChartConfig.Type.Line) {
+      } else if (config.type == ChartConfig.Type.Line) {
         writer.write("    line: { marker: { enabled: false } }\n");
       }
       writer.write("  },\n");
@@ -185,7 +193,7 @@ public class Chart
         writer.write("  { name: '" + seq.getName() + "',\n");
         writer.write("    data: [");
         for (int t = 0; t < seqs[i].length(); ++t) {
-          double x = seqs[i].get(t, dim);
+          double x = seqs[i].get(t, config.yIndex);
           // x = FinLib.mul2ret(x); // TODO
           writer.write(String.format("%.6f%s", x, t == seqs[i].size() - 1 ? "" : ", "));
         }
@@ -199,8 +207,8 @@ public class Chart
       writer.write(" });\n");
       writer.write("});\n");
 
-      writer.write("</script></head><body style=\"width:" + width + "px;\">\n");
-      writer.write("<div id=\"chart\" style=\"width:100%; height:" + height + "px;\" />\n");
+      writer.write("</script></head><body style=\"width:" + config.width + "px;\">\n");
+      writer.write("<div id=\"chart\" style=\"width:100%; height:" + config.height + "px;\" />\n");
       writer.write("</body></html>\n");
     }
   }
@@ -319,7 +327,7 @@ public class Chart
 
   public static void saveScatterPlot(ChartConfig config) throws IOException
   {
-    Sequence scatter = config.data;
+    Sequence scatter = config.data[0];
     assert scatter.getNumDims() >= 2;
 
     // Determine if any point has a name.
