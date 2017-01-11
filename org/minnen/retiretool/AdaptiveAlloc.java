@@ -87,7 +87,7 @@ public class AdaptiveAlloc
   // "DFGBX", "SGGDX", "VGPMX", "USAGX", "FSPCX", "FSRBX", "FPBFX", "ETGIX", "VDIGX", "MDY", "VBINX", "VWINX", "MCA",
   // "^IXIC" };
 
-  // public static final String[] fundSymbols = FinLib.VANGUARD_INVESTOR_FUNDS;
+  public static final String[] fundSymbols = FinLib.VANGUARD_INVESTOR_FUNDS;
 
   // public static final String[] fundSymbols = new String[] { "VTSMX", "VBMFX", "VGTSX", "VWINX",
   // "FPBFX", "USAGX" };
@@ -113,8 +113,8 @@ public class AdaptiveAlloc
 
   // VEA = VTMGX
   // VWO = VEIEX
-  public static final String[]      fundSymbols              = new String[] { "VTSMX", "VBMFX", "VTI", "VTMGX",
-      "VEIEX", "VIG", "XLE", "MUB"                          };
+  // public static final String[] fundSymbols = new String[] { "VTSMX", "VBMFX", "VTI", "VTMGX",
+  // "VEIEX", "VIG", "XLE", "MUB" };
 
   // QQQ, XLK, AAPL, MSFT
   public static final String[]      assetSymbols             = new String[fundSymbols.length + 1];
@@ -787,9 +787,9 @@ public class AdaptiveAlloc
     System.out.printf("Common[%d]: [%s] -> [%s]\n", seqs.size(), TimeLib.formatDate(commonStart),
         TimeLib.formatDate(commonEnd));
 
-    long timeSimStart = commonStart;
-    // timeSimStart = TimeLib.toMs(TimeLib.ms2date(commonStart).plusWeeks(53 + 4)
-    // .with(TemporalAdjusters.firstDayOfMonth()));
+    // long timeSimStart = commonStart;
+    long timeSimStart = TimeLib.toMs(TimeLib.ms2date(commonStart).plusWeeks(53 + 4)
+        .with(TemporalAdjusters.firstDayOfMonth()));
     // timeSimStart = TimeLib.toMs(2013, Month.JANUARY, 1); // TODO
     long timeSimEnd = commonEnd;
     // timeSimEnd = TimeLib.toMs(2012, Month.DECEMBER, 31); // TODO
@@ -937,27 +937,27 @@ public class AdaptiveAlloc
 
     // Wealthfront comparison.
     // VEA = VTMGX, VWO = VEIEX "VTI", "VTMGX", "VEIEX", "VIG", "XLE", "MUB"
-    String[] assetsWF = new String[] { "VTI", "VTMGX", "VEIEX", "VIG", "XLE", "MUB", "cash" };
-    double[] weightsWF = new double[] { 0.344, 0.236, 0.19, 0.087, 0.05, 0.09, 0.003 };
-    assert assetsWF.length == weightsWF.length;
-    assert Math.abs(Library.sum(weightsWF) - 1.0) < 1e-6;
-    DiscreteDistribution distribution = new DiscreteDistribution(assetsWF, weightsWF);
-    PredictorConfig[] configsWF = new PredictorConfig[assetsWF.length];
-    for (int i = 0; i < assetsWF.length; ++i) {
-      configsWF[i] = new ConfigConst(assetsWF[i]);
-    }
-    config = new ConfigMixed(distribution, configsWF);
-    Predictor wealthfront = config.build(sim.broker.accessObject, assetsWF);
-    Sequence returnsWF = sim.run(wealthfront, timeSimStart, timeSimEnd, "Wealthfront");
-    System.out.println(CumulativeStats.calc(returnsWF));
-    returns.add(returnsWF);
-    Chart.saveHoldings(new File(outputDir, "holdings-wealthfront.html"), sim.holdings, sim.store);
-    Chart.saveLineChart(new File(outputDir, "returns.html"),
-        String.format("Returns (%d\u00A2 Spread)", Math.round(slippage.constSlip * 200)), 1000, 640, false, true,
-        returns);
-
-    Chart.saveAnnualStatsTable(new File(outputDir, "annual-stats.html"), 1000, false, 0, returns);
-        System.exit(0);
+    // String[] assetsWF = new String[] { "VTI", "VTMGX", "VEIEX", "VIG", "XLE", "MUB", "cash" };
+    // double[] weightsWF = new double[] { 0.344, 0.236, 0.19, 0.087, 0.05, 0.09, 0.003 };
+    // assert assetsWF.length == weightsWF.length;
+    // assert Math.abs(Library.sum(weightsWF) - 1.0) < 1e-6;
+    // DiscreteDistribution distribution = new DiscreteDistribution(assetsWF, weightsWF);
+    // PredictorConfig[] configsWF = new PredictorConfig[assetsWF.length];
+    // for (int i = 0; i < assetsWF.length; ++i) {
+    // configsWF[i] = new ConfigConst(assetsWF[i]);
+    // }
+    // config = new ConfigMixed(distribution, configsWF);
+    // Predictor wealthfront = config.build(sim.broker.accessObject, assetsWF);
+    // Sequence returnsWF = sim.run(wealthfront, timeSimStart, timeSimEnd, "Wealthfront");
+    // System.out.println(CumulativeStats.calc(returnsWF));
+    // returns.add(returnsWF);
+    // Chart.saveHoldings(new File(outputDir, "holdings-wealthfront.html"), sim.holdings, sim.store);
+    // Chart.saveLineChart(new File(outputDir, "returns.html"),
+    // String.format("Returns (%d\u00A2 Spread)", Math.round(slippage.constSlip * 200)), 1000, 640, false, true,
+    // returns);
+    //
+    // Chart.saveAnnualStatsTable(new File(outputDir, "annual-stats.html"), 1000, false, 0, returns);
+    // System.exit(0);
 
     // Volatility-Responsive Asset Allocation.
     Predictor volres = new VolResPredictor(60, "VTSMX", "VBMFX", sim.broker.accessObject, FinLib.Close);

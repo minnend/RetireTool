@@ -14,11 +14,12 @@ import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
+import org.minnen.retiretool.viz.ChartConfig;
 
 public class ExploreRPS
 {
   private final Map<String, Integer> name2index = new HashMap<>();
-  private String[]                   columnNames;
+  private String[]                   signalNames;
   private Sequence                   signalData = new Sequence("RPS");
   private Sequence[]                 signals;
 
@@ -40,18 +41,18 @@ public class ExploreRPS
 
       if (nLines == 1) { // Load header
         assert toks[0].equals("date");
-        columnNames = new String[toks.length - 1];
+        signalNames = new String[toks.length - 1];
         signals = new Sequence[toks.length - 1];
         for (int i = 1; i < toks.length; ++i) {
           String name = toks[i].trim();
-          columnNames[i - 1] = name;
+          signalNames[i - 1] = name;
           name2index.put(name, i - 1);
           signals[i - 1] = new Sequence(name);
         }
         continue;
       }
 
-      assert toks.length == columnNames.length + 1;
+      assert toks.length == signalNames.length + 1;
       int date = Integer.parseInt(toks[0]);
       int year = date / 10000;
       int month = (date / 100) % 100;
@@ -60,7 +61,7 @@ public class ExploreRPS
       FeatureVec v = new FeatureVec(toks.length - 1);
       for (int i = 0; i < v.getNumDims(); ++i) {
         // Provided returns are fractions (1.0% = 0.01) so convert to percentages (1.0% = 1.0).
-        double percentReturn = Double.parseDouble(toks[i + 1]) * 100.0; 
+        double percentReturn = Double.parseDouble(toks[i + 1]) * 100.0;
         v.set(i, percentReturn);
       }
       signalData.addData(v, ms);
@@ -81,10 +82,51 @@ public class ExploreRPS
     }
   }
 
+  /** Invert the given signal; Equivalent to going long the bottom decile and shorting the top decile. */
+  private void calcCumulativeReturns(int iSignal, int dir)
+  {
+    assert dir == 1 || dir == -1;
+    Sequence seq = signals[iSignal];
+    for (int i = 0; i < signalData.length(); ++i) {
+      double r = dir * signalData.get(i, iSignal);
+      double value = seq.get(i, 0) * FinLib.ret2mul(r);
+      seq.set(i + 1, 0, value);
+    }
+  }
+
+  /** Invert any signal that loses money. */
+  private void flipLosers()
+  {
+    assert signals.length == signalData.getNumDims();
+    for (int iSignal = 0; iSignal < signals.length; ++iSignal) {
+      if (signals[iSignal].getLast(0) >= 1.0) continue;
+      calcCumulativeReturns(iSignal, -1);
+    }
+  }
+
   public void analyze(File outputDir) throws IOException
   {
-    System.out.printf("%d\n", signalData.length());
-    Chart.saveLineChart(new File(outputDir, "rps.html"), "Return Predictive Signals", 1200, 800, true, true, signals);
+    System.out.printf("Length: %d\n", signalData.length());
+    double nMonths = TimeLib.monthsBetween(signals[0].getStartMS(), signals[0].getEndMS());
+    System.out.printf("Months: %.1f\n", nMonths);
+
+    ChartConfig chartConfig = new ChartConfig(new File(outputDir, "rps-raw.html")).setType(ChartConfig.Type.Line)
+        .setTitle("Return Predictive Signals").setSize(1200, 800).setLogarthimicYAxis(true).setMonthlyData(true)
+        .setData(signals);
+    Chart.saveChart(chartConfig);
+
+    flipLosers();
+    chartConfig.setFile(new File(outputDir, "rps-positive.html"));
+    Chart.saveChart(chartConfig);
+
+    int iSignal = name2index.get("roavol");
+    calcCumulativeReturns(iSignal, 1);
+    Sequence seqA = signals[iSignal].dup();
+    calcCumulativeReturns(iSignal, -1);
+    Sequence seqB = signals[iSignal].dup();
+    chartConfig.setFile(new File(outputDir, signalNames[iSignal] + ".html")).setData(seqA, seqB);
+    Chart.saveChart(chartConfig);
+
   }
 
   public static void main(String[] args) throws IOException

@@ -251,6 +251,7 @@ public class SimbaPortfolios
     int nYears = returnData[0].size();
     Sequence returns = new Sequence(targetAllocation.toStringWithNames(nSigDig));
     returns.setMeta("portfolio", targetAllocation);
+    // TODO allow minimum year to avoid gold weirdness in early 70s.
     for (int iYear = 0; iYear < nYears; ++iYear) {
       double r = returnForYear(iYear, targetAllocation);
       returns.addData(FinLib.mul2ret(r), index2ms(iYear));
@@ -624,8 +625,8 @@ public class SimbaPortfolios
       dimNames[i] = name2desc.get(stats[i]);
     }
 
-    final int[][] goodCharts = new int[][] { { 0, 1 }, { 0, 2 }, { 0, 3 }, { 1, 3 }, { 1, 7 }, { 2, 5 }, { 3, 4 },
-        { 3, 7 }, { 4, 7 } };
+    final int[][] goodCharts = new int[][] { { 0, 1 }, { 0, 2 }, { 0, 3 }, { 0, 4 }, { 1, 3 }, { 1, 7 }, { 2, 5 },
+        { 3, 4 }, { 3, 7 }, { 4, 7 } };
 
     for (int iChart = 0; iChart < goodCharts.length; ++iChart) {
       int i = goodCharts[iChart][0];

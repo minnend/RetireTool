@@ -24,6 +24,7 @@ public class ChartConfig
   public String     yAxisTitle;
   public double     ymin               = Double.NaN;
   public double     ymax               = Double.NaN;
+  public int        iDim               = 0;
   public int        xIndex             = 0;
   public int        yIndex             = 1;
   public int        width              = 1200;
@@ -72,6 +73,12 @@ public class ChartConfig
     this.file = file;
   }
 
+  public ChartConfig setFile(File file)
+  {
+    this.file = file;
+    return this;
+  }
+
   public ChartConfig setData(Sequence... data)
   {
     this.data = data;
@@ -109,7 +116,7 @@ public class ChartConfig
     return this;
   }
 
-  public ChartConfig setIsMonthlyData(boolean isMonthlyData)
+  public ChartConfig setMonthlyData(boolean isMonthlyData)
   {
     this.isMonthlyData = isMonthlyData;
     return this;
@@ -210,6 +217,12 @@ public class ChartConfig
   public ChartConfig showToolTips(boolean show)
   {
     this.showToolTips = show;
+    return this;
+  }
+
+  public ChartConfig setDimension(int iDim)
+  {
+    this.iDim = iDim;
     return this;
   }
 

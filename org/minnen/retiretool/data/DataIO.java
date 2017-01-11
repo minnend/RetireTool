@@ -14,6 +14,8 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.io.IOUtils;
 import org.minnen.retiretool.util.FinLib;
@@ -300,6 +302,63 @@ public class DataIO
     return data;
   }
 
+  /**
+   * Load sequences from a CSV file.
+   * 
+   * The assumption is that the first column has date information and each additional column is a separate sequence. A
+   * header on the first line gives the name of each sequence (must start with "date").
+   * 
+   * @param file file to load
+   * @return List of Sequences with data loaded from the given file.
+   */
+  public static List<Sequence> loadSequenceCSV(File file) throws IOException
+  {
+    if (!file.canRead()) {
+      throw new IOException(String.format("Can't read CSV file (%s)", file.getPath()));
+    }
+    System.out.printf("Loading CSV file: [%s]\n", file.getPath());
+
+    try (BufferedReader in = new BufferedReader(new FileReader(file))) {
+      List<Sequence> seqs = new ArrayList<>();
+
+      String line;
+      while ((line = in.readLine()) != null) {
+        line = line.trim();
+        if (line.isEmpty() || line.startsWith("#")) {
+          continue;
+        }
+        String[] toks = line.trim().split(",");
+        for (int i = 0; i < toks.length; ++i) {
+          toks[i] = toks[i].trim();
+        }
+
+        // Check for header.
+        if (toks[0].toLowerCase().startsWith("date")) {
+          if (!seqs.isEmpty()) {
+            throw new IOException("Found second header line.");
+          }
+          for (int i = 1; i < toks.length; ++i) {
+            seqs.add(new Sequence(toks[i]));
+          }
+          continue;
+        }
+
+        try {
+          long time = parseDate(toks[0]);
+          if (toks.length != seqs.size() + 1) {
+            throw new IOException(String.format("Expected %d fields, but only found %d", seqs.size() + 1, toks.length));
+          }
+          for (int i = 1; i < toks.length; ++i) {
+            seqs.get(i - 1).addData(new FeatureVec(1, Double.parseDouble(toks[i])).setTime(time));
+          }
+        } catch (NumberFormatException e) {
+          throw new IOException(String.format("Error parsing CSV data: [%s]\n", line));
+        }
+      }
+      return seqs;
+    }
+  }
+
   public static URL buildYahooURL(String symbol)
   {
     return buildYahooURL(symbol, LocalDate.of(1900, Month.JANUARY, 1));
@@ -454,7 +513,10 @@ public class DataIO
     // TODO use java.time parser.
     int year = Integer.parseInt(dateFields[0]);
     int month = Integer.parseInt(dateFields[1]);
-    int day = Integer.parseInt(dateFields[2]);
+    int day = 1;
+    if (dateFields.length > 2) {
+      day = Integer.parseInt(dateFields[2]);
+    }
 
     return TimeLib.toMs(year, month, day);
   }

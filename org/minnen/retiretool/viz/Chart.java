@@ -40,29 +40,30 @@ public class Chart
   public static void saveLineChart(File file, String title, int width, int height, boolean logarithmic,
       boolean monthly, Sequence... seqs) throws IOException
   {
-    saveHighChart(file, ChartConfig.Type.Line, title, null, null, width, height, Double.NaN, Double.NaN,
-        logarithmic ? 0.5 : Double.NaN, logarithmic, monthly, 0, seqs);
+    saveChart(file, ChartConfig.Type.Line, title, null, null, width, height, Double.NaN, Double.NaN, logarithmic ? 0.5
+        : Double.NaN, logarithmic, monthly, 0, seqs);
   }
 
   public static void saveLineChart(File file, String title, int width, int height, boolean logarithmic,
       boolean monthly, List<Sequence> seqs) throws IOException
   {
-    saveHighChart(file, ChartConfig.Type.Line, title, null, null, width, height, Double.NaN, Double.NaN,
-        logarithmic ? 0.5 : Double.NaN, logarithmic, monthly, 0, seqs.toArray(new Sequence[seqs.size()]));
+    saveChart(file, ChartConfig.Type.Line, title, null, null, width, height, Double.NaN, Double.NaN, logarithmic ? 0.5
+        : Double.NaN, logarithmic, monthly, 0, seqs.toArray(new Sequence[seqs.size()]));
   }
 
-  public static void saveHighChart(File file, ChartConfig.Type chartType, String title, String[] labels,
-      String[] colors, int width, int height, double ymin, double ymax, double minorTickIntervalY,
-      boolean logarthimicYAxis, boolean isMonthlyData, int dim, Sequence... seqs) throws IOException
+  public static void saveChart(File file, ChartConfig.Type chartType, String title, String[] labels, String[] colors,
+      int width, int height, double ymin, double ymax, double minorTickIntervalY, boolean logarthimicYAxis,
+      boolean isMonthlyData, int dim, Sequence... seqs) throws IOException
   {
     ChartConfig config = new ChartConfig(file).setType(chartType).setTitle(title).setLabels(labels).setColors(colors)
         .setSize(width, height).setMinMaxY(ymin, ymax).setMinorTickIntervalY(minorTickIntervalY)
-        .setLogarthimicYAxis(logarthimicYAxis).setIsMonthlyData(isMonthlyData).setIndexY(dim);
-    saveHighChart(config, seqs);
+        .setLogarthimicYAxis(logarthimicYAxis).setMonthlyData(isMonthlyData).setIndexY(dim).setData(seqs);
+    saveChart(config);
   }
 
-  public static void saveHighChart(ChartConfig config, Sequence... seqs) throws IOException
+  public static void saveChart(ChartConfig config) throws IOException
   {
+    Sequence[] seqs = config.data;
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(config.file))) {
       writer.write("<html><head>\n");
       writer.write("<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js\"></script>\n");
@@ -193,7 +194,7 @@ public class Chart
         writer.write("  { name: '" + seq.getName() + "',\n");
         writer.write("    data: [");
         for (int t = 0; t < seqs[i].length(); ++t) {
-          double x = seqs[i].get(t, config.yIndex);
+          double x = seqs[i].get(t, config.iDim);
           // x = FinLib.mul2ret(x); // TODO
           writer.write(String.format("%.6f%s", x, t == seqs[i].size() - 1 ? "" : ", "));
         }
@@ -213,7 +214,7 @@ public class Chart
     }
   }
 
-  public static void saveHighChartScatter(File file, String title, int width, int height, int dim, Sequence returns1,
+  public static void saveScatter(File file, String title, int width, int height, int dim, Sequence returns1,
       Sequence returns2) throws IOException
   {
     assert returns1.length() == returns2.length();

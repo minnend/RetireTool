@@ -52,7 +52,8 @@ public class ReturnStats implements Comparable<ReturnStats>
     while (index < r.length && r[index] < 1e-8) {
       ++index;
     }
-    assert index == r.length || (r[index] > 0.0 && (index == 0 || r[index - 1] <= 0.0));
+    assert index == r.length || (r[index] > 0.0 && (index == 0 || r[index - 1] <= 1e-8)) : String.format(
+        "index=%d, r.length=%d, r[index-1]=%f, r[index]=%f", index, r.length, index > 0 ? r[index - 1] : 0.0, r[index]);
     int nDown = index;
     int nUp = r.length - index;
     percentUp = 100.0 * nUp / r.length;

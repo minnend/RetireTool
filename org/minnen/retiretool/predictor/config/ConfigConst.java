@@ -39,4 +39,13 @@ public class ConfigConst extends PredictorConfig
   {
     return "Const=" + assetName;
   }
+
+  public static ConfigConst[] wrap(String... assetNames)
+  {
+    ConfigConst[] configs = new ConfigConst[assetNames.length];
+    for (int i = 0; i < assetNames.length; ++i) {
+      configs[i] = new ConfigConst(assetNames[i]);
+    }
+    return configs;
+  }
 }

@@ -2,6 +2,7 @@ package org.minnen.retiretool.data;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -699,16 +700,25 @@ public class Sequence implements Iterable<FeatureVec>
     }
   }
 
+  /** Add all data from the given list to the end of this sequence. */
+  public Sequence append(List<FeatureVec> a)
+  {
+    data.addAll(a);
+    return this;
+  }
+
   /** Add all data from the given sequence to the end of this sequence. */
-  public void append(Sequence seq)
+  public Sequence append(Sequence seq)
   {
     data.addAll(seq.data);
+    return this;
   }
 
   /** Add all data from the given sequence to the beginning of this sequence. */
-  public void prepend(Sequence seq)
+  public Sequence prepend(Sequence seq)
   {
     data.addAll(0, seq.data);
+    return this;
   }
 
   /**
@@ -1053,5 +1063,28 @@ public class Sequence implements Iterable<FeatureVec>
     }
     assert seq.matches(this);
     return seq;
+  }
+
+  public static Comparator<Sequence> getStartDateComparator()
+  {
+    return new Comparator<Sequence>()
+    {
+      @Override
+      public int compare(Sequence a, Sequence b)
+      {
+        if (a == b) return 0;
+        if (a == null) return -1;
+        if (b == null) return 1;
+        return Long.compare(a.getStartMS(), b.getStartMS());
+      }
+    };
+  }
+
+  public static int findByName(String name, List<Sequence> seqs)
+  {
+    for (int i = 0; i < seqs.size(); ++i) {
+      if (seqs.get(i).getName().equals(name)) return i;
+    }
+    return -1;
   }
 }

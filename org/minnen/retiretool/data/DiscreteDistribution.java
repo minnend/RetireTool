@@ -224,7 +224,7 @@ public class DiscreteDistribution
     return distribution;
   }
 
-  public static DiscreteDistribution uniform(String[] names)
+  public static DiscreteDistribution uniform(String... names)
   {
     DiscreteDistribution distribution = new DiscreteDistribution(names);
     double w = 1.0 / names.length;
@@ -274,6 +274,22 @@ public class DiscreteDistribution
     return sb.toString();
   }
 
+  public static DiscreteDistribution fromStringWithNames(String s)
+  {
+    s = s.trim();
+    if (!s.startsWith("[") || !s.endsWith("]")) return null;
+    s = s.substring(1, s.length() - 1);
+    String[] toks = s.split(",");
+    String[] names = new String[toks.length];
+    double[] weights = new double[toks.length];
+    for (int i = 0; i < toks.length; ++i) {
+      String[] kv = toks[i].split(":");
+      names[i] = kv[0].trim();
+      weights[i] = Double.parseDouble(kv[1].trim()) / 100.0;
+    }
+    return new DiscreteDistribution(names, weights);
+  }
+
   public String toString(String format)
   {
     StringBuilder sb = new StringBuilder(String.format("[" + format, weights[0] * 100));
@@ -288,5 +304,24 @@ public class DiscreteDistribution
   public String toString()
   {
     return toString("%4.1f");
+  }
+
+  /** @return a new distribution with zero-weight elements removed. */
+  public DiscreteDistribution removeZeroWeights(double eps)
+  {
+    int numNonZero = getNumNonZero();
+    if (numNonZero == size()) return this;
+
+    String[] nonZeroNames = new String[numNonZero];
+    double[] nonZeroWeights = new double[numNonZero];
+    int iNonZero = 0;
+    for (int i = 0; i < weights.length; ++i) {
+      if (weights[i] < eps) continue;
+      nonZeroNames[iNonZero] = names[i];
+      nonZeroWeights[iNonZero] = weights[i];
+      ++iNonZero;
+    }
+    assert iNonZero == numNonZero;
+    return new DiscreteDistribution(nonZeroNames, nonZeroWeights);
   }
 }

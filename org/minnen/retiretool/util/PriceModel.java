@@ -7,6 +7,7 @@ import org.minnen.retiretool.data.FeatureVec;
  */
 public class PriceModel
 {
+  /** Always returns the value at index zero. */
   public final static PriceModel zeroModel      = new PriceModel(Type.FixedIndex, false, 0, Double.NaN);
   public final static PriceModel closeModel     = new PriceModel(Type.Close, false);
   public final static PriceModel adjCloseModel  = new PriceModel(Type.AdjClose, false);
