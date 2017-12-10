@@ -99,9 +99,11 @@ public class SummaryTools
   {
     List<DiscreteDistribution> portfolios = new ArrayList<>();
     long a = TimeLib.getTime();
+    // TODO create config class for scanning.
     // scanDistributions(1, 10, 10, 100, 10, portfolios);
-    scanDistributions(1, 8, 10, 40, 10, portfolios);
-    // scanDistributions(6, 6, 10, 20, 10, portfolios);
+    // scanDistributions(1, 8, 10, 40, 10, portfolios);
+    scanDistributions(4, 6, 5, 30, 5, portfolios);
+    // scanDistributions(3, 3, 20, 40, 10, portfolios);
     long b = TimeLib.getTime();
     System.out.printf("Portofolios: %d  (%s)\n", portfolios.size(), TimeLib.formatDuration(b - a));
     List<FeatureVec> stats = new ArrayList<>();
@@ -160,6 +162,24 @@ public class SummaryTools
     return portfolioStats;
   }
 
+  public static List<DiscreteDistribution> loadPortfolios(File file) throws IOException
+  {
+    if (!file.canRead()) {
+      throw new IOException(String.format("Can't read portfolio file (%s)", file.getPath()));
+    }
+    System.out.printf("Loading portfolio data file: [%s]\n", file.getPath());
+    List<DiscreteDistribution> portfolios = new ArrayList<>();
+    BufferedReader in = new BufferedReader(new FileReader(file));
+    String line;
+    while ((line = in.readLine()) != null) {
+      line = line.trim();
+      if (line.isEmpty() || line.startsWith("#")) continue;
+      portfolios.add(DiscreteDistribution.fromStringWithNames(line));
+    }
+    in.close();
+    return portfolios;
+  }
+
   /** @return true if x dominates y */
   public static boolean dominates(FeatureVec x, FeatureVec y)
   {
@@ -216,7 +236,7 @@ public class SummaryTools
   {
     CumulativeStats cstats = CumulativeStats.calc(cumulativeReturnsMonthly);
     DurationalStats dstats = DurationalStats.calc(cumulativeReturnsMonthly, durStatsMonths);
-    return new FeatureVec(cumulativeReturnsMonthly.getName(), 5, cstats.cagr, cstats.drawdown, dstats.min,
+    return new FeatureVec(cumulativeReturnsMonthly.getName(), 5, cstats.cagr, -cstats.drawdown, dstats.min,
         dstats.percentile10, dstats.median);
   }
 }

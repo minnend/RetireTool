@@ -127,14 +127,14 @@ public class RetireToolMonthly
     store.addMisc(bondsAll, "Bonds-All");
 
     assert cpi.matches(stockAll);
-    for (int i = 0; i < cpi.length(); ++i) {
-      System.out.printf("%s,%.4f,%.4f,%.4f,%.4f\n", TimeLib.formatYM(cpi.getTimeMS(i)), stockAll.get(i, 0),
-          stockNoDiv.get(i, 0), bondsAll.get(i, 0), cpi.get(i, 0));
-    }
+    // for (int i = 0; i < cpi.length(); ++i) {
+    // System.out.printf("%s,%.4f,%.4f,%.4f,%.4f\n", TimeLib.formatYM(cpi.getTimeMS(i)), stockAll.get(i, 0),
+    // stockNoDiv.get(i, 0), bondsAll.get(i, 0), cpi.get(i, 0));
+    // }
     double nMonths = TimeLib.monthsBetween(stockAll.getStartMS(), stockAll.getEndMS());
     System.out.printf("%.3f, %.3f, %.3f\n", FinLib.getAnnualReturn(stockAll.getLast(0), nMonths),
         FinLib.getAnnualReturn(stockNoDiv.getLast(0), nMonths), FinLib.getAnnualReturn(bondsAll.getLast(0), nMonths));
-    System.exit(0);
+    // System.exit(0);
 
     Sequence tbillsAll = null;
     if (tbillData != null) {
@@ -901,8 +901,8 @@ public class RetireToolMonthly
 
     String title = "Histogram of Returns - " + TimeLib.formatDurationMonths(nMonths);
     String[] labels = Histogram.getLabelsFromHistogram(histograms[0]);
-    Chart.saveChart(new File(dir, "histogram-returns.html"), ChartConfig.Type.Bar, title, labels, null,
-        GRAPH_WIDTH, GRAPH_HEIGHT, Double.NaN, Double.NaN, Double.NaN, false, true, 1, histograms);
+    Chart.saveChart(new File(dir, "histogram-returns.html"), ChartConfig.Type.Bar, title, labels, null, GRAPH_WIDTH,
+        GRAPH_HEIGHT, Double.NaN, Double.NaN, Double.NaN, false, true, 1, histograms);
 
     // Generate histogram showing future returns.
     title = String.format("Future CAGR: %s (%s)", returns[0].getName(), TimeLib.formatDurationMonths(nMonths));
@@ -930,8 +930,8 @@ public class RetireToolMonthly
     Chart.saveComparisonTable(new File(dir, "duel-comparison.html"), GRAPH_WIDTH, comparison);
     Chart.saveStatsTable(new File(dir, "duel-chart.html"), GRAPH_WIDTH, false, store.getCumulativeStats(name1, name2));
 
-    Chart.saveChart(new File(dir, "duel-cumulative.html"), ChartConfig.Type.Line, "Cumulative Market Returns",
-        null, null, GRAPH_WIDTH, GRAPH_HEIGHT, 1, Double.NaN, 1.0, true, true, 0, player2, player1);
+    Chart.saveChart(new File(dir, "duel-cumulative.html"), ChartConfig.Type.Line, "Cumulative Market Returns", null,
+        null, GRAPH_WIDTH, GRAPH_HEIGHT, 1, Double.NaN, 1.0, true, true, 0, player2, player1);
 
     DurationalStats dstatsA = store.getDurationalStats(name1);
     DurationalStats dstatsB = store.getDurationalStats(name2);
@@ -941,8 +941,8 @@ public class RetireToolMonthly
 
     // Generate scatter plot comparing results.
     String title = String.format("%s vs. %s (%s)", name1, name2, TimeLib.formatDurationMonths(duration));
-    Chart.saveScatter(new File(dir, "duel-scatter.html"), title, 730, GRAPH_HEIGHT, 0,
-        dstatsB.durationReturns, dstatsA.durationReturns);
+    Chart.saveScatter(new File(dir, "duel-scatter.html"), title, 730, GRAPH_HEIGHT, 0, dstatsB.durationReturns,
+        dstatsA.durationReturns);
 
     // Generate histogram summarizing excess returns of B over A.
     title = String.format("Excess Returns: %s vs. %s (%s)", name1, name2, TimeLib.formatDurationMonths(duration));
@@ -1217,8 +1217,8 @@ public class RetireToolMonthly
   public static void genInterestRateGraph(Sequence shiller, Sequence tbills, File file) throws IOException
   {
     Sequence bonds = Shiller.getData(Shiller.GS10, "Bonds", shiller);
-    Chart.saveChart(file, ChartConfig.Type.Line, "Interest Rates", null, null, GRAPH_WIDTH, GRAPH_HEIGHT, 0.0,
-        16.0, 1.0, false, true, 0, bonds, tbills);
+    Chart.saveChart(file, ChartConfig.Type.Line, "Interest Rates", null, null, GRAPH_WIDTH, GRAPH_HEIGHT, 0.0, 16.0,
+        1.0, false, true, 0, bonds, tbills);
   }
 
   public static void genCorrelationGraph(Sequence shiller, File dir) throws IOException
@@ -1235,8 +1235,8 @@ public class RetireToolMonthly
     stock.setName("Stock");
 
     Sequence corr = FinLib.calcCorrelation(stock, bonds, 3 * 12);
-    Chart.saveChart(new File(dir, "stock-bond-correlation.html"), ChartConfig.Type.Area, corr.getName(), null,
-        null, GRAPH_WIDTH, GRAPH_HEIGHT, -1.0, 1.0, 0.25, false, true, 0, corr);
+    Chart.saveChart(new File(dir, "stock-bond-correlation.html"), ChartConfig.Type.Area, corr.getName(), null, null,
+        GRAPH_WIDTH, GRAPH_HEIGHT, -1.0, 1.0, 0.25, false, true, 0, corr);
   }
 
   public static void genSavingsTargetChart(File dir) throws IOException
@@ -1355,9 +1355,8 @@ public class RetireToolMonthly
       }
       String title = String.format("[%s] - [%s]", TimeLib.formatMonth(timePeriod[0]),
           TimeLib.formatMonth(timePeriod[1]));
-      Chart.saveChart(new File(dir, String.format("time-period-%02d.html", iTimePeriod + 1)),
-          ChartConfig.Type.Line, title, null, null, GRAPH_WIDTH, GRAPH_HEIGHT, Double.NaN, Double.NaN, 1.0, true, true,
-          0, returns);
+      Chart.saveChart(new File(dir, String.format("time-period-%02d.html", iTimePeriod + 1)), ChartConfig.Type.Line,
+          title, null, null, GRAPH_WIDTH, GRAPH_HEIGHT, Double.NaN, Double.NaN, 1.0, true, true, 0, returns);
     }
   }
 

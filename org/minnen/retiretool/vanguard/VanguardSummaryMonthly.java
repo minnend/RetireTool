@@ -34,11 +34,68 @@ public class VanguardSummaryMonthly
   public static final int                       durStatsYears  = 5;
   public static final int                       momentumMonths = 6;
 
+  public static MonthlyRunner                   runner;
+
   static {
     // Add "cash" as the last asset since it's not a fund in fundSymbols.
     System.arraycopy(fundSymbols, 0, assetSymbols, 0, fundSymbols.length);
     assetSymbols[assetSymbols.length - 1] = "cash";
     SummaryTools.fundSymbols = fundSymbols;
+  }
+
+  public static List<FeatureVec> genPortfolios(List<Sequence> seqs, File outputDir) throws IOException
+  {
+    // Search over all portfolios.
+    File file = new File(outputDir, "vanguard-portfolios-monthly.txt");
+    List<FeatureVec> stats = SummaryTools.savePortfolioStats(runner, file);
+
+    // Save pruned stats.
+    SummaryTools.prunePortfolios(stats);
+    System.out.printf("Pruned Portfolios: %d\n", stats.size());
+    file = new File(outputDir, "vanguard-portfolios-monthly-pruned.txt");
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+      for (FeatureVec v : stats) {
+        writer.write(String.format("%-80s %s\n", v.getName(), v));
+      }
+    }
+    return stats;
+  }
+
+  public static void genScatterPlots(List<FeatureVec> stats, File outputDir) throws IOException
+  {
+    Sequence scatter = new Sequence().append(stats);
+    int nStats = stats.get(0).getNumDims();
+    for (int i = 0; i < nStats; ++i) {
+      for (int j = i + 1; j < nStats; ++j) {
+        String filename = String.format("vanguard-monthly-scatter-%d%d.html", i + 1, j + 1);
+        ChartConfig chartConfig = new ChartConfig(new File(outputDir, filename)).setType(ChartConfig.Type.Scatter)
+            .setSize(800, 600).setRadius(2).setData(scatter).showToolTips(true).setDimNames(statNames)
+            .setAxisTitles(statNames[i], statNames[j]).setIndexXY(i, j);
+        Chart.saveScatterPlot(chartConfig);
+      }
+    }
+  }
+
+  public static Sequence applyMomentumFilter(Sequence seq, int momentumMonths)
+  {
+    if (momentumMonths < 1) return seq;
+
+    double[] baseReturns = seq.extractDim(0);
+    for (int t = momentumMonths; t < seq.length(); ++t) {
+      // Calculate N month momentum.
+      double r = 1.0;
+      for (int i = t - momentumMonths; i < t; ++i) {
+        r *= baseReturns[i];
+      }
+
+      // Only allowed to hold assets that have positive momentum.
+      // TODO could compare against cash or short-term treasuries.
+      if (r <= 1.0) {
+        // Setting return to 1.0 is equivalent to holding cash (with no interest).
+        seq.get(t).set(0, 1.0);
+      }
+    }
+    return seq;
   }
 
   public static void main(String[] args) throws IOException
@@ -66,75 +123,39 @@ public class VanguardSummaryMonthly
         double r = v.get(0);
         v.set(0, FinLib.ret2mul(r));
       }
+      applyMomentumFilter(seq, momentumMonths);
     }
-
-    // TODO adjust monthly returns for momentum filter before searching.
+    runner = new MonthlyRunner(seqs, durStatsYears * 12);
 
     // Load portfolios from disk.
-    file = new File(outputDir, "vanguard-portfolios-monthly-8x10x40-mom6-pruned.txt");
-    List<FeatureVec> stats = SummaryTools.loadPortfolioStats(file, false);
-    System.out.printf("Portfolios: %d\n", stats.size());
+    // file = new File(outputDir, "vanguard-portfolios-monthly-8x10x40-mom6-pruned.txt");
+    // List<FeatureVec> stats = SummaryTools.loadPortfolioStats(file, false);
+    // System.out.printf("Portfolios: %d\n", stats.size());
 
     // Select a random subset of portfolios for visualization.
     // Collections.shuffle(stats);
     // stats = stats.subList(0, 250000);
 
     // Remove portfolios that don't meet minimum requirements.
-    for (int i = 0; i < stats.size(); ++i) {
-      FeatureVec v = stats.get(i);
-      if (v.get(SummaryTools.PERCENTILE10) > 1.0 && v.get(SummaryTools.MEDIAN) > 8.0) continue;
-      stats.set(i, null);
-    }
-    SummaryTools.removeNulls(stats);
-    System.out.printf("Pruned: %d\n", stats.size());
-
-    // Run portfolios and save stats.
-    MonthlyRunner runner = new MonthlyRunner(seqs, durStatsYears * 12, momentumMonths);
-
-    // for (FeatureVec x : stats) {
-    // DiscreteDistribution portfolio = DiscreteDistribution.fromStringWithNames(x.getName());
-    // FeatureVec y = runner.run(portfolio);
-    // y.set(SummaryTools.DRAWDOWN, -y.get(SummaryTools.DRAWDOWN));
-    // System.out.printf("%s\n%s\n%s\n\n", portfolio.toStringWithNames(0), x, y);
+    // for (int i = 0; i < stats.size(); ++i) {
+    // FeatureVec v = stats.get(i);
+    // if (v.get(SummaryTools.WORST) > 2.0 && v.get(SummaryTools.PERCENTILE10) > 4.0 && v.get(SummaryTools.MEDIAN) >
+    // 9.0) continue;
+    // stats.set(i, null);
     // }
+    // SummaryTools.removeNulls(stats);
+    // System.out.printf("Pruned: %d\n", stats.size());
 
-    // DiscreteDistribution portfolio = new DiscreteDistribution(
-    // new String[] { "VBIIX", "VGSIX", "VISVX", "VISGX", "VGHCX", "VGPMX", "VGENX" },
-    // new double[] { 10, 20, 10, 10, 20, 10, 20 });
-    // portfolio.normalize();
+    // Load saved distributions.
+    // file = new File(outputDir, "vanguard-favs.txt");
+    // List<DiscreteDistribution> portfolios = SummaryTools.loadPortfolios(file);
+    // for (DiscreteDistribution portfolio : portfolios) {
+    // assert portfolio.isNormalized();
     // FeatureVec stats = runner.run(portfolio);
-    // System.out.printf("%s  %s\n", stats.getName(), stats);
-    // System.exit(1);
-
-    // Search over all portfolios.
-    // file = new File(outputDir, "vanguard-portfolios-monthly.txt");
-    // List<FeatureVec> stats = SummaryTools.savePortfolioStats(runner, file);
-
-    // Invert drawdown so that bigger always means better.
-    // for (FeatureVec v : stats) {
-    // v.set(SummaryTools.DRAWDOWN, -v.get(SummaryTools.DRAWDOWN));
+    // System.out.printf("%-80s  %s\n", portfolio.toStringWithNames(0), stats);
     // }
 
-    // Save pruned stats.
-    // SummaryTools.prunePortfolios(stats);
-    // System.out.printf("Pruned Portfolios: %d\n", stats.size());
-    // file = new File(outputDir, "vanguard-portfolios-monthly-pruned.txt");
-    // try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
-    // for (FeatureVec v : stats) {
-    // writer.write(String.format("%-80s %s\n", v.getName(), v));
-    // }
-    // }
-
-    Sequence scatter = new Sequence().append(stats);
-    int nStats = stats.get(0).getNumDims();
-    for (int i = 0; i < nStats; ++i) {
-      for (int j = i + 1; j < nStats; ++j) {
-        String filename = String.format("vanguard-monthly-scatter-%d%d.html", i + 1, j + 1);
-        ChartConfig chartConfig = new ChartConfig(new File(outputDir, filename)).setType(ChartConfig.Type.Scatter)
-            .setSize(800, 600).setRadius(2).setData(scatter).showToolTips(true).setDimNames(statNames)
-            .setAxisTitles(statNames[i], statNames[j]).setIndexXY(i, j);
-        Chart.saveScatterPlot(chartConfig);
-      }
-    }
+    List<FeatureVec> stats = genPortfolios(seqs, outputDir);
+    genScatterPlots(stats, outputDir);
   }
 }

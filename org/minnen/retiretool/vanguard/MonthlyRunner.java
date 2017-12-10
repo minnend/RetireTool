@@ -5,16 +5,12 @@ import java.util.List;
 import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
-import org.minnen.retiretool.stats.CumulativeStats;
-import org.minnen.retiretool.stats.DurationalStats;
-import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
 
 public class MonthlyRunner implements PortfolioRunner
 {
   private List<Sequence> seqs;
   private int            durStatsMonths;
-  private int            momentumMonths;
 
   private class Position
   {
@@ -22,7 +18,6 @@ public class MonthlyRunner implements PortfolioRunner
     public double   value;
     public double   targetAllocation;
     public Sequence seq;
-    public boolean  bCanHold;
 
     public Position(String symbol, double value, double targetAllocation, Sequence seq)
     {
@@ -30,15 +25,13 @@ public class MonthlyRunner implements PortfolioRunner
       this.value = value;
       this.targetAllocation = targetAllocation;
       this.seq = seq;
-      this.bCanHold = true;
     }
   }
 
-  public MonthlyRunner(List<Sequence> seqs, int durStatsMonths, int momentumMonths)
+  public MonthlyRunner(List<Sequence> seqs, int durStatsMonths)
   {
     this.seqs = seqs;
     this.durStatsMonths = durStatsMonths;
-    this.momentumMonths = momentumMonths;
   }
 
   @Override
@@ -62,16 +55,9 @@ public class MonthlyRunner implements PortfolioRunner
     int monthsSinceRebalance = 0;
 
     for (int t = 0; t < nMonths; ++t) {
-      // Determine if each position is allowed to be held in the current month.
-      for (Position pos : positions) {
-        pos.bCanHold = canHold(pos.seq, t);
-      }
-
       // Update each position with the next month's returns.
       for (Position pos : positions) {
-        if (pos.bCanHold) {
-          pos.value *= pos.seq.get(t, 0);
-        }
+        pos.value *= pos.seq.get(t, 0);
       }
       ++monthsSinceRebalance;
 
@@ -91,22 +77,6 @@ public class MonthlyRunner implements PortfolioRunner
     }
 
     return SummaryTools.calcStats(returnsMonthly, durStatsMonths);
-  }
-
-  private boolean canHold(Sequence seq, int t)
-  {
-    if (momentumMonths < 1) return true;
-    int iStart = t - momentumMonths;
-    if (iStart < 0) return true;
-
-    // Calculate N month momentum.
-    double r = 1.0;
-    for (int i = iStart; i < t; ++i) {
-      r *= seq.get(i, 0);
-    }
-
-    // Only allowed to hold assets that have positive momentum.
-    return r > 1.0;
   }
 
   private static double getBalance(Position[] positions)

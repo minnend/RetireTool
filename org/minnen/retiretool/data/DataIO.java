@@ -3,12 +3,16 @@ package org.minnen.retiretool.data;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
@@ -370,7 +374,7 @@ public class DataIO
       // http://stackoverflow.com/questions/754593/source-of-historical-stock-data
       // http://web.archive.org/web/20140325063520/http://www.gummy-stuff.org/Yahoo-data.htm
       String address = String.format(
-          "http://ichart.yahoo.com/table.csv?s=%s&a=%d&b=%d&c=%d&d=11&e=31&f=2050&g=d&ignore=.csv", symbol,
+          "https://ichart.yahoo.com/table.csv?s=%s&a=%d&b=%d&c=%d&d=11&e=31&f=2050&g=d&ignore=.csv", symbol,
           startDate.getMonthValue() - 1, startDate.getDayOfMonth(), startDate.getYear());
       return new URL(address);
     } catch (MalformedURLException e) {
@@ -388,6 +392,40 @@ public class DataIO
     } catch (IOException e) {
       e.printStackTrace();
       return null;
+    }
+  }
+
+  private static void printUrlInfo(URL url)
+  {
+    try {
+      System.out.printf("URL: %s\n", url);
+      HttpURLConnection con = (HttpURLConnection) url.openConnection();
+      System.out.printf("Connect Timeout: %d\n", con.getConnectTimeout());
+      System.out.printf("Read Timeout: %d\n", con.getReadTimeout());
+      // con.setConnectTimeout(1000);
+      // con.setReadTimeout(1000);
+      System.out.printf("Request Method: %s\n", con.getRequestMethod());
+      System.out.printf("Response Message: %s\n", con.getResponseMessage());
+      System.out.printf("Response Code: %d\n", con.getResponseCode());
+
+      for (int i = 0;; ++i) {
+        String s = con.getHeaderField(i);
+        if (s == null) break;
+        System.out.printf("Header %d: %s\n", i, s);
+      }
+    } catch (IOException e) {
+      System.err.println(e.getMessage());
+    }
+  }
+
+  private static boolean copyUrlToFile(URL url, File file)
+  {
+    try (InputStream input = url.openStream()) {
+      Files.copy(input, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+      return true;
+    } catch (IOException e) {
+      printUrlInfo(url);
+      return false;
     }
   }
 
@@ -420,9 +458,7 @@ public class DataIO
     try {
       URL url = buildYahooURL(symbol, startDate);
       File tmpFile = File.createTempFile(String.format("yahoo-%s-", symbol), null);
-      try (InputStream input = url.openStream()) {
-        Files.copy(input, tmpFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-      }
+      if (!copyUrlToFile(url, tmpFile)) return false;
       Sequence seqNew = loadYahooData(tmpFile);
       assert seqNew.getStartMS() == seqOld.getEndMS();
 
@@ -453,6 +489,9 @@ public class DataIO
 
     return true;
   }
+
+  // TODO: download FRED data
+  // Example Link: https://fred.stlouisfed.org/graph/fredgraph.csv?id=TB3MS
 
   /**
    * Download Yahoo financial data into the given file, or create a file if the path is a directory.

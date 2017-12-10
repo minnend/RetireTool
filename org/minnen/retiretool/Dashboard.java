@@ -70,7 +70,9 @@ public class Dashboard
 
     String symbol = "^GSPC";
     File file = DataIO.getYahooFile(yahooDir, symbol);
-    DataIO.updateDailyDataFromYahoo(file, symbol, 8 * TimeLib.MS_IN_HOUR);
+    if (!DataIO.updateDailyDataFromYahoo(file, symbol, 8 * TimeLib.MS_IN_HOUR)) {
+      throw new IOException("Failed to update data.");
+    }
 
     Sequence stock = DataIO.loadYahooData(file);
     System.out.printf("S&P (Daily): [%s] -> [%s]\n", TimeLib.formatDate(stock.getStartMS()),

@@ -82,12 +82,12 @@ public class AdaptiveAlloc
   public static final boolean       GENERATE_PAIRWISE_DATA   = false;
 
   // These symbols go back to 13 May 1996.
-  // public static final String[] fundSymbols = new String[] { "SPY", "VTSMX", "VBMFX", "VGSIX",
-  // "VGTSX", "VFISX", "VFSTX", "VBISX", "EWU", "EWG", "EWJ", "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX",
-  // "DFGBX", "SGGDX", "VGPMX", "USAGX", "FSPCX", "FSRBX", "FPBFX", "ETGIX", "VDIGX", "MDY", "VBINX", "VWINX", "MCA",
-  // "^IXIC" };
+  public static final String[]      fundSymbols              = new String[] { "SPY", "VTSMX", "VBMFX", "VGSIX",
+      "VGTSX", "VFISX", "VFSTX", "VBISX", "EWU", "EWG", "EWJ", "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX",
+      "DFGBX", "SGGDX", "VGPMX", "USAGX", "FSPCX", "FSRBX", "FPBFX", "ETGIX", "VDIGX", "MDY", "VBINX", "VWINX", "MCA",
+      "^IXIC"                                               };
 
-  public static final String[] fundSymbols = FinLib.VANGUARD_INVESTOR_FUNDS;
+  //public static final String[] fundSymbols = FinLib.VANGUARD_INVESTOR_FUNDS;
 
   // public static final String[] fundSymbols = new String[] { "VTSMX", "VBMFX", "VGTSX", "VWINX",
   // "FPBFX", "USAGX" };
