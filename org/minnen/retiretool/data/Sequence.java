@@ -196,9 +196,9 @@ public class Sequence implements Iterable<FeatureVec>
   /**
    * Lock this sequence so that only elements in [iStart, iEnd] can be access.
    * 
-   * The typical motivation for locking a sequence is ensuring against bugs that allow a strategy to
-   * "look in to the future". When simulating a particular point in time, you can lock the sequence to points in the
-   * past [0, t-1] and protect against accidental cheating.
+   * The typical motivation for locking a sequence is ensuring against bugs that allow a strategy to "look in to the
+   * future". When simulating a particular point in time, you can lock the sequence to points in the past [0, t-1] and
+   * protect against accidental cheating.
    * 
    * @param iStart first index that can be accessed (inclusive)
    * @param iEnd last index that can be accessed (inclusive)
@@ -1012,7 +1012,8 @@ public class Sequence implements Iterable<FeatureVec>
    */
   public boolean matches(Sequence other)
   {
-    return (other != null && other.length() == length() && other.getStartMS() == getStartMS() && other.getEndMS() == getEndMS());
+    return (other != null && other.length() == length() && other.getStartMS() == getStartMS()
+        && other.getEndMS() == getEndMS());
   }
 
   public Sequence derivative()
@@ -1075,7 +1076,9 @@ public class Sequence implements Iterable<FeatureVec>
         if (a == b) return 0;
         if (a == null) return -1;
         if (b == null) return 1;
-        return Long.compare(a.getStartMS(), b.getStartMS());
+        if (a.getStartMS() < b.getStartMS()) return -1;
+        if (a.getStartMS() > b.getStartMS()) return 1;
+        return a.getName().compareTo(b.getName());
       }
     };
   }

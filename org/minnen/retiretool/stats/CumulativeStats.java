@@ -9,7 +9,6 @@ import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.WeightedValue;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
 import org.minnen.retiretool.util.FinLib;
-import org.minnen.retiretool.util.TimeLib;
 
 /**
  * Holds statistics that characterize the results of an investment strategy over the full investment duration.
@@ -145,11 +144,11 @@ public class CumulativeStats implements Comparable<CumulativeStats>
   @Override
   public String toString()
   {
-    // return String.format("[%s: CAGR=%.2f  DD=%.1f  DEV=%.2f  %%[%.1f|%.1f|%.1f|%.1f|%.1f]  Down10=%.1f]",
+    // return String.format("[%s: CAGR=%.2f DD=%.1f DEV=%.2f %%[%.1f|%.1f|%.1f|%.1f|%.1f] Down10=%.1f]",
     // FinLib.getBaseName(name()), cagr, drawdown, devAnnualReturn, annualPercentiles[0], annualPercentiles[1],
     // annualPercentiles[2], annualPercentiles[3], annualPercentiles[4], percentDown10);
 
-    // return String.format("[%s: CAGR=%.2f  DD=%.1f  Down10=%.1f]", FinLib.getBaseName(name()), cagr, drawdown,
+    // return String.format("[%s: CAGR=%.2f DD=%.1f Down10=%.1f]", FinLib.getBaseName(name()), cagr, drawdown,
     // percentDown10);
 
     // return String.format("[%s: %5.2f, %4.1f |%.2f]", FinLib.getBaseName(name()), cagr, drawdown, scoreSimple());
@@ -159,7 +158,7 @@ public class CumulativeStats implements Comparable<CumulativeStats>
 
   public String toRowString()
   {
-    // return String.format("%50s: %.2f \tDD=%.1f  \t[%.1f|%.1f|%.1f|%.1f|%.1f] \tDown10=%.1f",
+    // return String.format("%50s: %.2f \tDD=%.1f \t[%.1f|%.1f|%.1f|%.1f|%.1f] \tDown10=%.1f",
     // FinLib.getBaseName(name()), cagr, drawdown, annualPercentiles[0], annualPercentiles[1], annualPercentiles[2],
     // annualPercentiles[3], annualPercentiles[4], percentDown10);
 

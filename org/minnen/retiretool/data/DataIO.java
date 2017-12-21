@@ -140,7 +140,7 @@ public class DataIO
           long timeMS = TimeLib.toMs(year, month, 1);
           seq.addData(new FeatureVec(5, price, div, cpi, gs10, cape), timeMS);
 
-          // System.out.printf("%d/%d:  $%.2f  $%.2f  $%.2f\n", year,
+          // System.out.printf("%d/%d: $%.2f $%.2f $%.2f\n", year,
           // month, price, div, cpi);
 
         } catch (NumberFormatException nfe) {
@@ -418,7 +418,7 @@ public class DataIO
     }
   }
 
-  private static boolean copyUrlToFile(URL url, File file)
+  public static boolean copyUrlToFile(URL url, File file)
   {
     try (InputStream input = url.openStream()) {
       Files.copy(input, file.toPath(), StandardCopyOption.REPLACE_EXISTING);

@@ -52,6 +52,12 @@ public final class FinLib
   public static final int      High                    = 3;
   public static final int      Volume                  = 4;
   public static final int      AdjClose                = 5;
+  public static final int      AdjHigh                 = 6;
+  public static final int      AdjLow                  = 7;
+  public static final int      AdjOpen                 = 8;
+  public static final int      AdjVolume               = 9;
+  public static final int      DivCash                 = 10;
+  public static final int      SplitFactor             = 11;
 
   public static DecimalFormat  currencyFormatter       = new DecimalFormat("#,##0.00");
   public static DecimalFormat  dollarFormatter         = new DecimalFormat("#,##0");
@@ -64,7 +70,7 @@ public final class FinLib
   // VTIAX = International Stock
   // VWIAX = Wellesley Income
   public static final String[] VANGUARD_ADMIRAL_FUNDS  = new String[] { "VFIAX", "VEXAX", "VTSAX", "VBTLX", "VGSLX",
-      "VTIAX", "VWIAX"                                };
+      "VTIAX", "VWIAX" };
 
   // VTSMX = Total Stock Market (~3800 stocks)
   // VBMFX = Total Bond Market (~7650 bonds)
@@ -257,7 +263,7 @@ public final class FinLib
     int n = (int) Math.round((end - start) / gap) + 1;
     // System.out.printf("Merge: (%.2f -> %.2f) + (%.2f -> %.2f) = (%.2f -> %.2f) %d\n", startA, endA, startB, endB,
     // start, end, n);
-    // System.out.printf(" A: [%.3f -> %.3f]  B: [%.3f -> %.3f]\n", firstValueA, lastValueA, firstValueB, lastValueB);
+    // System.out.printf(" A: [%.3f -> %.3f] B: [%.3f -> %.3f]\n", firstValueA, lastValueA, firstValueB, lastValueB);
 
     double eps = 1e-5;
     int nd = a.getNumDims(); // one for roi, rest is real data
@@ -549,7 +555,8 @@ public final class FinLib
     return balance;
   }
 
-  public static void calcSavings(double principal, double depStartOfYear, double depStartOfMonth, double cagr, int years)
+  public static void calcSavings(double principal, double depStartOfYear, double depStartOfMonth, double cagr,
+      int years)
   {
     double annualReturn = ret2mul(cagr);
     double monthlyReturn = Math.pow(annualReturn, Library.ONE_TWELFTH);
@@ -623,7 +630,7 @@ public final class FinLib
           // Save end balance after adjusting back to today's dollars.
           if (done) {
             endBalances[i] = adjustForInflation(cpi, endBalance, i + nMonths, nData - 1);
-            // System.out.printf("[%s] -> [%s]: %.0f -> %.0f  (%.0f, %.3f)  %s\n",
+            // System.out.printf("[%s] -> [%s]: %.0f -> %.0f (%.0f, %.3f) %s\n",
             // Library.formatMonth(cpi.getTimeMS(i)),
             // Library.formatMonth(cpi.getTimeMS(i + nMonths)), endBalance, endBalances[i], finalSalary, endBalance
             // / finalSalary, endBalance / finalSalary < 23.0 ? "************************" : "");
@@ -637,7 +644,7 @@ public final class FinLib
         }
       }
       double successRate = (double) nOK / endBalances.length;
-      // System.out.printf("$%s  %d/%d = %.2f%%\n", currencyFormatter.format(principal), nOK, n, 100.0 * successRate);
+      // System.out.printf("$%s %d/%d = %.2f%%\n", currencyFormatter.format(principal), nOK, n, 100.0 * successRate);
       if (successRate >= minLikelihood) {
         maxSavings = principal;
       } else {
@@ -742,8 +749,8 @@ public final class FinLib
       long timeMS = snp.getTimeMS(i);
       double divReinvest = 0.0;
       if (divMethod == DividendMethod.NO_REINVEST_MONTHLY)
-      // No dividend reinvestment so all dividends go to cash.
-      divCash += shares * snp.get(i, Shiller.DIV);
+        // No dividend reinvestment so all dividends go to cash.
+        divCash += shares * snp.get(i, Shiller.DIV);
       else if (divMethod == DividendMethod.MONTHLY) {
         // Dividends at the end of every month.
         divReinvest = shares * snp.get(i, Shiller.DIV);
@@ -886,13 +893,16 @@ public final class FinLib
   }
 
   /**
-   * Returns the same name with a {@literal <br/>} inserted before the last open paren.
+   * Returns the same name with a {@literal <br/>
+   * } inserted before the last open paren.
    * 
    * Examples:
    * <ul>
    * <li>"foo" -> "foo"
-   * <li>"foo (bar)" -> "foo{@literal <br/>} (bar)"
-   * <li>"foo (bar) (buzz)" -> "foo (bar){@literal <br/>}(buzz)"
+   * <li>"foo (bar)" -> "foo{@literal <br/>
+   * } (bar)"
+   * <li>"foo (bar) (buzz)" -> "foo (bar){@literal <br/>
+   * }(buzz)"
    * </ul>
    * 
    * @param name the name to modify

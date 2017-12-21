@@ -82,12 +82,11 @@ public class AdaptiveAlloc
   public static final boolean       GENERATE_PAIRWISE_DATA   = false;
 
   // These symbols go back to 13 May 1996.
-  public static final String[]      fundSymbols              = new String[] { "SPY", "VTSMX", "VBMFX", "VGSIX",
-      "VGTSX", "VFISX", "VFSTX", "VBISX", "EWU", "EWG", "EWJ", "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX",
-      "DFGBX", "SGGDX", "VGPMX", "USAGX", "FSPCX", "FSRBX", "FPBFX", "ETGIX", "VDIGX", "MDY", "VBINX", "VWINX", "MCA",
-      "^IXIC"                                               };
+  public static final String[]      fundSymbols              = new String[] { "SPY", "VTSMX", "VBMFX", "VGSIX", "VGTSX",
+      "VFISX", "VFSTX", "VBISX", "EWU", "EWG", "EWJ", "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX",
+      "SGGDX", "VGPMX", "USAGX", "FSPCX", "FSRBX", "FPBFX", "ETGIX", "VDIGX", "MDY", "VBINX", "VWINX", "MCA", "^IXIC" };
 
-  //public static final String[] fundSymbols = FinLib.VANGUARD_INVESTOR_FUNDS;
+  // public static final String[] fundSymbols = FinLib.VANGUARD_INVESTOR_FUNDS;
 
   // public static final String[] fundSymbols = new String[] { "VTSMX", "VBMFX", "VGTSX", "VWINX",
   // "FPBFX", "USAGX" };
@@ -143,8 +142,11 @@ public class AdaptiveAlloc
 
     long testStart = timeSimStart;
     assert testStart >= wfSim.getStartMS();
-    final long timeFirstAbleToPredict = TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(
-        store.getCommonStartTime()).plusMonths(6))); // TODO pull requirements from config/predictor
+    final long timeFirstAbleToPredict = TimeLib
+        .toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(store.getCommonStartTime()).plusMonths(6))); // TODO pull
+                                                                                                     // requirements
+                                                                                                     // from
+                                                                                                     // config/predictor
     System.out.printf("First Able to Predict: [%s]\n", TimeLib.formatDate(timeFirstAbleToPredict));
 
     while (testStart < wfSim.getEndMS()) {
@@ -177,8 +179,8 @@ public class AdaptiveAlloc
           TimeLib.formatDate(testEnd), stats.cagr, stats.drawdown, config);
 
       // Advance test start time by N months.
-      testStart = TimeLib.toMs(TimeLib.ms2date(testStart).plusMonths(stepMonths)
-          .with(TemporalAdjusters.firstDayOfMonth()));
+      testStart = TimeLib
+          .toMs(TimeLib.ms2date(testStart).plusMonths(stepMonths).with(TemporalAdjusters.firstDayOfMonth()));
     }
     wfSim.finishRun();
     return wfSim;
@@ -208,8 +210,8 @@ public class AdaptiveAlloc
     Broker broker = new Broker(store, Slippage.None, today);
     while (true) {
       final long timePredictStart = TimeLib.toNextBusinessDay(today);
-      final long timePredictEnd = TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.toLastBusinessDayOfWeek(TimeLib
-          .ms2date(today).plusWeeks(1))));
+      final long timePredictEnd = TimeLib
+          .toMs(TimeLib.toNextBusinessDay(TimeLib.toLastBusinessDayOfWeek(TimeLib.ms2date(today).plusWeeks(1))));
       if (timePredictEnd > timeEnd) break;
 
       // System.out.printf("GenPredData: [%s] -> [%s]\n", TimeLib.formatDate(timePredictStart),
@@ -223,7 +225,7 @@ public class AdaptiveAlloc
         int index1 = seq.getIndexAt(timePredictStart);
         int index2 = seq.getIndexAt(timePredictEnd);
         if (index1 < 0 || index2 < 0) {
-          // System.out.printf("[%s]=%d  [%s]=%d\n", TimeLib.formatDate(timePredictStart), index1,
+          // System.out.printf("[%s]=%d [%s]=%d\n", TimeLib.formatDate(timePredictStart), index1,
           // TimeLib.formatDate(timePredictEnd), index2);
           break;
         }
@@ -287,8 +289,12 @@ public class AdaptiveAlloc
 
     long testStart = timeSimStart;
     assert testStart >= sim.getStartMS();
-    final long timeFirstAbleToPredict = TimeLib.toMs(TimeLib.toFirstBusinessDayOfMonth(TimeLib.ms2date(
-        store.getCommonStartTime()).plusWeeks(53))); // TODO pull requirements from config/predictor
+    final long timeFirstAbleToPredict = TimeLib
+        .toMs(TimeLib.toFirstBusinessDayOfMonth(TimeLib.ms2date(store.getCommonStartTime()).plusWeeks(53))); // TODO
+                                                                                                             // pull
+                                                                                                             // requirements
+                                                                                                             // from
+                                                                                                             // config/predictor
     System.out.printf("First Able to Predict: [%s]\n", TimeLib.formatDate(timeFirstAbleToPredict));
 
     FeatureExtractor featureExtractor = getFeatureExtractor();
@@ -338,12 +344,12 @@ public class AdaptiveAlloc
 
       // Report results for this test period.
       CumulativeStats stats = CumulativeStats.calc(sim.returnsMonthly);
-      System.out.printf("Stats: [%s] -> [%s]: %.2f, %.2f\n", TimeLib.formatDate(testStart),
-          TimeLib.formatDate(testEnd), stats.cagr, stats.drawdown);
+      System.out.printf("Stats: [%s] -> [%s]: %.2f, %.2f\n", TimeLib.formatDate(testStart), TimeLib.formatDate(testEnd),
+          stats.cagr, stats.drawdown);
 
       // Advance test start time by N months.
-      testStart = TimeLib.toMs(TimeLib.ms2date(testStart).plusMonths(stepMonths)
-          .with(TemporalAdjusters.firstDayOfMonth()));
+      testStart = TimeLib
+          .toMs(TimeLib.ms2date(testStart).plusMonths(stepMonths).with(TemporalAdjusters.firstDayOfMonth()));
     }
     sim.finishRun();
     return sim;
@@ -393,13 +399,13 @@ public class AdaptiveAlloc
     final long timeDataStart = store.getCommonStartTime();
 
     // TODO pull requirements from config/predictor
-    final long timeFirstAbleToPredict = TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(timeDataStart)
-        .plusWeeks(49)));
+    final long timeFirstAbleToPredict = TimeLib
+        .toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(timeDataStart).plusWeeks(49)));
     long today = TimeLib.toLastBusinessDayOfWeek(timeFirstAbleToPredict);
 
     // Early predictors need some examples so delay simulation.
-    final long timeStartSim = TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(timeFirstAbleToPredict)
-        .plusMonths(6)));
+    final long timeStartSim = TimeLib
+        .toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(timeFirstAbleToPredict).plusMonths(6)));
     System.out.printf("Prediction Map: [%s] -> [%s]\n", TimeLib.formatDate(today),
         TimeLib.formatDate(guideSeq.getEndMS()));
 
@@ -412,11 +418,11 @@ public class AdaptiveAlloc
     long ta = TimeLib.getTime();
     while (true) {
       final long timePredictStart = TimeLib.toNextBusinessDay(today);
-      final long timePredictEnd = TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.toLastBusinessDayOfWeek(TimeLib
-          .ms2date(today).plusWeeks(1))));
+      final long timePredictEnd = TimeLib
+          .toMs(TimeLib.toNextBusinessDay(TimeLib.toLastBusinessDayOfWeek(TimeLib.ms2date(today).plusWeeks(1))));
       if (timePredictEnd > guideSeq.getEndMS()) break;
 
-      // System.out.printf("Learn: [%s] -> [%s]  Predict: [%s] -> [%s]\n", TimeLib.formatDate(timeLearnStart),
+      // System.out.printf("Learn: [%s] -> [%s] Predict: [%s] -> [%s]\n", TimeLib.formatDate(timeLearnStart),
       // TimeLib.formatDate(today), TimeLib.formatDate(timePredictStart), TimeLib.formatDate(timePredictEnd));
 
       broker.setNewDay(new TimeInfo(today));
@@ -427,7 +433,7 @@ public class AdaptiveAlloc
         int index1 = seq.getIndexAt(timePredictStart);
         int index2 = seq.getIndexAt(timePredictEnd);
         if (index1 < 0 || index2 < 0) {
-          // System.out.printf("[%s]=%d  [%s]=%d\n", TimeLib.formatDate(timePredictStart), index1,
+          // System.out.printf("[%s]=%d [%s]=%d\n", TimeLib.formatDate(timePredictStart), index1,
           // TimeLib.formatDate(timePredictEnd), index2);
           break;
         }
@@ -504,11 +510,11 @@ public class AdaptiveAlloc
       System.out.printf("r = %f\n", r);
     }
 
-    Chart.saveScatterPlot(new File(outputDir, "predictions-raw.html"), "Predictions", 1000, 1000, 3, new String[] {
-        "Predicted", "Actual" }, scatterData);
+    Chart.saveScatterPlot(new File(outputDir, "predictions-raw.html"), "Predictions", 1000, 1000, 3,
+        new String[] { "Predicted", "Actual" }, scatterData);
 
-    Chart.saveScatterPlot(new File(outputDir, "predictions-aligned.html"), "Predictions", 1000, 1000, 3, new String[] {
-        "Predicted", "Actual" }, scatterAligned);
+    Chart.saveScatterPlot(new File(outputDir, "predictions-aligned.html"), "Predictions", 1000, 1000, 3,
+        new String[] { "Predicted", "Actual" }, scatterAligned);
   }
 
   public static void genPredictionData(Sequence guideSeq, List<Example> pointExamples, List<Example> pairExamples,
@@ -518,8 +524,8 @@ public class AdaptiveAlloc
     final long timeDataStart = store.getCommonStartTime();
 
     // TODO pull requirements from config/predictor
-    final long timeFirstAbleToPredict = TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(timeDataStart)
-        .plusWeeks(49)));
+    final long timeFirstAbleToPredict = TimeLib
+        .toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(timeDataStart).plusWeeks(49)));
     long today = TimeLib.toLastBusinessDayOfWeek(timeFirstAbleToPredict);
     System.out.printf("Prediction Data Range: [%s] -> [%s]\n", TimeLib.formatDate(today),
         TimeLib.formatDate(guideSeq.getEndMS()));
@@ -531,8 +537,8 @@ public class AdaptiveAlloc
     int nGood = 0;
     while (true) {
       final long timePredictStart = TimeLib.toNextBusinessDay(today);
-      final long timePredictEnd = TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.toLastBusinessDayOfWeek(TimeLib
-          .ms2date(today).plusWeeks(1))));
+      final long timePredictEnd = TimeLib
+          .toMs(TimeLib.toNextBusinessDay(TimeLib.toLastBusinessDayOfWeek(TimeLib.ms2date(today).plusWeeks(1))));
       if (timePredictEnd > guideSeq.getEndMS()) break;
 
       broker.setNewDay(new TimeInfo(today));
@@ -544,7 +550,7 @@ public class AdaptiveAlloc
         int index1 = seq.getIndexAt(timePredictStart);
         int index2 = seq.getIndexAt(timePredictEnd);
         if (index1 < 0 || index2 < 0) {
-          // System.out.printf("[%s]=%d  [%s]=%d\n", TimeLib.formatDate(timePredictStart), index1,
+          // System.out.printf("[%s]=%d [%s]=%d\n", TimeLib.formatDate(timePredictStart), index1,
           // TimeLib.formatDate(timePredictEnd), index2);
           break;
         }
@@ -590,8 +596,8 @@ public class AdaptiveAlloc
       today = TimeLib.toMs(TimeLib.toLastBusinessDayOfWeek(TimeLib.ms2date(today).plusWeeks(1)));
     }
     FeatureVec mean = Example.mean(pointExamples);
-    System.out.printf("Pointwise Examples: %d (Good: %d = %.1f%%)\n", pointExamples.size(), nGood, 100.0 * nGood
-        / pointExamples.size());
+    System.out.printf("Pointwise Examples: %d (Good: %d = %.1f%%)\n", pointExamples.size(), nGood,
+        100.0 * nGood / pointExamples.size());
     System.out.printf(" Mean: %s\n", mean);
 
     if (GENERATE_PAIRWISE_DATA) {
@@ -788,8 +794,8 @@ public class AdaptiveAlloc
         TimeLib.formatDate(commonEnd));
 
     // long timeSimStart = commonStart;
-    long timeSimStart = TimeLib.toMs(TimeLib.ms2date(commonStart).plusWeeks(53 + 4)
-        .with(TemporalAdjusters.firstDayOfMonth()));
+    long timeSimStart = TimeLib
+        .toMs(TimeLib.ms2date(commonStart).plusWeeks(53 + 4).with(TemporalAdjusters.firstDayOfMonth()));
     // timeSimStart = TimeLib.toMs(2013, Month.JANUARY, 1); // TODO
     long timeSimEnd = commonEnd;
     // timeSimEnd = TimeLib.toMs(2012, Month.DECEMBER, 31); // TODO
@@ -895,8 +901,8 @@ public class AdaptiveAlloc
 
     // Lazy 2-fund portfolio.
     String[] assetsLazy2 = new String[] { "VTSMX", "VBMFX" };
-    config = new ConfigMixed(new DiscreteDistribution(assetsLazy2, new double[] { 0.7, 0.3 }), new ConfigConst(
-        assetsLazy2[0]), new ConfigConst(assetsLazy2[1]));
+    config = new ConfigMixed(new DiscreteDistribution(assetsLazy2, new double[] { 0.7, 0.3 }),
+        new ConfigConst(assetsLazy2[0]), new ConfigConst(assetsLazy2[1]));
     Predictor lazy2 = config.build(sim.broker.accessObject, assetsLazy2);
     Sequence returnsLazy2 = sim.run(lazy2, timeSimStart, timeSimEnd, "70/30");
     System.out.println(CumulativeStats.calc(returnsLazy2));
@@ -994,8 +1000,8 @@ public class AdaptiveAlloc
         Momentum.CompoundPeriod.Weekly, FinLib.Close);
     int dualMomAge = (nBaseA + nBaseB + 20) / 40;
     Stump stump = new Stump(0, 0.0, false, 5.0);
-    Predictor dualMom = new AdaptivePredictor(feDualMom, stump, 1, "VFISX", sim.broker.accessObject, new String[] {
-        "VTSMX", "VGTSX", "VFISX" });
+    Predictor dualMom = new AdaptivePredictor(feDualMom, stump, 1, "VFISX", sim.broker.accessObject,
+        new String[] { "VTSMX", "VGTSX", "VFISX" });
     sim.run(dualMom, timeSimStart, timeSimEnd, String.format("Dual_Momentum[%d]", dualMomAge));
     System.out.println(CumulativeStats.calc(sim.returnsMonthly));
     returns.add(sim.returnsMonthly);
@@ -1005,8 +1011,8 @@ public class AdaptiveAlloc
     // ITA 60/100/volatility model.
     FeatureExtractor itaFeature = new ITAScore(FinLib.AdjClose);
     stump = new Stump(0, 0.0, false, 5.0);
-    Predictor itaPred = new AdaptivePredictor(itaFeature, stump, 1, "VFISX", sim.broker.accessObject, new String[] {
-        "VTSMX", "VGTSX", "VFISX" });
+    Predictor itaPred = new AdaptivePredictor(itaFeature, stump, 1, "VFISX", sim.broker.accessObject,
+        new String[] { "VTSMX", "VGTSX", "VFISX" });
     sim.run(itaPred, timeSimStart, timeSimEnd, "ITA");
     System.out.println(CumulativeStats.calc(sim.returnsMonthly));
     returns.add(sim.returnsMonthly);
