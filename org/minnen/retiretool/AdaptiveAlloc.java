@@ -21,6 +21,7 @@ import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.data.YahooIO;
 import org.minnen.retiretool.data.Sequence.EndpointBehavior;
 import org.minnen.retiretool.ml.ClassificationModel;
 import org.minnen.retiretool.ml.PositiveQuadrant;
@@ -758,15 +759,15 @@ public class AdaptiveAlloc
 
     // Make sure we have the latest data.
     for (String symbol : fundSymbols) {
-      File file = DataIO.getYahooFile(yahooDir, symbol);
-      DataIO.updateDailyDataFromYahoo(file, symbol, 8 * TimeLib.MS_IN_HOUR);
+      File file = YahooIO.getFile(yahooDir, symbol);
+      YahooIO.updateDailyData(file, symbol, 8 * TimeLib.MS_IN_HOUR);
     }
 
     // Load data and trim to same time period.
     List<Sequence> seqs = new ArrayList<>();
     for (String symbol : fundSymbols) {
-      File file = DataIO.getYahooFile(yahooDir, symbol);
-      Sequence seq = DataIO.loadYahooData(file);
+      File file = YahooIO.getFile(yahooDir, symbol);
+      Sequence seq = YahooIO.loadData(file);
       System.out.printf("%5s [%s] -> [%s]\n", symbol, TimeLib.formatDate2(seq.getStartMS()),
           TimeLib.formatDate2(seq.getEndMS()));
       seqs.add(seq);

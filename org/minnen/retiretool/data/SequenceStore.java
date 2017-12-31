@@ -50,6 +50,17 @@ public class SequenceStore implements Iterable<Sequence>
   {
     this.commonStart = commonStart;
     this.commonEnd = commonEnd;
+
+    // Update sequences in this store with the new start/end times.
+    for (int i = 0; i < seqs.size(); ++i) {
+      Sequence seq = seqs.get(i);
+      assert commonStart >= seq.getStartMS();
+      assert commonEnd <= seq.getEndMS();
+      if (commonStart != seq.getStartMS() || commonEnd != seq.getEndMS()) {
+        seq = seq.subseq(commonStart, commonEnd, EndpointBehavior.Closest);
+        seqs.set(i, seq);
+      }
+    }
   }
 
   public void clear()
@@ -90,6 +101,16 @@ public class SequenceStore implements Iterable<Sequence>
   public int add(Sequence seq)
   {
     return add(seq, seq.getName());
+  }
+
+  /**
+   * Add all sequences in the given collection.
+   */
+  public void addAll(Collection<? extends Sequence> newSeqs)
+  {
+    for (Sequence seq : newSeqs) {
+      add(seq);
+    }
   }
 
   /**
@@ -173,6 +194,11 @@ public class SequenceStore implements Iterable<Sequence>
   public Sequence tryGet(int id)
   {
     return (id < 0 ? null : seqs.get(id));
+  }
+
+  public List<Sequence> getSeqs()
+  {
+    return seqs;
   }
 
   public List<Sequence> getSeqs(String... names)

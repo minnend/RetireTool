@@ -27,19 +27,15 @@ public class VanguardSummaryMonthly
   public static final VanguardFund.FundSet      fundSet        = VanguardFund.FundSet.All;
   public static final Slippage                  slippage       = Slippage.None;
   public static final String[]                  fundSymbols    = VanguardFund.getFundNames(fundSet);
-  public static final String[]                  assetSymbols   = new String[fundSymbols.length + 1];
   public static final Map<String, VanguardFund> funds          = VanguardFund.getFundMap(fundSet);
   public static final String[]                  statNames      = new String[] { "CAGR", "MaxDrawdown", "Worst Period",
-      "10th Percentile", "Median "                            };
+      "10th Percentile", "Median " };
   public static final int                       durStatsYears  = 5;
   public static final int                       momentumMonths = 6;
 
   public static MonthlyRunner                   runner;
 
   static {
-    // Add "cash" as the last asset since it's not a fund in fundSymbols.
-    System.arraycopy(fundSymbols, 0, assetSymbols, 0, fundSymbols.length);
-    assetSymbols[assetSymbols.length - 1] = "cash";
     SummaryTools.fundSymbols = fundSymbols;
   }
 
@@ -123,7 +119,9 @@ public class VanguardSummaryMonthly
         double r = v.get(0);
         v.set(0, FinLib.ret2mul(r));
       }
-      applyMomentumFilter(seq, momentumMonths);
+      if (momentumMonths > 0) {
+        applyMomentumFilter(seq, momentumMonths);
+      }
     }
     runner = new MonthlyRunner(seqs, durStatsYears * 12);
 
@@ -152,7 +150,7 @@ public class VanguardSummaryMonthly
     // for (DiscreteDistribution portfolio : portfolios) {
     // assert portfolio.isNormalized();
     // FeatureVec stats = runner.run(portfolio);
-    // System.out.printf("%-80s  %s\n", portfolio.toStringWithNames(0), stats);
+    // System.out.printf("%-80s %s\n", portfolio.toStringWithNames(0), stats);
     // }
 
     List<FeatureVec> stats = genPortfolios(seqs, outputDir);

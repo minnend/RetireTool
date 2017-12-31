@@ -102,8 +102,9 @@ public class SummaryTools
     // TODO create config class for scanning.
     // scanDistributions(1, 10, 10, 100, 10, portfolios);
     // scanDistributions(1, 8, 10, 40, 10, portfolios);
-    scanDistributions(4, 6, 5, 30, 5, portfolios);
+    // scanDistributions(4, 6, 5, 30, 5, portfolios); // last one run
     // scanDistributions(3, 3, 20, 40, 10, portfolios);
+    scanDistributions(1, 3, 10, 100, 10, portfolios);
     long b = TimeLib.getTime();
     System.out.printf("Portofolios: %d  (%s)\n", portfolios.size(), TimeLib.formatDuration(b - a));
     List<FeatureVec> stats = new ArrayList<>();

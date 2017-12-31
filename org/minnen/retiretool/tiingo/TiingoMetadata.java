@@ -14,8 +14,9 @@ public class TiingoMetadata
   public final String                                 ticker;
   public final String                                 description;
   public final String                                 exchange;
-  public final LocalDate                              start;
-  public final LocalDate                              end;
+
+  public LocalDate                                    start;
+  public LocalDate                                    end;
 
   public TiingoMetadata(String name, String ticker, String description, String exchange, LocalDate start, LocalDate end)
   {

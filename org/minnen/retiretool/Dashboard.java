@@ -10,6 +10,7 @@ import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.data.YahooIO;
 import org.minnen.retiretool.predictor.config.ConfigConst;
 import org.minnen.retiretool.predictor.config.ConfigMixed;
 import org.minnen.retiretool.predictor.config.ConfigMulti;
@@ -69,12 +70,12 @@ public class Dashboard
     }
 
     String symbol = "^GSPC";
-    File file = DataIO.getYahooFile(yahooDir, symbol);
-    if (!DataIO.updateDailyDataFromYahoo(file, symbol, 8 * TimeLib.MS_IN_HOUR)) {
+    File file = YahooIO.getFile(yahooDir, symbol);
+    if (!YahooIO.updateDailyData(file, symbol, 8 * TimeLib.MS_IN_HOUR)) {
       throw new IOException("Failed to update data.");
     }
 
-    Sequence stock = DataIO.loadYahooData(file);
+    Sequence stock = YahooIO.loadData(file);
     System.out.printf("S&P (Daily): [%s] -> [%s]\n", TimeLib.formatDate(stock.getStartMS()),
         TimeLib.formatDate(stock.getEndMS()));
     store.add(stock, "stock");

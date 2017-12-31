@@ -9,12 +9,12 @@ import java.util.List;
 import org.minnen.retiretool.data.TiingoIO;
 import org.minnen.retiretool.util.TimeLib;
 
-public class FilterFunds
+public class DownloadFilteredFunds
 {
-  public static void saveFundMetadata(List<TiingoFund> funds, File dir, boolean replaceExisting) throws IOException
+  public static void saveFundMetadata(List<TiingoFund> funds) throws IOException
   {
     for (TiingoFund fund : funds) {
-      if (!TiingoIO.saveFundMetadata(fund, replaceExisting)) break;
+      if (!TiingoIO.saveFundMetadata(fund)) break;
     }
   }
 
@@ -27,7 +27,12 @@ public class FilterFunds
 
   public static void main(String[] args) throws IOException
   {
-    List<TiingoFund> funds = TiingoIO.loadTickers(Tiingo.supportedTickersPath);
+    if (!TiingoIO.downloadLatestSupportedTickerCSV()) {
+      System.err.println("Failed to update supported tickers CSV");
+      System.exit(1);
+    }
+
+    List<TiingoFund> funds = TiingoIO.loadTickers();
     System.out.printf("Funds: %d\n", funds.size());
 
     // Only funds that trade in USD.
@@ -40,7 +45,7 @@ public class FilterFunds
 
     // Only funds with recent date.
     LocalDate today = TimeLib.ms2date(TimeLib.getTime());
-    LocalDate endAfter = today.minusDays(7);
+    LocalDate endAfter = today.minusDays(5);
     funds.removeIf(p -> !p.end.isAfter(endAfter));
     System.out.printf("Funds (recent): %d\n", funds.size());
 
@@ -64,11 +69,18 @@ public class FilterFunds
     });
 
     // Print funds that pass all tests.
-    // for (TiingoFund fund : funds) {
-    // System.out.printf("%s [%s] -> [%s]\n", fund.ticker, fund.start, fund.end);
-    // }
+    int nMissingMeta = 0;
+    int nMissingEod = 0;
+    for (TiingoFund fund : funds) {
+      File file = TiingoIO.getEodFile(fund.ticker);
+      if (!file.exists()) ++nMissingEod;
 
-    saveFundMetadata(funds, Tiingo.metaPath, false);
-    saveFundEodData(funds, false);
+      file = TiingoIO.getMetadataFile(fund.ticker);
+      if (!file.exists()) ++nMissingMeta;
+    }
+    System.out.printf("Missing: meta=%d  eod=%d\n", nMissingMeta, nMissingEod);
+
+    saveFundMetadata(funds);
+    // saveFundEodData(funds, false);
   }
 }

@@ -15,6 +15,7 @@ import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.data.YahooIO;
 import org.minnen.retiretool.data.Sequence.EndpointBehavior;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive.TradeFreq;
@@ -60,8 +61,8 @@ public class TestMixablePredictor
     // Load data and trim to same time period.
     List<Sequence> seqs = new ArrayList<>();
     for (String symbol : fundSymbols) {
-      File file = DataIO.getYahooFile(yahooDir, symbol);
-      Sequence seq = DataIO.loadYahooData(file);
+      File file = YahooIO.getFile(yahooDir, symbol);
+      Sequence seq = YahooIO.loadData(file);
       seqs.add(seq);
     }
 

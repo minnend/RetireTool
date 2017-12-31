@@ -1,29 +1,18 @@
 package org.minnen.retiretool.vanguard;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.time.LocalDate;
-import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 
-import org.minnen.retiretool.data.DataIO;
-import org.minnen.retiretool.data.DiscreteDistribution;
-import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
-import org.minnen.retiretool.data.Sequence.EndpointBehavior;
-import org.minnen.retiretool.predictor.daily.TimeCode;
+import org.minnen.retiretool.data.TiingoIO;
+import org.minnen.retiretool.tiingo.Tiingo;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.util.Writer;
-import org.minnen.retiretool.viz.Chart;
-import org.minnen.retiretool.viz.ChartConfig;
 
 public class VanguardReport
 {
@@ -32,14 +21,10 @@ public class VanguardReport
   public static final VanguardFund.FundSet      fundSet        = VanguardFund.FundSet.All;
   public static final Slippage                  slippage       = Slippage.None;
   public static final String[]                  fundSymbols    = VanguardFund.getFundNames(fundSet);
-  public static final String[]                  assetSymbols   = new String[fundSymbols.length + 1];
   public static final Map<String, VanguardFund> funds          = VanguardFund.getFundMap(fundSet);
   public static final int[]                     momentumMonths = new int[] { 36, 24, 18, 12, 9, 6, 5, 4, 3, 2, 1 };
 
   static {
-    // Add "cash" as the last asset since it's not a fund in fundSymbols.
-    System.arraycopy(fundSymbols, 0, assetSymbols, 0, fundSymbols.length);
-    assetSymbols[assetSymbols.length - 1] = "cash";
     SummaryTools.fundSymbols = fundSymbols;
   }
 
@@ -98,7 +83,7 @@ public class VanguardReport
 
   public static void genReport(File file) throws IOException
   {
-    final long endTime = TimeLib.getTime(); //TimeLib.toMs(2009, 5, 1);
+    final long endTime = store.getCommonEndTime();
     final String green = "1E2";
     final String red = "D12";
     final String sRowGap = "<td class=\"hgap\">&nbsp;</td>";
@@ -140,47 +125,8 @@ public class VanguardReport
   public static void main(String[] args) throws IOException
   {
     File outputDir = new File("g:/web");
-    File dataDir = new File("g:/research/finance/");
-    assert dataDir.isDirectory();
-
-    File yahooDir = new File(dataDir, "yahoo/");
-    if (!yahooDir.exists()) yahooDir.mkdirs();
-
-    // Make sure we have the latest data.
-    for (String symbol : fundSymbols) {
-      File file = DataIO.getYahooFile(yahooDir, symbol);
-      DataIO.updateDailyDataFromYahoo(file, symbol, 8 * TimeLib.MS_IN_HOUR);
-    }
-
-    // Load data and trim to same time period.
-    List<Sequence> seqs = new ArrayList<>();
-    for (String symbol : fundSymbols) {
-      File file = DataIO.getYahooFile(yahooDir, symbol);
-      Sequence seq = DataIO.loadYahooData(file);
-      seqs.add(seq);
-    }
-    seqs.sort(Sequence.getStartDateComparator());
-    for (Sequence seq : seqs) {
-      String symbol = seq.getName();
-      System.out.printf("%5s [%s] -> [%s]  %s\n", symbol, TimeLib.formatDate2(seq.getStartMS()),
-          TimeLib.formatDate2(seq.getEndMS()), funds.get(symbol).description);
-    }
-
-    long commonStart = TimeLib.calcCommonStart(seqs);
-    long commonEnd = TimeLib.calcCommonEnd(seqs);
-    // commonEnd = TimeLib.toMs(2012, Month.DECEMBER, 31); // TODO
-    store.setCommonTimes(commonStart, commonEnd);
-    System.out.printf("Common[%d]: [%s] -> [%s]\n", seqs.size(), TimeLib.formatDate(commonStart),
-        TimeLib.formatDate(commonEnd));
-
-    // Extract common subsequence from each data sequence and add to the sequence store.
-    for (int i = 0; i < seqs.size(); ++i) {
-      Sequence seq = seqs.get(i);
-      seq = seq.subseq(commonStart, commonEnd, EndpointBehavior.Closest);
-      seqs.set(i, seq);
-      store.add(seq);
-    }
-
+    TiingoIO.updateData(fundSymbols);
+    Tiingo.setupSimulation(fundSymbols, slippage, store);
     File file = new File(outputDir, "vanguard-report.html");
     genReport(file);
   }

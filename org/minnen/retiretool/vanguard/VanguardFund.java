@@ -51,7 +51,7 @@ public class VanguardFund
     funds.add(new VanguardFund("DODGX", "Dodge & Cox Stock", null, 0.52));
 
     if (fundSet == FundSet.All) {
-      funds.add(new VanguardFund("VIPSX", "Inflation-Protected Securities", "0119", 0.20)); // June 2000
+      // funds.add(new VanguardFund("VIPSX", "Inflation-Protected Securities", "0119", 0.20)); // June 2000
       funds.add(new VanguardFund("VISGX", "Small-Cap Growth", "0861", 0.20));
 
       funds.add(new VanguardFund("VISVX", "Small-Cap Value", "0860", 0.20));
@@ -69,12 +69,12 @@ public class VanguardFund
       funds.add(new VanguardFund("VTRIX", "International Value", null, 0.46));
       funds.add(new VanguardFund("VWIGX", "International Growth", null, 0.46));
 
-      funds.add(new VanguardFund("VITAX", "Information Technology", null, 0.10)); // Feb 2004
-      funds.add(new VanguardFund("GLD", "Gold", null, 0.40)); // Nov 2004
-      funds.add(new VanguardFund("USAGX", "Gold", null, 0.40)); // Nov 2004
+      // funds.add(new VanguardFund("VITAX", "Information Technology", null, 0.10)); // Feb 2004
+      // funds.add(new VanguardFund("GLD", "Gold", null, 0.40)); // Nov 2004
+      funds.add(new VanguardFund("USAGX", "Gold", null, 0.40)); // Aug 1984
       // funds.add(new VanguardFund("VICSX", "Intermediate Corporate Bonds", "1946", 0.07)); // Nov 2009
 
-      // funds.add(new VanguardFund("^VIX", "VIX", null, 0.0));      
+      // funds.add(new VanguardFund("^VIX", "VIX", null, 0.0));
       // funds.add("VHGEX", new VanguardFund("VHGEX", "Global Equity", "0129", 0.57)); // US = 40%
     }
 

@@ -38,6 +38,7 @@ import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.data.YahooIO;
 
 public class RetireTool
 {
@@ -64,7 +65,7 @@ public class RetireTool
 
   public static void setupBroker(File dataDir, File dir) throws IOException
   {
-    Sequence stock = DataIO.loadYahooData(new File(dataDir, "^GSPC.csv"));
+    Sequence stock = YahooIO.loadData(new File(dataDir, "^GSPC.csv"));
     Sequence bondRate = DataIO.loadDateValueCSV(new File(dataDir, "treasury-10year-daily.csv"));
     Sequence shiller = DataIO.loadShillerData(new File(dataDir, "shiller.csv"));
     shiller.adjustDatesToEndOfMonth();

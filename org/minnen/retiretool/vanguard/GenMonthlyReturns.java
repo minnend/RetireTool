@@ -10,10 +10,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.minnen.retiretool.data.DataIO;
+import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
-import org.minnen.retiretool.data.Sequence.EndpointBehavior;
+import org.minnen.retiretool.fred.Fred;
+import org.minnen.retiretool.fred.FredSeries;
+import org.minnen.retiretool.tiingo.Tiingo;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.PriceModel;
 import org.minnen.retiretool.util.Slippage;
@@ -21,57 +23,28 @@ import org.minnen.retiretool.util.TimeLib;
 
 public class GenMonthlyReturns
 {
-  public static final SequenceStore             store        = new SequenceStore();
+  public static final SequenceStore             store       = new SequenceStore();
 
-  public static final VanguardFund.FundSet      fundSet      = VanguardFund.FundSet.All;
-  public static final Slippage                  slippage     = Slippage.None;
-  public static final String[]                  fundSymbols  = VanguardFund.getFundNames(fundSet);
-  public static final String[]                  assetSymbols = new String[fundSymbols.length + 1];
-  public static final Map<String, VanguardFund> funds        = VanguardFund.getFundMap(fundSet);
-  public static final String[]                  statNames    = new String[] { "CAGR", "MaxDrawdown", "Worst Period",
-      "10th Percentile", "Median "                          };
-
-  static {
-    // Add "cash" as the last asset since it's not a fund in fundSymbols.
-    System.arraycopy(fundSymbols, 0, assetSymbols, 0, fundSymbols.length);
-    assetSymbols[assetSymbols.length - 1] = "cash";
-  }
+  public static final VanguardFund.FundSet      fundSet     = VanguardFund.FundSet.All;
+  public static final String[]                  fundSymbols = VanguardFund.getFundNames(fundSet);
+  public static final Map<String, VanguardFund> funds       = VanguardFund.getFundMap(fundSet);
+  public static final String[]                  statNames   = new String[] { "CAGR", "MaxDrawdown", "Worst Period",
+      "10th Percentile", "Median " };
 
   public static void main(String[] args) throws IOException
   {
     File outputDir = new File("g:/web");
-    File dataDir = new File("g:/research/finance/");
-    assert dataDir.isDirectory();
 
-    File yahooDir = new File(dataDir, "yahoo/");
-    if (!yahooDir.exists()) yahooDir.mkdirs();
-
-    // Load CPI data.
-    Sequence cpi = DataIO.loadDateValueCSV(new File(dataDir, "cpi.csv"));
+    // Load CPI data (https://fred.stlouisfed.org/series/CPIAUCSL).
+    FredSeries fredCPI = Fred.getName("cpi");
+    System.out.println(fredCPI);
+    Sequence cpi = fredCPI.seq;
 
     // Make sure we have the latest data.
-    for (String symbol : fundSymbols) {
-      File file = DataIO.getYahooFile(yahooDir, symbol);
-      DataIO.updateDailyDataFromYahoo(file, symbol, 8 * TimeLib.MS_IN_HOUR);
-    }
-
-    // Load data and trim to same time period.
-    List<Sequence> seqs = new ArrayList<>();
-    for (String symbol : fundSymbols) {
-      File file = DataIO.getYahooFile(yahooDir, symbol);
-      Sequence seq = DataIO.loadYahooData(file);
-      System.out.printf("%5s [%s] -> [%s]  %s\n", symbol, TimeLib.formatDate2(seq.getStartMS()),
-          TimeLib.formatDate2(seq.getEndMS()), funds.get(symbol).description);
-      seqs.add(seq);
-    }
-
-    // Find common start / end time across all funds.
-    long commonStart = TimeLib.calcCommonStart(seqs);
-    long commonEnd = TimeLib.calcCommonEnd(seqs);
-    System.out.printf("Common[%d]: [%s] -> [%s]\n", seqs.size(), TimeLib.formatDate(commonStart),
-        TimeLib.formatDate(commonEnd));
+    Simulation sim = Tiingo.setupSimulation(fundSymbols, Slippage.None, store, cpi);
 
     // Adjust start time to earliest end-of-month.
+    long commonStart = sim.getStartMS();
     LocalDate dateStart = TimeLib.ms2time(commonStart).toLocalDate();
     if (!TimeLib.toLastBusinessDayOfMonth(dateStart).equals(dateStart)) {
       dateStart = TimeLib.toLastBusinessDayOfMonth(dateStart);
@@ -80,9 +53,10 @@ public class GenMonthlyReturns
     }
 
     // Adjust end time to latest end-of-month.
+    long commonEnd = sim.getEndMS();
     LocalDate dateEnd = TimeLib.ms2time(commonEnd).toLocalDate();
     if (!TimeLib.toLastBusinessDayOfMonth(dateEnd).equals(dateEnd)) {
-      dateEnd = TimeLib.toFirstBusinessDayOfMonth(dateEnd.minusMonths(1));
+      dateEnd = TimeLib.toLastBusinessDayOfMonth(dateEnd.minusMonths(1));
       commonEnd = TimeLib.toMs(dateEnd);
       System.out.printf("New End Time: [%s]\n", TimeLib.formatDate(commonEnd));
     }
@@ -91,11 +65,9 @@ public class GenMonthlyReturns
         TimeLib.formatDate(commonEnd), TimeLib.monthsBetween(commonStart, commonEnd));
 
     // Extract common subsequence from each data sequence and add to the sequence store.
-    for (int i = 0; i < seqs.size(); ++i) {
-      Sequence seq = seqs.get(i);
-      seq = seq.subseq(commonStart, commonEnd, EndpointBehavior.Closest);
-      seqs.set(i, seq);
-      store.add(seq);
+    for (Sequence seq : store.getSeqs()) {
+      assert (seq.getStartMS() == commonStart);
+      assert (seq.getEndMS() == commonEnd);
     }
 
     // Calculate monthly expense ratio for each fund.

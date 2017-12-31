@@ -581,4 +581,20 @@ public class TimeLib
     assert date.getDayOfWeek() == DayOfWeek.SUNDAY;
     return date;
   }
+
+  /** @return ms for data in YYYY-MM or YYYY-MM-DD format. */
+  public static long parseDate(String date) throws NumberFormatException
+  {
+    String[] dateFields = date.split("-");
+
+    // TODO use java.time parser.
+    int year = Integer.parseInt(dateFields[0]);
+    int month = Integer.parseInt(dateFields[1]);
+    int day = 1;
+    if (dateFields.length > 2) {
+      day = Integer.parseInt(dateFields[2]);
+    }
+
+    return TimeLib.toMs(year, month, day);
+  }
 }

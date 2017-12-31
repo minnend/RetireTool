@@ -13,6 +13,7 @@ import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.data.YahooIO;
 import org.minnen.retiretool.data.Sequence.EndpointBehavior;
 import org.minnen.retiretool.predictor.config.ConfigConst;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
@@ -39,9 +40,9 @@ public class Oddmund
 
     // Make sure we have the latest data.
     String symbol = "SPY";
-    File file = DataIO.getYahooFile(yahooDir, symbol);
-    DataIO.updateDailyDataFromYahoo(file, symbol, 8 * TimeLib.MS_IN_HOUR);
-    Sequence rawPrices = DataIO.loadYahooData(file);
+    File file = YahooIO.getFile(yahooDir, symbol);
+    YahooIO.updateDailyData(file, symbol, 8 * TimeLib.MS_IN_HOUR);
+    Sequence rawPrices = YahooIO.loadData(file);
 
     long commonStart = TimeLib.toMs(1995, Month.JANUARY, 1);
     long commonEnd = TimeLib.toMs(2015, Month.DECEMBER, 31);

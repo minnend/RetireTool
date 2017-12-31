@@ -15,10 +15,11 @@ import java.nio.file.Files;
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
-import org.minnen.retiretool.tiingo.Tiingo;
 import org.minnen.retiretool.tiingo.TiingoFund;
 import org.minnen.retiretool.tiingo.TiingoMetadata;
 import org.minnen.retiretool.util.FinLib;
@@ -26,6 +27,23 @@ import org.minnen.retiretool.util.TimeLib;
 
 public class TiingoIO
 {
+  public static final String                 auth                 = System.getenv("tiingo.auth");
+
+  public static final File                   tiingoPath           = new File(DataIO.financePath, "tiingo");
+  public static final File                   metaPath             = new File(tiingoPath, "meta");
+  public static final File                   eodPath              = new File(tiingoPath, "eod");
+
+  public static final String                 supportedTickersUrl  = "https://apimedia.tiingo.com/docs/tiingo/daily/supported_tickers.zip";
+  public static final File                   supportedTickersPath = new File(tiingoPath,
+      "tiingo_supported_tickers.csv");
+
+  private static Map<File, List<TiingoFund>> cacheFunds           = new HashMap<File, List<TiingoFund>>();
+
+  public static void clearMetadataCache()
+  {
+    cacheFunds.clear();
+  }
+
   public static URL buildDataURL(String symbol)
   {
     return buildDataURL(symbol, LocalDate.of(1900, Month.JANUARY, 1));
@@ -42,7 +60,7 @@ public class TiingoIO
           endDate.getDayOfMonth());
       String address = String.format(
           "https://api.tiingo.com/tiingo/daily/%s/prices?token=%s&format=csv&resampleFreq=daily&startDate=%s&endDate=%s",
-          symbol, Tiingo.auth, startDateString, endDateString);
+          symbol, TiingoIO.auth, startDateString, endDateString);
       // System.out.printf("URL: %s\n", address);
       return new URL(address);
     } catch (MalformedURLException e) {
@@ -65,14 +83,32 @@ public class TiingoIO
   }
 
   /**
+   * Load metadata from the default Tiingo supported tickers file.
+   * 
+   * @return List of Tiingo funds
+   * @throws IOException if there is a problem reading the file.
+   */
+  public static List<TiingoFund> loadTickers() throws IOException
+  {
+    return loadTickers(TiingoIO.supportedTickersPath);
+  }
+
+  /**
    * Load metadata from Tiingo supported tickers file.
    * 
    * @param file file to load
    * @return List of Tiingo funds
    * @throws IOException if there is a problem reading the file.
    */
-  public static List<TiingoFund> loadTickers(File file) throws IOException
+  private static List<TiingoFund> loadTickers(File file) throws IOException
   {
+    if (cacheFunds.containsKey(file)) {
+      return cacheFunds.get(file);
+    }
+
+    if (!downloadLatestSupportedTickerCSV()) {
+      throw new IOException("Failed to download latest supported tickers CSV");
+    }
     if (!file.canRead()) {
       throw new IOException(String.format("Can't read tiingo file (%s)", file.getPath()));
     }
@@ -87,12 +123,24 @@ public class TiingoIO
         funds.add(fund);
       }
     }
+
+    cacheFunds.put(file, funds);
     return funds;
+  }
+
+  public static File getMetadataFile(String symbol)
+  {
+    return new File(TiingoIO.metaPath, symbol + "-meta.json");
+  }
+
+  public static File getEodFile(String symbol)
+  {
+    return new File(TiingoIO.eodPath, symbol + "-eod.csv");
   }
 
   public static TiingoMetadata loadMetadata(String symbol)
   {
-    File file = new File(Tiingo.metaPath, symbol + "-meta.json");
+    File file = getMetadataFile(symbol);
     try {
       List<String> lines = Files.readAllLines(file.toPath(), StandardCharsets.ISO_8859_1);
       String json = String.join("\n", lines);
@@ -106,7 +154,7 @@ public class TiingoIO
 
   public static Sequence loadEodData(String symbol) throws IOException
   {
-    File file = new File(Tiingo.eodPath, symbol + "-eod.csv");
+    File file = getEodFile(symbol);
     if (!file.canRead()) {
       throw new IOException(String.format("Can't read Tiingo CSV file (%s)", file.getPath()));
     }
@@ -133,13 +181,10 @@ public class TiingoIO
       if (line.isEmpty()) {
         continue;
       }
-      String[] toks = line.trim().split(",");
+      String[] toks = DataIO.splitCSV(line, ",");
       if (toks == null || toks.length != 13) {
         System.err.printf("Error parsing Tiingo data: [%s]\n", line);
         continue;
-      }
-      for (int i = 0; i < toks.length; ++i) {
-        toks[i] = toks[i].trim();
       }
 
       // Parse the header.
@@ -204,38 +249,31 @@ public class TiingoIO
     return seq;
   }
 
-  public static String downloadDailyData(String symbol)
-  {
-    System.out.printf("Download data: %s\n", symbol);
-    try {
-      URL url = buildDataURL(symbol);
-      return IOUtils.toString(url);
-    } catch (IOException e) {
-      e.printStackTrace();
-      return null;
-    }
-  }
-
-  public static boolean httpGetToFile(URL url, File file) throws IOException
+  private static String httpGetToString(URL url) throws IOException
   {
     // https://api.tiingo.com/docs/tiingo/daily
     HttpURLConnection con = (HttpURLConnection) url.openConnection();
     con.setRequestMethod("GET");
     con.setRequestProperty("Content-Type", "application/json");
-    con.setRequestProperty("Authorization", "Token " + Tiingo.auth);
+    con.setRequestProperty("Authorization", "Token " + TiingoIO.auth);
     if (con.getResponseCode() != 200) {
       System.out.printf("Response: %d - %s\n", con.getResponseCode(), con.getResponseMessage());
-      return false;
+      return null;
     }
 
-    String data;
     try (InputStream input = con.getInputStream()) {
-      // Files.copy(input, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
-      data = IOUtils.toString(input);
-      if (data.startsWith("Error")) {
-        System.out.println(data);
-        return false;
-      }
+      return IOUtils.toString(input);
+    }
+  }
+
+  private static boolean httpGetToFile(URL url, File file) throws IOException
+  {
+    String data = httpGetToString(url);
+    if (data == null) return false;
+
+    if (data.startsWith("Error")) {
+      System.out.println(data);
+      return false;
     }
 
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
@@ -246,29 +284,134 @@ public class TiingoIO
 
   public static boolean saveFundEodData(TiingoFund fund, boolean replaceExisting) throws IOException
   {
-    if (!Tiingo.eodPath.exists()) {
-      Tiingo.eodPath.mkdirs();
+    if (!TiingoIO.eodPath.exists()) {
+      TiingoIO.eodPath.mkdirs();
     }
     URL url = TiingoIO.buildDataURL(fund.ticker);
-    File file = new File(Tiingo.eodPath, fund.ticker + "-eod.csv");
+    File file = getEodFile(fund.ticker);
     if (replaceExisting || !file.exists()) {
-      System.out.printf("%s  [%s] -> [%s]\n", fund.ticker, fund.start, fund.end);
+      System.out.printf("%s (eod)  [%s] -> [%s]\n", fund.ticker, fund.start, fund.end);
       return TiingoIO.httpGetToFile(url, file);
     }
     return true;
   }
 
-  public static boolean saveFundMetadata(TiingoFund fund, boolean replaceExisting) throws IOException
+  public static boolean updateFundEodData(TiingoFund fund) throws IOException
   {
-    if (!Tiingo.metaPath.exists()) {
-      Tiingo.metaPath.mkdirs();
+    File file = getEodFile(fund.ticker);
+    List<String> lines = Files.readAllLines(file.toPath());
+    String header = lines.get(0).trim();
+    String lastLine = lines.get(lines.size() - 1);
+    String[] toks = DataIO.splitCSV(header);
+    assert toks[0].toLowerCase().equals("date");
+
+    toks = DataIO.splitCSV(lastLine);
+    LocalDate lastDate = LocalDate.parse(toks[0]);
+
+    URL url = buildDataURL(fund.ticker, lastDate);
+    String data = httpGetToString(url);
+
+    System.out.println(data);
+    String[] newLines = DataIO.splitCSV(data, "\n");
+    for (int i = 0; i < newLines.length; ++i) {
+      System.out.printf("%02d: %s\n", i, newLines[i]);
+    }
+    if (newLines.length < 3) return true; // no new data
+
+    if (!newLines[0].equals(header)) {
+      System.out.printf("New header => replace entire file (%s)\n", fund.ticker);
+      System.out.printf("Old: %s\n", header);
+      System.out.printf("New: %s\n", newLines[0]);
+      return saveFundEodData(fund, true);
+    }
+
+    if (!lastLine.equals(newLines[1])) {
+      System.out.printf("Old last line doesn't match new first line (%s)\n", fund.ticker);
+      System.out.printf("Old: %s\n", lastLine);
+      System.out.printf("New: %s\n", newLines[1]);
+      return saveFundEodData(fund, true);
+    }
+
+    // Add new lines to old lines (skip header and one line overlap).
+    for (int i = 2; i < newLines.length; ++i) {
+      lines.add(newLines[i]);
+    }
+    Files.write(file.toPath(), lines);
+    return true;
+  }
+
+  public static boolean saveFundMetadata(TiingoFund fund) throws IOException
+  {
+    return saveFundMetadata(fund, 10 * TimeLib.MS_IN_DAY);
+  }
+
+  public static boolean saveFundMetadata(TiingoFund fund, long replaceAgeMs) throws IOException
+  {
+    if (!TiingoIO.metaPath.exists()) {
+      TiingoIO.metaPath.mkdirs();
     }
     URL url = TiingoIO.buildMetaURL(fund.ticker);
-    File file = new File(Tiingo.metaPath, fund.ticker + "-meta.json");
-    if (replaceExisting || !file.exists()) {
-      System.out.printf("%s  [%s] -> [%s]\n", fund.ticker, fund.start, fund.end);
+    File file = TiingoIO.getMetadataFile(fund.ticker);
+    if (!file.exists() || DataIO.shouldDownloadUpdate(file, replaceAgeMs)) {
+      System.out.printf("%s (meta)  [%s] -> [%s]\n", fund.ticker, fund.start, fund.end);
       return TiingoIO.httpGetToFile(url, file);
     }
+    return true;
+  }
+
+  public static boolean updateData(String[] symbols) throws IOException
+  {
+    // TODO Implement data update.
+    TiingoIO.loadTickers(TiingoIO.supportedTickersPath);
+    for (String symbol : symbols) {
+      TiingoFund fund = TiingoFund.get(symbol);
+      if (!TiingoIO.saveFundMetadata(fund)) return false;
+      if (!TiingoIO.saveFundEodData(fund, false)) return false;
+    }
+    return true;
+  }
+
+  public static boolean downloadLatestSupportedTickerCSV()
+  {
+    File zip = new File(tiingoPath, "supported_tickers.zip");
+    try {
+      if (!DataIO.shouldDownloadUpdate(zip, 24 * TimeLib.MS_IN_HOUR)) return true;
+    } catch (IOException e) {
+      return false;
+    }
+
+    System.out.print("Downloading supported tickers CSV... ");
+    if (!DataIO.copyUrlToFile(supportedTickersUrl, zip)) {
+      System.out.println("FAILED.");
+      return false;
+    } else {
+      System.out.println("done.");
+    }
+
+    try {
+      System.out.print("Unzipping supported tickers CSV... ");
+      DataIO.unzipFile(zip, null);
+      System.out.println("done.");
+    } catch (IOException e) {
+      System.out.println("FAILED.");
+      return false;
+    }
+
+    File file = new File(tiingoPath, "supported_tickers.csv");
+    if (!file.exists()) {
+      System.err.println("Expected supported_tickers.csv file is missing!");
+      return false;
+    }
+
+    if (supportedTickersPath.exists() && !supportedTickersPath.delete()) {
+      System.err.println("Failed to delete old supported tickers CSV.");
+      return false;
+    }
+    if (!file.renameTo(supportedTickersPath)) {
+      System.err.println("Failed to rename new supported tickers CSV.");
+      return false;
+    }
+
     return true;
   }
 }

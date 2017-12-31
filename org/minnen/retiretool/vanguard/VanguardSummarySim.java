@@ -1,49 +1,17 @@
 package org.minnen.retiretool.vanguard;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Predicate;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-import org.minnen.retiretool.broker.SimFactory;
-import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.DataIO;
-import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.data.YahooIO;
 import org.minnen.retiretool.data.Sequence.EndpointBehavior;
-import org.minnen.retiretool.ml.Stump;
-import org.minnen.retiretool.predictor.config.ConfigAdaptive;
-import org.minnen.retiretool.predictor.config.ConfigAdaptive.TradeFreq;
-import org.minnen.retiretool.predictor.config.ConfigConst;
-import org.minnen.retiretool.predictor.config.ConfigMixed;
-import org.minnen.retiretool.predictor.config.ConfigTactical;
-import org.minnen.retiretool.predictor.config.PredictorConfig;
-import org.minnen.retiretool.predictor.daily.AdaptivePredictor;
-import org.minnen.retiretool.predictor.daily.MixedPredictor;
-import org.minnen.retiretool.predictor.daily.Predictor;
-import org.minnen.retiretool.predictor.features.FeatureExtractor;
-import org.minnen.retiretool.predictor.features.ITAScore;
-import org.minnen.retiretool.predictor.features.Momentum;
-import org.minnen.retiretool.stats.ComparisonStats;
-import org.minnen.retiretool.stats.CumulativeStats;
-import org.minnen.retiretool.stats.DurationalStats;
-import org.minnen.retiretool.util.FinLib;
-import org.minnen.retiretool.util.Library;
-import org.minnen.retiretool.util.PriceModel;
 import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
@@ -59,7 +27,7 @@ public class VanguardSummarySim
   public static final String[]                  assetSymbols = new String[fundSymbols.length + 1];
   public static final Map<String, VanguardFund> funds        = VanguardFund.getFundMap(fundSet);
   public static final String[]                  statNames    = new String[] { "CAGR", "MaxDrawdown", "Worst Period",
-      "10th Percentile", "Median "                          };
+      "10th Percentile", "Median " };
 
   static {
     // Add "cash" as the last asset since it's not a fund in fundSymbols.
@@ -86,15 +54,15 @@ public class VanguardSummarySim
 
     // Make sure we have the latest data.
     for (String symbol : fundSymbols) {
-      File file = DataIO.getYahooFile(yahooDir, symbol);
-      DataIO.updateDailyDataFromYahoo(file, symbol, 8 * TimeLib.MS_IN_HOUR);
+      File file = YahooIO.getFile(yahooDir, symbol);
+      YahooIO.updateDailyData(file, symbol, 8 * TimeLib.MS_IN_HOUR);
     }
 
     // Load data and trim to same time period.
     List<Sequence> seqs = new ArrayList<>();
     for (String symbol : fundSymbols) {
-      File file = DataIO.getYahooFile(yahooDir, symbol);
-      Sequence seq = DataIO.loadYahooData(file);
+      File file = YahooIO.getFile(yahooDir, symbol);
+      Sequence seq = YahooIO.loadData(file);
       seqs.add(seq);
     }
     seqs.sort(Sequence.getStartDateComparator());

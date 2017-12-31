@@ -47,8 +47,8 @@ public class MonthlyRunner implements PortfolioRunner
     // Create initial positions.
     Position[] positions = new Position[portfolio.names.length];
     for (int i = 0; i < positions.length; ++i) {
-      positions[i] = new Position(portfolio.names[i], portfolio.weights[i], portfolio.weights[i], seqs.get(Sequence
-          .findByName(portfolio.names[i], seqs)));
+      positions[i] = new Position(portfolio.names[i], portfolio.weights[i], portfolio.weights[i],
+          seqs.get(Sequence.findByName(portfolio.names[i], seqs)));
     }
 
     int nMonths = seqs.get(0).length();
