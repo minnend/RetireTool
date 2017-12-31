@@ -41,9 +41,6 @@ public class VanguardSummarySim
     File dataDir = new File("g:/research/finance/");
     assert dataDir.isDirectory();
 
-    File yahooDir = new File(dataDir, "yahoo/");
-    if (!yahooDir.exists()) yahooDir.mkdirs();
-
     Sequence tbillData = DataIO.loadDateValueCSV(new File(dataDir, "treasury-bills-3-month.csv"));
     tbillData.setName("3-Month Treasury Bills");
     tbillData.adjustDatesToEndOfMonth();
@@ -54,14 +51,13 @@ public class VanguardSummarySim
 
     // Make sure we have the latest data.
     for (String symbol : fundSymbols) {
-      File file = YahooIO.getFile(yahooDir, symbol);
-      YahooIO.updateDailyData(file, symbol, 8 * TimeLib.MS_IN_HOUR);
+      YahooIO.updateDailyData(symbol, 8 * TimeLib.MS_IN_HOUR);
     }
 
     // Load data and trim to same time period.
     List<Sequence> seqs = new ArrayList<>();
     for (String symbol : fundSymbols) {
-      File file = YahooIO.getFile(yahooDir, symbol);
+      File file = YahooIO.getFile(symbol);
       Sequence seq = YahooIO.loadData(file);
       seqs.add(seq);
     }

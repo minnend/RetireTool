@@ -24,8 +24,8 @@ public class ComparisonStats
   public double                targetReturn;
   public Sequence[]            defenders;
   public Map<Integer, Results> durationToResults;
-  public final static int[]    durations = new int[] { 1, 12, 2 * 12, 3 * 12, 4 * 12, 5 * 12, 10 * 12, 15 * 12,
-      20 * 12, 30 * 12                  };
+  public final static int[]    durations = new int[] { 1, 12, 2 * 12, 3 * 12, 4 * 12, 5 * 12, 10 * 12, 15 * 12, 20 * 12,
+      30 * 12 };
 
   private ComparisonStats()
   {
@@ -40,6 +40,7 @@ public class ComparisonStats
     stats.returns1 = cumulativeReturns;
     stats.defenders = defenders;
 
+    // Calculate comparison stats for each duration.
     for (int i = 0; i < durations.length && durations[i] < cumulativeReturns.length(); ++i) {
       final int duration = durations[i];
       stats.durationToResults.put(duration, calcFromCumulative(cumulativeReturns, defenders, duration, diffMargin));
@@ -100,7 +101,7 @@ public class ComparisonStats
       if (returns2 == null) {
         returns2 = returns;
       } else {
-        returns2._max(returns);
+        returns2._max(returns); // keep the best returns for any defender
       }
     }
 
@@ -114,8 +115,8 @@ public class ComparisonStats
     return calcFromDurationReturns(returns, targetReturn, nMonths, diffMargin);
   }
 
-  public static Results calcFromDurationReturns(Sequence returnsForDuration1, Sequence returnsForDuration2,
-      int nMonths, double diffMargin)
+  public static Results calcFromDurationReturns(Sequence returnsForDuration1, Sequence returnsForDuration2, int nMonths,
+      double diffMargin)
   {
     assert returnsForDuration1.length() == returnsForDuration2.length();
     Results results = new Results();
@@ -146,7 +147,6 @@ public class ComparisonStats
     results.worstExcess = r[0];
     results.medianExcess = r[Math.min(Math.round(N * 0.5f), N - 1)];
     results.bestExcess = r[N - 1];
-
     return results;
   }
 

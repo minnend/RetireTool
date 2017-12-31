@@ -69,8 +69,8 @@ public class ExplorePredictions
     final long timeDataStart = store.getCommonStartTime();
 
     // TODO pull requirements from config/predictor
-    final long timeFirstAbleToPredict = TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(timeDataStart)
-        .plusWeeks(49)));
+    final long timeFirstAbleToPredict = TimeLib
+        .toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(timeDataStart).plusWeeks(49)));
     long today = TimeLib.toLastBusinessDayOfWeek(timeFirstAbleToPredict);
     System.out.printf("Prediction Data Range: [%s] -> [%s]\n", TimeLib.formatDate(today),
         TimeLib.formatDate(guideSeq.getEndMS()));
@@ -82,8 +82,8 @@ public class ExplorePredictions
     int nGood = 0;
     while (true) {
       final long timePredictStart = TimeLib.toNextBusinessDay(today);
-      final long timePredictEnd = TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.toLastBusinessDayOfWeek(TimeLib
-          .ms2date(today).plusWeeks(1))));
+      final long timePredictEnd = TimeLib
+          .toMs(TimeLib.toNextBusinessDay(TimeLib.toLastBusinessDayOfWeek(TimeLib.ms2date(today).plusWeeks(1))));
       if (timePredictEnd > guideSeq.getEndMS()) break;
 
       broker.setNewDay(new TimeInfo(today));
@@ -95,7 +95,7 @@ public class ExplorePredictions
         int index1 = seq.getIndexAt(timePredictStart);
         int index2 = seq.getIndexAt(timePredictEnd);
         if (index1 < 0 || index2 < 0) {
-          // System.out.printf("[%s]=%d  [%s]=%d\n", TimeLib.formatDate(timePredictStart), index1,
+          // System.out.printf("[%s]=%d [%s]=%d\n", TimeLib.formatDate(timePredictStart), index1,
           // TimeLib.formatDate(timePredictEnd), index2);
           break;
         }
@@ -126,8 +126,8 @@ public class ExplorePredictions
       today = TimeLib.toMs(TimeLib.toLastBusinessDayOfWeek(TimeLib.ms2date(today).plusWeeks(1)));
     }
     FeatureVec mean = Example.mean(pointExamples);
-    System.out.printf("Pointwise Examples: %d (Good: %d = %.1f%%)\n", pointExamples.size(), nGood, 100.0 * nGood
-        / pointExamples.size());
+    System.out.printf("Pointwise Examples: %d (Good: %d = %.1f%%)\n", pointExamples.size(), nGood,
+        100.0 * nGood / pointExamples.size());
     System.out.printf(" Mean: %s\n", mean);
 
     if (outputDir != null) {
@@ -219,9 +219,6 @@ public class ExplorePredictions
     File dataDir = new File("g:/research/finance/");
     assert dataDir.isDirectory();
 
-    File yahooDir = new File(dataDir, "yahoo/");
-    if (!yahooDir.exists()) yahooDir.mkdirs();
-
     Sequence tbillData = DataIO.loadDateValueCSV(new File(dataDir, "treasury-bills-3-month.csv"));
     tbillData.setName("3-Month Treasury Bills");
     tbillData.adjustDatesToEndOfMonth();
@@ -232,14 +229,13 @@ public class ExplorePredictions
 
     // Make sure we have the latest data.
     for (String symbol : fundSymbols) {
-      File file = YahooIO.getFile(yahooDir, symbol);
-      YahooIO.updateDailyData(file, symbol, 8 * TimeLib.MS_IN_HOUR);
+      YahooIO.updateDailyData(symbol, 8 * TimeLib.MS_IN_HOUR);
     }
 
     // Load data and trim to same time period.
     List<Sequence> seqs = new ArrayList<>();
     for (String symbol : fundSymbols) {
-      File file = YahooIO.getFile(yahooDir, symbol);
+      File file = YahooIO.getFile(symbol);
       Sequence seq = YahooIO.loadData(file);
       seqs.add(seq);
     }
@@ -255,8 +251,8 @@ public class ExplorePredictions
     System.out.printf("Common[%d]: [%s] -> [%s]\n", seqs.size(), TimeLib.formatDate(commonStart),
         TimeLib.formatDate(commonEnd));
 
-    long timeSimStart = TimeLib.toMs(TimeLib.ms2date(commonStart).plusWeeks(53 + 51)
-        .with(TemporalAdjusters.firstDayOfMonth()));
+    long timeSimStart = TimeLib
+        .toMs(TimeLib.ms2date(commonStart).plusWeeks(53 + 51).with(TemporalAdjusters.firstDayOfMonth()));
     // long timeSimStart = TimeLib.toMs(2010, Month.JANUARY, 1); // TODO
     long timeSimEnd = commonEnd; // TimeLib.toMs(2005, Month.DECEMBER, 31); // TODO
     double nSimMonths = TimeLib.monthsBetween(timeSimStart, timeSimEnd);
@@ -289,7 +285,7 @@ public class ExplorePredictions
       System.out.printf("%.2f: %s\n", x, fv);
     }
 
-    Chart.saveScatterPlot(new File(outputDir, "momentum-6.html"), "Predictions", 1000, 1000, 3, new String[] {
-        "Predicted", "Actual" }, scatterData);
+    Chart.saveScatterPlot(new File(outputDir, "momentum-6.html"), "Predictions", 1000, 1000, 3,
+        new String[] { "Predicted", "Actual" }, scatterData);
   }
 }

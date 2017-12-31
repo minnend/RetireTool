@@ -10,6 +10,7 @@ import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.data.tiingo.Tiingo;
 import org.minnen.retiretool.ml.Stump;
 import org.minnen.retiretool.predictor.config.ConfigConst;
 import org.minnen.retiretool.predictor.config.ConfigMixed;
@@ -21,7 +22,6 @@ import org.minnen.retiretool.predictor.features.FeatureExtractor;
 import org.minnen.retiretool.predictor.features.Momentum;
 import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
-import org.minnen.retiretool.tiingo.Tiingo;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
@@ -47,7 +47,9 @@ public class ComparePortfolios
   public static void main(String[] args) throws IOException
   {
     File outputDir = new File("g:/web");
-    Simulation sim = Tiingo.setupSimulation(fundSymbols, 10000.0, 0.0, slippage, store);
+    double startingBalance = 10000.0;
+    double monthlyDeposit = 0.0;
+    Simulation sim = Tiingo.setupSimulation(fundSymbols, startingBalance, monthlyDeposit, slippage, store);
 
     long commonStart = store.getCommonStartTime();
     long commonEnd = store.getCommonEndTime();

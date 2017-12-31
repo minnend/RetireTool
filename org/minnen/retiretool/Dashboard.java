@@ -6,11 +6,12 @@ import java.time.Month;
 import java.time.ZoneId;
 
 import org.minnen.retiretool.broker.Simulation;
-import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.data.TiingoIO;
 import org.minnen.retiretool.data.YahooIO;
+import org.minnen.retiretool.data.tiingo.TiingoFund;
 import org.minnen.retiretool.predictor.config.ConfigConst;
 import org.minnen.retiretool.predictor.config.ConfigMixed;
 import org.minnen.retiretool.predictor.config.ConfigMulti;
@@ -57,25 +58,22 @@ public class Dashboard
       new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap), new ConfigSMA(25, 0, 155, 125, 0.75, FinLib.Close, gap),
       new ConfigSMA(5, 0, 165, 5, 0.5, FinLib.Close, gap) };
   public static final int[][]           allParams     = new int[][] { { 20, 0, 240, 150, 25 }, { 25, 0, 155, 125, 75 },
-      { 5, 0, 165, 5, 50 }                           };
+      { 5, 0, 165, 5, 50 } };
 
   public static void setupData() throws IOException
   {
     File dataDir = new File("g:/research/finance");
     assert dataDir.exists();
 
-    File yahooDir = new File(dataDir, "yahoo");
-    if (!yahooDir.exists()) {
-      yahooDir.mkdirs();
-    }
+    // String symbol = "^GSPC";
+    // if (!YahooIO.updateDailyData(symbol, 8 * TimeLib.MS_IN_HOUR)) {
+    // throw new IOException("Failed to update data.");
+    // }
+    // Sequence stock = YahooIO.loadData(YahooIO.getFile(symbol));
 
-    String symbol = "^GSPC";
-    File file = YahooIO.getFile(yahooDir, symbol);
-    if (!YahooIO.updateDailyData(file, symbol, 8 * TimeLib.MS_IN_HOUR)) {
-      throw new IOException("Failed to update data.");
-    }
+    TiingoFund fund = TiingoFund.fromSymbol("VFINX", true);
+    Sequence stock = fund.data;
 
-    Sequence stock = YahooIO.loadData(file);
     System.out.printf("S&P (Daily): [%s] -> [%s]\n", TimeLib.formatDate(stock.getStartMS()),
         TimeLib.formatDate(stock.getEndMS()));
     store.add(stock, "stock");

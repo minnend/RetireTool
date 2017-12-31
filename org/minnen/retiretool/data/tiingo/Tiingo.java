@@ -1,4 +1,4 @@
-package org.minnen.retiretool.tiingo;
+package org.minnen.retiretool.data.tiingo;
 
 import java.io.IOException;
 import java.util.ArrayList;

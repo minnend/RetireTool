@@ -16,11 +16,11 @@ import org.minnen.retiretool.util.TimeLib;
 
 /**
  * API for downloading and updating data from Yahoo! Finance.
- * 
- * @deprecated The Yahoo web API changed so it's unlikely that this API still works. Use Tiingo instead.
  */
 public class YahooIO
 {
+  public static final File yahooDir = new File(DataIO.financePath, "yahoo");
+
   /**
    * Load data from a Yahoo CSV file.
    * 
@@ -123,11 +123,17 @@ public class YahooIO
     }
   }
 
+  /**
+   * @deprecated The Yahoo web API changed so it's unlikely that this API still works. Use Tiingo instead.
+   */
   public static URL buildURL(String symbol)
   {
     return buildURL(symbol, LocalDate.of(1900, Month.JANUARY, 1));
   }
 
+  /**
+   * @deprecated The Yahoo web API changed so it's unlikely that this API still works. Use Tiingo instead.
+   */
   public static URL buildURL(String symbol, LocalDate startDate)
   {
     try {
@@ -143,11 +149,14 @@ public class YahooIO
     }
   }
 
-  public static boolean updateDailyData(File file, String symbol, long replaceAgeMs)
+  /**
+   * @deprecated The Yahoo web API changed so it's unlikely that this API still works. Use Tiingo instead.
+   */
+  public static boolean updateDailyData(String symbol, long replaceAgeMs)
   {
-    // No file => download all data.
+    File file = YahooIO.getFile(symbol);
     if (!file.exists()) {
-      file = downloadDailyData(file, symbol, 0);
+      file = YahooIO.downloadDailyData(symbol, 0);
       return (file != null);
     }
 
@@ -207,31 +216,30 @@ public class YahooIO
   /**
    * Download Yahoo financial data into the given file, or create a file if the path is a directory.
    * 
-   * @param path File or directory in which to store data.
+   * @deprecated The Yahoo web API changed so it's unlikely that this API still works. Use Tiingo instead.
+   * 
    * @param symbol symbol to download
    * @param replaceAgeMs If the file exists and is older than this value (in ms), replace it; otherwise, don't download
    *          new data.
    * @return File in which that data is stored or null if there was an error.
    */
-  public static File downloadDailyData(File path, String symbol, long replaceAgeMs)
+  public static File downloadDailyData(String symbol, long replaceAgeMs)
   {
-    path = getFile(path, symbol);
+    File file = getFile(symbol);
     try {
-      if (!DataIO.shouldDownloadUpdate(path, replaceAgeMs)) return path;
+      if (!DataIO.shouldDownloadUpdate(file, replaceAgeMs)) return file;
     } catch (IOException e) {
       return null;
     }
     System.out.printf("Download data: %s\n", symbol);
     URL url = buildURL(symbol);
-    DataIO.copyUrlToFile(url, path);
-    return path;
+    DataIO.copyUrlToFile(url, file);
+    return file;
   }
 
-  public static File getFile(File path, String symbol)
+  public static File getFile(String symbol)
   {
-    if (path.isDirectory()) {
-      return new File(path, symbol + ".csv");
-    }
-    return path;
+    if (!yahooDir.exists() && !yahooDir.mkdirs()) return null;
+    return new File(yahooDir, symbol + ".csv");
   }
 }

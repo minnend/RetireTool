@@ -1,4 +1,4 @@
-package org.minnen.retiretool.tiingo;
+package org.minnen.retiretool.data.tiingo;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,7 +21,7 @@ public class DownloadFilteredFunds
   public static void saveFundEodData(List<TiingoFund> funds, boolean replaceExisting) throws IOException
   {
     for (TiingoFund fund : funds) {
-      if (!TiingoIO.saveFundEodData(fund, replaceExisting)) break;
+      if (!TiingoIO.updateFundEodData(fund)) break;
     }
   }
 
@@ -55,8 +55,8 @@ public class DownloadFilteredFunds
     System.out.printf("Funds (old): %d\n", funds.size());
 
     // Only Vanguard funds.
-    // funds.removeIf(p -> !p.ticker.startsWith("V"));
-    // System.out.printf("Funds (V): %d\n", funds.size());
+    funds.removeIf(p -> !p.ticker.startsWith("V"));
+    System.out.printf("Funds (V): %d\n", funds.size());
 
     // Sort by start date.
     funds.sort(new Comparator<TiingoFund>()
@@ -75,12 +75,19 @@ public class DownloadFilteredFunds
       File file = TiingoIO.getEodFile(fund.ticker);
       if (!file.exists()) ++nMissingEod;
 
+      TiingoMetadata meta = null;
       file = TiingoIO.getMetadataFile(fund.ticker);
-      if (!file.exists()) ++nMissingMeta;
+      if (!file.exists()) {
+        ++nMissingMeta;
+      } else {
+        meta = TiingoIO.loadMetadata(fund.ticker);
+      }
+
+      System.out.printf("%s  %s\n", fund, meta == null ? "" : meta.name);
     }
-    System.out.printf("Missing: meta=%d  eod=%d\n", nMissingMeta, nMissingEod);
+    System.out.printf("# missing: meta=%d  eod=%d\n", nMissingMeta, nMissingEod);
 
     saveFundMetadata(funds);
-    // saveFundEodData(funds, false);
+    saveFundEodData(funds, false);
   }
 }

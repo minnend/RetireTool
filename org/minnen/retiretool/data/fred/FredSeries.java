@@ -1,4 +1,4 @@
-package org.minnen.retiretool.fred;
+package org.minnen.retiretool.data.fred;
 
 import java.io.File;
 import java.io.IOException;

@@ -8,7 +8,7 @@ import java.util.Map;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.data.TiingoIO;
-import org.minnen.retiretool.tiingo.Tiingo;
+import org.minnen.retiretool.data.tiingo.Tiingo;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;

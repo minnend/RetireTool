@@ -1,10 +1,10 @@
-package org.minnen.retiretool.fred;
+package org.minnen.retiretool.data.fred;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.minnen.retiretool.fred.FredSeries.Frequency;
+import org.minnen.retiretool.data.fred.FredSeries.Frequency;
 
 public class Fred
 {

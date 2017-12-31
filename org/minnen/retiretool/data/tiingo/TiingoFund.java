@@ -1,12 +1,12 @@
-package org.minnen.retiretool.tiingo;
+package org.minnen.retiretool.data.tiingo;
 
-import java.io.File;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 
+import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.TiingoIO;
 import org.minnen.retiretool.util.TimeLib;
@@ -36,15 +36,32 @@ public class TiingoFund
     fundMap.put(ticker, this);
   }
 
+  @Override
+  public String toString()
+  {
+    return String.format("[%-5s  [%s] -> [%s]]", ticker, start, end);
+  }
+
+  public static TiingoFund fromSymbol(String symbol, boolean loadData)
+  {
+    try {
+      TiingoIO.loadTickers();
+      TiingoFund fund = TiingoFund.get(symbol);
+      if (loadData && !fund.loadData()) return null;
+      return fund;
+    } catch (IOException e) {
+      return null;
+    }
+  }
+
   public static TiingoFund fromString(String info)
   {
-    String[] toks = info.split(",");
+    String[] toks = DataIO.splitCSV(info);
     if (toks.length != 6) {
       // System.err.printf("Error parsing tiingo fund string: [%s]\n", info);
       return null;
     }
     for (int i = 0; i < toks.length; ++i) {
-      toks[i] = toks[i].trim();
       if (toks[i].isEmpty()) return null;
     }
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("uuuu-MM-dd");

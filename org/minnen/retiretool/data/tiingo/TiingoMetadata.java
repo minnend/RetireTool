@@ -1,4 +1,4 @@
-package org.minnen.retiretool.tiingo;
+package org.minnen.retiretool.data.tiingo;
 
 import java.time.LocalDate;
 import java.util.HashMap;

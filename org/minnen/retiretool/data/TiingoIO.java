@@ -20,8 +20,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
-import org.minnen.retiretool.tiingo.TiingoFund;
-import org.minnen.retiretool.tiingo.TiingoMetadata;
+import org.minnen.retiretool.data.tiingo.TiingoFund;
+import org.minnen.retiretool.data.tiingo.TiingoMetadata;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
 
@@ -290,7 +290,7 @@ public class TiingoIO
     URL url = TiingoIO.buildDataURL(fund.ticker);
     File file = getEodFile(fund.ticker);
     if (replaceExisting || !file.exists()) {
-      System.out.printf("%s (eod)  [%s] -> [%s]\n", fund.ticker, fund.start, fund.end);
+      System.out.printf("Downloading: %s (eod)  [%s] -> [%s]\n", fund.ticker, fund.start, fund.end);
       return TiingoIO.httpGetToFile(url, file);
     }
     return true;
@@ -299,6 +299,10 @@ public class TiingoIO
   public static boolean updateFundEodData(TiingoFund fund) throws IOException
   {
     File file = getEodFile(fund.ticker);
+    if (!file.exists()) {
+      return saveFundEodData(fund, true);
+    }
+
     List<String> lines = Files.readAllLines(file.toPath());
     String header = lines.get(0).trim();
     String lastLine = lines.get(lines.size() - 1);
@@ -311,11 +315,7 @@ public class TiingoIO
     URL url = buildDataURL(fund.ticker, lastDate);
     String data = httpGetToString(url);
 
-    System.out.println(data);
     String[] newLines = DataIO.splitCSV(data, "\n");
-    for (int i = 0; i < newLines.length; ++i) {
-      System.out.printf("%02d: %s\n", i, newLines[i]);
-    }
     if (newLines.length < 3) return true; // no new data
 
     if (!newLines[0].equals(header)) {
@@ -353,7 +353,7 @@ public class TiingoIO
     URL url = TiingoIO.buildMetaURL(fund.ticker);
     File file = TiingoIO.getMetadataFile(fund.ticker);
     if (!file.exists() || DataIO.shouldDownloadUpdate(file, replaceAgeMs)) {
-      System.out.printf("%s (meta)  [%s] -> [%s]\n", fund.ticker, fund.start, fund.end);
+      System.out.printf("%5s (meta)  [%s] -> [%s]\n", fund.ticker, fund.start, fund.end);
       return TiingoIO.httpGetToFile(url, file);
     }
     return true;

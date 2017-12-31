@@ -55,21 +55,18 @@ public class TestMixablePredictor
     File dataDir = new File("g:/research/finance/");
     assert dataDir.isDirectory();
 
-    File yahooDir = new File(dataDir, "yahoo/");
-    if (!yahooDir.exists()) yahooDir.mkdirs();
-
     // Load data and trim to same time period.
     List<Sequence> seqs = new ArrayList<>();
     for (String symbol : fundSymbols) {
-      File file = YahooIO.getFile(yahooDir, symbol);
+      File file = YahooIO.getFile(symbol);
       Sequence seq = YahooIO.loadData(file);
       seqs.add(seq);
     }
 
     long commonStart = TimeLib.calcCommonStart(seqs);
     long commonEnd = TimeLib.calcCommonEnd(seqs);
-    long simStartMs = TimeLib.toMs(TimeLib.ms2date(commonStart).plusMonths(12)
-        .with(TemporalAdjusters.firstDayOfMonth()));
+    long simStartMs = TimeLib
+        .toMs(TimeLib.ms2date(commonStart).plusMonths(12).with(TemporalAdjusters.firstDayOfMonth()));
 
     for (int i = 0; i < seqs.size(); ++i) {
       Sequence seq = seqs.get(i);

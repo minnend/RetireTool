@@ -32,17 +32,11 @@ public class Oddmund
   public static void main(String[] args) throws IOException
   {
     File outputDir = new File("g:/web");
-    File dataDir = new File("g:/research/finance/");
-    assert dataDir.isDirectory();
-
-    File yahooDir = new File(dataDir, "yahoo/");
-    if (!yahooDir.exists()) yahooDir.mkdirs();
 
     // Make sure we have the latest data.
     String symbol = "SPY";
-    File file = YahooIO.getFile(yahooDir, symbol);
-    YahooIO.updateDailyData(file, symbol, 8 * TimeLib.MS_IN_HOUR);
-    Sequence rawPrices = YahooIO.loadData(file);
+    YahooIO.updateDailyData(symbol, 8 * TimeLib.MS_IN_HOUR);
+    Sequence rawPrices = YahooIO.loadData(YahooIO.getFile(symbol));
 
     long commonStart = TimeLib.toMs(1995, Month.JANUARY, 1);
     long commonEnd = TimeLib.toMs(2015, Month.DECEMBER, 31);
