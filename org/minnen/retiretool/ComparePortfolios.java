@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.minnen.retiretool.broker.Simulation;
+import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
@@ -51,7 +52,6 @@ public class ComparePortfolios
 
   public static void main(String[] args) throws IOException
   {
-    File outputDir = new File("g:/web");
     double startingBalance = 10000.0;
     double monthlyDeposit = 0.0;
     Simulation sim = Tiingo.setupSimulation(fundSymbols, startingBalance, monthlyDeposit, slippage, store);
@@ -148,24 +148,26 @@ public class ComparePortfolios
     System.out.println(CumulativeStats.calc(sim.returnsMonthly));
     returns.add(sim.returnsMonthly);
     compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
-    Chart.saveHoldings(new File(outputDir, "holdings-dual-momentum.html"), sim.holdings, sim.store);
+    Chart.saveHoldings(new File(DataIO.outputPath, "holdings-dual-momentum.html"), sim.holdings, sim.store);
 
     // Save reports: graph of returns + comparison summary.
     String title = String.format("Returns (%d\u00A2 Spread)", Math.round(slippage.constSlip * 200));
-    Chart.saveLineChart(new File(outputDir, "returns.html"), title, 1000, 640, true, true, returns);
+    Chart.saveLineChart(new File(DataIO.outputPath, "returns.html"), title, 1000, 640, true, true, returns);
 
-    Chart.saveComparisonTable(new File(outputDir, "comparison.html"), 1000, compStats);
+    Chart.saveComparisonTable(new File(DataIO.outputPath, "comparison.html"), 1000, compStats);
 
     // Report: comparison of returns over next N months.
-    int nMonths = 12 * 5;
-    List<Sequence> durationalReturns = new ArrayList<>();
-    for (Sequence r : returns) {
-      Sequence seq = FinLib.calcReturnsForMonths(r, nMonths);
-      System.out.printf("Name: %s\n", seq.getName());
-      durationalReturns.add(seq);
+    for (int nMonths : new int[] { 12 * 5, 12 * 10 }) {
+      List<Sequence> durationalReturns = new ArrayList<>();
+      for (Sequence r : returns) {
+        Sequence seq = FinLib.calcReturnsForMonths(r, nMonths);
+        seq.setName(r.getName());
+        durationalReturns.add(seq);
+      }
+      title = String.format("Returns (%s, %d\u00A2 Spread)", TimeLib.formatDurationMonths(nMonths),
+          Math.round(slippage.constSlip * 200));
+      File file = new File(DataIO.outputPath, String.format("duration-returns-%d-months.html", nMonths));
+      Chart.saveLineChart(file, title, 1000, 640, false, true, durationalReturns);
     }
-    title = String.format("Returns (%s, %d\u00A2 Spread)", TimeLib.formatDurationMonths(nMonths),
-        Math.round(slippage.constSlip * 200));
-    Chart.saveLineChart(new File(outputDir, "duration-returns.html"), title, 1000, 640, false, true, durationalReturns);
   }
 }

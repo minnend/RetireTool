@@ -46,6 +46,16 @@ public class SequenceStore implements Iterable<Sequence>
     return commonEnd;
   }
 
+  /**
+   * Updates all sequences to have the same start and end times.
+   */
+  public void clipToCommonTimeRange()
+  {
+    long commonStart = TimeLib.calcCommonStart(seqs);
+    long commonEnd = TimeLib.calcCommonEnd(seqs);
+    setCommonTimes(commonStart, commonEnd);
+  }
+
   public void setCommonTimes(long commonStart, long commonEnd)
   {
     this.commonStart = commonStart;
@@ -107,6 +117,16 @@ public class SequenceStore implements Iterable<Sequence>
    * Add all sequences in the given collection.
    */
   public void addAll(Collection<? extends Sequence> newSeqs)
+  {
+    for (Sequence seq : newSeqs) {
+      add(seq);
+    }
+  }
+
+  /**
+   * Add all sequences in the given array.
+   */
+  public void addAll(Sequence... newSeqs)
   {
     for (Sequence seq : newSeqs) {
       add(seq);

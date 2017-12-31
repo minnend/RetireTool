@@ -8,7 +8,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
-import java.util.function.Predicate;
 
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.util.Random;
@@ -583,6 +582,15 @@ public class Sequence implements Iterable<FeatureVec>
     return dup()._div(x);
   }
 
+  /** In-place natural logarithm. */
+  public Sequence _log()
+  {
+    for (FeatureVec fv : data) {
+      fv._log();
+    }
+    return this;
+  }
+
   /**
    * @return index of the data point closest to the given time without respecting lock boundaries.
    */
@@ -870,7 +878,7 @@ public class Sequence implements Iterable<FeatureVec>
   /** @return new sequence equal to given sequence subtracted from this sequence. */
   public Sequence sub(Sequence seq)
   {
-    assert length() == seq.length();
+    assert length() == seq.length() : String.format("%d vs. %d", length(), seq.length());
     Sequence ret = new Sequence(getName() + " - " + seq.getName());
     for (int i = 0; i < length(); ++i) {
       FeatureVec x = get(i);

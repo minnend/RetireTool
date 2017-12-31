@@ -13,7 +13,6 @@ import java.util.Map;
 import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
-import org.minnen.retiretool.data.fred.Fred;
 import org.minnen.retiretool.data.fred.FredSeries;
 import org.minnen.retiretool.data.tiingo.Tiingo;
 import org.minnen.retiretool.util.FinLib;
@@ -36,9 +35,9 @@ public class GenMonthlyReturns
     File outputDir = new File("g:/web");
 
     // Load CPI data (https://fred.stlouisfed.org/series/CPIAUCSL).
-    FredSeries fredCPI = Fred.getName("cpi");
+    FredSeries fredCPI = FredSeries.fromName("cpi");
     System.out.println(fredCPI);
-    Sequence cpi = fredCPI.seq;
+    Sequence cpi = fredCPI.data;
 
     // Make sure we have the latest data.
     Simulation sim = Tiingo.setupSimulation(fundSymbols, Slippage.None, store, cpi);

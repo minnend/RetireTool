@@ -24,6 +24,7 @@ import org.minnen.retiretool.util.TimeLib;
 
 public class DataIO
 {
+  public static final File outputPath  = new File("g:/web");
   public static final File financePath = new File("G:/research/finance");
 
   /**

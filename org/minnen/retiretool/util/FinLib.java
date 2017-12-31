@@ -1,12 +1,9 @@
 package org.minnen.retiretool.util;
 
 import java.text.DecimalFormat;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.Month;
-import java.time.MonthDay;
 import java.time.Period;
-import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -322,11 +319,12 @@ public final class FinLib
    * Calculate returns for all periods with the given duration.
    * 
    * @param cumulativeReturns sequence of cumulative returns for the investment strategy
-   * @param nDays number of days invested
+   * @param nDays number of days invested (interpreted as an index, not calendar day)
    * @param priceModel price model touse with cumulativeReturns
+   * @param cagr if true, the return sequence will CAGRs instead of total returns
    * @return sequence containing total returns for each time period of the given duration
    */
-  public static Sequence calcReturnsForDays(Sequence cumulativeReturns, int nDays, PriceModel priceModel)
+  public static Sequence calcReturnsForDays(Sequence cumulativeReturns, int nDays, PriceModel priceModel, boolean cagr)
   {
     final int N = cumulativeReturns.size();
     assert nDays <= N;
@@ -334,7 +332,15 @@ public final class FinLib
     Sequence rois = new Sequence(name);
     for (int i = 0; i + nDays < N; i++) {
       double roi = getTotalReturn(cumulativeReturns, i, i + nDays, priceModel);
-      rois.addData(mul2ret(roi), cumulativeReturns.getTimeMS(i));
+      if (cagr) {
+        long t1 = cumulativeReturns.getTimeMS(i);
+        long t2 = cumulativeReturns.getTimeMS(i + nDays);
+        double nMonths = TimeLib.monthsBetween(t1, t2);
+        roi = FinLib.getAnnualReturn(roi, nMonths);
+      } else {
+        roi = mul2ret(roi);
+      }
+      rois.addData(roi, cumulativeReturns.getTimeMS(i));
     }
     assert rois.size() > 0;
     return rois;
@@ -1440,6 +1446,12 @@ public final class FinLib
       sma.addData(v, seq.getTimeMS(t));
     }
     return sma;
+  }
+
+  /** In-place normalization so that seq[0][0] == 1.0. */
+  public static Sequence normalizeReturns(Sequence seq)
+  {
+    return seq._div(seq.getFirst(0));
   }
 
   /**

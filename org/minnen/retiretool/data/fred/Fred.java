@@ -24,18 +24,6 @@ public class Fred
     series.add(new FredSeries("30-year-treasury", "DGS30", "30-Year Treasury Constant Maturity Rate", Frequency.Daily));
   }
 
-  public static FredSeries getName(String name) throws IOException
-  {
-    name = name.toLowerCase();
-    for (FredSeries fred : series) {
-      if (fred.name.equals(name)) {
-        fred.loadData();
-        return fred;
-      }
-    }
-    return null;
-  }
-
   public static void main(String[] args) throws IOException
   {
     for (FredSeries fred : series) {

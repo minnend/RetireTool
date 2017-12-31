@@ -18,7 +18,7 @@ public class FredSeries
   public final String    seriesID;
   public final String    description;
   public final Frequency frequency;
-  public Sequence        seq;
+  public Sequence        data;
 
   public FredSeries(String name, String seriesID, String description, Frequency frequency)
   {
@@ -30,12 +30,13 @@ public class FredSeries
 
   public boolean loadData()
   {
-    if (seq != null) return true;
+    if (data != null) return true;
     try {
       File file = FredIO.downloadData(FredIO.fredPath, seriesID, TimeLib.MS_IN_HOUR * 8);
-      this.seq = DataIO.loadDateValueCSV(file);
+      this.data = DataIO.loadDateValueCSV(file);
+      this.data.setName(name);
       if (frequency == Frequency.Monthly) {
-        this.seq.adjustDatesToEndOfMonth();
+        this.data.adjustDatesToEndOfMonth();
       }
       return true;
     } catch (IOException e) {
@@ -46,11 +47,24 @@ public class FredSeries
   @Override
   public String toString()
   {
-    if (seq == null) {
+    if (data == null) {
       return String.format("[FRED| %s (%s) %s]", name, seriesID, description);
     } else {
-      return String.format("[FRED| %s (%s) [%s] -> [%s]]", name, seriesID, TimeLib.formatMonth(seq.getStartMS()),
-          TimeLib.formatMonth(seq.getEndMS()));
+      return String.format("[FRED| %s (%s) [%s] -> [%s]]", name, seriesID, TimeLib.formatMonth(data.getStartMS()),
+          TimeLib.formatMonth(data.getEndMS()));
     }
   }
+
+  public static FredSeries fromName(String name) throws IOException
+  {
+    name = name.toLowerCase();
+    for (FredSeries fred : Fred.series) {
+      if (fred.name.equals(name)) {
+        fred.loadData();
+        return fred;
+      }
+    }
+    return null;
+  }
+
 }
