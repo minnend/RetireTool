@@ -104,7 +104,6 @@ public class ComparisonStats
         returns2._max(returns); // keep the best returns for any defender
       }
     }
-
     return calcFromDurationReturns(returns1, returns2, nMonths, diffMargin);
   }
 
@@ -118,6 +117,7 @@ public class ComparisonStats
   public static Results calcFromDurationReturns(Sequence returnsForDuration1, Sequence returnsForDuration2, int nMonths,
       double diffMargin)
   {
+    if (returnsForDuration1 == null || returnsForDuration2 == null) return null;
     assert returnsForDuration1.length() == returnsForDuration2.length();
     Results results = new Results();
     results.duration = nMonths;

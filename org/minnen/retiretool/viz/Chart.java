@@ -37,18 +37,18 @@ public class Chart
 {
   public final static boolean bVerticalLine = false;
 
-  public static void saveLineChart(File file, String title, int width, int height, boolean logarithmic,
-      boolean monthly, Sequence... seqs) throws IOException
+  public static void saveLineChart(File file, String title, int width, int height, boolean logarithmic, boolean monthly,
+      Sequence... seqs) throws IOException
   {
-    saveChart(file, ChartConfig.Type.Line, title, null, null, width, height, Double.NaN, Double.NaN, logarithmic ? 0.5
-        : Double.NaN, logarithmic, monthly, 0, seqs);
+    saveChart(file, ChartConfig.Type.Line, title, null, null, width, height, Double.NaN, Double.NaN,
+        logarithmic ? 0.5 : Double.NaN, logarithmic, monthly, 0, seqs);
   }
 
-  public static void saveLineChart(File file, String title, int width, int height, boolean logarithmic,
-      boolean monthly, List<Sequence> seqs) throws IOException
+  public static void saveLineChart(File file, String title, int width, int height, boolean logarithmic, boolean monthly,
+      List<Sequence> seqs) throws IOException
   {
-    saveChart(file, ChartConfig.Type.Line, title, null, null, width, height, Double.NaN, Double.NaN, logarithmic ? 0.5
-        : Double.NaN, logarithmic, monthly, 0, seqs.toArray(new Sequence[seqs.size()]));
+    saveChart(file, ChartConfig.Type.Line, title, null, null, width, height, Double.NaN, Double.NaN,
+        logarithmic ? 0.5 : Double.NaN, logarithmic, monthly, 0, seqs.toArray(new Sequence[seqs.size()]));
   }
 
   public static void saveChart(File file, ChartConfig.Type chartType, String title, String[] labels, String[] colors,
@@ -181,7 +181,7 @@ public class Chart
         writer.write("    states: {\n");
         writer.write("      hover: { lineWidth: 1 }\n");
         writer.write("    },\n");
-        // writer.write("    threshold: null\n");
+        // writer.write(" threshold: null\n");
         writer.write("   }\n");
       } else if (config.type == ChartConfig.Type.Line) {
         writer.write("    line: { marker: { enabled: false } }\n");
@@ -318,11 +318,14 @@ public class Chart
     }
   }
 
+  /**
+   * Convenience function that takes individual arguments and builds a ChartConfig.
+   */
   public static void saveScatterPlot(File file, String title, int width, int height, int radius, String[] dimNames,
       Sequence scatter) throws IOException
   {
-    ChartConfig config = new ChartConfig(file).setTitle(title).setSize(width, height).setRadius(radius)
-        .setDimNames(dimNames).setData(scatter);
+    ChartConfig config = new ChartConfig(file).setType(ChartConfig.Type.Scatter).setTitle(title).setSize(width, height)
+        .setRadius(radius).setDimNames(dimNames).setData(scatter);
     saveScatterPlot(config);
   }
 
@@ -417,8 +420,8 @@ public class Chart
       writer.write("  series: [{\n");
       writer.write("   data: [\n");
       for (FeatureVec v : scatter) {
-        StringBuilder dataString = new StringBuilder(String.format("x:%.3f,y:%.3f", v.get(config.xIndex),
-            v.get(config.yIndex)));
+        StringBuilder dataString = new StringBuilder(
+            String.format("x:%.3f,y:%.3f", v.get(config.xIndex), v.get(config.yIndex)));
         int nDims = Math.min(v.getNumDims(), config.dimNames.length);
         int zIndex = 0;
         for (int i = 0; i < nDims; ++i) {
@@ -462,8 +465,8 @@ public class Chart
       writer.write("    style: { fontSize: '18px' }\n");
       writer.write("   },\n");
       writer.write("   minorTickInterval: 0.5,\n");
-      // writer.write("   min: 1.5,\n");
-      // writer.write("   max: 5.0\n");
+      // writer.write(" min: 1.5,\n");
+      // writer.write(" max: 5.0\n");
       writer.write("  },\n");
       writer.write("  yAxis: {\n");
       writer.write("   title: {\n");
@@ -624,8 +627,8 @@ public class Chart
       writer.write("<script type=\"text/javascript\">\n");
       writer.write(" $(document).ready(function() { $(\"#statsTable\").tablesorter( {widgets: ['zebra']} ); } );\n");
       writer.write("</script>\n");
-      writer
-          .write("<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
+      writer.write(
+          "<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
       writer.write(String.format("</head><body style=\"width:%dpx\">\n", width));
       writer.write("<h2>Statistics for Different Strategies / Assets</h2>\n");
       writer.write("<table id=\"statsTable\" class=\"tablesorter\">\n");
@@ -692,8 +695,8 @@ public class Chart
           writer.write(String.format("<td>%.2f</td>\n", stats.leverage));
         }
         if (!reduced && includeRiskAdjusted) {
-          writer.write(String.format("<td>%.2f</td>\n", stats.cagr * strategyStats[0].devAnnualReturn
-              / stats.devAnnualReturn));
+          writer.write(
+              String.format("<td>%.2f</td>\n", stats.cagr * strategyStats[0].devAnnualReturn / stats.devAnnualReturn));
         }
         writer.write(String.format("<td>%.2f</td>\n", stats.percentDown10));
 
@@ -749,8 +752,8 @@ public class Chart
       writer.write(" <li><b>Best AR</b> - Return of best year (biggest gain)</li>\n");
       if (!reduced) {
         writer.write(" <li><b>Speedup</b> - Percentage ahead of base returns per year</li>");
-        writer
-            .write(" <li><b>Score</b> - Semi-arbitrary combination of statistics used to rank strategies (higher is better)</li>\n");
+        writer.write(
+            " <li><b>Score</b> - Semi-arbitrary combination of statistics used to rank strategies (higher is better)</li>\n");
       }
       writer.write("</ul></div>");
       writer.write("</body></html>\n");
@@ -774,8 +777,8 @@ public class Chart
       writer.write("<script type=\"text/javascript\">\n");
       writer.write(" $(document).ready(function() { $(\"#myTable\").tablesorter( {widgets: ['zebra']} ); } );\n");
       writer.write("</script>\n");
-      writer
-          .write("<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
+      writer.write(
+          "<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
       writer.write(String.format("</head><body style=\"width:%dpx\">\n", width));
       writer.write("<h2>Strategy Comparison</h2>\n");
       writer.write(String.format("<h3>%s</h3>\n", FinLib.getBaseName(stats.returns1.getName())));
@@ -839,11 +842,11 @@ public class Chart
       writer.write("<script type=\"text/javascript\">\n");
       writer.write(" $(document).ready(function() { $(\"#myTable\").tablesorter( {widgets: ['zebra']} ); } );\n");
       writer.write("</script>\n");
-      writer
-          .write("<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
+      writer.write(
+          "<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
       writer.write(String.format("</head><body style=\"width:%dpx\">\n", width));
-      String defender = allStats[0].returns2 != null ? FinLib.getBaseName(allStats[0].returns2.getName()) : String
-          .format("%d Defenders", allStats[0].defenders.length);
+      String defender = allStats[0].returns2 != null ? FinLib.getBaseName(allStats[0].returns2.getName())
+          : String.format("%d Defenders", allStats[0].defenders.length);
       writer.write(String.format("<h2>Win Rate vs. %s</h2>\n", defender));
       writer.write("<table id=\"comparisonTable\" class=\"tablesorter\">\n");
       writer.write("<thead><tr>\n");
@@ -899,8 +902,8 @@ public class Chart
       writer.write("<script type=\"text/javascript\">\n");
       writer.write(" $(document).ready(function() { $(\"#myTable\").tablesorter( {widgets: ['zebra']} ); } );\n");
       writer.write("</script>\n");
-      writer
-          .write("<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
+      writer.write(
+          "<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
       writer.write(String.format("</head><body style=\"width:%dpx\">\n", width));
       writer.write("<h2>Beat Inflation</h2>\n");
       writer.write("<table id=\"comparisonTable\" class=\"tablesorter\">\n");
@@ -950,8 +953,8 @@ public class Chart
     }
 
     System.out.printf("<table id=\"decadeTable\" class=\"tablesorter\"><thead>\n");
-    System.out
-        .printf("<tr><th>Decade</th><th>CAGR</th><th>Dev</th><th>Drawdown</th><th>Down 10%%</th><th>Total<br/>Return</th></tr>\n");
+    System.out.printf(
+        "<tr><th>Decade</th><th>CAGR</th><th>Dev</th><th>Drawdown</th><th>Down 10%%</th><th>Total<br/>Return</th></tr>\n");
     System.out.printf("</thead><tbody>\n");
 
     for (int i = iStart; i + 120 < cumulativeReturns.length(); i += 120) {
@@ -1053,8 +1056,8 @@ public class Chart
       writer.write("<script type=\"text/javascript\">\n");
       writer.write(" $(document).ready(function() { $(\"#statsTable\").tablesorter( {widgets: ['zebra']} ); } );\n");
       writer.write("</script>\n");
-      writer
-          .write("<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
+      writer.write(
+          "<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
       writer.write(String.format("</head><body style=\"width:%dpx\">\n", width));
       writer.write("<table id=\"statsTable\" class=\"tablesorter\">\n");
       writer.write("<thead><tr>\n");

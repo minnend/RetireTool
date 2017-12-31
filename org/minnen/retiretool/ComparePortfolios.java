@@ -26,15 +26,20 @@ import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
+import org.minnen.retiretool.viz.ChartConfig;
 
 public class ComparePortfolios
 {
   public static final SequenceStore store        = new SequenceStore();
   public static final Slippage      slippage     = new Slippage(0.03, 0.0);
 
-  public static final String[]      fundSymbols  = new String[] { "SPY", "VTSMX", "VBMFX", "VGSIX", "VGTSX", "VFISX",
-      "VFSTX", "VBISX", "EWU", "EWG", "EWJ", "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX", "SGGDX",
-      "VGPMX", "USAGX", "FSPCX", "FSRBX", "FPBFX", "ETGIX", "VDIGX", "MDY", "VBINX", "VWINX", "MCA" };
+  // public static final String[] fundSymbols = new String[] { "SPY", "VTSMX", "VBMFX", "VGSIX", "VGTSX", "VFISX",
+  // "VFSTX", "VBISX", "EWU", "EWG", "EWJ", "VGENX", "WHOSX", "FAGIX", "BUFHX", "VFICX", "FNMIX", "DFGBX", "SGGDX",
+  // "VGPMX", "USAGX", "FSPCX", "FSRBX", "FPBFX", "ETGIX", "VDIGX", "MDY", "VBINX", "VWINX", "MCA" };
+
+  // public static final String[] fundSymbols = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX", "VFISX" };
+
+  public static final String[]      fundSymbols  = new String[] { "VFINX", "VBMFX", "VWIGX", "VFISX" };
 
   public static final String[]      assetSymbols = new String[fundSymbols.length + 1];
 
@@ -68,8 +73,11 @@ public class ComparePortfolios
     Predictor predictor;
     List<Sequence> returns = new ArrayList<>();
 
+    String stockSymbol = "VFINX"; // "VTSMX";
+    String intSymbol = "VWIGX"; // "VGTSX";
+
     // Lazy 2-fund portfolio.
-    String[] assetsLazy2 = new String[] { "VTSMX", "VBMFX" };
+    String[] assetsLazy2 = new String[] { stockSymbol, "VBMFX" };
     config = new ConfigMixed(new DiscreteDistribution(assetsLazy2, new double[] { 0.7, 0.3 }),
         new ConfigConst(assetsLazy2[0]), new ConfigConst(assetsLazy2[1]));
     predictor = config.build(sim.broker.accessObject, assetsLazy2);
@@ -78,7 +86,7 @@ public class ComparePortfolios
     returns.add(returnsLazy2);
 
     // Lazy 3-fund portfolio.
-    String[] lazy3 = new String[] { "VTSMX", "VBMFX", "VGTSX" };
+    String[] lazy3 = new String[] { stockSymbol, "VBMFX", intSymbol };
     config = new ConfigMixed(new DiscreteDistribution(lazy3, new double[] { 0.34, 0.33, 0.33 }),
         new ConfigConst(lazy3[0]), new ConfigConst(lazy3[1]), new ConfigConst(lazy3[2]));
     predictor = config.build(sim.broker.accessObject, lazy3);
@@ -87,24 +95,24 @@ public class ComparePortfolios
     returns.add(returnsLazy3);
 
     // Lazy 4-fund portfolio.
-    String[] lazy4 = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX" };
-    config = new ConfigMixed(new DiscreteDistribution(lazy4, new double[] { 0.4, 0.2, 0.1, 0.3 }),
-        new ConfigConst(lazy4[0]), new ConfigConst(lazy4[1]), new ConfigConst(lazy4[2]), new ConfigConst(lazy4[3]));
-    predictor = config.build(sim.broker.accessObject, lazy4);
-    Sequence returnsLazy4 = sim.run(predictor, timeSimStart, timeSimEnd, "Lazy4");
-    System.out.println(CumulativeStats.calc(returnsLazy4));
-    returns.add(returnsLazy4);
+    // String[] lazy4 = new String[] { stockSymbol, "VBMFX", "VGSIX", intSymbol };
+    // config = new ConfigMixed(new DiscreteDistribution(lazy4, new double[] { 0.4, 0.2, 0.1, 0.3 }),
+    // new ConfigConst(lazy4[0]), new ConfigConst(lazy4[1]), new ConfigConst(lazy4[2]), new ConfigConst(lazy4[3]));
+    // predictor = config.build(sim.broker.accessObject, lazy4);
+    // Sequence returnsLazy4 = sim.run(predictor, timeSimStart, timeSimEnd, "Lazy4");
+    // System.out.println(CumulativeStats.calc(returnsLazy4));
+    // returns.add(returnsLazy4);
 
     // Set up defenders for comparison analysis based on previous portfolios.
     List<ComparisonStats> compStats = new ArrayList<>();
     // Sequence[] defenders = new Sequence[] { returnsStock, returnsBonds, returnsLazy2, returnsLazy3, returnsLazy4 };
-    Sequence[] defenders = new Sequence[] { returnsLazy2, returnsLazy3, returnsLazy4 };
+    Sequence[] defenders = new Sequence[] { returnsLazy2, returnsLazy3 }; // , returnsLazy4 };
     for (Sequence ret : defenders) {
       compStats.add(ComparisonStats.calc(ret, 0.5, defenders));
     }
 
     // All stock.
-    PredictorConfig stockConfig = new ConfigConst("VTSMX");
+    PredictorConfig stockConfig = new ConfigConst(stockSymbol);
     predictor = stockConfig.build(sim.broker.accessObject, assetSymbols);
     Sequence returnsStock = sim.run(predictor, timeSimStart, timeSimEnd, "Stock");
     System.out.println(CumulativeStats.calc(returnsStock));
@@ -120,7 +128,7 @@ public class ComparePortfolios
     compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
 
     // Tactical Allocation
-    PredictorConfig tacticalConfig = new ConfigTactical(FinLib.Close, "VTSMX", "VFISX");
+    PredictorConfig tacticalConfig = new ConfigTactical(FinLib.Close, stockSymbol, "VFISX");
     Predictor tacticalPred = tacticalConfig.build(sim.broker.accessObject, assetSymbols);
     sim.run(tacticalPred, timeSimStart, timeSimEnd, "Tactical");
     System.out.println(CumulativeStats.calc(sim.returnsMonthly));
@@ -135,7 +143,7 @@ public class ComparePortfolios
     int dualMomAge = (nBaseA + nBaseB + 20) / 40;
     Stump stump = new Stump(0, 0.0, false, 5.0);
     Predictor dualMom = new AdaptivePredictor(feDualMom, stump, 1, "VFISX", sim.broker.accessObject,
-        new String[] { "VTSMX", "VGTSX", "VFISX" });
+        new String[] { stockSymbol, intSymbol, "VFISX" });
     sim.run(dualMom, timeSimStart, timeSimEnd, String.format("Dual_Momentum[%d]", dualMomAge));
     System.out.println(CumulativeStats.calc(sim.returnsMonthly));
     returns.add(sim.returnsMonthly);
@@ -143,10 +151,21 @@ public class ComparePortfolios
     Chart.saveHoldings(new File(outputDir, "holdings-dual-momentum.html"), sim.holdings, sim.store);
 
     // Save reports: graph of returns + comparison summary.
-    Chart.saveLineChart(new File(outputDir, "returns.html"),
-        String.format("Returns (%d\u00A2 Spread)", Math.round(slippage.constSlip * 200)), 1000, 640, true, true,
-        returns);
+    String title = String.format("Returns (%d\u00A2 Spread)", Math.round(slippage.constSlip * 200));
+    Chart.saveLineChart(new File(outputDir, "returns.html"), title, 1000, 640, true, true, returns);
 
     Chart.saveComparisonTable(new File(outputDir, "comparison.html"), 1000, compStats);
+
+    // Report: comparison of returns over next N months.
+    int nMonths = 12 * 5;
+    List<Sequence> durationalReturns = new ArrayList<>();
+    for (Sequence r : returns) {
+      Sequence seq = FinLib.calcReturnsForMonths(r, nMonths);
+      System.out.printf("Name: %s\n", seq.getName());
+      durationalReturns.add(seq);
+    }
+    title = String.format("Returns (%s, %d\u00A2 Spread)", TimeLib.formatDurationMonths(nMonths),
+        Math.round(slippage.constSlip * 200));
+    Chart.saveLineChart(new File(outputDir, "duration-returns.html"), title, 1000, 640, false, true, durationalReturns);
   }
 }

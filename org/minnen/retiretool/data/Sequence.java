@@ -1083,11 +1083,28 @@ public class Sequence implements Iterable<FeatureVec>
     };
   }
 
-  public static int findByName(String name, List<Sequence> seqs)
+  /** @return index of sequence that matches the query name. */
+  public static int findByName(String queryName, List<Sequence> seqs)
   {
+    // Look for a perfect match.
     for (int i = 0; i < seqs.size(); ++i) {
-      if (seqs.get(i).getName().equals(name)) return i;
+      String seqName = seqs.get(i).getName();
+      if (seqName.equals(queryName)) return i;
+    }
+
+    // Look for a partial match.
+    queryName = queryName.toLowerCase();
+    for (int i = 0; i < seqs.size(); ++i) {
+      String seqName = seqs.get(i).getName().toLowerCase();
+      if (seqName.contains(queryName)) return i;
     }
     return -1;
+  }
+
+  /** @return Sequence that matches the query name. */
+  public static Sequence getSeq(String name, List<Sequence> seqs)
+  {
+    int i = findByName(name, seqs);
+    return i < 0 ? null : seqs.get(i);
   }
 }
