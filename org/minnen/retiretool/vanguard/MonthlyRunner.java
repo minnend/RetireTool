@@ -47,8 +47,12 @@ public class MonthlyRunner implements PortfolioRunner
     // Create initial positions.
     Position[] positions = new Position[portfolio.names.length];
     for (int i = 0; i < positions.length; ++i) {
-      positions[i] = new Position(portfolio.names[i], portfolio.weights[i], portfolio.weights[i],
-          seqs.get(Sequence.findByName(portfolio.names[i], seqs)));
+      int index = Sequence.findByName(portfolio.names[i], seqs);
+      if (index < 0) {
+        System.err.printf("Failed to find asset: %s\n", portfolio.names[i]);
+        return null;
+      }
+      positions[i] = new Position(portfolio.names[i], portfolio.weights[i], portfolio.weights[i], seqs.get(index));
     }
 
     int nMonths = seqs.get(0).length();

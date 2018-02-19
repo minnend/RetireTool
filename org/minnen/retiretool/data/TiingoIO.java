@@ -342,7 +342,7 @@ public class TiingoIO
 
   public static boolean saveFundMetadata(TiingoFund fund) throws IOException
   {
-    return saveFundMetadata(fund, 10 * TimeLib.MS_IN_DAY);
+    return saveFundMetadata(fund, 30 * TimeLib.MS_IN_DAY);
   }
 
   public static boolean saveFundMetadata(TiingoFund fund, long replaceAgeMs) throws IOException
@@ -353,7 +353,7 @@ public class TiingoIO
     URL url = TiingoIO.buildMetaURL(fund.ticker);
     File file = TiingoIO.getMetadataFile(fund.ticker);
     if (!file.exists() || DataIO.shouldDownloadUpdate(file, replaceAgeMs)) {
-      System.out.printf("%5s (meta)  [%s] -> [%s]\n", fund.ticker, fund.start, fund.end);
+      System.out.printf("Downloading: %5s (meta)  [%s] -> [%s]\n", fund.ticker, fund.start, fund.end);
       return TiingoIO.httpGetToFile(url, file);
     }
     return true;

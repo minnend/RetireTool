@@ -9,7 +9,7 @@ public class ConstPredictor extends Predictor
 
   public ConstPredictor(ConfigConst config, BrokerInfoAccess brokerAccess, String assetName)
   {
-    super("Const:" + assetName, brokerAccess, assetName);
+    super(assetName, brokerAccess, assetName);
     this.assetName = assetName;
     this.predictorType = PredictorType.SelectOne;
   }

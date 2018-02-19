@@ -18,10 +18,9 @@ public class VanguardReport
 {
   public static final SequenceStore             store          = new SequenceStore();
 
-  public static final VanguardFund.FundSet      fundSet        = VanguardFund.FundSet.All;
   public static final Slippage                  slippage       = Slippage.None;
-  public static final String[]                  fundSymbols    = VanguardFund.getFundNames(fundSet);
-  public static final Map<String, VanguardFund> funds          = VanguardFund.getFundMap(fundSet);
+  public static final String[]                  fundSymbols    = VanguardFund.getAllFunds();
+  public static final Map<String, VanguardFund> funds          = VanguardFund.fundMap;
   public static final int[]                     momentumMonths = new int[] { 36, 24, 18, 12, 9, 6, 5, 4, 3, 2, 1 };
 
   static {

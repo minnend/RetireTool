@@ -24,7 +24,7 @@ public abstract class Predictor
   }
 
   /** Name of this predictor. */
-  public final String           name;
+  public String                 name;
 
   /** Names of assets available to this predictor. */
   public final String[]         assetChoices;

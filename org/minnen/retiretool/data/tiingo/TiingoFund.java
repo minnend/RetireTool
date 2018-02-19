@@ -70,6 +70,23 @@ public class TiingoFund
     return new TiingoFund(toks[0], toks[1], toks[2], toks[3], start, end);
   }
 
+  /** Load metadata; download updated data if necessary. */
+  public boolean loadMetadata()
+  {
+    try {
+      if (!TiingoIO.saveFundMetadata(this)) return false;
+      meta = TiingoIO.loadMetadata(ticker);
+
+      // We trust data from "supported tickers" file more than individual meta files.
+      meta.end = end;
+      meta.start = start;
+      return true;
+    } catch (IOException e) {
+      return false;
+    }
+  }
+
+  /** Load EOD and metadata; download updated data if necessary. */
   public boolean loadData()
   {
     if (data != null) return true;
@@ -108,6 +125,7 @@ public class TiingoFund
           System.err.printf("Failed to update EOD data (%s)\n", ticker);
           return false;
         }
+        data = TiingoIO.loadEodData(ticker); // Load newly acquired data
       }
 
       return true;

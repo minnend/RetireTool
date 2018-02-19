@@ -27,7 +27,7 @@ public class ConfigMulti extends PredictorConfig
   @Override
   public boolean isValid()
   {
-    // Make sure basde configs are valid.
+    // Make sure base configs are valid.
     for (int i = 0; i < configs.length; ++i) {
       if (!configs[i].isValid()) return false;
     }

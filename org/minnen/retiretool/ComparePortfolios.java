@@ -27,7 +27,9 @@ import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
-import org.minnen.retiretool.viz.ChartConfig;
+
+// NOBL - based on dividend aristocrats
+// https://www.suredividend.com/wp-content/uploads/2016/07/NOBL-Index-Historical-Constituents.pdf
 
 public class ComparePortfolios
 {
@@ -40,7 +42,9 @@ public class ComparePortfolios
 
   // public static final String[] fundSymbols = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX", "VFISX" };
 
-  public static final String[]      fundSymbols  = new String[] { "VFINX", "VBMFX", "VWIGX", "VFISX" };
+  // TODO use cash instead of VFISX to get data from before 1991.
+  public static final String[]      fundSymbols  = new String[] { "VFINX", "VBMFX", "VWIGX", "VFISX", "VWINX",
+      "NAESX" };
 
   public static final String[]      assetSymbols = new String[fundSymbols.length + 1];
 
@@ -74,33 +78,27 @@ public class ComparePortfolios
     List<Sequence> returns = new ArrayList<>();
 
     String stockSymbol = "VFINX"; // "VTSMX";
+    String bondSymbol = "VBMFX";
     String intSymbol = "VWIGX"; // "VGTSX";
+    String reitSymbol = "VGSIX";
+
+    StandardPortfolios portfolios = new StandardPortfolios(sim);
 
     // Lazy 2-fund portfolio.
-    String[] assetsLazy2 = new String[] { stockSymbol, "VBMFX" };
-    config = new ConfigMixed(new DiscreteDistribution(assetsLazy2, new double[] { 0.7, 0.3 }),
-        new ConfigConst(assetsLazy2[0]), new ConfigConst(assetsLazy2[1]));
-    predictor = config.build(sim.broker.accessObject, assetsLazy2);
-    Sequence returnsLazy2 = sim.run(predictor, timeSimStart, timeSimEnd, "Lazy2 [70/30]");
-    System.out.println(CumulativeStats.calc(returnsLazy2));
+    predictor = portfolios.passive("Lazy2 [70/30]", new String[] { stockSymbol, bondSymbol }, 0.7, 0.3);
+    Sequence returnsLazy2 = portfolios.run(predictor, timeSimStart, timeSimEnd);
     returns.add(returnsLazy2);
 
     // Lazy 3-fund portfolio.
-    String[] lazy3 = new String[] { stockSymbol, "VBMFX", intSymbol };
-    config = new ConfigMixed(new DiscreteDistribution(lazy3, new double[] { 0.34, 0.33, 0.33 }),
-        new ConfigConst(lazy3[0]), new ConfigConst(lazy3[1]), new ConfigConst(lazy3[2]));
-    predictor = config.build(sim.broker.accessObject, lazy3);
-    Sequence returnsLazy3 = sim.run(predictor, timeSimStart, timeSimEnd, "Lazy3");
-    System.out.println(CumulativeStats.calc(returnsLazy3));
+    predictor = portfolios.passive("Lazy3", new String[] { stockSymbol, bondSymbol, intSymbol }, 0.34, 0.33, 0.33);
+    Sequence returnsLazy3 = portfolios.run(predictor, timeSimStart, timeSimEnd);
     returns.add(returnsLazy3);
 
     // Lazy 4-fund portfolio.
-    // String[] lazy4 = new String[] { stockSymbol, "VBMFX", "VGSIX", intSymbol };
-    // config = new ConfigMixed(new DiscreteDistribution(lazy4, new double[] { 0.4, 0.2, 0.1, 0.3 }),
-    // new ConfigConst(lazy4[0]), new ConfigConst(lazy4[1]), new ConfigConst(lazy4[2]), new ConfigConst(lazy4[3]));
-    // predictor = config.build(sim.broker.accessObject, lazy4);
-    // Sequence returnsLazy4 = sim.run(predictor, timeSimStart, timeSimEnd, "Lazy4");
-    // System.out.println(CumulativeStats.calc(returnsLazy4));
+    // predictor = portfolios.passive("Lazy4", new String[] { stockSymbol, bondSymbol, intSymbol, reitSymbol }, 0.4,
+    // 0.2,
+    // 0.3, 0.1);
+    // Sequence returnsLazy4 = portfolios.run(predictor, timeSimStart, timeSimEnd);
     // returns.add(returnsLazy4);
 
     // Set up defenders for comparison analysis based on previous portfolios.
@@ -112,18 +110,24 @@ public class ComparePortfolios
     }
 
     // All stock.
-    PredictorConfig stockConfig = new ConfigConst(stockSymbol);
-    predictor = stockConfig.build(sim.broker.accessObject, assetSymbols);
-    Sequence returnsStock = sim.run(predictor, timeSimStart, timeSimEnd, "Stock");
-    System.out.println(CumulativeStats.calc(returnsStock));
+    predictor = portfolios.passive("S&P 500", stockSymbol);
+    Sequence returnsStock = portfolios.run(predictor, timeSimStart, timeSimEnd);
     returns.add(returnsStock);
     compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
 
+    // All short-term treasuries.
+    predictor = portfolios.passive("Short-term Treasuries", "VFISX");
+    returns.add(portfolios.run(predictor, timeSimStart, timeSimEnd));
+
+    predictor = portfolios.passive("Wellesley", "VWINX");
+    returns.add(portfolios.run(predictor, timeSimStart, timeSimEnd));
+
+    predictor = portfolios.passive("Small-Cap", "NAESX");
+    returns.add(portfolios.run(predictor, timeSimStart, timeSimEnd));
+
     // All bonds.
-    PredictorConfig bondConfig = new ConfigConst("VBMFX");
-    predictor = bondConfig.build(sim.broker.accessObject, assetSymbols);
-    Sequence returnsBonds = sim.run(predictor, timeSimStart, timeSimEnd, "Bonds");
-    System.out.println(CumulativeStats.calc(returnsBonds));
+    predictor = portfolios.passive("Bonds", bondSymbol);
+    Sequence returnsBonds = portfolios.run(predictor, timeSimStart, timeSimEnd);
     returns.add(returnsBonds);
     compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
 
@@ -136,17 +140,9 @@ public class ComparePortfolios
     compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
 
     // Dual Momentum
-    int nBaseA = 240;
-    int nBaseB = 220;
-    FeatureExtractor feDualMom = new Momentum(20, 1, nBaseA, nBaseB, Momentum.ReturnOrMul.Return,
-        Momentum.CompoundPeriod.Weekly, FinLib.Close);
-    int dualMomAge = (nBaseA + nBaseB + 20) / 40;
-    Stump stump = new Stump(0, 0.0, false, 5.0);
-    Predictor dualMom = new AdaptivePredictor(feDualMom, stump, 1, "VFISX", sim.broker.accessObject,
-        new String[] { stockSymbol, intSymbol, "VFISX" });
-    sim.run(dualMom, timeSimStart, timeSimEnd, String.format("Dual_Momentum[%d]", dualMomAge));
-    System.out.println(CumulativeStats.calc(sim.returnsMonthly));
-    returns.add(sim.returnsMonthly);
+    Predictor dualMomPred = portfolios.dualMomentum("VFISX", stockSymbol, intSymbol);
+    Sequence returnsDualMom = portfolios.run(dualMomPred, timeSimStart, timeSimEnd);
+    returns.add(returnsDualMom);
     compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
     Chart.saveHoldings(new File(DataIO.outputPath, "holdings-dual-momentum.html"), sim.holdings, sim.store);
 

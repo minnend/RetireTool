@@ -2,6 +2,7 @@ package org.minnen.retiretool.util;
 
 import java.text.*;
 import java.util.*;
+import java.util.function.Predicate;
 
 public final class Library
 {
@@ -509,5 +510,18 @@ public final class Library
     double t = (x - x0) / sigma;
     double y = 1.0 + Math.exp(-t);
     return 1.0 / y;
+  }
+
+  public static List<? extends Object> removeNulls(List<? extends Object> list)
+  {
+    list.removeIf(new Predicate<Object>()
+    {
+      @Override
+      public boolean test(Object v)
+      {
+        return v == null;
+      }
+    });
+    return list;
   }
 }

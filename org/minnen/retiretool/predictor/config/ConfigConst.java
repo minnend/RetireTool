@@ -6,6 +6,7 @@ import org.minnen.retiretool.broker.BrokerInfoAccess;
 import org.minnen.retiretool.predictor.daily.ConstPredictor;
 import org.minnen.retiretool.predictor.daily.Predictor;
 
+/** Configuration for a "predictor" that always returns the same asset. */
 public class ConfigConst extends PredictorConfig
 {
   public final String assetName;
@@ -40,6 +41,7 @@ public class ConfigConst extends PredictorConfig
     return "Const=" + assetName;
   }
 
+  /** @return list of configs matching the list of asset names. */
   public static ConfigConst[] wrap(String... assetNames)
   {
     ConfigConst[] configs = new ConfigConst[assetNames.length];

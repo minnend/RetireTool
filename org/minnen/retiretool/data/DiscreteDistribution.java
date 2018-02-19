@@ -42,7 +42,7 @@ public class DiscreteDistribution
     weights[0] = 1.0;
   }
 
-  public DiscreteDistribution(String[] names, double[] weights)
+  public DiscreteDistribution(String[] names, double ... weights)
   {
     this(names.length);
     assert names.length == weights.length;

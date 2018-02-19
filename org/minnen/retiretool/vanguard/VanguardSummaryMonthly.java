@@ -4,17 +4,15 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import org.minnen.retiretool.data.DataIO;
-import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.util.FinLib;
+import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
@@ -24,13 +22,12 @@ public class VanguardSummaryMonthly
 {
   public static final SequenceStore             store          = new SequenceStore();
 
-  public static final VanguardFund.FundSet      fundSet        = VanguardFund.FundSet.All;
   public static final Slippage                  slippage       = Slippage.None;
-  public static final String[]                  fundSymbols    = VanguardFund.getFundNames(fundSet);
-  public static final Map<String, VanguardFund> funds          = VanguardFund.getFundMap(fundSet);
+  public static final String[]                  fundSymbols    = VanguardFund.getOldFunds();
+  public static final Map<String, VanguardFund> funds          = VanguardFund.fundMap;
   public static final String[]                  statNames      = new String[] { "CAGR", "MaxDrawdown", "Worst Period",
       "10th Percentile", "Median " };
-  public static final int                       durStatsYears  = 5;
+  public static final int                       durStatsMonths = 5 * 12;
   public static final int                       momentumMonths = 6;
 
   public static MonthlyRunner                   runner;
@@ -39,21 +36,31 @@ public class VanguardSummaryMonthly
     SummaryTools.fundSymbols = fundSymbols;
   }
 
-  public static List<FeatureVec> genPortfolios(List<Sequence> seqs, File outputDir) throws IOException
+  public static List<FeatureVec> genPortfolios(List<Sequence> seqs) throws IOException
   {
     // Search over all portfolios.
-    File file = new File(outputDir, "vanguard-portfolios-monthly.txt");
-    List<FeatureVec> stats = SummaryTools.savePortfolioStats(runner, file);
+    File file = new File(DataIO.financePath, "vanguard-portfolios-monthly.txt");
 
-    // Save pruned stats.
-    SummaryTools.prunePortfolios(stats);
-    System.out.printf("Pruned Portfolios: %d\n", stats.size());
-    file = new File(outputDir, "vanguard-portfolios-monthly-pruned.txt");
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
-      for (FeatureVec v : stats) {
-        writer.write(String.format("%-80s %s\n", v.getName(), v));
+    // scanDistributions(1, 10, 10, 100, 10, portfolios);
+    // scanDistributions(1, 8, 10, 40, 10, portfolios);
+    // scanDistributions(4, 6, 5, 30, 5, portfolios); // last one run
+    // scanDistributions(3, 3, 20, 40, 10, portfolios);
+    PortfolioSearchConfig config = new PortfolioSearchConfig(1, 6, 10, 100, 10);
+    List<FeatureVec> stats = SummaryTools.savePortfolioStats(runner, config, file);
+
+    boolean prunePortfolios = true;
+    if (prunePortfolios) {
+      // Save pruned stats.
+      SummaryTools.prunePortfolios(stats);
+      System.out.printf("Pruned Portfolios: %d\n", stats.size());
+      file = new File(DataIO.financePath, "vanguard-portfolios-monthly-pruned.txt");
+      try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+        for (FeatureVec v : stats) {
+          writer.write(String.format("%-80s %s\n", v.getName(), v));
+        }
       }
     }
+
     return stats;
   }
 
@@ -96,14 +103,11 @@ public class VanguardSummaryMonthly
 
   public static void main(String[] args) throws IOException
   {
-    // Note: run GenMonthlyReturns to create a CSV file with monthly returns.
-
     File outputDir = new File("g:/web");
-    File dataDir = new File("g:/research/finance/");
-    assert dataDir.isDirectory();
 
-    // Load monthly return data
-    File file = new File(outputDir, "vanguard-monthly.csv");
+    // Load monthly return data.
+    // Note: run GenMonthlyReturns to create a CSV file with monthly returns.
+    File file = new File(DataIO.financePath, "vanguard-monthly.csv");
     List<Sequence> seqs = DataIO.loadSequenceCSV(file);
     System.out.printf("Funds: %d\n", seqs.size());
 
@@ -114,6 +118,7 @@ public class VanguardSummaryMonthly
         TimeLib.formatMonth(timeEnd), nSimMonths);
 
     // Convert monthly returns to multipliers.
+    System.out.printf("Momentum months: %d\n", momentumMonths);
     for (Sequence seq : seqs) {
       for (FeatureVec v : seq) {
         double r = v.get(0);
@@ -123,10 +128,15 @@ public class VanguardSummaryMonthly
         applyMomentumFilter(seq, momentumMonths);
       }
     }
-    runner = new MonthlyRunner(seqs, durStatsYears * 12);
+    System.out.printf("Duration Statistics: %s\n", TimeLib.formatDurationMonths(durStatsMonths));
+    runner = new MonthlyRunner(seqs, durStatsMonths);
+
+    List<FeatureVec> stats = genPortfolios(seqs);
 
     // Load portfolios from disk.
     // file = new File(outputDir, "vanguard-portfolios-monthly-8x10x40-mom6-pruned.txt");
+    // file = new File(DataIO.financePath, "vanguard-portfolios-monthly-1-6-10-pruned.txt");
+    // file = new File(DataIO.financePath, "vanguard-portfolios-monthly-1-6-10-momentum6-pruned.txt");
     // List<FeatureVec> stats = SummaryTools.loadPortfolioStats(file, false);
     // System.out.printf("Portfolios: %d\n", stats.size());
 
@@ -137,12 +147,13 @@ public class VanguardSummaryMonthly
     // Remove portfolios that don't meet minimum requirements.
     // for (int i = 0; i < stats.size(); ++i) {
     // FeatureVec v = stats.get(i);
-    // if (v.get(SummaryTools.WORST) > 2.0 && v.get(SummaryTools.PERCENTILE10) > 4.0 && v.get(SummaryTools.MEDIAN) >
-    // 9.0) continue;
+    // if (v.get(SummaryTools.WORST) > 0.0 && v.get(SummaryTools.PERCENTILE10) > 3.0 && v.get(SummaryTools.MEDIAN) > 8.0
+    // && v.get(SummaryTools.DRAWDOWN) > -40.0)
+    // continue;
     // stats.set(i, null);
     // }
-    // SummaryTools.removeNulls(stats);
-    // System.out.printf("Pruned: %d\n", stats.size());
+    Library.removeNulls(stats);
+    System.out.printf("Pruned: %d\n", stats.size());
 
     // Load saved distributions.
     // file = new File(outputDir, "vanguard-favs.txt");
@@ -153,7 +164,6 @@ public class VanguardSummaryMonthly
     // System.out.printf("%-80s %s\n", portfolio.toStringWithNames(0), stats);
     // }
 
-    List<FeatureVec> stats = genPortfolios(seqs, outputDir);
     genScatterPlots(stats, outputDir);
   }
 }

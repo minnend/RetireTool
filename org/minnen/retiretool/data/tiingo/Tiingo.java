@@ -27,7 +27,7 @@ public class Tiingo
     // Load all supported symbols.
     TiingoIO.loadTickers();
 
-    // Load EOD data and metadata for all symbols.
+    // Load EOD data and metadata for all Tiingo symbols.
     List<Sequence> seqs = new ArrayList<>();
     for (String symbol : symbols) {
       TiingoFund fund = TiingoFund.get(symbol);
@@ -43,6 +43,7 @@ public class Tiingo
       seqs.add(fund.data);
     }
 
+    // Add non-Tiingo sequences to the list.
     for (Sequence seq : otherSeqs) {
       seqs.add(seq);
     }

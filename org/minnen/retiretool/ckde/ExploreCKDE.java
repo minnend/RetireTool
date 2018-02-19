@@ -273,7 +273,7 @@ public class ExploreCKDE
     long delay = Duration.ofDays(730).toMillis();
     double fraction = 0.3;
 
-    String assetName = "VGENX";
+    String assetName = "VTSMX";
     // Random rng = new Random();
     // double best = Double.NEGATIVE_INFINITY;
     // FeatureVec weights = new FeatureVec(3);

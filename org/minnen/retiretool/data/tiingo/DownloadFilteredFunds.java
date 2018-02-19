@@ -9,12 +9,17 @@ import java.util.List;
 import org.minnen.retiretool.data.TiingoIO;
 import org.minnen.retiretool.util.TimeLib;
 
+/**
+ * Loads the latest "supported tickers" file, filters the funds, and downloads metadata and EOD data for all funds that
+ * pass the filters.
+ */
 public class DownloadFilteredFunds
 {
   public static void saveFundMetadata(List<TiingoFund> funds) throws IOException
   {
     for (TiingoFund fund : funds) {
       if (!TiingoIO.saveFundMetadata(fund)) break;
+      fund.loadMetadata();
     }
   }
 
@@ -50,11 +55,11 @@ public class DownloadFilteredFunds
     System.out.printf("Funds (recent): %d\n", funds.size());
 
     // Only funds with significant history.
-    LocalDate startBefore = LocalDate.of(1996, 1, 1);
+    LocalDate startBefore = LocalDate.of(1999, 1, 1);
     funds.removeIf(p -> p.start.isAfter(startBefore));
     System.out.printf("Funds (old): %d\n", funds.size());
 
-    // Only Vanguard funds.
+    // Only "V" funds.
     funds.removeIf(p -> !p.ticker.startsWith("V"));
     System.out.printf("Funds (V): %d\n", funds.size());
 
@@ -88,6 +93,14 @@ public class DownloadFilteredFunds
     System.out.printf("# missing: meta=%d  eod=%d\n", nMissingMeta, nMissingEod);
 
     saveFundMetadata(funds);
+
+    // Filter by fund name (not ticker / symbol).
+    // funds.removeIf(p -> !p.meta.name.toLowerCase().contains("vanguard"));
+    // System.out.printf("Funds (vanguard): %d\n", funds.size());
+    // for (TiingoFund fund : funds) {
+    // System.out.printf("%s %s\n", fund, fund.meta.name);
+    // }
+
     saveFundEodData(funds, false);
   }
 }

@@ -17,6 +17,7 @@ import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.DurationalStats;
+import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.TimeLib;
 
 public class SummaryTools
@@ -56,6 +57,12 @@ public class SummaryTools
     return dist;
   }
 
+  public static void scanDistributions(PortfolioSearchConfig config, List<DiscreteDistribution> portfolios)
+  {
+    scanDistributions(config.minAssets, config.maxAssets, config.minWeight, config.maxWeight, config.weightStep,
+        portfolios);
+  }
+
   public static void scanDistributions(int minAssets, int maxAssets, int minWeight, int maxWeight, int weightStep,
       List<DiscreteDistribution> portfolios)
   {
@@ -63,7 +70,7 @@ public class SummaryTools
     scanDistributions(weights, 0, 0, 100, minAssets, maxAssets, minWeight, maxWeight, weightStep, portfolios);
   }
 
-  public static void scanDistributions(int[] weights, int index, int nAssetsSoFar, int weightLeft, int minAssets,
+  private static void scanDistributions(int[] weights, int index, int nAssetsSoFar, int weightLeft, int minAssets,
       int maxAssets, int minWeight, int maxWeight, int weightStep, List<DiscreteDistribution> portfolios)
   {
     assert weightLeft >= 0;
@@ -95,16 +102,14 @@ public class SummaryTools
         weightStep, portfolios);
   }
 
-  public static List<FeatureVec> savePortfolioStats(PortfolioRunner runner, File file) throws IOException
+  public static List<FeatureVec> savePortfolioStats(PortfolioRunner runner, PortfolioSearchConfig config, File file)
+      throws IOException
   {
     List<DiscreteDistribution> portfolios = new ArrayList<>();
     long a = TimeLib.getTime();
-    // TODO create config class for scanning.
-    // scanDistributions(1, 10, 10, 100, 10, portfolios);
-    // scanDistributions(1, 8, 10, 40, 10, portfolios);
-    // scanDistributions(4, 6, 5, 30, 5, portfolios); // last one run
-    // scanDistributions(3, 3, 20, 40, 10, portfolios);
-    scanDistributions(1, 3, 10, 100, 10, portfolios);
+
+    scanDistributions(config, portfolios);
+
     long b = TimeLib.getTime();
     System.out.printf("Portofolios: %d  (%s)\n", portfolios.size(), TimeLib.formatDuration(b - a));
     List<FeatureVec> stats = new ArrayList<>();
@@ -195,7 +200,7 @@ public class SummaryTools
   /** Removes portfolios that are "dominated" by another. */
   public static void prunePortfolios(List<FeatureVec> portfolioStats)
   {
-    // Filter results.
+    // Filter results by setting "dominated" portfolios to null.
     int n = portfolioStats.size();
     for (int i = 0; i < n; ++i) {
       FeatureVec v1 = portfolioStats.get(i);
@@ -217,20 +222,7 @@ public class SummaryTools
     }
 
     // Remove all null entries.
-    removeNulls(portfolioStats);
-  }
-
-  public static List<? extends Object> removeNulls(List<? extends Object> list)
-  {
-    list.removeIf(new Predicate<Object>()
-    {
-      @Override
-      public boolean test(Object v)
-      {
-        return v == null;
-      }
-    });
-    return list;
+    Library.removeNulls(portfolioStats);
   }
 
   public static FeatureVec calcStats(Sequence cumulativeReturnsMonthly, int durStatsMonths)

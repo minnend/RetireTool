@@ -21,11 +21,10 @@ public class VanguardSummarySim
 {
   public static final SequenceStore             store        = new SequenceStore();
 
-  public static final VanguardFund.FundSet      fundSet      = VanguardFund.FundSet.All;
   public static final Slippage                  slippage     = Slippage.None;
-  public static final String[]                  fundSymbols  = VanguardFund.getFundNames(fundSet);
+  public static final String[]                  fundSymbols  = VanguardFund.getAllFunds();
   public static final String[]                  assetSymbols = new String[fundSymbols.length + 1];
-  public static final Map<String, VanguardFund> funds        = VanguardFund.getFundMap(fundSet);
+  public static final Map<String, VanguardFund> funds        = VanguardFund.fundMap;
   public static final String[]                  statNames    = new String[] { "CAGR", "MaxDrawdown", "Worst Period",
       "10th Percentile", "Median " };
 

@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.minnen.retiretool.broker.Simulation;
+import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.data.fred.FredSeries;
@@ -23,17 +24,14 @@ import org.minnen.retiretool.util.TimeLib;
 public class GenMonthlyReturns
 {
   public static final SequenceStore             store       = new SequenceStore();
-
-  public static final VanguardFund.FundSet      fundSet     = VanguardFund.FundSet.All;
-  public static final String[]                  fundSymbols = VanguardFund.getFundNames(fundSet);
-  public static final Map<String, VanguardFund> funds       = VanguardFund.getFundMap(fundSet);
+  // public static final String[] fundSymbols = VanguardFund.getAllFunds();
+  public static final String[]                  fundSymbols = VanguardFund.getOldFunds();
+  public static final Map<String, VanguardFund> funds       = VanguardFund.fundMap;
   public static final String[]                  statNames   = new String[] { "CAGR", "MaxDrawdown", "Worst Period",
       "10th Percentile", "Median " };
 
   public static void main(String[] args) throws IOException
   {
-    File outputDir = new File("g:/web");
-
     // Load CPI data (https://fred.stlouisfed.org/series/CPIAUCSL).
     FredSeries fredCPI = FredSeries.fromName("cpi");
     System.out.println(fredCPI);
@@ -80,7 +78,8 @@ public class GenMonthlyReturns
     }
 
     // Calculate monthly returns for each fund.
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(new File(outputDir, "vanguard-monthly.csv")))) {
+    File file = new File(DataIO.financePath, "vanguard-monthly.csv");
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
       // Write header.
       List<String> tokens = new ArrayList<>();
       tokens.add("Date");

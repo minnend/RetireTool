@@ -9,7 +9,7 @@ import smile.math.Math;
 
 public class Neighbor implements Comparable<Neighbor>
 {
-  public double tr;
+  public double tr; // total returns
   public double distance;
   public double weight;
   public long   time;
