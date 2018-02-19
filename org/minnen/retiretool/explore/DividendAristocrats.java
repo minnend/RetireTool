@@ -5,8 +5,6 @@ import java.io.IOException;
 import java.time.Month;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -14,7 +12,6 @@ import java.util.Set;
 import org.minnen.retiretool.StandardPortfolios;
 import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.DataIO;
-import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.data.tiingo.Tiingo;
@@ -22,11 +19,11 @@ import org.minnen.retiretool.data.tiingo.TiingoFund;
 import org.minnen.retiretool.data.tiingo.TiingoFundFilter;
 import org.minnen.retiretool.predictor.config.ConfigTactical;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
+import org.minnen.retiretool.predictor.daily.GatedPredictor;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.util.FinLib;
-import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
@@ -102,7 +99,7 @@ public class DividendAristocrats
 
   private static String[] merge(String[]... lists)
   {
-    Set<String> all = new HashSet<String>();
+    Set<String> all = new LinkedHashSet<String>();
     for (String[] list : lists) {
       for (String name : list) {
         all.add(name);
@@ -180,8 +177,8 @@ public class DividendAristocrats
     compStats.add(ComparisonStats.calc(returnsContenders, 0.5, returnsStock));
 
     // Dividend Kingdom = equal weighting for all funds on all lists.
-    predictor = portfolios.passiveEqualWeight("Kingdom", kingdom);
-    Sequence returnsKingdom = portfolios.run(predictor, timeSimStart, timeSimEnd);
+    Predictor kingdomPred = portfolios.passiveEqualWeight("Kingdom", kingdom);
+    Sequence returnsKingdom = portfolios.run(kingdomPred, timeSimStart, timeSimEnd);
     returns.add(returnsKingdom);
     compStats.add(ComparisonStats.calc(returnsKingdom, 0.5, returnsStock));
 
@@ -205,12 +202,21 @@ public class DividendAristocrats
     returns.add(sim.returnsMonthly);
     compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, returnsStock));
 
-    // Dual Momentum
+    // Dual Momentum.
     Predictor dualMomPred = portfolios.dualMomentum(safeAsset, "VFINX", "VWIGX");
     Sequence returnsDualMom = portfolios.run(dualMomPred, timeSimStart, timeSimEnd);
     returns.add(returnsDualMom);
     compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, returnsStock));
     Chart.saveHoldings(new File(DataIO.outputPath, "holdings-dual-momentum.html"), sim.holdings, sim.store);
+
+    // Gated Dividends.
+    String[] assets = merge(kingdom, new String[] { "VFINX", safeAsset });
+    assert assets[assets.length - 1].equals(safeAsset);
+    Predictor gated = new GatedPredictor(kingdomPred, tacticalPred, sim.broker.accessObject, assets);
+    gated.name = "Gated Kingdom";
+    Sequence returnsGated = portfolios.run(gated, timeSimStart, timeSimEnd);
+    returns.add(returnsGated);
+    compStats.add(ComparisonStats.calc(returnsGated, 0.5, returnsStock));
 
     // Save reports: graph of returns + comparison summary.
     Chart.saveLineChart(new File(DataIO.outputPath, "returns.html"), "Total Returns", 1000, 640, true, true, returns);

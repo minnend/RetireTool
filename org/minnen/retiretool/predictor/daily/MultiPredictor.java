@@ -16,7 +16,7 @@ public class MultiPredictor extends Predictor
   public MultiPredictor(Predictor[] predictors, long assetMap, String assetName, String alternativeAsset,
       BrokerInfoAccess brokerAccess)
   {
-    super("Multiscale", brokerAccess, new String[] { assetName, alternativeAsset });
+    super("MultiPredictor", brokerAccess, new String[] { assetName, alternativeAsset });
     this.predictorType = PredictorType.SelectOne;
     this.predictors = predictors;
     this.assetMap = assetMap;
