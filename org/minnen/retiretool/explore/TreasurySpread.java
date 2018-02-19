@@ -1,4 +1,4 @@
-package org.minnen.retiretool;
+package org.minnen.retiretool.explore;
 
 import java.io.File;
 import java.io.IOException;

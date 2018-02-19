@@ -238,8 +238,8 @@ public class TiingoIO
         fv.set(FinLib.SplitFactor, splitFactor);
         seq.addData(fv, time);
       } catch (NumberFormatException e) {
-        System.err.printf("Error parsing Tiingo CSV data: [%s]\n", line);
-        continue;
+        System.err.printf("Error parsing Tiingo CSV data (%s): [%s]\n", symbol, line);
+        throw e;
       }
     }
     in.close();

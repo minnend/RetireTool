@@ -36,7 +36,7 @@ public class ConfigTactical extends PredictorConfig
   {
     List<String> assetList = Arrays.asList(allAssets);
     for (String symbol : assetChoices) {
-      assert assetList.contains(symbol);
+      assert assetList.contains(symbol) : symbol;
     }
     return new TacticalPredictor(this, brokerAccess, assetChoices);
   }

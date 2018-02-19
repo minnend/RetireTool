@@ -15,14 +15,14 @@ import org.minnen.retiretool.util.TimeLib;
 
 public class Tiingo
 {
-  public static Simulation setupSimulation(String[] symbols, Slippage slippage, SequenceStore store,
-      Sequence... otherSeqs) throws IOException
+  public static Simulation setupSimulation(String[] symbols, Slippage slippage, TiingoFundFilter filter,
+      SequenceStore store, Sequence... otherSeqs) throws IOException
   {
-    return setupSimulation(symbols, 100000.0, 0.0, slippage, store, otherSeqs);
+    return setupSimulation(symbols, 100000.0, 0.0, slippage, filter, store, otherSeqs);
   }
 
   public static Simulation setupSimulation(String[] symbols, double startingBalance, double monthlyDeposit,
-      Slippage slippage, SequenceStore store, Sequence... otherSeqs) throws IOException
+      Slippage slippage, TiingoFundFilter filter, SequenceStore store, Sequence... otherSeqs) throws IOException
   {
     // Load all supported symbols.
     TiingoIO.loadTickers();
@@ -35,6 +35,8 @@ public class Tiingo
         System.out.printf("Unavailable: %s\n", symbol);
         continue;
       }
+
+      if (filter != null && !filter.accept(fund)) continue;
 
       if (!fund.loadData()) {
         System.err.printf("Failed to load data for %s.", fund.ticker);
@@ -59,7 +61,6 @@ public class Tiingo
     // Find common start/end times (last start and first end).
     long commonStart = TimeLib.calcCommonStart(seqs);
     long commonEnd = TimeLib.calcCommonEnd(seqs);
-    // commonEnd = TimeLib.toMs(2012, Month.DECEMBER, 31);
 
     store.addAll(seqs);
     store.setCommonTimes(commonStart, commonEnd);

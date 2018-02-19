@@ -38,7 +38,7 @@ public class GenMonthlyReturns
     Sequence cpi = fredCPI.data;
 
     // Make sure we have the latest data.
-    Simulation sim = Tiingo.setupSimulation(fundSymbols, Slippage.None, store, cpi);
+    Simulation sim = Tiingo.setupSimulation(fundSymbols, Slippage.None, null, store, cpi);
 
     // Adjust start time to earliest end-of-month.
     long commonStart = sim.getStartMS();

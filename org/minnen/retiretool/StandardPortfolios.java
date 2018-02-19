@@ -1,5 +1,7 @@
 package org.minnen.retiretool;
 
+import java.util.Arrays;
+
 import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.Sequence;
@@ -41,10 +43,19 @@ public class StandardPortfolios
   /** Passive portfolio with fixed allocations to a set of funds. */
   public Predictor passive(String name, String[] assets, double... mix)
   {
+    assert assets.length > 0 && assets.length == mix.length;
     PredictorConfig config = new ConfigMixed(new DiscreteDistribution(assets, mix), ConfigConst.wrap(assets));
     Predictor predictor = config.build(sim.broker.accessObject, assets);
     predictor.name = name;
     return predictor;
+  }
+
+  /** Passive portfolio with equal allocations to each fund. */
+  public Predictor passiveEqualWeight(String name, String... assets)
+  {
+    double[] mix = new double[assets.length];
+    Arrays.fill(mix, 1.0 / assets.length);
+    return passive(name, assets, mix);
   }
 
   /** Standard dual-momentum strategy with 12-month look-back. */

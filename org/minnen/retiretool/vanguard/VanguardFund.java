@@ -43,10 +43,9 @@ public class VanguardFund
     funds.add(new VanguardFund("VWNFX", "Windsor II", null, 0.34));
 
     funds.add(new VanguardFund("VEIEX", "Emerging Markets", null, 0.32)); // 1994
-    funds.add(new VanguardFund("VEURX", "European Stock", null, 0.26));
-    funds.add(new VanguardFund("VINEX", "International Explorer", null, 0.42));
-    funds.add(new VanguardFund("VTRIX", "International Value", null, 0.46));
-    funds.add(new VanguardFund("VWIGX", "International Growth", null, 0.46));
+    funds.add(new VanguardFund("VINEX", "International Explorer", null, 0.42)); // 1996
+    funds.add(new VanguardFund("VTRIX", "International Value", null, 0.46)); // 1983
+    funds.add(new VanguardFund("VWIGX", "International Growth", null, 0.46)); // 1981
     funds.add(new VanguardFund("VPACX", "Pacific Stock", "0072", 0.10)); // 1990, VPADX @ 0.26, 0.10
     funds.add(new VanguardFund("VEURX", "European Stock", "0079", 0.10)); // 1990, VEUSX @ 0.26, 0.10
 
@@ -99,7 +98,7 @@ public class VanguardFund
         "VFINX", // 1976 S&P 500
         "NAESX", // 1980 Small-cap
         "VGENX", // 1984 Energy
-        //"VGHCX", // 1984 Health care
+        // "VGHCX", // 1984 Health care
         "VGPMX", // 1984 Precious metals
         "VBMFX", // 1986 US Bonds
         "VEXMX", // 1987 US Extended

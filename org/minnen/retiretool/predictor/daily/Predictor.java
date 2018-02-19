@@ -15,7 +15,7 @@ public abstract class Predictor
    *
    * <ul>
    * <li>InOut = One asset with prediction of holding (in) or avoiding (out).
-   * <li>SelectOne = Choose one asset and go all-in.
+   * <li>SelectOne = Choose one asset and goes all-in.
    * <li>Distribution = Generate a distribution over all assets.
    * </ul>
    */

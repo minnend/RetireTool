@@ -8,28 +8,19 @@ import java.util.List;
 
 import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.DataIO;
-import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.data.tiingo.Tiingo;
-import org.minnen.retiretool.ml.Stump;
-import org.minnen.retiretool.predictor.config.ConfigConst;
-import org.minnen.retiretool.predictor.config.ConfigMixed;
+import org.minnen.retiretool.explore.DividendAristocrats;
 import org.minnen.retiretool.predictor.config.ConfigTactical;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
-import org.minnen.retiretool.predictor.daily.AdaptivePredictor;
 import org.minnen.retiretool.predictor.daily.Predictor;
-import org.minnen.retiretool.predictor.features.FeatureExtractor;
-import org.minnen.retiretool.predictor.features.Momentum;
 import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
-
-// NOBL - based on dividend aristocrats
-// https://www.suredividend.com/wp-content/uploads/2016/07/NOBL-Index-Historical-Constituents.pdf
 
 public class ComparePortfolios
 {
@@ -58,7 +49,7 @@ public class ComparePortfolios
   {
     double startingBalance = 10000.0;
     double monthlyDeposit = 0.0;
-    Simulation sim = Tiingo.setupSimulation(fundSymbols, startingBalance, monthlyDeposit, slippage, store);
+    Simulation sim = Tiingo.setupSimulation(fundSymbols, startingBalance, monthlyDeposit, slippage, null, store);
 
     long commonStart = store.getCommonStartTime();
     long commonEnd = store.getCommonEndTime();
@@ -73,14 +64,13 @@ public class ComparePortfolios
         TimeLib.formatDate(timeSimEnd), nSimMonths);
 
     // Simulate different portfolios.
-    PredictorConfig config;
     Predictor predictor;
     List<Sequence> returns = new ArrayList<>();
 
     String stockSymbol = "VFINX"; // "VTSMX";
     String bondSymbol = "VBMFX";
     String intSymbol = "VWIGX"; // "VGTSX";
-    String reitSymbol = "VGSIX";
+    // String reitSymbol = "VGSIX";
 
     StandardPortfolios portfolios = new StandardPortfolios(sim);
 
@@ -90,7 +80,7 @@ public class ComparePortfolios
     returns.add(returnsLazy2);
 
     // Lazy 3-fund portfolio.
-    predictor = portfolios.passive("Lazy3", new String[] { stockSymbol, bondSymbol, intSymbol }, 0.34, 0.33, 0.33);
+    predictor = portfolios.passiveEqualWeight("Lazy3", new String[] { stockSymbol, bondSymbol, intSymbol });
     Sequence returnsLazy3 = portfolios.run(predictor, timeSimStart, timeSimEnd);
     returns.add(returnsLazy3);
 

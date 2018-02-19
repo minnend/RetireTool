@@ -800,10 +800,7 @@ public class FeatureVec
    */
   public FeatureVec _appendDim(double x)
   {
-    double[] vec2 = new double[vec.length + 1];
-    Library.copy(vec, vec2);
-    vec2[vec.length] = x;
-    vec = vec2;
+    vec = Library.concat(vec, x);
     return this;
   }
 
@@ -823,11 +820,7 @@ public class FeatureVec
    */
   public FeatureVec _appendDims(FeatureVec x)
   {
-    int D = x.getNumDims();
-    double[] vec2 = new double[vec.length + D];
-    Library.copy(vec, vec2);
-    Library.copy(x.vec, vec2, 0, vec.length, D);
-    vec = vec2;
+    vec = Library.concat(vec, x.vec);
     return this;
   }
 
@@ -847,10 +840,7 @@ public class FeatureVec
    */
   public FeatureVec _appendDim(double[] x)
   {
-    double[] vec2 = new double[vec.length + x.length];
-    Library.copy(vec, vec2);
-    Library.copy(x, vec2, 0, vec.length, x.length);
-    vec = vec2;
+    vec = Library.concat(vec, x);
     return this;
   }
 
