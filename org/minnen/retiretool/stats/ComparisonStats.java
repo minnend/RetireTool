@@ -35,7 +35,7 @@ public class ComparisonStats
 
   public static ComparisonStats calc(Sequence cumulativeReturns, double diffMargin, Sequence... defenders)
   {
-    assert cumulativeReturns.length() == defenders[0].length();
+    assert cumulativeReturns.length() == defenders[0].length() : String.format("%d vs. %d", cumulativeReturns.length(), defenders[0].length());
     ComparisonStats stats = new ComparisonStats();
     stats.returns1 = cumulativeReturns;
     stats.defenders = defenders;

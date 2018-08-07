@@ -1180,7 +1180,7 @@ public class RetireToolMonthly
     }
     String[] names = nameList.toArray(new String[nameList.size()]);
     Chart.saveStatsTable(new File(dir, "NewHigh-sweep.html"), GRAPH_WIDTH, true, store.getCumulativeStats(names));
-    Chart.printDecadeTable(store.get("NewHigh-12"), store.get("stock"));
+    System.out.print(Chart.genDecadeTable(store.get("NewHigh-12"), store.get("stock")));
     Chart.saveLineChart(new File(dir, "NewHigh-cumulative.html"), "Cumulative Market Returns: NewHigh Strategy",
         GRAPH_WIDTH, GRAPH_HEIGHT, true, true, store.getReturns(names));
     Chart.saveBoxPlots(new File(dir, "NewHigh-box-plots.html"),

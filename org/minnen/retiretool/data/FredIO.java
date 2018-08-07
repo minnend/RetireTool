@@ -15,7 +15,6 @@ public class FredIO
   public static URL buildURLForWeb(String seriesID)
   {
     try {
-
       String address = "https://fred.stlouisfed.org/series/" + seriesID;
       return new URL(address);
     } catch (MalformedURLException e) {

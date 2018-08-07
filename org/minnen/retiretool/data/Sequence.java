@@ -1,6 +1,7 @@
 package org.minnen.retiretool.data;
 
 import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -498,6 +499,12 @@ public class Sequence implements Iterable<FeatureVec>
     return ix;
   }
 
+  /** add a time stamped feature vector to the end of this sequence */
+  public int addData(FeatureVec value, LocalDate date)
+  {
+    return addData(value, TimeLib.toMs(date));
+  }
+
   /**
    * Add (append) a value to this data set.
    * 
@@ -824,6 +831,20 @@ public class Sequence implements Iterable<FeatureVec>
     return seq;
   }
 
+  /** @return new sequence with times matching `ref` and data from this sequence. */
+  public Sequence matchTimes(Sequence ref, long eps)
+  {
+    Sequence seq = new Sequence(name);
+    for (FeatureVec x : ref) {
+      int i = this.getClosestIndex(x.getTime());
+      long delta = Math.abs(x.getTime() - this.getTimeMS(i));
+      if (delta <= eps) {
+        seq.addData(this.get(i).dup());
+      }
+    }
+    return seq;
+  }
+
   public IndexRange getIndices(long startMs, long endMs, EndpointBehavior endpointBehavior)
   {
     assert startMs <= endMs;
@@ -845,7 +866,8 @@ public class Sequence implements Iterable<FeatureVec>
       i = getIndexAtOrAfter(startMs);
       j = getIndexAtOrAfter(endMs);
     }
-    assert i <= j;
+    if (i < 0 || j < 0) return null;
+    assert i <= j : String.format("Indices: %d, %d", i, j);
     return new IndexRange(i, j);
   }
 
@@ -1024,6 +1046,17 @@ public class Sequence implements Iterable<FeatureVec>
         && other.getEndMS() == getEndMS());
   }
 
+  /** @return true if length and individual timestamps match. */
+  public boolean sameTimestamps(Sequence other)
+  {
+    if (other == null) return false;
+    if (length() != other.length()) return false;
+    for (int i = 0; i < other.length(); ++i) {
+      if (getTimeMS(i) != other.getTimeMS(i)) return false;
+    }
+    return true;
+  }
+
   public Sequence derivative()
   {
     Sequence deriv = new Sequence(getName() + "- Derivative");
@@ -1055,11 +1088,14 @@ public class Sequence implements Iterable<FeatureVec>
   {
     for (FeatureVec v : data) {
       LocalDate date = TimeLib.ms2date(v.getTime());
-      date = TimeLib.toLastBusinessDayOfMonth(date);
+      // TODO best to move to last day of month (even a weekend) or last business day?
+      // date = TimeLib.toLastBusinessDayOfMonth(date);
+      date = date.with(TemporalAdjusters.lastDayOfMonth());
       v.setTime(TimeLib.toMs(date));
     }
   }
 
+  /** An integral sequence holds the sum over [0, t] for each time step t. */
   public Sequence getIntegralSeq()
   {
     Sequence seq = new Sequence(name + "-integral");

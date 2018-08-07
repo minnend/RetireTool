@@ -1,5 +1,6 @@
 package org.minnen.retiretool.data;
 
+/** Holds a start and end index. */
 public class IndexRange
 {
   public final int iStart;

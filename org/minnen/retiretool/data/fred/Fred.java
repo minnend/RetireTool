@@ -22,12 +22,19 @@ public class Fred
     series.add(new FredSeries("7-year-treasury", "DGS7", "7-Year Treasury Constant Maturity Rate", Frequency.Daily));
     series.add(new FredSeries("10-year-treasury", "DGS10", "10-Year Treasury Constant Maturity Rate", Frequency.Daily));
     series.add(new FredSeries("30-year-treasury", "DGS30", "30-Year Treasury Constant Maturity Rate", Frequency.Daily));
+    series.add(new FredSeries("unemployment initial claims", "ICSA", "Unemployment insurance weekly claims", Frequency.Weekly));
+    series.add(new FredSeries("unemployment rate", "UNRATE", "Civilian Unemployment Rate", Frequency.Monthly));
+    
   }
 
   public static void main(String[] args) throws IOException
   {
     for (FredSeries fred : series) {
-      fred.loadData();
+      if (!fred.loadData()) {
+        System.err.println("Failed to load: " + fred);
+      }
+    }
+    for (FredSeries fred : series) {
       System.out.println(fred);
     }
   }

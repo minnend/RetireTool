@@ -28,7 +28,7 @@ public class VanguardSummaryMonthly
   public static final String[]                  statNames      = new String[] { "CAGR", "MaxDrawdown", "Worst Period",
       "10th Percentile", "Median " };
   public static final int                       durStatsMonths = 5 * 12;
-  public static final int                       momentumMonths = 6;
+  public static final int                       momentumMonths = 10;
 
   public static MonthlyRunner                   runner;
 
@@ -45,7 +45,7 @@ public class VanguardSummaryMonthly
     // scanDistributions(1, 8, 10, 40, 10, portfolios);
     // scanDistributions(4, 6, 5, 30, 5, portfolios); // last one run
     // scanDistributions(3, 3, 20, 40, 10, portfolios);
-    PortfolioSearchConfig config = new PortfolioSearchConfig(1, 6, 10, 100, 10);
+    PortfolioSearchConfig config = new PortfolioSearchConfig(1, 99, 10, 40, 10);
     List<FeatureVec> stats = SummaryTools.savePortfolioStats(runner, config, file);
 
     boolean prunePortfolios = true;
@@ -103,8 +103,6 @@ public class VanguardSummaryMonthly
 
   public static void main(String[] args) throws IOException
   {
-    File outputDir = new File("g:/web");
-
     // Load monthly return data.
     // Note: run GenMonthlyReturns to create a CSV file with monthly returns.
     File file = new File(DataIO.financePath, "vanguard-monthly.csv");
@@ -164,6 +162,6 @@ public class VanguardSummaryMonthly
     // System.out.printf("%-80s %s\n", portfolio.toStringWithNames(0), stats);
     // }
 
-    genScatterPlots(stats, outputDir);
+    genScatterPlots(stats, DataIO.outputPath);
   }
 }

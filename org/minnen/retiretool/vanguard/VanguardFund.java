@@ -98,12 +98,13 @@ public class VanguardFund
         "VFINX", // 1976 S&P 500
         "NAESX", // 1980 Small-cap
         "VGENX", // 1984 Energy
-        // "VGHCX", // 1984 Health care
+        "VGHCX", // 1984 Health care
         "VGPMX", // 1984 Precious metals
+        "FRESX", // 1986 Real Estate (similar to VGSIX but longer history)
         "VBMFX", // 1986 US Bonds
         "VEXMX", // 1987 US Extended
-        "VPACX", // 1990 Pacific stock
-        "VEURX", // 1990 European stock
+        "VPACX", // 1990 Pacific stock  (FPBFX from 1986?)
+        "VEURX", // 1990 European stock (FIEUX from 1986?)
     };
   }
 

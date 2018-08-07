@@ -55,13 +55,13 @@ public class DownloadFilteredFunds
     System.out.printf("Funds (recent): %d\n", funds.size());
 
     // Only funds with significant history.
-    LocalDate startBefore = LocalDate.of(1999, 1, 1);
+    LocalDate startBefore = LocalDate.of(1990, 1, 1);
     funds.removeIf(p -> p.start.isAfter(startBefore));
     System.out.printf("Funds (old): %d\n", funds.size());
 
     // Only "V" funds.
-    funds.removeIf(p -> !p.ticker.startsWith("V"));
-    System.out.printf("Funds (V): %d\n", funds.size());
+    // funds.removeIf(p -> !p.ticker.startsWith("V"));
+    // System.out.printf("Funds (V): %d\n", funds.size());
 
     // Sort by start date.
     funds.sort(new Comparator<TiingoFund>()
@@ -95,11 +95,11 @@ public class DownloadFilteredFunds
     saveFundMetadata(funds);
 
     // Filter by fund name (not ticker / symbol).
-    // funds.removeIf(p -> !p.meta.name.toLowerCase().contains("vanguard"));
-    // System.out.printf("Funds (vanguard): %d\n", funds.size());
-    // for (TiingoFund fund : funds) {
-    // System.out.printf("%s %s\n", fund, fund.meta.name);
-    // }
+    funds.removeIf(p -> !p.meta.name.toLowerCase().contains("vanguard")); // fidelity
+    System.out.printf("Funds (vanguard): %d\n", funds.size());
+    for (TiingoFund fund : funds) {
+      System.out.printf("%s %s\n", fund, fund.meta.name);
+    }
 
     saveFundEodData(funds, false);
   }

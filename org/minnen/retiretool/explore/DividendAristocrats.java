@@ -31,15 +31,15 @@ import org.minnen.retiretool.viz.Chart;
 // NOBL - based on dividend aristocrats
 // https://www.suredividend.com/wp-content/uploads/2016/07/NOBL-Index-Historical-Constituents.pdf
 
-// TODO use tactical signal for S&P to gate aristocrats.
-
 public class DividendAristocrats
 {
   public static final SequenceStore store          = new SequenceStore();
 
   // Dividend Aristocrats for 2018 from: https://www.retirebeforedad.com/dividend-aristocrats/
+  // 2017 list + changes back to 2011: https://investorjunkie.com/3974/dividend-aristocrats/
+
   // Dropped ABBC since data only goes 2013 when it spun off from ABT.
-  // TODO use historical data to avoid "future knowledge" (survivorship bias).
+  // TODO use historical data to avoid "future knowledge" (look-ahead / survivorship bias).
   public static final String[]      allAristocrats = new String[] { "AFL", "T", "NUE", "CAH", "TROW", "WBA", "BEN",
       "PNR", "CVX", "DOV", "PPG", "SWK", "XOM", "APD", "GD", "MDT", "ABT", "ADM", "GWW", "MKC", "PG", "TGT", "BDX",
       "ED", "GPC", "AOS", "ECL", "HRL", "JNJ", "KMB", "LEG", "LOW", "SYY", "EMR", "SHW", "WMT", "CINF", "CTAS", "PX",
@@ -158,6 +158,15 @@ public class DividendAristocrats
     Sequence returnsStock = portfolios.run(predictor, timeSimStart, timeSimEnd);
     returns.add(returnsStock);
 
+    // Dividend Aristocrats using historical data.
+    // File file = new File(DataIO.financePath, "historical-aristocrats-returns.txt");
+    // Sequence returnsHistoricalAristocrats = DataIO.loadDateValueCSV(file);
+    // returnsHistoricalAristocrats = returnsHistoricalAristocrats.matchTimes(returnsStock, 1000);
+    // FinLib.normalizeReturns(returnsHistoricalAristocrats);
+    // System.out.println(CumulativeStats.calc(returnsHistoricalAristocrats));
+    // returns.add(returnsHistoricalAristocrats);
+    // compStats.add(ComparisonStats.calc(returnsHistoricalAristocrats, 0.5, returnsStock));
+
     // Dividend Aristocrats = equal weighting for all funds in the aristocrat list.
     predictor = portfolios.passiveEqualWeight("Aristocrats", aristocrats);
     Sequence returnsAristocrats = portfolios.run(predictor, timeSimStart, timeSimEnd);
@@ -171,8 +180,8 @@ public class DividendAristocrats
     compStats.add(ComparisonStats.calc(returnsChampions, 0.5, returnsStock));
 
     // Dividend Contenders = equal weighting for all funds in the contenders list.
-    predictor = portfolios.passiveEqualWeight("Contenders", contenders);
-    Sequence returnsContenders = portfolios.run(predictor, timeSimStart, timeSimEnd);
+    Predictor contenderPred = portfolios.passiveEqualWeight("Contenders", contenders);
+    Sequence returnsContenders = portfolios.run(contenderPred, timeSimStart, timeSimEnd);
     returns.add(returnsContenders);
     compStats.add(ComparisonStats.calc(returnsContenders, 0.5, returnsStock));
 
@@ -197,13 +206,13 @@ public class DividendAristocrats
     // Tactical Allocation (S&P).
     PredictorConfig tacticalConfig = new ConfigTactical(FinLib.Close, "VFINX", safeAsset);
     Predictor tacticalPred = tacticalConfig.build(sim.broker.accessObject, indexFunds);
-    sim.run(tacticalPred, timeSimStart, timeSimEnd, "Tactical.Index");
+    sim.run(tacticalPred, timeSimStart, timeSimEnd, "Tactical");
     System.out.println(CumulativeStats.calc(sim.returnsMonthly));
     returns.add(sim.returnsMonthly);
     compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, returnsStock));
 
     // Dual Momentum.
-    Predictor dualMomPred = portfolios.dualMomentum(safeAsset, "VFINX", "VWIGX");
+    Predictor dualMomPred = portfolios.dualMomentum(1, safeAsset, "VFINX", "VWIGX");
     Sequence returnsDualMom = portfolios.run(dualMomPred, timeSimStart, timeSimEnd);
     returns.add(returnsDualMom);
     compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, returnsStock));

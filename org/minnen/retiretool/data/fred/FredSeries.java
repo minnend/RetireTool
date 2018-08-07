@@ -11,7 +11,7 @@ import org.minnen.retiretool.util.TimeLib;
 public class FredSeries
 {
   public enum Frequency {
-    Daily, Monthly, Yearly
+    Daily, Weekly, Monthly, Yearly
   };
 
   public final String    name;
@@ -57,14 +57,13 @@ public class FredSeries
 
   public static FredSeries fromName(String name) throws IOException
   {
-    name = name.toLowerCase();
     for (FredSeries fred : Fred.series) {
       if (fred.name.equals(name)) {
         fred.loadData();
         return fred;
       }
     }
-    return null;
+    throw new IOException("Failed to find FRED Series: " + name);
   }
 
 }

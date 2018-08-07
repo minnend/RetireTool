@@ -90,7 +90,7 @@ public class VanguardReport
     try (Writer f = new Writer(file)) {
       f.write("<html><head>\n");
       f.write("<title>Vanguard Report</title>\n");
-      f.write("<link rel=\"stylesheet\" href=\"vanguard-report.css\">\n");
+      f.write("<link rel=\"stylesheet\" href=\"css/vanguard-report.css\">\n");
       f.write("</head><body>\n");
       f.write("<div><b>End Date:</b> %s<br/><br/></div>\n", TimeLib.formatDate(endTime));
       f.write("<table>\n");

@@ -6,11 +6,22 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.Month;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.apache.commons.io.IOUtils;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
 
@@ -185,6 +196,8 @@ public class YahooIO
       Sequence seqNew = YahooIO.loadData(tmpFile);
       assert seqNew.getStartMS() == seqOld.getEndMS();
 
+      // FIX adjusted data may change and thus invalidate old data
+
       // Add new data to old sequence.
       for (int i = 1; i < seqNew.length(); ++i) {
         seqOld.addData(seqNew.get(i));
@@ -216,8 +229,6 @@ public class YahooIO
   /**
    * Download Yahoo financial data into the given file, or create a file if the path is a directory.
    * 
-   * @deprecated The Yahoo web API changed so it's unlikely that this API still works. Use Tiingo instead.
-   * 
    * @param symbol symbol to download
    * @param replaceAgeMs If the file exists and is older than this value (in ms), replace it; otherwise, don't download
    *          new data.
@@ -227,19 +238,85 @@ public class YahooIO
   {
     File file = getFile(symbol);
     try {
+      System.out.println(file.getCanonicalPath());
       if (!DataIO.shouldDownloadUpdate(file, replaceAgeMs)) return file;
     } catch (IOException e) {
       return null;
     }
     System.out.printf("Download data: %s\n", symbol);
-    URL url = buildURL(symbol);
-    DataIO.copyUrlToFile(url, file);
-    return file;
+
+    try {
+      int period1 = (int) (TimeLib.toMs(1905, 1, 1) / 1000);
+      int period2 = (int) (TimeLib.getTime() / 1000);
+      String address = String.format(
+          "https://finance.yahoo.com/quote/%s/history?period1=%d&period2=%d&interval=1d&filter=history&frequency=1d",
+          symbol, period1, period2);
+      URL url = new URL(address);
+      URLConnection conn = url.openConnection();
+      Map<String, List<String>> headerFields = conn.getHeaderFields();
+      List<String> cookieList = headerFields.getOrDefault("set-cookie", null);
+      if (cookieList == null) {
+        throw new IOException("No cookie from Yahoo!");
+      }
+      String cookie = cookieList.get(0);
+      // System.out.println(cookie);
+
+      InputStream in = conn.getInputStream();
+      String html = null;
+      try {
+        html = IOUtils.toString(in);
+      } finally {
+        IOUtils.closeQuietly(in);
+      }
+      Pattern pattern = Pattern.compile("\"CrumbStore\":\\{\"crumb\":\"(.{6,18})\"\\}");
+      Matcher m = pattern.matcher(html);
+      String crumb = null;
+      while (m.find()) {
+        crumb = m.group(1);
+        // System.out.println(crumb);
+      }
+      crumb = decodeUnicode(crumb);
+      address = String.format(
+          "https://query1.finance.yahoo.com/v7/finance/download/%s?period1=%d&period2=%d&interval=1d&events=history&crumb=%s",
+          symbol, period1, period2, crumb);
+      url = new URL(address);
+      conn = url.openConnection();
+      conn.setRequestProperty("cookie", cookie);
+      in = conn.getInputStream();
+      try {
+        Files.copy(in, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+      } finally {
+        IOUtils.closeQuietly(in);
+      }
+      return file;
+    } catch (IOException e) {
+      System.out.println(e);
+      return null;
+    }
   }
 
   public static File getFile(String symbol)
   {
     if (!yahooDir.exists() && !yahooDir.mkdirs()) return null;
     return new File(yahooDir, symbol + ".csv");
+  }
+
+  private static String decodeUnicode(String s)
+  {
+    while (true) {
+      int i = s.indexOf("\\u");
+      if (i < 0) break;
+      String prefix = s.substring(0, i);
+      String suffix = s.substring(i + 6, s.length());
+      int x = Integer.parseInt(s.substring(i + 2, i + 6), 16);
+      assert x >= 0 && x <= 255;
+      s = prefix + ((char) x) + suffix;
+    }
+    return s;
+  }
+
+  public static void main(String[] args) throws IOException
+  {
+    downloadDailyData("^GSPC", 0);
   }
 }

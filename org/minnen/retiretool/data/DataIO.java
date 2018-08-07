@@ -1,10 +1,12 @@
 package org.minnen.retiretool.data;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -78,7 +80,19 @@ public class DataIO
       }
     }
     in.close();
+    if (data.getStartMS() > data.getEndMS()) {
+      data.reverse();
+    }
     return data;
+  }
+
+  public static void saveDateValueCSV(File file, Sequence seq, int iDim) throws IOException
+  {
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+      for (FeatureVec x : seq) {
+        writer.write(String.format("%s,%f\n", TimeLib.formatYMD(x.getTime()), x.get(iDim)));
+      }
+    }
   }
 
   public static Sequence loadRecessionData(File file) throws IOException

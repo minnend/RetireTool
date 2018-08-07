@@ -73,6 +73,7 @@ public class TimeLib
     return LocalDate.from(ms2time(ms));
   }
 
+  /** @return time in ms for noon on the given date. */
   public static long toMs(LocalDate date)
   {
     return toMs(LocalDateTime.of(date, LocalTime.NOON));
@@ -83,12 +84,13 @@ public class TimeLib
     return time.toInstant(ZeroOffset).toEpochMilli();
   }
 
-  /** @return time in ms for the given year, month, day (January = 1) */
+  /** @return time in ms for noon on the given year, month, day (January = 1) */
   public static long toMs(int year, int month, int day)
   {
     return toMs(LocalDate.of(year, month, day));
   }
 
+  /** @return time in ms for noon on the given date. */
   public static long toMs(int year, Month month, int day)
   {
     return toMs(LocalDate.of(year, month, day));

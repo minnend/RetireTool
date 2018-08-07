@@ -4,6 +4,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.StringWriter;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjuster;
 import java.time.temporal.TemporalAdjusters;
@@ -32,6 +33,7 @@ import org.minnen.retiretool.stats.ComparisonStats.Results;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.TimeLib;
+import org.minnen.retiretool.util.Writer;
 
 public class Chart
 {
@@ -873,7 +875,8 @@ public class Chart
 
         for (ComparisonStats stats : allStats) {
           Results results = stats.durationToResults.get(duration);
-          writer.write(String.format("<td title=\"%.1f | %.1f\" style=\"color: #3B3\">\n", results.winPercent1,
+          writer.write(String.format("<td title=\"%.1f (%.1f + %.1f) | %.1f\" style=\"color: #3B3\">\n",
+              100 - results.winPercent2, results.winPercent1, 100 - (results.winPercent1 + results.winPercent2),
               results.winPercent2));
           // writer.write(String.format("%.1f\n", 100.0 - results.winPercent2));
           writer.write(genWinBar(results.winPercent1, results.winPercent2));
@@ -968,45 +971,53 @@ public class Chart
   }
 
   /**
-   * Print an HTML chart comparing the returns from two strategies for each decade.
+   * Generate an HTML chart comparing the returns from two strategies for each decade.
    * 
    * @param returns1 cumulative returns for Strategy #1
    * @param returns2 cumulative returns for Strategy #2
    */
-  public static void printDecadeTable(Sequence returns1, Sequence returns2)
+  public static String genDecadeTable(Sequence returns1, Sequence returns2)
   {
     assert returns1.length() == returns2.length();
     int iStart = TimeLib.findStartofFirstDecade(returns1, false);
     if (iStart < 0) {
-      return;
+      return null;
     }
 
-    System.out.printf("<table id=\"decadeComparisonTable\" class=\"tablesorter\"><thead>\n");
-    System.out.printf("<tr><th>Decade</th><th>%s<br/>CAGR</th><th>%s<br/>CAGR</th><th>Excess<br/>Returns</th>\n",
-        FinLib.getBaseName(returns1.getName()), FinLib.getBaseName(returns2.getName()));
-    System.out.printf("<th>%s<br/>Dev</th><th>%s<br/>Dev</th></tr>\n", FinLib.getBaseName(returns1.getName()),
-        FinLib.getBaseName(returns2.getName()));
-    System.out.printf("</thead><tbody>\n");
+    StringWriter sw = new StringWriter();
+    try (Writer writer = new Writer(sw)) {
+      writer.write("<table id=\"decadeComparisonTable\" class=\"tablesorter\" cellspacing=\"0\"><thead>\n");
+      writer.write("<tr><th>Decade</th><th>%s<br/>CAGR</th><th>%s<br/>CAGR</th><th>Excess<br/>Returns</th>\n",
+          FinLib.getBaseName(returns1.getName()), FinLib.getBaseName(returns2.getName()));
+      writer.write("<th>%s<br/>Dev</th><th>%s<br/>Dev</th></tr>\n", FinLib.getBaseName(returns1.getName()),
+          FinLib.getBaseName(returns2.getName()));
+      writer.write("</thead><tbody>\n");
 
-    final double eps = 0.01; // epsilon for larger cagr
-    for (int i = iStart; i + 120 < returns1.length(); i += 120) {
-      assert returns1.getTimeMS(i) == returns2.getTimeMS(i);
-      LocalDate date = TimeLib.ms2date(returns1.getTimeMS(i));
-      Sequence decade1 = returns1.subseq(i, 121);
-      Sequence decade2 = returns2.subseq(i, 121);
-      CumulativeStats stats1 = CumulativeStats.calc(decade1);
-      CumulativeStats stats2 = CumulativeStats.calc(decade2);
+      final double eps = 0.01; // epsilon for larger cagr
+      int iRow = 0;
+      for (int i = iStart; i + 120 < returns1.length(); i += 120) {
+        assert returns1.getTimeMS(i) == returns2.getTimeMS(i);
+        LocalDate date = TimeLib.ms2date(returns1.getTimeMS(i));
+        Sequence decade1 = returns1.subseq(i, 121);
+        Sequence decade2 = returns2.subseq(i, 121);
+        CumulativeStats stats1 = CumulativeStats.calc(decade1);
+        CumulativeStats stats2 = CumulativeStats.calc(decade2);
 
-      String excess = String.format("%.2f", stats1.cagr - stats2.cagr);
-      if (stats1.cagr > stats2.cagr + eps) {
-        excess = "<font color=\"#070\">" + excess + "</font>";
-      } else if (stats2.cagr > stats1.cagr + eps) {
-        excess = "<font color=\"#700\">" + excess + "</font>";
+        String excess = String.format("%.2f", stats1.cagr - stats2.cagr);
+        if (stats1.cagr > stats2.cagr + eps) {
+          excess = "<font color=\"#070\">" + excess + "</font>";
+        } else if (stats2.cagr > stats1.cagr + eps) {
+          excess = "<font color=\"#700\">" + excess + "</font>";
+        }
+        writer.write(
+            " <tr class=\"%s\"><td>%ds</td><td>%.2f</td><td>%.2f</td><td>%s</td><td>%.2f</td><td>%.2f</td></tr>\n",
+            iRow % 2 == 0 ? "evenRow" : "oddRow", date.getYear(), stats1.cagr, stats2.cagr, excess,
+            stats1.devAnnualReturn, stats2.devAnnualReturn);
+        ++iRow;
       }
-      System.out.printf(" <tr><td>%ds</td><td>%.2f</td><td>%.2f</td><td>%s</td><td>%.2f</td><td>%.2f</td></tr>\n",
-          date.getYear(), stats1.cagr, stats2.cagr, excess, stats1.devAnnualReturn, stats2.devAnnualReturn);
-    }
-    System.out.printf("</tbody>\n</table>\n");
+      writer.write("</tbody>\n</table>\n");
+    } catch (IOException e) {}
+    return sw.toString();
   }
 
   /**
@@ -1016,25 +1027,26 @@ public class Chart
    * @param winPercent2 percentage of time second strategy wins
    * @return HTML that represents a win bar
    */
-  private static String genWinBar(double winPercent1, double winPercent2)
+  public static String genWinBar(double winPercent1, double winPercent2)
   {
-    StringBuilder sb = new StringBuilder();
-    double tiePercent = 100.0 - (winPercent1 + winPercent2);
-    assert tiePercent >= 0.0;
-    if (winPercent1 > 0) {
-      sb.append(String.format(
-          "<span style=\"float: left; width: %.2f%%; background: #53df53; white-space: nowrap;\">%.1f</span>\n",
-          winPercent1, winPercent1 + tiePercent));
-    }
-    if (tiePercent > 0) {
-      sb.append(String.format("<span style=\"float: left; width: %.2f%%; background: #dfdf53;\">&nbsp;</span>\n",
-          tiePercent));
-    }
-    if (winPercent2 > 0) {
-      sb.append(String.format("<span style=\"float: left; width: %.2f%%; background: #df5353;\">&nbsp;</span>\n",
-          winPercent2));
-    }
-    return sb.toString();
+    StringWriter sw = new StringWriter();
+    try (Writer writer = new Writer(sw)) {
+
+      double tiePercent = 100.0 - (winPercent1 + winPercent2);
+      assert tiePercent >= 0.0;
+      if (winPercent1 > 0) {
+        writer.write(
+            "<span style=\"float: left; width: %.2f%%; background: #53df53; white-space: nowrap;\">%.1f</span>\n",
+            winPercent1, winPercent1 + tiePercent);
+      }
+      if (tiePercent > 0) {
+        writer.write("<span style=\"float: left; width: %.2f%%; background: #dfdf53;\">&nbsp;</span>\n", tiePercent);
+      }
+      if (winPercent2 > 0) {
+        writer.write("<span style=\"float: left; width: %.2f%%; background: #df5353;\">&nbsp;</span>\n", winPercent2);
+      }
+    } catch (IOException e) {}
+    return sw.toString();
   }
 
   public static void saveAnnualStatsTable(File file, int width, boolean bCheckDate, int iPrice, List<Sequence> seqs)

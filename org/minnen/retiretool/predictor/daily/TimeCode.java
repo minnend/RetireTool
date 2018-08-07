@@ -2,9 +2,11 @@ package org.minnen.retiretool.predictor.daily;
 
 import java.util.List;
 
+import org.minnen.retiretool.data.FeatureVec;
+import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.util.TimeLib;
 
-/** Represents a code from a MultiPredictor at a given time. */
+/** Represents a code from a predictor at a given time. */
 public class TimeCode
 {
   public long time;
@@ -31,5 +33,14 @@ public class TimeCode
       if (codes.get(i).time > time) return i - 1;
     }
     return codes.size() - 1;
+  }
+
+  public static Sequence asSequence(List<TimeCode> codes)
+  {
+    Sequence seq = new Sequence("time codes");
+    for (TimeCode code : codes) {
+      seq.addData(new FeatureVec(1, code.code), code.time);
+    }
+    return seq;
   }
 }

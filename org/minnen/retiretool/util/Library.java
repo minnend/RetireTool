@@ -292,6 +292,23 @@ public final class Library
     ii[index2] = itmp;
   }
 
+  /** @return minimum of the values in the given array. */
+  public static double min(double[] a)
+  {
+    return min(a, 0, a.length - 1);
+  }
+
+  /** @return minimum of the values in [iStart, iEnd] for the given array. */
+  public static double min(double[] a, int iStart, int iEnd)
+  {
+    assert iStart <= iEnd;
+    double min = a[iStart];
+    for (int i = iStart + 1; i <= iEnd; ++i) {
+      if (a[i] < min) min = a[i];
+    }
+    return min;
+  }
+
   /** @return mean (average) of the values in the given array. */
   public static double mean(double[] a)
   {

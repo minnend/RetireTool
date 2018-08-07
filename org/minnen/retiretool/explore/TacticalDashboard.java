@@ -1,23 +1,21 @@
-package org.minnen.retiretool;
+package org.minnen.retiretool.explore;
 
 import java.io.File;
 import java.io.IOException;
 import java.time.Month;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.minnen.retiretool.broker.Simulation;
-import org.minnen.retiretool.data.DiscreteDistribution;
+import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
-import org.minnen.retiretool.data.TiingoIO;
 import org.minnen.retiretool.data.YahooIO;
-import org.minnen.retiretool.data.tiingo.TiingoFund;
 import org.minnen.retiretool.predictor.config.ConfigConst;
-import org.minnen.retiretool.predictor.config.ConfigMixed;
 import org.minnen.retiretool.predictor.config.ConfigMulti;
 import org.minnen.retiretool.predictor.config.ConfigSMA;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
-import org.minnen.retiretool.predictor.daily.MixedPredictor;
 import org.minnen.retiretool.predictor.daily.MultiPredictor;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.predictor.daily.TimeCode;
@@ -30,7 +28,7 @@ import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.util.Writer;
 import org.minnen.retiretool.viz.Chart;
 
-public class Dashboard
+public class TacticalDashboard
 {
   public final static SequenceStore     store         = new SequenceStore();
 
@@ -45,7 +43,7 @@ public class Dashboard
   public static final PriceModel        priceModel    = PriceModel.closeModel;
 
   public static final String            riskyName     = "stock";
-  public static final String            safeName      = "cash";
+  public static final String            safeName      = "3-month-treasuries";
   public static final String[]          assetNames    = new String[] { riskyName, safeName };
 
   // public static final PredictorConfig[] singleConfigs = new PredictorConfig[] {
@@ -53,6 +51,10 @@ public class Dashboard
   // new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap) };
   // public static final int[][] allParams = new int[][] { { 20, 0, 240, 150, 25 }, { 50, 0, 180, 30, 100 },
   // { 10, 0, 220, 0, 200 } };
+
+  // PredictorConfig[] singleConfigs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap),
+  // new ConfigSMA(20, 0, 250, 50, 1.0, FinLib.Close, gap), new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap),
+  // new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap), new ConfigSMA(10, 0, 230, 40, 2.0, FinLib.Close, gap) };
 
   public static final PredictorConfig[] singleConfigs = new PredictorConfig[] {
       new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap), new ConfigSMA(25, 0, 155, 125, 0.75, FinLib.Close, gap),
@@ -62,181 +64,29 @@ public class Dashboard
 
   public static void setupData() throws IOException
   {
-    File dataDir = new File("g:/research/finance");
-    assert dataDir.exists();
+    String symbol = "^GSPC";
+    File file = YahooIO.downloadDailyData(symbol, 8 * TimeLib.MS_IN_HOUR);
+    Sequence stock = YahooIO.loadData(file);
 
-    // String symbol = "^GSPC";
-    // if (!YahooIO.updateDailyData(symbol, 8 * TimeLib.MS_IN_HOUR)) {
-    // throw new IOException("Failed to update data.");
-    // }
-    // Sequence stock = YahooIO.loadData(YahooIO.getFile(symbol));
-
-    TiingoFund fund = TiingoFund.fromSymbol("VFINX", true);
-    Sequence stock = fund.data;
+    // TiingoFund fund = TiingoFund.fromSymbol("VFINX", true);
+    // Sequence stock = fund.data;
 
     System.out.printf("S&P (Daily): [%s] -> [%s]\n", TimeLib.formatDate(stock.getStartMS()),
         TimeLib.formatDate(stock.getEndMS()));
     store.add(stock, "stock");
 
-    // Add integral sequence for stock data.
-    Sequence stockIntegral = stock.getIntegralSeq();
-    store.add(stockIntegral);
-  }
-
-  public static void runFiveTwoMix(Simulation sim, File dir) throws IOException
-  {
-    // Buy-and-Hold.
-    PredictorConfig configRisky = new ConfigConst(riskyName);
-    Predictor predRisky = configRisky.build(sim.broker.accessObject, assetNames);
-    // ConstPredictor predSafe = new ConstPredictor(new ConfigConst(1), sim.broker.accessObject, assetNames);
-    // MixedPredictor predBaseline = new MixedPredictor(new Predictor[] { predRisky, predSafe }, new
-    // DiscreteDistribution(
-    // 0.8, 0.2), sim.broker.accessObject);
-    sim.run(predRisky);
-    Sequence baselineReturns = sim.returnsDaily;
-    CumulativeStats stats = CumulativeStats.calc(sim.returnsMonthly);
-    System.out.println(stats);
-
-    // List of all single-SMA configs.
-    PredictorConfig[] singleConfigs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap),
-        new ConfigSMA(20, 0, 250, 50, 1.0, FinLib.Close, gap), new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap),
-        new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap), new ConfigSMA(10, 0, 230, 40, 2.0, FinLib.Close, gap) };
-
-    // One config that holds all of them to make it easier to get results.
-    PredictorConfig configSingles = new ConfigMulti(-1, singleConfigs);
-    MultiPredictor predSingles = (MultiPredictor) configSingles.build(sim.broker.accessObject, assetNames);
-    sim.run(predSingles);
-
-    // Actual predictors.
-    PredictorConfig[] multiConfigs = new PredictorConfig[] {
-        new ConfigMulti(254, new PredictorConfig[] { singleConfigs[0], singleConfigs[2], singleConfigs[3] }),
-        new ConfigMulti(254, new PredictorConfig[] { singleConfigs[0], singleConfigs[2], singleConfigs[4] }) };
-
-    PredictorConfig configMultis = new ConfigMulti(-1, multiConfigs);
-    MultiPredictor predMultis = (MultiPredictor) configMultis.build(sim.broker.accessObject, assetNames);
-    sim.run(predMultis);
-
-    DiscreteDistribution mix = new DiscreteDistribution(0.5, 0.5);
-    PredictorConfig configMix = new ConfigMixed(mix, multiConfigs);
-    MixedPredictor predMix = (MixedPredictor) configMix.build(sim.broker.accessObject, assetNames);
-    sim.run(predMix);
-    Sequence strategyReturns = sim.returnsDaily;
-    assert strategyReturns.matches(baselineReturns);
-
-    stats = CumulativeStats.calc(sim.returnsMonthly);
-    System.out.println(stats);
-
-    final String green = "1E2";
-    final String red = "D12";
-    final String orange = "E90";
-    final String sRowGap = "<td style=\"width: 4;\">&nbsp;</td>";
-
-    try (Writer f = new Writer(new File(dir, "dashboard.html"))) {
-      f.write("<html><head>\n");
-      f.write("<title>Dashboard</title>\n");
-      f.write("<script src=\"http://code.jquery.com/jquery.min.js\"></script>\n");
-      f.write("<link rel=\"stylesheet\" href=\"dashboard.css\">\n");
-      f.write("</head>\n");
-      f.write("<table>\n");
-
-      // Pre-compute top-level color strings.
-      String[] topColors = new String[predMultis.timeCodes.size()];
-      for (int i = 0; i < predMultis.timeCodes.size(); ++i) {
-        switch (predMultis.timeCodes.get(i).code) {
-        case 0:
-          topColors[i] = red;
-          break;
-        case 1:
-        case 2:
-          topColors[i] = orange;
-          break;
-        case 3:
-          topColors[i] = green;
-          break;
-        }
-      }
-
-      for (int iCode = predSingles.timeCodes.size() - 1; iCode >= 0; --iCode) {
-        TimeCode timeCodeSingles = predSingles.timeCodes.get(iCode);
-
-        long prevTime = baselineReturns.getStartMS();
-        if (iCode > 0) {
-          prevTime = predSingles.timeCodes.get(iCode - 1).time;
-        }
-
-        long nextTime = baselineReturns.getEndMS();
-        if (iCode < predSingles.timeCodes.size() - 1) {
-          nextTime = predSingles.timeCodes.get(iCode + 1).time;
-        }
-
-        // Date column.
-        f.write("<tr><td class=\"history\">%s</td>", TimeLib.formatDate(timeCodeSingles.time));
-        f.write(sRowGap);
-
-        // Single SMA predictors.
-        for (int i = 0; i < singleConfigs.length; ++i) {
-          int mask = 1 << (singleConfigs.length - i - 1);
-          boolean b = ((timeCodeSingles.code & mask) != 0);
-          f.write("<td style=\"width: 16; background: #%s;\">&nbsp;</td>", b ? green : red);
-        }
-
-        // Multi-predictors.
-        f.write(sRowGap);
-        int iTopCode = TimeCode.indexForTime(timeCodeSingles.time, predMultis.timeCodes);
-        int iPrevTop = TimeCode.indexForTime(prevTime, predMultis.timeCodes);
-        TimeCode timeCodeMultis = predMultis.timeCodes.get(iTopCode);
-        for (int i = 0; i < multiConfigs.length; ++i) {
-          int mask = 1 << (multiConfigs.length - i - 1);
-          boolean b = ((timeCodeMultis.code & mask) != 0);
-          f.write("<td style=\"width: 16; background: #%s;\">&nbsp;</td>", b ? green : red);
-        }
-
-        // Final decision.
-        f.write(sRowGap);
-        f.write("<td style=\"width: 16; background: #%s;\">&nbsp;</td>", topColors[iTopCode]);
-
-        // Return for this time period (single change).
-        int index1 = baselineReturns.getClosestIndex(timeCodeSingles.time);
-        int index2 = baselineReturns.getClosestIndex(nextTime);
-        double totalMul = FinLib.getTotalReturn(baselineReturns, index1, index2);
-        f.write("<td>%.2f</td>", FinLib.mul2ret(totalMul));
-
-        // Return for this time period (top-level change).
-        boolean bTopChange = (iCode == 0 || iCode == predSingles.timeCodes.size() - 1 || iTopCode != iPrevTop);
-        long nextTopTime = baselineReturns.getEndMS();
-        if (iTopCode < predMultis.timeCodes.size() - 1) {
-          nextTopTime = predMultis.timeCodes.get(iTopCode + 1).time;
-        }
-        index2 = baselineReturns.getClosestIndex(nextTopTime);
-        totalMul = FinLib.getTotalReturn(baselineReturns, index1, index2);
-        f.write(sRowGap);
-        f.write("<td>%s</td>", bTopChange ? String.format("%.2f", FinLib.mul2ret(totalMul)) : "");
-
-        // Value of S&P and Strategy
-        f.write(sRowGap);
-        f.write("<td>%.2f</td>", baselineReturns.get(index1, 0));
-        f.write(sRowGap);
-        f.write("<td>%.2f</td>", strategyReturns.get(index1, 0));
-
-        f.write("</tr>\n");
-
-      }
-      f.write("</table>\n");
-      f.write("</body></html>\n");
-    }
+    Sequence tb3mo = FinLib.inferAssetFrom3MonthTreasuries();
+    store.add(tb3mo, "3-month-treasuries");
   }
 
   public static void runMulti3(Simulation sim, File dir) throws IOException
   {
-    // Buy-and-Hold.
+    // Buy-and-Hold 100% stock.
     PredictorConfig configRisky = new ConfigConst(riskyName);
     Predictor predRisky = configRisky.build(sim.broker.accessObject, assetNames);
-    // ConstPredictor predSafe = new ConstPredictor(new ConfigConst(1), sim.broker.accessObject, assetNames);
-    // MixedPredictor predBaseline = new MixedPredictor(new Predictor[] { predRisky, predSafe }, new
-    // DiscreteDistribution(
-    // 0.8, 0.2), sim.broker.accessObject);
     sim.run(predRisky, "Buy & Hold");
     Sequence baselineReturns = sim.returnsDaily;
+    Sequence m1 = sim.returnsMonthly;
     CumulativeStats stats = CumulativeStats.calc(sim.returnsMonthly);
     System.out.println(stats);
 
@@ -245,6 +95,7 @@ public class Dashboard
     MultiPredictor predStrategy = (MultiPredictor) configStrategy.build(sim.broker.accessObject, assetNames);
     sim.run(predStrategy, "Tactical");
     Sequence strategyReturns = sim.returnsDaily;
+    Sequence m2 = sim.returnsMonthly;
     assert strategyReturns.matches(baselineReturns);
 
     stats = CumulativeStats.calc(sim.returnsMonthly);
@@ -258,14 +109,17 @@ public class Dashboard
       f.write("<html><head>\n");
       f.write("<title>Dashboard</title>\n");
       f.write("<script src=\"http://code.jquery.com/jquery.min.js\"></script>\n");
-      f.write("<link rel=\"stylesheet\" href=\"dashboard.css\">\n");
+      f.write("<link rel=\"stylesheet\" href=\"css/dashboard.css\">\n");
       f.write("</head><body>\n");
 
       // Table is Column 1.
       f.write("<div class=\"column\">\n");
       f.write("<table cellspacing=\"0\">\n");
+      List<TimeCode> exitDates = new ArrayList<>();
+      List<TimeCode> reenterDates = new ArrayList<>();
       for (int iCode = predStrategy.timeCodes.size() - 1; iCode >= 0; --iCode) {
         TimeCode timeCodeSingles = predStrategy.timeCodes.get(iCode);
+        // System.out.println(timeCodeSingles);
 
         long prevTime = baselineReturns.getStartMS();
         if (iCode > 0) {
@@ -309,6 +163,11 @@ public class Dashboard
         boolean b2 = (prevCodeStrategy.code != 0);
         boolean bTopChange = (iCode == 0 || iCode == predStrategy.timeCodes.size() - 1 || (b1 ^ b2));
 
+        if (bTopChange && !b2) {
+          exitDates.add(prevCodeStrategy);
+          reenterDates.add(timeCodeStrategy);
+        }
+
         int iNextTop = iTopCode + 1;
         for (; iNextTop < predStrategy.timeCodes.size(); ++iNextTop) {
           boolean ba = (timeCodeStrategy.code != 0);
@@ -321,13 +180,6 @@ public class Dashboard
         totalMul = FinLib.getTotalReturn(baselineReturns, index1, index2);
         f.write(sRowGap);
         f.write("<td>%s</td>", bTopChange ? String.format("%.2f", FinLib.mul2ret(totalMul)) : "");
-
-        // Value of S&P and Strategy
-        // f.write(sRowGap);
-        // double baselineTR = baselineReturns.get(index1, 0);
-        // double strategyTR = strategyReturns.get(index1, 0);
-        // f.write("<td>%.1f%%</td>", FinLib.mul2ret(strategyTR / baselineTR));
-
         f.write(sRowGap);
         f.write("</tr>\n");
       }
@@ -352,23 +204,39 @@ public class Dashboard
       f.write("[<a href=\"sma2.html\">SMA-2</a>]\n");
       f.write("[<a href=\"sma3.html\">SMA-3</a>]\n");
       f.write("</p>\n");
+
+      f.write(Chart.genDecadeTable(m2, m1) + "<br/>");
+
+      // List of dates when the strategy moves to cash.
+      f.write("<b>Move to Safe Asset</b>: " + exitDates.size() + "<br/>\n");
+      // f.write("<ul>\n");
+      // for (int i = 0; i < exitDates.size(); ++i) {
+      // TimeCode a = exitDates.get(i);
+      // TimeCode b = reenterDates.get(i);
+      // f.write("<li>[%s] &rarr; [%s] (%s)</li>\n", TimeLib.formatDate2(a.time), TimeLib.formatDate2(b.time),
+      // TimeLib.formatDuration(b.time - a.time));
+      //
+      // // Sequence seq = store.get(riskyName).subseq(a.time, b.time);
+      // // Chart.saveLineChart(
+      // // new File(DataIO.outputPath, String.format("exit-%02d-%s.html", i + 1, TimeLib.formatYMD(a.time))),
+      // // String.format("Exit %d", i + 1), 1200, 600, false, false, seq);
+      // }
+      // f.write("</ul>\n");
       f.write("</div>\n");
+
       f.write("</body></html>\n");
     }
   }
 
   public static void main(String[] args) throws IOException
   {
-    File dir = new File("g:/web/");
-    assert dir.isDirectory();
-
     setupData();
 
     Sequence stock = store.get(riskyName);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stock.subseq(iStart);
     Simulation sim = new Simulation(store, guideSeq, slippage, maxDelay, priceModel, priceModel);
-    runMulti3(sim, dir);
+    runMulti3(sim, DataIO.outputPath);
 
     // Generate graphs.
     for (int i = 0; i < allParams.length; ++i) {
@@ -382,8 +250,8 @@ public class Dashboard
       Sequence raw = stock.subseq(startMs, endMs);
       trigger.setName("Trigger");
       base.setName("Base");
-      Chart.saveLineChart(new File(dir, String.format("sma%d.html", i + 1)), String.format("SMA-%d", i + 1), 1200, 600,
-          false, false, trigger, baseLow, baseHigh, raw);
+      Chart.saveLineChart(new File(DataIO.outputPath, String.format("sma%d.html", i + 1)),
+          String.format("SMA-%d", i + 1), 1200, 600, false, false, trigger, baseLow, baseHigh, raw);
     }
   }
 }

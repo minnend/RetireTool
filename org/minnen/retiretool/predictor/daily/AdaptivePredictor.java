@@ -38,7 +38,7 @@ public class AdaptivePredictor extends Predictor
   }
 
   public AdaptivePredictor(FeatureExtractor featureExtractor, SoftClassifier<FeatureVec> absoluteClassifier,
-      int nMaxKeep, String safeAsset, BrokerInfoAccess brokerAccess, String[] assetChoices)
+      int nMaxKeep, String safeAsset, BrokerInfoAccess brokerAccess, String... assetChoices)
   {
     this(featureExtractor, new ClassificationModel(null, absoluteClassifier), null, null, nMaxKeep, safeAsset,
         brokerAccess, assetChoices);
@@ -46,7 +46,7 @@ public class AdaptivePredictor extends Predictor
 
   public AdaptivePredictor(FeatureExtractor featureExtractor, ClassificationModel absoluteClassifier,
       ClassificationModel pairwiseClassifier, Ranker ranker, int nMaxKeep, String safeAsset,
-      BrokerInfoAccess brokerAccess, String[] assetChoices)
+      BrokerInfoAccess brokerAccess, String... assetChoices)
   {
     super("Adaptive", brokerAccess, assetChoices);
     this.featureExtractor = featureExtractor;
@@ -61,9 +61,8 @@ public class AdaptivePredictor extends Predictor
   @Override
   protected void calcDistribution(DiscreteDistribution distribution)
   {
-    if (prevDistribution != null
-        && ((tradeFreq == TradeFreq.Weekly && !brokerAccess.getTimeInfo().isLastDayOfWeek) || tradeFreq == TradeFreq.Monthly
-            && !brokerAccess.getTimeInfo().isLastDayOfMonth)) {
+    if (prevDistribution != null && ((tradeFreq == TradeFreq.Weekly && !brokerAccess.getTimeInfo().isLastDayOfWeek)
+        || tradeFreq == TradeFreq.Monthly && !brokerAccess.getTimeInfo().isLastDayOfMonth)) {
       distribution.copyFrom(prevDistribution);
       return;
     }

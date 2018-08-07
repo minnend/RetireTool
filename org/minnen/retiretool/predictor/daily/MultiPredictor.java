@@ -1,16 +1,12 @@
 package org.minnen.retiretool.predictor.daily;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.minnen.retiretool.broker.BrokerInfoAccess;
 import org.minnen.retiretool.util.Library;
 
 /** Combines the in/out votes from multiple predictors. */
 public class MultiPredictor extends Predictor
 {
-  private final long          assetMap;
-  public final List<TimeCode> timeCodes = new ArrayList<>();
+  private final long assetMap;
 
   /** If the vote is positive ("in") hold `assetName`, else `alternativeAsset`. */
   public MultiPredictor(Predictor[] predictors, long assetMap, String assetName, String alternativeAsset,
@@ -55,6 +51,7 @@ public class MultiPredictor extends Predictor
       // nNo <= Math.abs(assetMap));
       return nNo <= Math.abs(assetMap); // combined vote is "in" if few enough constituents voted "out"
     } else {
+      // Check the corresponding bit in the asset map.
       return ((assetMap >> code) & 1L) > 0;
     }
   }

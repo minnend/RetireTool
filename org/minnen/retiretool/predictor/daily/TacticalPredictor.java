@@ -44,14 +44,16 @@ public class TacticalPredictor extends Predictor
     // Calculate the combined distribution.
     distribution.clear();
     for (int i = 0; i < predictors.length; ++i) {
+      // Each predictor selects either risky or safe asset.
       String name = predictors[i].selectAsset();
       if (name.equals(safeName)) continue;
       int ix = distribution.find(name);
-      distribution.weights[ix] += 1.0;
+      distribution.weights[ix] += 1.0;  // increase weight for risky asset
     }
     if (Library.sum(distribution.weights) < 1e-4) {
+      // If zero weight, put everything into safe asset.
       distribution.set(safeName, 1.0);
-    } else {
+    } else { 
       distribution.normalize();
     }
   }

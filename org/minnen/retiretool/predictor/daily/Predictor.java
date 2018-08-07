@@ -1,5 +1,7 @@
 package org.minnen.retiretool.predictor.daily;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.minnen.retiretool.broker.BrokerInfoAccess;
@@ -45,6 +47,9 @@ public abstract class Predictor
   private DiscreteDistribution  distribution;
 
   public Map<String, Double>    futureReturns;
+
+  /** Stores information for each time the prediction changes. */
+  public final List<TimeCode>   timeCodes      = new ArrayList<>();
 
   public Predictor(String name, BrokerInfoAccess brokerAccess, String... assetChoices)
   {

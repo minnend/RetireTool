@@ -1,9 +1,12 @@
 package org.minnen.retiretool.util;
 
+import java.io.IOException;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.Period;
+import java.time.temporal.TemporalAdjuster;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -14,16 +17,20 @@ import org.minnen.retiretool.Shiller;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStoreV1;
+import org.minnen.retiretool.data.fred.FredSeries;
 import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.DurationalStats;
 import org.minnen.retiretool.stats.RetirementStats;
+import org.threeten.bp.Year;
 
 import com.joptimizer.functions.ConvexMultivariateRealFunction;
 import com.joptimizer.functions.LinearMultivariateRealFunction;
 import com.joptimizer.functions.PDQuadraticMultivariateRealFunction;
 import com.joptimizer.optimizers.JOptimizer;
 import com.joptimizer.optimizers.OptimizationRequest;
+
+import smile.math.Math;
 
 public final class FinLib
 {
@@ -534,7 +541,7 @@ public final class FinLib
     assert (iStart >= 0 && nMonths >= 1 && iStart + nMonths < nData);
 
     double monthlyWithdrawal = annualWithdrawal / 12.0;
-    double monthlyExpenseRatio = (expenseRatio / 100.0) / 12.0;
+    double monthlyExpenseRatio = (expenseRatio / 100.0) / 12.0; // TODO x/12 or x^(1/12)?
     double balance = principal;
     for (int i = iStart; i < iStart + nMonths; ++i) {
       // Withdraw money at beginning of month.
@@ -1383,6 +1390,7 @@ public final class FinLib
     return Math.sqrt(v);
   }
 
+  /** @return sharpe ratio for `returns` relative to `benchmark`, which can be null */
   public static double sharpeDaily(Sequence returns, Sequence benchmark)
   {
     final int N = returns.length();
@@ -1509,5 +1517,47 @@ public final class FinLib
       seq.addData(new FeatureVec(1, balance), fv.getTime());
     }
     return seq;
+  }
+
+  /** @return Sequence holding total returns for an investment that pays the current 3-month treasury rate */
+  public static Sequence inferAssetFrom3MonthTreasuries() throws IOException
+  {
+    FredSeries fred = FredSeries.fromName("3-month-treasury");
+    Sequence data = fred.data;
+    LocalDate startDay = TimeLib.ms2date(fred.data.getStartMS()).withDayOfMonth(1);
+    LocalDate endDay = TimeLib.ms2date(fred.data.getEndMS()).with(TemporalAdjusters.lastDayOfMonth());
+
+    Sequence asset = new Sequence("3-Month Treasuries");
+    LocalDate day = startDay;
+    double balance = 1.0;
+    int iTreasury = 0;
+    while (!day.isAfter(endDay)) {
+      // Find index into treasury data that matches current month.
+      Month dayMonth = day.getMonth();
+      Month treasuryMonth = TimeLib.ms2date(data.getTimeMS(iTreasury)).getMonth();
+      if (treasuryMonth != dayMonth) {
+        ++iTreasury;
+        treasuryMonth = TimeLib.ms2date(data.getTimeMS(iTreasury)).getMonth();
+        assert dayMonth == treasuryMonth;
+      }
+
+      double prevBalance = balance;
+      if (day != startDay) {
+        // Assume daily compounding and infer daily rate from current annual rate.
+        double annualReturn = FinLib.ret2mul(data.get(iTreasury, 0));
+        double dailyReturn = Math.pow(annualReturn, 1.0 / Year.of(day.getYear()).length());
+        balance *= dailyReturn;
+      } else {
+        assert dayMonth == treasuryMonth;
+      }
+
+      double low = Math.min(prevBalance, balance);
+      double high = Math.min(prevBalance, balance);
+      FeatureVec x = new FeatureVec(6, balance, prevBalance, low, high, 0, balance);
+      asset.addData(x, day);
+      day = day.plusDays(1);
+    }
+
+    return asset;
   }
 }

@@ -65,7 +65,8 @@ public class RetireTool
 
   public static void setupBroker(File dataDir, File dir) throws IOException
   {
-    Sequence stock = YahooIO.loadData(new File(dataDir, "^GSPC.csv"));
+    File file = YahooIO.downloadDailyData("^GSPC", 8 * TimeLib.MS_IN_HOUR);
+    Sequence stock = YahooIO.loadData(file);
     Sequence bondRate = DataIO.loadDateValueCSV(new File(dataDir, "treasury-10year-daily.csv"));
     Sequence shiller = DataIO.loadShillerData(new File(dataDir, "shiller.csv"));
     shiller.adjustDatesToEndOfMonth();

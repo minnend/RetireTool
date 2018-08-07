@@ -5,6 +5,7 @@ import java.util.Arrays;
 import org.minnen.retiretool.broker.BrokerInfoAccess;
 import org.minnen.retiretool.data.DiscreteDistribution;
 
+/** If gated predictor says "safe", go safe. Otherwise, do whatever the primary predictor says. */
 public class GatedPredictor extends Predictor
 {
   private final Predictor primaryPredictor;

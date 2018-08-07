@@ -5,6 +5,7 @@ import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.predictor.config.ConfigRecession;
 import org.minnen.retiretool.util.TimeLib;
 
+/** Predictor based on a sequence called "recession". */
 public class RecessionPredictor extends Predictor
 {
   public final ConfigRecession config;

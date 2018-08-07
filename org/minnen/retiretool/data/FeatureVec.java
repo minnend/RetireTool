@@ -69,9 +69,10 @@ public class FeatureVec
     return name;
   }
 
-  public void setName(String name)
+  public FeatureVec setName(String name)
   {
     this.name = name;
+    return this;
   }
 
   /** @return this*x' */
