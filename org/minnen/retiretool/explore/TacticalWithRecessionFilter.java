@@ -32,6 +32,8 @@ import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.util.Writer;
 import org.minnen.retiretool.viz.Chart;
+import org.minnen.retiretool.viz.ChartConfig;
+import org.minnen.retiretool.viz.PlotBand;
 
 import smile.math.Math;
 
@@ -117,15 +119,26 @@ public class TacticalWithRecessionFilter
     returns.add(sim.returnsMonthly);
     System.out.println(CumulativeStats.calc(sim.returnsMonthly));
     compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
-    Sequence seq = sim.returnsMonthly.dup();
-    seq.setName("Unemployment Indicator");
-    Sequence timeCodes = TimeCode.asSequence(predUnemployment.timeCodes);
-    for (FeatureVec x : seq) {
-      int i = timeCodes.getIndexAtOrBefore(x.getTime());
-      double v = timeCodes.get(i, 0);
-      x.set(0, 0.5 + v / 2);
+    // Sequence seq = sim.returnsMonthly.dup();
+    // seq.setName("Unemployment Indicator");
+    // Sequence timeCodes = TimeCode.asSequence(predUnemployment.timeCodes);
+    // for (FeatureVec x : seq) {
+    // int i = timeCodes.getIndexAtOrBefore(x.getTime());
+    // double v = timeCodes.get(i, 0);
+    // x.set(0, 0.5 + v / 2);
+    // }
+    // returns.add(seq);
+    List<PlotBand> bands = new ArrayList<>();
+    for (int i = 1; i < predUnemployment.timeCodes.size(); ++i) {
+      TimeCode a = predUnemployment.timeCodes.get(i - 1);
+      if (a.code == 0) {
+        TimeCode b = predUnemployment.timeCodes.get(i);
+        assert b.code == 1;
+        int from = sim.returnsMonthly.getClosestIndex(a.time);
+        int to = sim.returnsMonthly.getClosestIndex(b.time);
+        bands.add(new PlotBand(from, to, "rgba(0,0,255,0.1)"));
+      }
     }
-    returns.add(seq);
 
     Sequence unrate = store.get(configUnemployment.analysisName);
     Sequence unrateSMA = calcSMA(unrate, nMonthsUnrateSMA);
@@ -163,8 +176,10 @@ public class TacticalWithRecessionFilter
     System.out.println(CumulativeStats.calc(sim.returnsMonthly));
     compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
 
-    Chart.saveLineChart(new File(DataIO.outputPath, "returns.html"), "Cumulative Returns", 1000, 640, true, true,
-        returns);
+    ChartConfig chartConfig = Chart.saveLineChart(new File(DataIO.outputPath, "returns.html"), "Cumulative Returns",
+        1000, 640, true, true, returns);
+    chartConfig.addPlotBandX(bands);
+    Chart.saveChart(chartConfig);
     Chart.saveComparisonTable(new File(DataIO.outputPath, "comparison.html"), 1000, compStats);
   }
 }

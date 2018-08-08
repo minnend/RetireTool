@@ -23,4 +23,9 @@ public class Writer extends BufferedWriter
   {
     super.write(String.format(format, args));
   }
+
+  public void writeln() throws IOException
+  {
+    super.write("\n");
+  }
 }

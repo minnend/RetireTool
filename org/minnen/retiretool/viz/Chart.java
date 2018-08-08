@@ -6,10 +6,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.time.LocalDate;
-import java.time.temporal.TemporalAdjuster;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -39,41 +37,86 @@ public class Chart
 {
   public final static boolean bVerticalLine = false;
 
-  public static void saveLineChart(File file, String title, int width, int height, boolean logarithmic, boolean monthly,
-      Sequence... seqs) throws IOException
+  public static ChartConfig saveLineChart(File file, String title, int width, int height, boolean logarithmic,
+      boolean monthly, Sequence... seqs) throws IOException
   {
-    saveChart(file, ChartConfig.Type.Line, title, null, null, width, height, Double.NaN, Double.NaN,
+    return saveChart(file, ChartConfig.Type.Line, title, null, null, width, height, Double.NaN, Double.NaN,
         logarithmic ? 0.5 : Double.NaN, logarithmic, monthly, 0, seqs);
   }
 
-  public static void saveLineChart(File file, String title, int width, int height, boolean logarithmic, boolean monthly,
-      List<Sequence> seqs) throws IOException
+  public static ChartConfig saveLineChart(File file, String title, int width, int height, boolean logarithmic,
+      boolean monthly, List<Sequence> seqs) throws IOException
   {
-    saveChart(file, ChartConfig.Type.Line, title, null, null, width, height, Double.NaN, Double.NaN,
+    return saveChart(file, ChartConfig.Type.Line, title, null, null, width, height, Double.NaN, Double.NaN,
         logarithmic ? 0.5 : Double.NaN, logarithmic, monthly, 0, seqs.toArray(new Sequence[seqs.size()]));
   }
 
-  public static void saveChart(File file, ChartConfig.Type chartType, String title, String[] labels, String[] colors,
-      int width, int height, double ymin, double ymax, double minorTickIntervalY, boolean logarthimicYAxis,
-      boolean isMonthlyData, int dim, Sequence... seqs) throws IOException
+  public static ChartConfig saveChart(File file, ChartConfig.Type chartType, String title, String[] labels,
+      String[] colors, int width, int height, double ymin, double ymax, double minorTickIntervalY,
+      boolean logarthimicYAxis, boolean isMonthlyData, int dim, Sequence... seqs) throws IOException
   {
     ChartConfig config = new ChartConfig(file).setType(chartType).setTitle(title).setLabels(labels).setColors(colors)
         .setSize(width, height).setMinMaxY(ymin, ymax).setMinorTickIntervalY(minorTickIntervalY)
         .setLogarthimicYAxis(logarthimicYAxis).setMonthlyData(isMonthlyData).setIndexY(dim).setData(seqs);
-    saveChart(config);
+    saveChart(config);  // TODO support option to build config w/o saving chart
+    return config;
+  }
+
+  public static void saveDataCSV(ChartConfig config, Sequence... seqs) throws IOException
+  {
+    File file = new File(config.file.getParentFile(), config.file.getName() + ".csv");
+    try (Writer writer = new Writer(file)) {
+      writer.write("Strategy,");
+      if (config.labels != null) {
+        assert config.labels.length == seqs[0].size();
+        writer.write("%s\n", String.join(",", config.labels));
+      } else {
+        for (int i = 0; i < seqs[0].size(); ++i) {
+          if (config.isMonthlyData) {
+            writer.write(TimeLib.formatMonth(seqs[0].getTimeMS(i)));
+          } else {
+            writer.write(TimeLib.formatDate(seqs[0].getTimeMS(i)));
+          }
+          if (i < seqs[0].size() - 1) {
+            writer.write(",");
+          }
+        }
+      }
+      writer.writeln();
+
+      for (Sequence seq : seqs) {
+        writer.write("%s,", seq.getName());
+        for (int t = 0; t < seq.length(); ++t) {
+          double x = seq.get(t, config.iDim);
+          writer.write("%.6f%s", x, t == seq.size() - 1 ? "" : ",");
+        }
+        writer.writeln();
+      }
+    }
+  }
+
+  private static void addPlotBands(List<PlotBand> bands, Writer writer) throws IOException
+  {
+    if (bands == null || bands.isEmpty()) return;
+    writer.write("   plotBands: [\n");
+    for (PlotBand band : bands) {
+      writer.write("    { from: %g, to: %g, color: '%s' },\n", band.from, band.to, band.color);
+    }
+    writer.write("   ]\n");
   }
 
   public static void saveChart(ChartConfig config) throws IOException
   {
     Sequence[] seqs = config.data;
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(config.file))) {
+    saveDataCSV(config, seqs);
+    try (Writer writer = new Writer(config.file)) {
       writer.write("<html><head>\n");
       writer.write("<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js\"></script>\n");
       writer.write("<script src=\"js/highcharts.js\"></script>\n");
-      writer.write("  <script type=\"text/javascript\">\n");
+      writer.write("<script type=\"text/javascript\">\n");
 
       writer.write("$(function () {\n");
-      writer.write(" $('#chart').highcharts({\n");
+      writer.write(" $('#%s').highcharts({\n", config.containerName);
       writer.write("  title: { text: '" + config.title + "' },\n");
       if (bVerticalLine) {
         writer.write("  tooltip: {\n");
@@ -88,7 +131,8 @@ public class Chart
       if (config.type != ChartConfig.Type.Line) {
         writer.write(String.format("  chart: { type: '%s' },\n", ChartConfig.chart2name(config.type)));
       }
-      writer.write("  xAxis: { categories: [");
+      writer.write("  xAxis: {\n");
+      writer.write("  categories: [");
       if (config.labels != null) {
         assert config.labels.length == seqs[0].size();
         for (int i = 0; i < config.labels.length; ++i) {
@@ -109,7 +153,9 @@ public class Chart
           }
         }
       }
-      writer.write("] },\n");
+      writer.write("],\n"); // categories
+      addPlotBands(config.xBands, writer);
+      writer.write("  },\n"); // xAxis
 
       writer.write("  yAxis: {\n");
       if (config.logarthimicYAxis) {
@@ -124,12 +170,13 @@ public class Chart
       if (!Double.isNaN(config.ymax)) {
         writer.write(String.format("   max: %.3f,\n", config.ymax));
       }
-      writer.write("   title: { text: null }\n");
-      writer.write("  },\n");
+      writer.write("   title: { text: null },\n");
+      addPlotBands(config.yBands, writer);
+      writer.write("  },\n"); // yAxis
 
       if (config.type == ChartConfig.Type.Line) {
         writer.write("  chart: {\n");
-        writer.write("   zoomType: 'xy'\n");
+        writer.write("   zoomType: 'xy',\n");
         writer.write("  },\n");
       }
 
@@ -210,8 +257,8 @@ public class Chart
       writer.write(" });\n");
       writer.write("});\n");
 
-      writer.write("</script></head><body style=\"width:" + config.width + "px;\">\n");
-      writer.write("<div id=\"chart\" style=\"width:100%; height:" + config.height + "px;\" />\n");
+      writer.write("</script></head><body style=\"width:%dpx;\">\n", config.width);
+      writer.write("<div id=\"%s\" style=\"width:100%%; height:%dpx;\" />\n", config.containerName, config.height);
       writer.write("</body></html>\n");
     }
   }
