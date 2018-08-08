@@ -41,29 +41,33 @@ public class Chart
     LINEAR, LOGARITHMIC
   };
 
+  public enum ChartTiming {
+    DAILY, MONTHLY
+  };
+
   public static ChartConfig saveLineChart(File file, String title, int width, int height, ChartScaling scaling,
-      boolean monthly, Sequence... seqs) throws IOException
+      ChartTiming timing, Sequence... seqs) throws IOException
   {
     return saveChart(file, ChartConfig.Type.Line, title, null, null, width, height, Double.NaN, Double.NaN,
-        scaling == ChartScaling.LOGARITHMIC ? 0.5 : Double.NaN, scaling, monthly, 0, seqs);
+        scaling == ChartScaling.LOGARITHMIC ? 0.5 : Double.NaN, scaling, timing, 0, seqs);
   }
 
   public static ChartConfig saveLineChart(File file, String title, int width, int height, ChartScaling scaling,
-      boolean monthly, List<Sequence> seqs) throws IOException
+      ChartTiming timing, List<Sequence> seqs) throws IOException
   {
     return saveChart(file, ChartConfig.Type.Line, title, null, null, width, height, Double.NaN, Double.NaN,
-        scaling == ChartScaling.LOGARITHMIC ? 0.5 : Double.NaN, scaling, monthly, 0,
+        scaling == ChartScaling.LOGARITHMIC ? 0.5 : Double.NaN, scaling, timing, 0,
         seqs.toArray(new Sequence[seqs.size()]));
   }
 
   public static ChartConfig saveChart(File file, ChartConfig.Type chartType, String title, String[] labels,
       String[] colors, int width, int height, double ymin, double ymax, double minorTickIntervalY, ChartScaling scaling,
-      boolean isMonthlyData, int dim, Sequence... seqs) throws IOException
+      ChartTiming timing, int dim, Sequence... seqs) throws IOException
   {
     ChartConfig config = new ChartConfig(file).setType(chartType).setTitle(title).setLabels(labels).setColors(colors)
         .setSize(width, height).setMinMaxY(ymin, ymax).setMinorTickIntervalY(minorTickIntervalY)
-        .setLogarthimicYAxis(scaling == ChartScaling.LOGARITHMIC).setMonthlyData(isMonthlyData).setIndexY(dim)
-        .setData(seqs);
+        .setLogarthimicYAxis(scaling == ChartScaling.LOGARITHMIC).setMonthlyData(timing == ChartTiming.MONTHLY)
+        .setIndexY(dim).setData(seqs);
     saveChart(config); // TODO support option to build config w/o saving chart
     return config;
   }
@@ -115,7 +119,7 @@ public class Chart
   public static void saveChart(ChartConfig config) throws IOException
   {
     Sequence[] seqs = config.data;
-    saveDataCSV(config, seqs);
+    // saveDataCSV(config, seqs);
     try (Writer writer = new Writer(config.file)) {
       writer.write("<html><head>\n");
       writer.write("<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js\"></script>\n");

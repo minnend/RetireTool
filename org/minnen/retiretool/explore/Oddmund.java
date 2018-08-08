@@ -24,6 +24,7 @@ import org.minnen.retiretool.util.PriceModel;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
 import org.minnen.retiretool.viz.Chart.ChartScaling;
+import org.minnen.retiretool.viz.Chart.ChartTiming;
 
 /**
  * Test strategies from the quantifiedstrategies.com blog. http://www.quantifiedstrategies.com/category/strategies/
@@ -80,6 +81,6 @@ public class Oddmund
     returns.add(seq);
 
     Chart.saveLineChart(new File(outputDir, "returns-oddmund.html"), "Returns", 1000, 640, ChartScaling.LOGARITHMIC,
-        false, returns);
+        ChartTiming.DAILY, returns);
   }
 }

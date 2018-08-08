@@ -46,6 +46,7 @@ import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
 import org.minnen.retiretool.viz.Chart.ChartScaling;
+import org.minnen.retiretool.viz.Chart.ChartTiming;
 
 public class ExploreCKDE
 {
@@ -337,11 +338,11 @@ public class ExploreCKDE
     // percentile80._mul(10.0);
 
     Chart.saveLineChart(new File(outputDir, "median.html"), assetName + ": Price vs. Median", 1000, 640,
-        ChartScaling.LINEAR, true, new Sequence[] { actualReturn, median, percentile20, percentile80 });
+        ChartScaling.LINEAR, ChartTiming.MONTHLY, new Sequence[] { actualReturn, median, percentile20, percentile80 });
 
     // Generate chart showing cumulative returns for all methods.
     Chart.saveLineChart(new File(outputDir, "returns.html"),
         String.format("Returns (%d\u00A2 Spread)", Math.round(slippage.constSlip * 200)), 1000, 640,
-        ChartScaling.LOGARITHMIC, true, returns);
+        ChartScaling.LOGARITHMIC, ChartTiming.MONTHLY, returns);
   }
 }

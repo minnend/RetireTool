@@ -19,6 +19,7 @@ import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
 import org.minnen.retiretool.viz.Chart.ChartScaling;
+import org.minnen.retiretool.viz.Chart.ChartTiming;
 
 public class SP500
 {
@@ -69,7 +70,7 @@ public class SP500
 
     // Save reports: graph of returns + comparison summary.
     Chart.saveLineChart(new File(DataIO.outputPath, "returns.html"), "Total Returns", 1000, 640,
-        ChartScaling.LOGARITHMIC, true, returns);
+        ChartScaling.LOGARITHMIC, ChartTiming.MONTHLY, returns);
     Chart.saveComparisonTable(new File(DataIO.outputPath, "comparison.html"), 1000, compStats);
 
     // Report: comparison of returns over next N months.
@@ -82,7 +83,7 @@ public class SP500
       }
       String title = String.format("Total Returns (Next %s)", TimeLib.formatDurationMonths(nMonths));
       File file = new File(DataIO.outputPath, String.format("duration-returns-%d-months.html", nMonths));
-      Chart.saveLineChart(file, title, 1000, 640, ChartScaling.LINEAR, true, durationalReturns);
+      Chart.saveLineChart(file, title, 1000, 640, ChartScaling.LINEAR, ChartTiming.MONTHLY, durationalReturns);
     }
 
     // TiingoFund fund = TiingoFund.fromSymbol("T", true);

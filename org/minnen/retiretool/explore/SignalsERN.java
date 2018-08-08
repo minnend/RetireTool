@@ -18,6 +18,7 @@ import org.minnen.retiretool.util.PriceModel;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
 import org.minnen.retiretool.viz.Chart.ChartScaling;
+import org.minnen.retiretool.viz.Chart.ChartTiming;
 
 /**
  * Visualize signals discussed in this macroeconomics article at ERN:
@@ -218,8 +219,9 @@ public class SignalsERN
     stockReturns._div(stockReturns.getFirst(0));
 
     File file = new File(DataIO.outputPath, "ern-signals-vs-stock.html");
-    Chart.saveLineChart(file, "Signals vs. Stock", 1200, 640, ChartScaling.LINEAR, true, pmi, treasurySpread,
-        initialClaims.div(10000), stockReturns, returnsAfterMonths[6], returnsAfterMonths[3], returnsAfterMonths[12]);
+    Chart.saveLineChart(file, "Signals vs. Stock", 1200, 640, ChartScaling.LINEAR, ChartTiming.MONTHLY, pmi,
+        treasurySpread, initialClaims.div(10000), stockReturns, returnsAfterMonths[6], returnsAfterMonths[3],
+        returnsAfterMonths[12]);
 
     genScatterPlot(initialClaims, returnsAfterMonths[6]);
     genScatterPlot(pmi, returnsAfterMonths[6]);

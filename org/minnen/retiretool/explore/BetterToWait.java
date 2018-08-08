@@ -11,6 +11,7 @@ import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
 import org.minnen.retiretool.viz.Chart.ChartScaling;
+import org.minnen.retiretool.viz.Chart.ChartTiming;
 
 /**
  * Calculate what percentage of days has a close that's lower than all future days. These are the best days to buy in.
@@ -22,8 +23,8 @@ public class BetterToWait
 {
   public static void main(String[] args) throws IOException
   {
-    //File file = YahooIO.downloadDailyData("^GSPC", 8 * TimeLib.MS_IN_HOUR);
-    //Sequence data = YahooIO.loadData(file);
+    // File file = YahooIO.downloadDailyData("^GSPC", 8 * TimeLib.MS_IN_HOUR);
+    // Sequence data = YahooIO.loadData(file);
     Sequence data = TiingoIO.loadEodData("VFINX");
     System.out.printf("[%s] -> [%s]\n", TimeLib.formatDate(data.getStartMS()), TimeLib.formatDate(data.getEndMS()));
     Sequence priceSeq = data.extractDims(FinLib.AdjClose);
@@ -46,6 +47,7 @@ public class BetterToWait
     System.out.printf("Wait: %5d  %.1f%%\n", nWait, 100.0 * nWait / (nWait + nBuy));
     System.out.printf(" Buy: %5d  %.1f%%\n", nBuy, 100.0 * nBuy / (nWait + nBuy));
 
-    Chart.saveLineChart(new File(DataIO.outputPath, "snp.html"), "Price", 1800, 800, ChartScaling.LOGARITHMIC, false, priceSeq);
+    Chart.saveLineChart(new File(DataIO.outputPath, "snp.html"), "Price", 1800, 800, ChartScaling.LOGARITHMIC,
+        ChartTiming.DAILY, priceSeq);
   }
 }
