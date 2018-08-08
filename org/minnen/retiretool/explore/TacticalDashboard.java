@@ -27,6 +27,7 @@ import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.util.Writer;
 import org.minnen.retiretool.viz.Chart;
+import org.minnen.retiretool.viz.Chart.ChartScaling;
 
 public class TacticalDashboard
 {
@@ -251,7 +252,7 @@ public class TacticalDashboard
       trigger.setName("Trigger");
       base.setName("Base");
       Chart.saveLineChart(new File(DataIO.outputPath, String.format("sma%d.html", i + 1)),
-          String.format("SMA-%d", i + 1), 1200, 600, false, false, trigger, baseLow, baseHigh, raw);
+          String.format("SMA-%d", i + 1), 1200, 600, ChartScaling.LINEAR, false, trigger, baseLow, baseHigh, raw);
     }
   }
 }

@@ -34,6 +34,7 @@ import org.minnen.retiretool.util.Writer;
 import org.minnen.retiretool.viz.Chart;
 import org.minnen.retiretool.viz.ChartConfig;
 import org.minnen.retiretool.viz.PlotBand;
+import org.minnen.retiretool.viz.Chart.ChartScaling;
 
 import smile.math.Math;
 
@@ -142,7 +143,7 @@ public class TacticalWithRecessionFilter
 
     Sequence unrate = store.get(configUnemployment.analysisName);
     Sequence unrateSMA = calcSMA(unrate, nMonthsUnrateSMA);
-    Chart.saveLineChart(new File(DataIO.outputPath, "unrate.html"), "Unemployment Rate", 1000, 640, false, true, unrate,
+    Chart.saveLineChart(new File(DataIO.outputPath, "unrate.html"), "Unemployment Rate", 1000, 640, ChartScaling.LINEAR, true, unrate,
         unrateSMA);
 
     // Tactical multi-predictor.
@@ -177,7 +178,7 @@ public class TacticalWithRecessionFilter
     compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
 
     ChartConfig chartConfig = Chart.saveLineChart(new File(DataIO.outputPath, "returns.html"), "Cumulative Returns",
-        1000, 640, true, true, returns);
+        1000, 640, ChartScaling.LOGARITHMIC, true, returns);
     chartConfig.addPlotBandX(bands);
     Chart.saveChart(chartConfig);
     Chart.saveComparisonTable(new File(DataIO.outputPath, "comparison.html"), 1000, compStats);

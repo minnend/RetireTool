@@ -23,6 +23,7 @@ import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.PriceModel;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
+import org.minnen.retiretool.viz.Chart.ChartScaling;
 
 /**
  * Test strategies from the quantifiedstrategies.com blog. http://www.quantifiedstrategies.com/category/strategies/
@@ -78,6 +79,7 @@ public class Oddmund
     seq._div(seq.getFirst(0));
     returns.add(seq);
 
-    Chart.saveLineChart(new File(outputDir, "returns-oddmund.html"), "Returns", 1000, 640, true, false, returns);
+    Chart.saveLineChart(new File(outputDir, "returns-oddmund.html"), "Returns", 1000, 640, ChartScaling.LOGARITHMIC,
+        false, returns);
   }
 }

@@ -37,28 +37,34 @@ public class Chart
 {
   public final static boolean bVerticalLine = false;
 
-  public static ChartConfig saveLineChart(File file, String title, int width, int height, boolean logarithmic,
+  public enum ChartScaling {
+    LINEAR, LOGARITHMIC
+  };
+
+  public static ChartConfig saveLineChart(File file, String title, int width, int height, ChartScaling scaling,
       boolean monthly, Sequence... seqs) throws IOException
   {
     return saveChart(file, ChartConfig.Type.Line, title, null, null, width, height, Double.NaN, Double.NaN,
-        logarithmic ? 0.5 : Double.NaN, logarithmic, monthly, 0, seqs);
+        scaling == ChartScaling.LOGARITHMIC ? 0.5 : Double.NaN, scaling, monthly, 0, seqs);
   }
 
-  public static ChartConfig saveLineChart(File file, String title, int width, int height, boolean logarithmic,
+  public static ChartConfig saveLineChart(File file, String title, int width, int height, ChartScaling scaling,
       boolean monthly, List<Sequence> seqs) throws IOException
   {
     return saveChart(file, ChartConfig.Type.Line, title, null, null, width, height, Double.NaN, Double.NaN,
-        logarithmic ? 0.5 : Double.NaN, logarithmic, monthly, 0, seqs.toArray(new Sequence[seqs.size()]));
+        scaling == ChartScaling.LOGARITHMIC ? 0.5 : Double.NaN, scaling, monthly, 0,
+        seqs.toArray(new Sequence[seqs.size()]));
   }
 
   public static ChartConfig saveChart(File file, ChartConfig.Type chartType, String title, String[] labels,
-      String[] colors, int width, int height, double ymin, double ymax, double minorTickIntervalY,
-      boolean logarthimicYAxis, boolean isMonthlyData, int dim, Sequence... seqs) throws IOException
+      String[] colors, int width, int height, double ymin, double ymax, double minorTickIntervalY, ChartScaling scaling,
+      boolean isMonthlyData, int dim, Sequence... seqs) throws IOException
   {
     ChartConfig config = new ChartConfig(file).setType(chartType).setTitle(title).setLabels(labels).setColors(colors)
         .setSize(width, height).setMinMaxY(ymin, ymax).setMinorTickIntervalY(minorTickIntervalY)
-        .setLogarthimicYAxis(logarthimicYAxis).setMonthlyData(isMonthlyData).setIndexY(dim).setData(seqs);
-    saveChart(config);  // TODO support option to build config w/o saving chart
+        .setLogarthimicYAxis(scaling == ChartScaling.LOGARITHMIC).setMonthlyData(isMonthlyData).setIndexY(dim)
+        .setData(seqs);
+    saveChart(config); // TODO support option to build config w/o saving chart
     return config;
   }
 
@@ -95,6 +101,7 @@ public class Chart
     }
   }
 
+  /** Adds text for each plot band to the given writer. */
   private static void addPlotBands(List<PlotBand> bands, Writer writer) throws IOException
   {
     if (bands == null || bands.isEmpty()) return;

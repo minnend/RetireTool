@@ -20,6 +20,7 @@ import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
 import org.minnen.retiretool.viz.ChartConfig;
+import org.minnen.retiretool.viz.Chart.ChartScaling;
 
 public class DrawdownResponse
 {
@@ -97,14 +98,14 @@ public class DrawdownResponse
       list.add(x.get(1));
     }
     for (Map.Entry<Integer, List<Double>> entry : ddBins.entrySet()) {
-      int initialDD = entry.getKey();      
+      int initialDD = entry.getKey();
       double[] extraDD = entry.getValue().stream().mapToDouble(x -> x).toArray();
       ReturnStats stats = ReturnStats.calc("Drawdown " + initialDD, extraDD);
       System.out.printf("%d: %s %d\n", initialDD, stats, stats.count);
     }
 
     Chart.saveChart(new File(DataIO.outputPath, "drawdown.html"), ChartConfig.Type.Area, "Drawdown", null, null, 1200,
-        700, Double.NaN, 0, 0, false, false, 0, seqDrawdown);
+        700, Double.NaN, 0, 0, ChartScaling.LINEAR, false, 0, seqDrawdown);
 
     Chart.saveScatterPlot(new File(DataIO.outputPath, "future-drawdown.html"), "Future Drawdown", 1200, 900, 2,
         new String[] { "Curren DD", "Extra DD" }, seqFutureDD);

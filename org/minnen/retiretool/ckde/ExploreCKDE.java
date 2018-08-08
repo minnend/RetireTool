@@ -45,6 +45,7 @@ import org.minnen.retiretool.util.Random;
 import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
+import org.minnen.retiretool.viz.Chart.ChartScaling;
 
 public class ExploreCKDE
 {
@@ -106,8 +107,8 @@ public class ExploreCKDE
     return examples;
   }
 
-  public static List<Neighbor> findNeighbors(FeatureVec q, List<Example> examples, DistanceMetric metric,
-      Kernel kernel, double fraction, long delay)
+  public static List<Neighbor> findNeighbors(FeatureVec q, List<Example> examples, DistanceMetric metric, Kernel kernel,
+      double fraction, long delay)
   {
     assert q.hasTime();
 
@@ -120,7 +121,7 @@ public class ExploreCKDE
       all.add(new Neighbor(example.y, dist, 1.0, example.getTime()));
     }
     int nNeighbors = (int) Math.round(all.size() * fraction);
-    // System.out.printf("All: %d  Neighbors: %d\n", all.size(), nNeighbors);
+    // System.out.printf("All: %d Neighbors: %d\n", all.size(), nNeighbors);
 
     // Grab the closest N neighbors.
     Collections.sort(all);
@@ -204,8 +205,8 @@ public class ExploreCKDE
     System.out.printf("Common[%d]: [%s] -> [%s]\n", seqs.size(), TimeLib.formatDate(commonStart),
         TimeLib.formatDate(commonEnd));
 
-    long timeSimStart = TimeLib.toMs(TimeLib.ms2date(commonStart).plusWeeks(52 * 4 + 4)
-        .with(TemporalAdjusters.firstDayOfMonth()));
+    long timeSimStart = TimeLib
+        .toMs(TimeLib.ms2date(commonStart).plusWeeks(52 * 4 + 4).with(TemporalAdjusters.firstDayOfMonth()));
     // timeSimStart = TimeLib.toMs(2006, Month.JUNE, 1); // TODO
     long timeSimEnd = commonEnd;
     // timeSimEnd = TimeLib.toMs(1999, Month.DECEMBER, 31); // TODO
@@ -244,8 +245,8 @@ public class ExploreCKDE
 
     // Lazy 2-fund portfolio for a baseline.
     String[] assetsLazy2 = new String[] { "VTSMX", "VBMFX" };
-    config = new ConfigMixed(new DiscreteDistribution(assetsLazy2, new double[] { 0.8, 0.2 }), new ConfigConst(
-        assetsLazy2[0]), new ConfigConst(assetsLazy2[1]));
+    config = new ConfigMixed(new DiscreteDistribution(assetsLazy2, new double[] { 0.8, 0.2 }),
+        new ConfigConst(assetsLazy2[0]), new ConfigConst(assetsLazy2[1]));
     Predictor lazy2 = config.build(sim.broker.accessObject, assetsLazy2);
     sim.run(lazy2, timeSimStart, timeSimEnd, "Lazy2");
     System.out.println(CumulativeStats.calc(sim.returnsMonthly));
@@ -288,7 +289,7 @@ public class ExploreCKDE
     // for (int i = 0; i < features.size(); ++i) {
     // System.out.println(features.get(i));
     // }
-    // System.out.printf("Log(prob): %f  %s\n", logProb, metric.getWeights());
+    // System.out.printf("Log(prob): %f %s\n", logProb, metric.getWeights());
     // best = logProb;
     // }
     // if (iter > 0 && iter % 10 == 0) {
@@ -327,7 +328,7 @@ public class ExploreCKDE
       percentile80.addData(kd.percentile(80.0), time);
       double tr = FinLib.getTotalReturn(asset, i, i + returnDays, FinLib.AdjClose);
       actualReturn.addData(FinLib.mul2ret(tr), time);
-      // TODO prob of most recent returnDays 
+      // TODO prob of most recent returnDays
     }
     long t1 = TimeLib.getTime();
     System.out.printf("Time: %d\n", t1 - t0);
@@ -335,12 +336,12 @@ public class ExploreCKDE
     // percentile20._mul(10.0);
     // percentile80._mul(10.0);
 
-    Chart.saveLineChart(new File(outputDir, "median.html"), assetName + ": Price vs. Median", 1000, 640, false, true,
-        new Sequence[] { actualReturn, median, percentile20, percentile80 });
+    Chart.saveLineChart(new File(outputDir, "median.html"), assetName + ": Price vs. Median", 1000, 640,
+        ChartScaling.LINEAR, true, new Sequence[] { actualReturn, median, percentile20, percentile80 });
 
     // Generate chart showing cumulative returns for all methods.
     Chart.saveLineChart(new File(outputDir, "returns.html"),
-        String.format("Returns (%d\u00A2 Spread)", Math.round(slippage.constSlip * 200)), 1000, 640, true, true,
-        returns);
+        String.format("Returns (%d\u00A2 Spread)", Math.round(slippage.constSlip * 200)), 1000, 640,
+        ChartScaling.LOGARITHMIC, true, returns);
   }
 }

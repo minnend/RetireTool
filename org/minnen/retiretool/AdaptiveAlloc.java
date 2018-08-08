@@ -66,6 +66,7 @@ import org.minnen.retiretool.util.Random;
 import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
+import org.minnen.retiretool.viz.Chart.ChartScaling;
 import org.ojalgo.matrix.BasicMatrix;
 import org.ojalgo.matrix.PrimitiveMatrix;
 
@@ -1025,8 +1026,8 @@ public class AdaptiveAlloc
     returns.add(sim.returnsMonthly);
     compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
     Chart.saveHoldings(new File(outputDir, "holdings-recession.html"), sim.holdings, sim.store);
-    Chart.saveLineChart(new File(outputDir, "recession-prob.html"), "Recession Probability", 1000, 640, false, true,
-        store.get("recession"));
+    Chart.saveLineChart(new File(outputDir, "recession-prob.html"), "Recession Probability", 1000, 640,
+        ChartScaling.LINEAR, true, store.get("recession"));
 
     // Run adaptive asset allocation.
     final TradeFreq tradeFreq = TradeFreq.Weekly;
@@ -1189,8 +1190,8 @@ public class AdaptiveAlloc
     // }
 
     Chart.saveLineChart(new File(outputDir, "returns.html"),
-        String.format("Returns (%d\u00A2 Spread)", Math.round(slippage.constSlip * 200)), 1000, 640, true, true,
-        returns);
+        String.format("Returns (%d\u00A2 Spread)", Math.round(slippage.constSlip * 200)), 1000, 640,
+        ChartScaling.LOGARITHMIC, true, returns);
 
     // Chart.saveAnnualStatsTable(new File(outputDir, "annual-stats.html"), 1000, false, returns);
     Chart.saveComparisonTable(new File(outputDir, "comparison.html"), 1000, compStats);

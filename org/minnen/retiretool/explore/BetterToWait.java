@@ -10,6 +10,7 @@ import org.minnen.retiretool.data.YahooIO;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
+import org.minnen.retiretool.viz.Chart.ChartScaling;
 
 /**
  * Calculate what percentage of days has a close that's lower than all future days. These are the best days to buy in.
@@ -45,6 +46,6 @@ public class BetterToWait
     System.out.printf("Wait: %5d  %.1f%%\n", nWait, 100.0 * nWait / (nWait + nBuy));
     System.out.printf(" Buy: %5d  %.1f%%\n", nBuy, 100.0 * nBuy / (nWait + nBuy));
 
-    Chart.saveLineChart(new File(DataIO.outputPath, "snp.html"), "Price", 1800, 800, true, false, priceSeq);
+    Chart.saveLineChart(new File(DataIO.outputPath, "snp.html"), "Price", 1800, 800, ChartScaling.LOGARITHMIC, false, priceSeq);
   }
 }
