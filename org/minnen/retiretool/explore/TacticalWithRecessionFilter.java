@@ -87,8 +87,10 @@ public class TacticalWithRecessionFilter
     Sequence seq = new Sequence(String.format("%s [SMA:%d]", data.getName(), nBack));
     for (int i = 0; i < data.length(); ++i) {
       int j = Math.max(0, i - nBack);
-      seq.addData(data.average(j, i), data.getTimeMS(i));
+      FeatureVec sma = data.average(j, i);
+      seq.addData(sma, data.getTimeMS(i));
     }
+    assert seq.length() == data.length();
     return seq;
   }
 
@@ -138,7 +140,7 @@ public class TacticalWithRecessionFilter
         assert b.code == 1;
         int from = sim.returnsMonthly.getClosestIndex(a.time);
         int to = sim.returnsMonthly.getClosestIndex(b.time);
-        bands.add(new PlotBand(from, to, "rgba(0,0,255,0.1)"));
+        bands.add(new PlotBand(from, to, "rgba(128,20,10,0.05)"));
       }
     }
 
@@ -157,20 +159,20 @@ public class TacticalWithRecessionFilter
     compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
 
     // Simple momentum.
-    // int nMonths = 10;
-    // int n = nMonths * 20;
-    // PredictorConfig configSMA = new ConfigSMA(5, 0, n, n - 5, 0.1, FinLib.AdjClose, 2 * TimeLib.MS_IN_DAY);
-    // predictor = configSMA.build(sim.broker.accessObject, assetNames);
-    // sim.run(predictor, String.format("SMA:%d", nMonths));
-    // assert sim.returnsDaily.matches(baselineReturns);
-    // System.out.println(CumulativeStats.calc(sim.returnsMonthly));
+    int nMonthsSMA = 10;
+    int n = nMonthsSMA * 20;
+    PredictorConfig configSMA = new ConfigSMA(5, 0, n, n - 5, 0.1, FinLib.AdjClose, 2 * TimeLib.MS_IN_DAY);
+    predictor = configSMA.build(sim.broker.accessObject, assetNames);
+    sim.run(predictor, String.format("SMA:%d", nMonthsSMA));
+    assert sim.returnsDaily.matches(baselineReturns);
+    returns.add(sim.returnsMonthly);
+    System.out.println(CumulativeStats.calc(sim.returnsMonthly));
 
     // Tactical + unemployment as a recession signal.
     long x = 65534;
-    PredictorConfig configRecessionFilter = new ConfigMonthlySMA(nMonthsUnrateSMA, true, "unemployment rate", 0);
-    // PredictorConfig configStrategy = new ConfigMulti(x, configSMA, configRecessionFilter);
+    // PredictorConfig configStrategy = new ConfigMulti(x, configSMA, configUnemployment);
     PredictorConfig configStrategy = new ConfigMulti(x, singleConfigs[0], singleConfigs[1], singleConfigs[2],
-        configRecessionFilter);
+        configUnemployment);
     predictor = configStrategy.build(sim.broker.accessObject, assetNames);
     sim.run(predictor, "Tactical+Unemployment");
     assert sim.returnsDaily.matches(baselineReturns);
@@ -178,10 +180,24 @@ public class TacticalWithRecessionFilter
     System.out.println(CumulativeStats.calc(sim.returnsMonthly));
     compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
 
-    ChartConfig chartConfig = Chart.saveLineChart(new File(DataIO.outputPath, "returns.html"), "Cumulative Returns",
-        1000, 640, ChartScaling.LOGARITHMIC, ChartTiming.MONTHLY, returns);
+    ChartConfig chartConfig = Chart.saveLineChart(new File(DataIO.outputPath, "returns.html"), null, 1000, 600,
+        ChartScaling.LOGARITHMIC, ChartTiming.MONTHLY, returns);
     chartConfig.addPlotBandX(bands);
     Chart.saveChart(chartConfig);
     Chart.saveComparisonTable(new File(DataIO.outputPath, "comparison.html"), 1000, compStats);
+
+    // Report: comparison of returns over next N months.
+    for (int nMonths : new int[] { 12 * 5, 12 * 10 }) {
+      List<Sequence> durationalReturns = new ArrayList<>();
+      for (Sequence r : returns) {
+        Sequence seq = FinLib.calcReturnsForMonths(r, nMonths);
+        seq.setName(r.getName());
+        durationalReturns.add(seq);
+      }
+      String title = String.format("Returns (%s, %d\u00A2 Spread)", TimeLib.formatDurationMonths(nMonths),
+          Math.round(slippage.constSlip * 200));
+      File file = new File(DataIO.outputPath, String.format("duration-returns-%d-months.html", nMonths));
+      Chart.saveLineChart(file, title, 1000, 640, ChartScaling.LINEAR, ChartTiming.MONTHLY, durationalReturns);
+    }
   }
 }

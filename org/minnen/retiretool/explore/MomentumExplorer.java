@@ -33,7 +33,7 @@ public class MomentumExplorer
   public static final Slippage      slippage     = new Slippage(0.03, 0.0);
 
   public static final String[]      fundSymbols  = new String[] { "VFINX", "VBMFX", "VWIGX", "VWINX", "NAESX", "VGENX",
-      "FRESX", "VEXMX" };
+      "FRESX", "VEXMX", "AAPL" };
 
   public static final String[]      assetSymbols = new String[fundSymbols.length + 2];
 
@@ -76,13 +76,14 @@ public class MomentumExplorer
 
     StandardPortfolios portfolios = new StandardPortfolios(sim);
 
-    String symbol = stockExtendedSymbol; // stockSymbol;
+    String symbol = "AAPL"; // stockSymbol;
     predictor = portfolios.passive(String.format("Buy & Hold [%s]", symbol), symbol);
     Sequence returnsBase = portfolios.run(predictor, timeSimStart, timeSimEnd);
     returns.add(returnsBase);
 
     List<ComparisonStats> compStats = new ArrayList<>();
-    int duration = 10 * 12;
+    final int duration = 10 * 12;
+    final int nPerturbed = 10;
     System.out.printf("Duration: %s\n", TimeLib.formatDurationMonths(duration));
     ComparisonStats best = null;
     for (int nMonths = 1; nMonths <= 24; ++nMonths) {
@@ -94,7 +95,6 @@ public class MomentumExplorer
       // System.out.printf("Base: %s\n", CumulativeStats.calc(returnsSMA));
 
       ComparisonStats worst = ComparisonStats.calc(returnsSMA, 0.5, returnsBase);;
-      int nPerturbed = 10;
       for (int i = 0; i < nPerturbed; ++i) {
         PredictorConfig perturbed = config.genPerturbed();
 

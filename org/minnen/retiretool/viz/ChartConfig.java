@@ -41,6 +41,8 @@ public class ChartConfig
   public String         containerName      = "highcharts-container";
   public List<PlotBand> xBands             = new ArrayList<PlotBand>();
   public List<PlotBand> yBands             = new ArrayList<PlotBand>();
+  public List<PlotLine> xLines             = new ArrayList<PlotLine>();
+  public List<PlotLine> yLines             = new ArrayList<PlotLine>();
 
   // Specific to scatter plots.
   public int            radius             = 3;
@@ -300,6 +302,34 @@ public class ChartConfig
   public ChartConfig addPlotBandY(Collection<? extends PlotBand> bands)
   {
     yBands.addAll(bands);
+    return this;
+  }
+
+  public ChartConfig addPlotLineX(PlotLine... Lines)
+  {
+    for (PlotLine Line : Lines) {
+      xLines.add(Line);
+    }
+    return this;
+  }
+
+  public ChartConfig addPlotLineY(PlotLine... Lines)
+  {
+    for (PlotLine Line : Lines) {
+      yLines.add(Line);
+    }
+    return this;
+  }
+
+  public ChartConfig addPlotLineX(Collection<? extends PlotLine> Lines)
+  {
+    xLines.addAll(Lines);
+    return this;
+  }
+
+  public ChartConfig addPlotLineY(Collection<? extends PlotLine> Lines)
+  {
+    yLines.addAll(Lines);
     return this;
   }
 }

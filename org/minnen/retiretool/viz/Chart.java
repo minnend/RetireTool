@@ -113,7 +113,19 @@ public class Chart
     for (PlotBand band : bands) {
       writer.write("    { from: %g, to: %g, color: '%s' },\n", band.from, band.to, band.color);
     }
-    writer.write("   ]\n");
+    writer.write("   ],\n");
+  }
+
+  /** Adds text for each plot line to the given writer. */
+  private static void addPlotLines(List<PlotLine> lines, Writer writer) throws IOException
+  {
+    if (lines == null || lines.isEmpty()) return;
+    writer.write("   plotLines: [\n");
+    for (PlotLine line : lines) {
+      writer.write("    { value: %g, width: %g, color: '%s', dashStyle: '%s', },\n", line.value, line.width, line.color,
+          line.dashStyle);
+    }
+    writer.write("   ],\n");
   }
 
   public static void saveChart(ChartConfig config) throws IOException
@@ -128,7 +140,7 @@ public class Chart
 
       writer.write("$(function () {\n");
       writer.write(" $('#%s').highcharts({\n", config.containerName);
-      writer.write("  title: { text: '" + config.title + "' },\n");
+      writer.write("  title: { text: '%s' },\n", config.title == null ? "" : config.title);
       if (bVerticalLine) {
         writer.write("  tooltip: {\n");
         writer.write("    crosshairs: {\n");
@@ -166,6 +178,7 @@ public class Chart
       }
       writer.write("],\n"); // categories
       addPlotBands(config.xBands, writer);
+      addPlotLines(config.xLines, writer);
       writer.write("  },\n"); // xAxis
 
       writer.write("  yAxis: {\n");
@@ -183,6 +196,7 @@ public class Chart
       }
       writer.write("   title: { text: null },\n");
       addPlotBands(config.yBands, writer);
+      addPlotLines(config.yLines, writer);
       writer.write("  },\n"); // yAxis
 
       if (config.type == ChartConfig.Type.Line) {
@@ -894,7 +908,7 @@ public class Chart
 
   public static void saveComparisonTable(File file, int width, ComparisonStats... allStats) throws IOException
   {
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+    try (Writer writer = new Writer(file)) {
       writer.write("<html><head>\n");
       writer.write("<title>Comparison Statistics</title>\n");
       writer.write("<script src=\"http://code.jquery.com/jquery.min.js\"></script>\n");
@@ -904,10 +918,19 @@ public class Chart
       writer.write("</script>\n");
       writer.write(
           "<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
-      writer.write(String.format("</head><body style=\"width:%dpx\">\n", width));
-      String defender = allStats[0].returns2 != null ? FinLib.getBaseName(allStats[0].returns2.getName())
-          : String.format("%d Defenders", allStats[0].defenders.length);
-      writer.write(String.format("<h2>Win Rate vs. %s</h2>\n", defender));
+      writer.write("</head><body style=\"width:%dpx\">\n", width);
+      String defender = null;
+      if (allStats[0].returns2 != null) {
+        defender = FinLib.getBaseName(allStats[0].returns2.getName());
+      } else {
+        int n = allStats[0].defenders.length;
+        if (n == 1) {
+          defender = allStats[0].defenders[0].getName();
+        } else {
+          defender = String.format("%d Defenders", n);
+        }
+      }
+      writer.write("<h2>Win Rate vs. %s</h2>\n", defender);
       writer.write("<table id=\"comparisonTable\" class=\"tablesorter\">\n");
       writer.write("<thead><tr>\n");
 
@@ -915,7 +938,7 @@ public class Chart
       String th = String.format("<th style=\"width: %.2f%%\">", widthPercent);
       writer.write(th + "Duration</th>\n");
       for (ComparisonStats stats : allStats) {
-        writer.write(String.format("%s%s</th>\n", th, FinLib.getBaseName(stats.returns1.getName())));
+        writer.write("%s%s</th>\n", th, FinLib.getBaseName(stats.returns1.getName()));
       }
       writer.write("</tr></thead>\n");
       writer.write("<tbody>\n");
@@ -925,21 +948,20 @@ public class Chart
         writer.write("<tr>\n");
 
         if (duration < 12) {
-          writer.write(String.format("<td>%d Month%s</td>\n", duration, duration > 1 ? "s" : ""));
+          writer.write("<td>%d Month%s</td>\n", duration, duration > 1 ? "s" : "");
         } else {
           int years = duration / 12;
-          writer.write(String.format("<td>%d Year%s</td>\n", years, years > 1 ? "s" : ""));
+          writer.write("<td>%d Year%s</td>\n", years, years > 1 ? "s" : "");
         }
 
         for (ComparisonStats stats : allStats) {
           Results results = stats.durationToResults.get(duration);
-          writer.write(String.format("<td title=\"%.1f (%.1f + %.1f) | %.1f\" style=\"color: #3B3\">\n",
-              100 - results.winPercent2, results.winPercent1, 100 - (results.winPercent1 + results.winPercent2),
-              results.winPercent2));
-          // writer.write(String.format("%.1f\n", 100.0 - results.winPercent2));
+          writer.write("<td title=\"%.1f (%.1f + %.1f) | %.1f\" style=\"color: #3B3\">\n", 100 - results.winPercent2,
+              results.winPercent1, 100 - (results.winPercent1 + results.winPercent2), results.winPercent2);
+          // writer.write("%.1f\n", 100.0 - results.winPercent2);
           writer.write(genWinBar(results.winPercent1, results.winPercent2));
           writer.write("</td>\n");
-          // writer.write(String.format("<td>%.1f (%.1f)</td>\n", results.winPercent1, results.winPercent2));
+          // writer.write("<td>%.1f (%.1f)</td>\n", results.winPercent1, results.winPercent2);
         }
         writer.write("</tr>\n");
       }

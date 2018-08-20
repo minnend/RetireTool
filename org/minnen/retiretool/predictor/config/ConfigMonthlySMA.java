@@ -7,12 +7,14 @@ import org.minnen.retiretool.util.Random;
 
 public class ConfigMonthlySMA extends PredictorConfig
 {
-  public static final Random rng = new Random();
+  public static final Random rng      = new Random();
 
   public final int           nLookback;
   public final int           iPrice;
-  public final boolean       invert;            // if true, go in when below SMA
+  public final boolean       invert;                 // if true, go in when below SMA
   public final String        analysisName;
+  public final int           nMinRisky = 2;
+  public final int           nMinSafe = 1;
 
   public ConfigMonthlySMA(int nLookback, boolean invert, String analysisName, int iPrice)
   {

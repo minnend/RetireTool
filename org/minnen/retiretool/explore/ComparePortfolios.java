@@ -28,6 +28,8 @@ import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
 import org.minnen.retiretool.viz.Chart.ChartScaling;
 import org.minnen.retiretool.viz.Chart.ChartTiming;
+import org.minnen.retiretool.viz.ChartConfig;
+import org.minnen.retiretool.viz.PlotLine;
 
 public class ComparePortfolios
 {
@@ -209,7 +211,10 @@ public class ComparePortfolios
       title = String.format("Returns (%s, %d\u00A2 Spread)", TimeLib.formatDurationMonths(nMonths),
           Math.round(slippage.constSlip * 200));
       File file = new File(DataIO.outputPath, String.format("duration-returns-%d-months.html", nMonths));
-      Chart.saveLineChart(file, title, 1000, 640, ChartScaling.LINEAR, ChartTiming.MONTHLY, durationalReturns);
+      ChartConfig chartConfig = Chart.saveLineChart(file, title, 1000, 640, ChartScaling.LINEAR, ChartTiming.MONTHLY,
+          durationalReturns);
+      chartConfig.addPlotLineY(new PlotLine(0, 2, "black"));
+      Chart.saveChart(chartConfig);
     }
   }
 }

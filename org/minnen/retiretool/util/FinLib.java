@@ -5,7 +5,7 @@ import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.Period;
-import java.time.temporal.TemporalAdjuster;
+import java.time.Year;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,7 +22,6 @@ import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.DurationalStats;
 import org.minnen.retiretool.stats.RetirementStats;
-import org.threeten.bp.Year;
 
 import com.joptimizer.functions.ConvexMultivariateRealFunction;
 import com.joptimizer.functions.LinearMultivariateRealFunction;
@@ -389,7 +388,7 @@ public final class FinLib
   }
 
   /**
-   * Calculate returns for all periods with the given duration.
+   * Calculate forward returns for all periods with the given duration.
    * 
    * @param cumulativeReturns sequence of cumulative returns for the investment strategy
    * @param nMonths number of months in the market
