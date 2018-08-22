@@ -29,9 +29,6 @@ public class DrawdownResponse
 
   private static void setupData() throws IOException
   {
-    File dataDir = new File("g:/research/finance");
-    assert dataDir.exists();
-
     String symbol = "^GSPC";
     File file = YahooIO.downloadDailyData(symbol, 8 * TimeLib.MS_IN_HOUR);
     Sequence stock = YahooIO.loadData(file);

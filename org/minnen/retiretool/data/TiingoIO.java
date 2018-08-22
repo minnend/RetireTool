@@ -174,75 +174,75 @@ public class TiingoIO
     int iSplitFactor = -1;
 
     Sequence seq = new Sequence(symbol);
-    BufferedReader in = new BufferedReader(new FileReader(file));
-    String line;
-    while ((line = in.readLine()) != null) {
-      line = line.trim();
-      if (line.isEmpty()) {
-        continue;
-      }
-      String[] toks = DataIO.splitCSV(line, ",");
-      if (toks == null || toks.length != 13) {
-        System.err.printf("Error parsing Tiingo data: [%s]\n", line);
-        continue;
-      }
-
-      // Parse the header.
-      if (iDate < 0) {
-        for (int i = 0; i < toks.length; ++i) {
-          String field = toks[i].toLowerCase();
-          if (field.equals("date")) iDate = i;
-          else if (field.equals("close")) iClose = i;
-          else if (field.equals("high")) iHigh = i;
-          else if (field.equals("low")) iLow = i;
-          else if (field.equals("open")) iOpen = i;
-          else if (field.equals("volume")) iVolume = i;
-          else if (field.equals("adjclose")) iAdjClose = i;
-          else if (field.equals("adjhigh")) iAdjHigh = i;
-          else if (field.equals("adjlow")) iAdjLow = i;
-          else if (field.equals("adjopen")) iAdjOpen = i;
-          else if (field.equals("adjvolume")) iAdjVolume = i;
-          else if (field.equals("divcash")) iDivCash = i;
-          else if (field.equals("splitfactor")) iSplitFactor = i;
+    try (BufferedReader in = new BufferedReader(new FileReader(file))) {
+      String line;
+      while ((line = in.readLine()) != null) {
+        line = line.trim();
+        if (line.isEmpty()) {
+          continue;
         }
-        continue;
-      }
+        String[] toks = DataIO.splitCSV(line, ",");
+        if (toks == null || toks.length != 13) {
+          System.err.printf("Error parsing Tiingo data: [%s]\n", line);
+          continue;
+        }
 
-      try {
-        long time = TimeLib.toMs(LocalDate.parse(toks[iDate]));
-        double close = Double.parseDouble(toks[iClose]);
-        double high = Double.parseDouble(toks[iHigh]);
-        double low = Double.parseDouble(toks[iLow]);
-        double open = Double.parseDouble(toks[iOpen]);
-        double volume = Double.parseDouble(toks[iVolume]);
-        double adjClose = Double.parseDouble(toks[iAdjClose]);
-        double adjHigh = Double.parseDouble(toks[iAdjHigh]);
-        double adjLow = Double.parseDouble(toks[iAdjLow]);
-        double adjOpen = Double.parseDouble(toks[iAdjOpen]);
-        double adjVolume = Double.parseDouble(toks[iAdjVolume]);
-        double divCash = Double.parseDouble(toks[iDivCash]);
-        double splitFactor = Double.parseDouble(toks[iSplitFactor]);
+        // Parse the header.
+        if (iDate < 0) {
+          for (int i = 0; i < toks.length; ++i) {
+            String field = toks[i].toLowerCase();
+            if (field.equals("date")) iDate = i;
+            else if (field.equals("close")) iClose = i;
+            else if (field.equals("high")) iHigh = i;
+            else if (field.equals("low")) iLow = i;
+            else if (field.equals("open")) iOpen = i;
+            else if (field.equals("volume")) iVolume = i;
+            else if (field.equals("adjclose")) iAdjClose = i;
+            else if (field.equals("adjhigh")) iAdjHigh = i;
+            else if (field.equals("adjlow")) iAdjLow = i;
+            else if (field.equals("adjopen")) iAdjOpen = i;
+            else if (field.equals("adjvolume")) iAdjVolume = i;
+            else if (field.equals("divcash")) iDivCash = i;
+            else if (field.equals("splitfactor")) iSplitFactor = i;
+          }
+          continue;
+        }
 
-        FeatureVec fv = new FeatureVec(12);
-        fv.set(FinLib.Open, open);
-        fv.set(FinLib.High, high);
-        fv.set(FinLib.Low, low);
-        fv.set(FinLib.Close, close);
-        fv.set(FinLib.Volume, volume);
-        fv.set(FinLib.AdjClose, adjClose);
-        fv.set(FinLib.AdjHigh, adjHigh);
-        fv.set(FinLib.AdjLow, adjLow);
-        fv.set(FinLib.AdjOpen, adjOpen);
-        fv.set(FinLib.AdjVolume, adjVolume);
-        fv.set(FinLib.DivCash, divCash);
-        fv.set(FinLib.SplitFactor, splitFactor);
-        seq.addData(fv, time);
-      } catch (NumberFormatException e) {
-        System.err.printf("Error parsing Tiingo CSV data (%s): [%s]\n", symbol, line);
-        throw e;
+        try {
+          long time = TimeLib.toMs(LocalDate.parse(toks[iDate]));
+          double close = Double.parseDouble(toks[iClose]);
+          double high = Double.parseDouble(toks[iHigh]);
+          double low = Double.parseDouble(toks[iLow]);
+          double open = Double.parseDouble(toks[iOpen]);
+          double volume = Double.parseDouble(toks[iVolume]);
+          double adjClose = Double.parseDouble(toks[iAdjClose]);
+          double adjHigh = Double.parseDouble(toks[iAdjHigh]);
+          double adjLow = Double.parseDouble(toks[iAdjLow]);
+          double adjOpen = Double.parseDouble(toks[iAdjOpen]);
+          double adjVolume = Double.parseDouble(toks[iAdjVolume]);
+          double divCash = Double.parseDouble(toks[iDivCash]);
+          double splitFactor = Double.parseDouble(toks[iSplitFactor]);
+
+          FeatureVec fv = new FeatureVec(12);
+          fv.set(FinLib.Open, open);
+          fv.set(FinLib.High, high);
+          fv.set(FinLib.Low, low);
+          fv.set(FinLib.Close, close);
+          fv.set(FinLib.Volume, volume);
+          fv.set(FinLib.AdjClose, adjClose);
+          fv.set(FinLib.AdjHigh, adjHigh);
+          fv.set(FinLib.AdjLow, adjLow);
+          fv.set(FinLib.AdjOpen, adjOpen);
+          fv.set(FinLib.AdjVolume, adjVolume);
+          fv.set(FinLib.DivCash, divCash);
+          fv.set(FinLib.SplitFactor, splitFactor);
+          seq.addData(fv, time);
+        } catch (NumberFormatException e) {
+          System.err.printf("Error parsing Tiingo CSV data (%s): [%s]\n", symbol, line);
+          throw e;
+        }
       }
     }
-    in.close();
     if (seq.getStartMS() > seq.getEndMS()) {
       seq.reverse();
     }
@@ -299,7 +299,7 @@ public class TiingoIO
   public static boolean updateFundEodData(TiingoFund fund) throws IOException
   {
     File file = getEodFile(fund.ticker);
-    if (!file.exists()) {
+    if (!file.exists() || file.length() <= 0) {
       return saveFundEodData(fund, true);
     }
 
@@ -352,7 +352,7 @@ public class TiingoIO
     }
     URL url = TiingoIO.buildMetaURL(fund.ticker);
     File file = TiingoIO.getMetadataFile(fund.ticker);
-    if (!file.exists() || DataIO.shouldDownloadUpdate(file, replaceAgeMs)) {
+    if (!file.exists() || file.length() <= 0 || DataIO.shouldDownloadUpdate(file, replaceAgeMs)) {
       System.out.printf("Downloading: %5s (meta)  [%s] -> [%s]\n", fund.ticker, fund.start, fund.end);
       return TiingoIO.httpGetToFile(url, file);
     }

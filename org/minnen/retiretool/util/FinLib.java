@@ -390,7 +390,7 @@ public final class FinLib
   /**
    * Calculate forward returns for all periods with the given duration.
    * 
-   * @param cumulativeReturns sequence of cumulative returns for the investment strategy
+   * @param cumulativeReturns sequence of cumulative returns for the investment strategy (monthly data)
    * @param nMonths number of months in the market
    * @return sequence containing returns for each time period of the given duration, if nMonths<12 then the returns are
    *         raw, else they are CAGRs.
@@ -1559,4 +1559,5 @@ public final class FinLib
 
     return asset;
   }
+
 }

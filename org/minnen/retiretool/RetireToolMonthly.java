@@ -32,6 +32,7 @@ import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.data.Sequence.EndpointBehavior;
 import org.minnen.retiretool.data.SequenceStoreV1;
+import org.minnen.retiretool.data.ShillerIO;
 import org.minnen.retiretool.data.YahooIO;
 import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
@@ -67,7 +68,7 @@ public class RetireToolMonthly
 
   public static void setupShillerData(File dataDir, File dir, boolean buildComplexStrategies) throws IOException
   {
-    Sequence shiller = DataIO.loadShillerData(new File(dataDir, "shiller.csv"));
+    Sequence shiller = ShillerIO.loadAll(new File(dataDir, "shiller.csv"));
     Sequence tbillData = DataIO.loadDateValueCSV(new File(dataDir, "treasury-bills-3-month.csv"));
     tbillData.setName("3-Month Treasury Bills");
     tbillData = FinLib.pad(tbillData, shiller, 0.0);
@@ -468,7 +469,7 @@ public class RetireToolMonthly
     System.out.printf("Int Stock: [%s] -> [%s]\n", TimeLib.formatMonth(istock.getStartMS()),
         TimeLib.formatMonth(istock.getEndMS()));
 
-    Sequence shiller = DataIO.loadShillerData(new File(dataDir, "shiller.csv"));
+    Sequence shiller = ShillerIO.loadAll(new File(dataDir, "shiller.csv"));
 
     long commonStart = TimeLib.calcCommonStart(stock, bonds, reits, istock, shiller);
     long commonEnd = TimeLib.calcCommonEnd(stock, bonds, reits, istock, shiller);
@@ -863,7 +864,7 @@ public class RetireToolMonthly
     for (int i = 0; i < liks.length; ++i) {
       liks[i] = returnLiks.extractDims(i + 1);
       liks[i].setName(String.format("%d year%s", years[i], years[i] == 1 ? "" : "s"));
-      Chart.saveChart(new File(String.format("g:/web/return-likelihoods-%d-years.html", years[i])),
+      Chart.saveChart(new File(DataIO.outputPath, String.format("return-likelihoods-%d-years.html", years[i])),
           ChartConfig.Type.Area, "Return Likelihoods", Histogram.getLabelsFromHistogram(returnLiks), null, GRAPH_WIDTH,
           GRAPH_HEIGHT, 0.0, 1.0, Double.NaN, ChartScaling.LINEAR, ChartTiming.MONTHLY, 0, liks[i]);
     }
@@ -1452,7 +1453,7 @@ public class RetireToolMonthly
 
   public static Sequence synthesizeData(File dataDir, File dir) throws IOException
   {
-    Sequence shiller = DataIO.loadShillerData(new File(dataDir, "shiller.csv"));
+    Sequence shiller = ShillerIO.loadAll(new File(dataDir, "shiller.csv"));
     Sequence tbillData = DataIO.loadDateValueCSV(new File(dataDir, "treasury-bills-3-month.csv"));
     tbillData.setName("3-Month Treasury Bills");
     tbillData = FinLib.pad(tbillData, shiller, 0.0);
@@ -1852,8 +1853,8 @@ public class RetireToolMonthly
 
   public static void main(String[] args) throws IOException
   {
-    File dataDir = new File("g:/research/finance");
-    File dir = new File("g:/web/");
+    File dataDir = DataIO.financePath;
+    File dir = DataIO.outputPath;
     assert dataDir.isDirectory();
     assert dir.isDirectory();
 

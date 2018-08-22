@@ -21,13 +21,18 @@ import java.util.zip.ZipInputStream;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
-import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.TimeLib;
 
 public class DataIO
 {
-  public static final File outputPath  = new File("g:/web");
-  public static final File financePath = new File("G:/research/finance");
+  public static final File outputPath  = new File("f:/web");
+  public static final File financePath = new File("f:/research/finance");
+
+  static {
+    // Create data and output directories if they doesn't exist.
+    if (!outputPath.exists()) outputPath.mkdirs();
+    if (!financePath.exists()) financePath.mkdirs();
+  }
 
   /**
    * Load data from CSV file of <date>,<value>.
@@ -92,79 +97,6 @@ public class DataIO
       for (FeatureVec x : seq) {
         writer.write(String.format("%s,%f\n", TimeLib.formatYMD(x.getTime()), x.get(iDim)));
       }
-    }
-  }
-
-  public static Sequence loadRecessionData(File file) throws IOException
-  {
-    if (file.isDirectory()) {
-      file = new File(file, "RECPROUSM156N.csv");
-      if (!file.canRead()) {
-        throw new IOException("Missing recession probability data file.");
-      }
-    }
-    Sequence seq = loadDateValueCSV(file);
-    seq.adjustDatesToEndOfMonth();
-    return seq;
-  }
-
-  /**
-   * Load data from CSV export of Shiller's SNP/CPI excel spreadsheet.
-   * 
-   * @param file file to load
-   * @return true on success
-   * @throws IOException if there is a problem reading the file.
-   */
-  public static Sequence loadShillerData(File file) throws IOException
-  {
-    if (!file.canRead()) {
-      throw new IOException(String.format("Can't read Shiller file (%s)", file.getPath()));
-    }
-    System.out.printf("Loading data file: [%s]\n", file.getPath());
-    Sequence seq = new Sequence("Shiller Financial Data");
-    try (BufferedReader in = new BufferedReader(new FileReader(file))) {
-      String line;
-      while ((line = in.readLine()) != null) {
-        try {
-          String[] toks = line.trim().split(",");
-          if (toks == null || toks.length < 5) {
-            continue; // want at least: date, p, d, e, cpi
-          }
-
-          // date
-          double date = Double.parseDouble(toks[0]);
-          int year = (int) Math.floor(date);
-          int month = (int) Math.round((date - year) * 100);
-
-          // snp price
-          double price = Double.parseDouble(toks[1]);
-
-          // snp dividend -- data is annual yield, we want monthly
-          double div = Double.parseDouble(toks[2]) / 12.0;
-
-          // cpi
-          double cpi = Double.parseDouble(toks[4]);
-
-          // GS10 rate
-          double gs10 = Double.parseDouble(toks[6]);
-
-          // CAPE
-          double cape = Library.tryParse(toks[10], 0.0);
-
-          long timeMS = TimeLib.toMs(year, month, 1);
-          seq.addData(new FeatureVec(5, price, div, cpi, gs10, cape), timeMS);
-
-          // System.out.printf("%d/%d: $%.2f $%.2f $%.2f\n", year,
-          // month, price, div, cpi);
-
-        } catch (NumberFormatException nfe) {
-          // something went wrong so skip this line
-          System.err.println("Bad Line: " + line);
-          continue;
-        }
-
-      }
-      return seq;
     }
   }
 

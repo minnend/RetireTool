@@ -19,4 +19,9 @@ public class LinearFunc
     return mul * x + add;
   }
 
+  @Override
+  public String toString()
+  {
+    return String.format("[LinearFunc: %f, %f]", mul, add);
+  }
 }

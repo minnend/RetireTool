@@ -13,6 +13,7 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 
+import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.util.TimeLib;
 
 public class DownloadUrl
@@ -51,7 +52,8 @@ public class DownloadUrl
     }
 
     long n = 0;
-    try (InputStreamReader is = new InputStreamReader(con.getInputStream()); BufferedReader br = new BufferedReader(is)) {
+    try (InputStreamReader is = new InputStreamReader(con.getInputStream());
+        BufferedReader br = new BufferedReader(is)) {
       while (true) {
         String line = br.readLine();
         if (line == null) break;
@@ -65,10 +67,10 @@ public class DownloadUrl
 
   public static void main(String[] args) throws Exception
   {
-    //URL url = new URL("http://ichart.finance.yahoo.com/table.csv?s=^GSPC&ignore=.csv");
+    // URL url = new URL("http://ichart.finance.yahoo.com/table.csv?s=^GSPC&ignore=.csv");
     URL url = new URL("https://ichart.finance.yahoo.com/table.csv?s=^GSPC");
     // URL url = new URL("http://finance.yahoo.com/d/quotes.csv?s=AAPL&f=snabopghydr1qd1veb4j4rs7s6");
-    File file = new File("g:/t/test.txt");
+    File file = new File(DataIO.outputPath, "test.txt");
     long a = TimeLib.getTime();
     // long n = download(url, file);
     // long n = copyUrlToFile(url, file);

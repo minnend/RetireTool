@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
+import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.util.FinLib;
@@ -131,9 +132,9 @@ public class ExploreRPS
 
   public static void main(String[] args) throws IOException
   {
-    File dataDir = new File("g:/research/finance/quant_strategy_materials");
+    File dataDir = new File(DataIO.financePath, "quant_strategy_materials");
     assert dataDir.isDirectory();
-    File outputDir = new File("g:/web");
+    File outputDir = DataIO.outputPath;
     assert dataDir.isDirectory();
 
     ExploreRPS explore = new ExploreRPS();

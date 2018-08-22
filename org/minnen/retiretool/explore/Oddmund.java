@@ -33,7 +33,7 @@ public class Oddmund
 {
   public static void main(String[] args) throws IOException
   {
-    File outputDir = new File("g:/web");
+    File outputDir = DataIO.outputPath;
 
     // Make sure we have the latest data.
     String symbol = "SPY";

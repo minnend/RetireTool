@@ -11,7 +11,7 @@ import org.minnen.retiretool.util.TimeLib;
 public class FredSeries
 {
   public enum Frequency {
-    Daily, Weekly, Monthly, Yearly
+    Daily, Weekly, Monthly, Quarterly, Yearly
   };
 
   public final String    name;
@@ -36,7 +36,7 @@ public class FredSeries
       this.data = DataIO.loadDateValueCSV(file);
       this.data.setName(name);
       if (frequency == Frequency.Monthly) {
-        this.data.adjustDatesToEndOfMonth();
+        this.data.adjustDatesToEndOfMonth(Sequence.LastDay.ANY_DAY);
       }
       return true;
     } catch (IOException e) {
@@ -58,7 +58,7 @@ public class FredSeries
   public static FredSeries fromName(String name) throws IOException
   {
     for (FredSeries fred : Fred.series) {
-      if (fred.name.equals(name)) {
+      if (fred.name.equalsIgnoreCase(name) || fred.seriesID.equalsIgnoreCase(name)) {
         fred.loadData();
         return fred;
       }

@@ -1,6 +1,7 @@
 package org.minnen.retiretool.data;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -54,6 +55,10 @@ public class Sequence implements Iterable<FeatureVec>
     {
       return rng.nextLong();
     }
+  }
+
+  public enum LastDay {
+    BUSINESS_DAY, ANY_DAY
   }
 
   /** Data stored in this data set. */
@@ -1083,16 +1088,44 @@ public class Sequence implements Iterable<FeatureVec>
     return deriv;
   }
 
-  /** Change all timestamps to the last business day of the month. */
-  public void adjustDatesToEndOfMonth()
+  public void adjustDatesToEndOfMonth(LastDay lastDay)
   {
     for (FeatureVec v : data) {
       LocalDate date = TimeLib.ms2date(v.getTime());
-      // TODO best to move to last day of month (even a weekend) or last business day?
-      // date = TimeLib.toLastBusinessDayOfMonth(date);
-      date = date.with(TemporalAdjusters.lastDayOfMonth());
+      if (lastDay == LastDay.BUSINESS_DAY) {
+        date = TimeLib.toLastBusinessDayOfMonth(date);
+      } else {
+        assert lastDay == LastDay.ANY_DAY;
+        date = date.with(TemporalAdjusters.lastDayOfMonth());
+      }
       v.setTime(TimeLib.toMs(date));
     }
+  }
+
+  /** Change all timestamps to the last day of the month. */
+  public void adjustDatesToEndOfMonth()
+  {
+    adjustDatesToEndOfMonth(LastDay.ANY_DAY);
+  }
+
+  public void adjustDatesToEndOfQuarter(LastDay lastDay)
+  {
+    // Adjust dates forward two months (from first to last month of quarter).
+    for (FeatureVec v : data) {
+      LocalDate date = TimeLib.ms2date(v.getTime());
+      assert date.getDayOfMonth() == 1;
+      final Month month = date.getMonth();
+      assert month == Month.JANUARY || month == Month.APRIL || month == Month.JULY || month == Month.OCTOBER;
+      date = date.plusMonths(2);
+      v.setTime(TimeLib.toMs(date));
+    }
+    adjustDatesToEndOfMonth(lastDay);
+  }
+
+  /** Change all timestamps to the last business day of the month. */
+  public void adjustDatesToEndOfQuarter()
+  {
+    adjustDatesToEndOfQuarter(LastDay.ANY_DAY);
   }
 
   /** An integral sequence holds the sum over [0, t] for each time step t. */

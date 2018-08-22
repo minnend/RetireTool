@@ -101,6 +101,10 @@ public class TiingoFund
       meta.end = end;
       meta.start = start;
 
+      // TODO handle these errors by downloading a fresh copy of the data.
+      assert data.getStartMS() != TimeLib.TIME_ERROR;
+      assert data.getEndMS() != TimeLib.TIME_ERROR;
+
       LocalDate dataStart = TimeLib.ms2date(data.getStartMS());
       LocalDate dataEnd = TimeLib.ms2date(data.getEndMS());
 

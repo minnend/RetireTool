@@ -19,10 +19,12 @@ import org.minnen.retiretool.broker.TimeInfo;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.FeatureVec;
+import org.minnen.retiretool.data.FredIO;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.data.YahooIO;
 import org.minnen.retiretool.data.Sequence.EndpointBehavior;
+import org.minnen.retiretool.data.fred.FredSeries;
 import org.minnen.retiretool.ml.ClassificationModel;
 import org.minnen.retiretool.ml.PositiveQuadrant;
 import org.minnen.retiretool.ml.RegressionModel;
@@ -739,8 +741,8 @@ public class AdaptiveAlloc
 
   public static void main(String[] args) throws IOException
   {
-    File outputDir = new File("g:/web");
-    File dataDir = new File("g:/research/finance/");
+    File outputDir = DataIO.outputPath;
+    File dataDir = DataIO.financePath;
     assert dataDir.isDirectory();
 
     Sequence tbillData = DataIO.loadDateValueCSV(new File(dataDir, "treasury-bills-3-month.csv"));
@@ -751,7 +753,7 @@ public class AdaptiveAlloc
     store.add(tbillData, "tbilldata");
     store.alias("interest-rates", "tbilldata");
 
-    Sequence recession = DataIO.loadRecessionData(dataDir);
+    Sequence recession = FredSeries.fromName("RECPROUSM156N").data;
     System.out.printf("Recession (Monthly): [%s] -> [%s]\n", TimeLib.formatDate(recession.getStartMS()),
         TimeLib.formatDate(recession.getEndMS()));
     store.add(recession, "recession");

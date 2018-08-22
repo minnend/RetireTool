@@ -38,6 +38,7 @@ import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
+import org.minnen.retiretool.data.ShillerIO;
 import org.minnen.retiretool.data.YahooIO;
 
 public class RetireTool
@@ -68,7 +69,7 @@ public class RetireTool
     File file = YahooIO.downloadDailyData("^GSPC", 8 * TimeLib.MS_IN_HOUR);
     Sequence stock = YahooIO.loadData(file);
     Sequence bondRate = DataIO.loadDateValueCSV(new File(dataDir, "treasury-10year-daily.csv"));
-    Sequence shiller = DataIO.loadShillerData(new File(dataDir, "shiller.csv"));
+    Sequence shiller = ShillerIO.loadAll(new File(dataDir, "shiller.csv"));
     shiller.adjustDatesToEndOfMonth();
     Sequence tbillData = DataIO.loadDateValueCSV(new File(dataDir, "treasury-bills-3-month.csv"));
     tbillData.setName("3-Month Treasury Bills");
@@ -113,7 +114,7 @@ public class RetireTool
     Sequence stockIntegral = stock.getIntegralSeq();
     store.add(stockIntegral);
 
-    // System.out.printf("#Store: %d  #Misc: %d\n", store.getNumReturns(), store.getNumMisc());
+    // System.out.printf("#Store: %d #Misc: %d\n", store.getNumReturns(), store.getNumMisc());
     // for (String name : store.getMiscNames()) {
     // System.out.printf(" - %s\n", name);
     // }
@@ -142,8 +143,8 @@ public class RetireTool
       long time = guideSeq.getTimeMS(t);
       final long key = Sequence.Lock.genKey();
       store.lock(TimeLib.TIME_BEGIN, time, key);
-      long nextTime = (t == T - 1 ? TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(time))) : guideSeq
-          .getTimeMS(t + 1));
+      long nextTime = (t == T - 1 ? TimeLib.toMs(TimeLib.toNextBusinessDay(TimeLib.ms2date(time)))
+          : guideSeq.getTimeMS(t + 1));
       broker.setNewDay(new TimeInfo(time, prevTime, nextTime));
       TimeInfo timeInfo = broker.getTimeInfo();
 
@@ -178,8 +179,8 @@ public class RetireTool
       // Note: we're comparing the current request to the previous one, not to the actual
       // distribution in the account, which could change due to price movement.
       boolean bPrevRebalance = bNeedRebalance;
-      bNeedRebalance = ((time - lastRebalance) / TimeLib.MS_IN_DAY > 365 || !desiredDistribution.isSimilar(
-          prevDistribution, DistributionEPS));
+      bNeedRebalance = ((time - lastRebalance) / TimeLib.MS_IN_DAY > 365
+          || !desiredDistribution.isSimilar(prevDistribution, DistributionEPS));
 
       if (maxDelay > 0) {
         if (bNeedRebalance && !bPrevRebalance) {
@@ -269,8 +270,8 @@ public class RetireTool
         writer.write(String.format("--- Summary (%d / %d, %s @ %.2f/s) ------ \n", allStats.size(), configs.size(),
             TimeLib.formatDuration(duration), perSec));
         for (JitterStats jstats : allStats) {
-          writer.write(String.format("%s <- [%s]  %s  %s\n", jstats, jstats.config, jstats.cagrStats,
-              jstats.drawdownStats));
+          writer.write(
+              String.format("%s <- [%s]  %s  %s\n", jstats, jstats.config, jstats.cagrStats, jstats.drawdownStats));
         }
         writer.close();
       }
@@ -318,8 +319,8 @@ public class RetireTool
 
       if (nSummaryTick > 0 && iter % nSummaryTick == (nSummaryTick - 1)) {
         long duration = TimeLib.getTime() - startMS;
-        System.out.printf("Trials: %d [%s @ %.1f/s]\n", iter + 1, TimeLib.formatDuration(duration), 1000.0 * (iter + 1)
-            / duration);
+        System.out.printf("Trials: %d [%s @ %.1f/s]\n", iter + 1, TimeLib.formatDuration(duration),
+            1000.0 * (iter + 1) / duration);
       }
     }
     ReturnStats cagrStats = ReturnStats.calc("CAGR", cagrs);
@@ -381,15 +382,15 @@ public class RetireTool
     int maxCode = (1 << config.size()) - 1;
     long maxMap = (1 << (maxCode + 1)) - 1;
     long startCode = (1 << maxCode);
-    // System.out.printf("maxCode=%d  maxMap=%d  startCode=%d\n", maxCode, maxMap, startCode);
+    // System.out.printf("maxCode=%d maxMap=%d startCode=%d\n", maxCode, maxMap, startCode);
     long bestAssetMap = -1;
     JitterStats bestStats = null;
     // for (long assetMap = startCode; assetMap <= maxMap; assetMap += 2) {
     {
       long assetMap = -2;
       config.assetMap = assetMap;
-      JitterStats jitterStats = collectJitterStats(nJitterRuns, config, assetNames, GlobalSlippage, PriceSDev,
-          maxDelay, BuyAtNextOpen, 0);
+      JitterStats jitterStats = collectJitterStats(nJitterRuns, config, assetNames, GlobalSlippage, PriceSDev, maxDelay,
+          BuyAtNextOpen, 0);
       if (bestStats == null || jitterStats.score() > bestStats.score()) {
         bestAssetMap = assetMap;
         bestStats = jitterStats;
@@ -458,8 +459,8 @@ public class RetireTool
     long duration = TimeLib.getTime() - startTime;
 
     System.out.println();
-    System.out.printf("Summary: %d runs in %s @ %.1f/s\n", allStats.size(), TimeLib.formatDuration(duration), 1000.0
-        * allStats.size() / duration);
+    System.out.printf("Summary: %d runs in %s @ %.1f/s\n", allStats.size(), TimeLib.formatDuration(duration),
+        1000.0 * allStats.size() / duration);
     CumulativeStats.filter(allStats);
     Collections.sort(allStats);
     for (CumulativeStats cstats : allStats) {
@@ -483,8 +484,8 @@ public class RetireTool
       for (int j = i + 1; j < nSingle; ++j) {
         for (int k = j + 1; k < nSingle; ++k) {
           System.out.printf("%d: (%d,%d,%d)\n", iMulti, i, j, k);
-          multiConfigs[iMulti++] = new ConfigMulti(254, new PredictorConfig[] { singleConfigs[i], singleConfigs[j],
-              singleConfigs[k] });
+          multiConfigs[iMulti++] = new ConfigMulti(254,
+              new PredictorConfig[] { singleConfigs[i], singleConfigs[j], singleConfigs[k] });
         }
       }
     }
@@ -512,8 +513,8 @@ public class RetireTool
     }
     long duration = TimeLib.getTime() - startTime;
     System.out.println();
-    System.out.printf("Summary: %d runs in %s @ %.1f/s\n", allStats.size(), TimeLib.formatDuration(duration), 1000.0
-        * allStats.size() / duration);
+    System.out.printf("Summary: %d runs in %s @ %.1f/s\n", allStats.size(), TimeLib.formatDuration(duration),
+        1000.0 * allStats.size() / duration);
     JitterStats.filter(allStats);
     Collections.sort(allStats);
     for (JitterStats stats : allStats) {
@@ -581,7 +582,7 @@ public class RetireTool
     // double va = Fixed.toFloat(broker.getPrice(riskyName, timeCode.time));
     // long nextTime = (i < timeCodes.size() - 1 ? timeCodes.get(i + 1).time : broker.getTime());
     // double vb = Fixed.toFloat(broker.getPrice(riskyName, nextTime));
-    // System.out.printf("%d   %.3f  [%s] -> [%s]\n", timeCode.code, FinLib.mul2ret(vb / va),
+    // System.out.printf("%d %.3f [%s] -> [%s]\n", timeCode.code, FinLib.mul2ret(vb / va),
     // TimeLib.formatDate(timeCode.time), TimeLib.formatDate(nextTime));
     //
     // Sequence seq = stock.subseq(timeCode.time, nextTime);
@@ -785,8 +786,8 @@ public class RetireTool
 
   public static void main(String[] args) throws IOException
   {
-    File dataDir = new File("g:/research/finance/");
-    File dir = new File("g:/web/");
+    File dataDir = DataIO.financePath;
+    File dir = DataIO.outputPath;
     assert dataDir.isDirectory();
     assert dir.isDirectory();
 

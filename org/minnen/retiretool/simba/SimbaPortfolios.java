@@ -19,6 +19,7 @@ import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
@@ -38,7 +39,7 @@ public class SimbaPortfolios
 {
   public static final int                  nLongYears = 10;
   public static final int                  nSigDig    = 0;
-  public static final File                 outputDir  = new File("g:/web");
+  public static final File                 outputDir  = DataIO.outputPath;
   public static final Map<String, Integer> stat2index = new HashMap<>();
   public static final String[]             stats      = new String[] { "Worst Period", "10th Percentile",
       "25th Percentile", "Median", "CAGR", "Std Dev", "Worst Year", "Max Drawdown" };
@@ -378,14 +379,14 @@ public class SimbaPortfolios
         if (v < -threshold[i]) ++nLoss;
         else if (v < threshold[i]) {
           if (v >= 0) ++nTiePlus;
-          else ++nTieMinus;
-        } else ++nWin;
+          else++nTieMinus;
+        } else++nWin;
       } else {
         if (v > threshold[i]) ++nLoss;
         else if (v > -threshold[i]) {
           if (v <= 0) ++nTiePlus;
-          else ++nTieMinus;
-        } else ++nWin;
+          else++nTieMinus;
+        } else++nWin;
       }
     }
     return nLoss == 0 && nWin > 0 && nTiePlus >= nTieMinus;
@@ -396,8 +397,8 @@ public class SimbaPortfolios
   {
     Sequence seq = new Sequence(cumulativeReturns.getName() + String.format(" %d year returns", nYears));
     seq.copyMeta(cumulativeReturns);
-    int nMonths = (int) Math.round(TimeLib.monthsBetween(cumulativeReturns.getTimeMS(0),
-        cumulativeReturns.getTimeMS(nYears)));
+    int nMonths = (int) Math
+        .round(TimeLib.monthsBetween(cumulativeReturns.getTimeMS(0), cumulativeReturns.getTimeMS(nYears)));
     assert nMonths == nYears * 12;
     final int n = cumulativeReturns.length();
     for (int i = 0; i + nYears < n; ++i) {
@@ -559,8 +560,8 @@ public class SimbaPortfolios
     }
     ChartConfig chartConfig = new ChartConfig(new File(outputDir, "simba-filtered.html"))
         .setType(ChartConfig.Type.Bubble).setTitle(descriptions[indices[1]] + " vs. " + descriptions[indices[0]])
-        .setYAxisTitle(descriptions[indices[1]]).setXAxisTitle(descriptions[indices[0]]).setSize(1200, 600)
-        .setRadius(3).setDimNames(dimNames).setData(scatter).showToolTips(true);
+        .setYAxisTitle(descriptions[indices[1]]).setXAxisTitle(descriptions[indices[0]]).setSize(1200, 600).setRadius(3)
+        .setDimNames(dimNames).setData(scatter).showToolTips(true);
     Chart.saveScatterPlot(chartConfig);
 
     portfolioStats.getData().sort(new Comparator<FeatureVec>()
@@ -667,16 +668,16 @@ public class SimbaPortfolios
     String descX = name2desc.get(stats[xIndex]);
     String descY = name2desc.get(stats[yIndex]);
     ChartConfig chartConfig = new ChartConfig(new File(outputDir, "simba-filtered.html"))
-        .setType(ChartConfig.Type.Bubble).setTitle("<b>" + descY + "</b> vs. <b>" + descX + "</b>")
-        .setYAxisTitle(descY).setXAxisTitle(descX).setSize(1200, 800).setRadius(3).setBubbleSizes("7", "20")
-        .setDimNames(dimNames).setData(scatter).showToolTips(true).setIndexXY(xIndex, yIndex);
+        .setType(ChartConfig.Type.Bubble).setTitle("<b>" + descY + "</b> vs. <b>" + descX + "</b>").setYAxisTitle(descY)
+        .setXAxisTitle(descX).setSize(1200, 800).setRadius(3).setBubbleSizes("7", "20").setDimNames(dimNames)
+        .setData(scatter).showToolTips(true).setIndexXY(xIndex, yIndex);
     Chart.saveScatterPlot(chartConfig);
   }
 
   public static void main(String[] args) throws IOException
   {
     // Inspiration: https://portfoliocharts.com/2016/03/07/the-ultimate-portfolio-guide-for-all-types-of-investors/
-    File dataDir = new File("g:/research/finance/");
+    File dataDir = DataIO.financePath;
     assert dataDir.isDirectory();
 
     loadSimbaData(new File(dataDir, "simba-1972.csv"));

@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.util.Map;
 
+import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.data.TiingoIO;
@@ -123,10 +124,9 @@ public class VanguardReport
 
   public static void main(String[] args) throws IOException
   {
-    File outputDir = new File("g:/web");
     TiingoIO.updateData(fundSymbols);
     Tiingo.setupSimulation(fundSymbols, slippage, null, store);
-    File file = new File(outputDir, "vanguard-report.html");
+    File file = new File(DataIO.outputPath, "vanguard-report.html");
     genReport(file);
   }
 }

@@ -95,74 +95,6 @@ public class VanguardIRR
     return transactions;
   }
 
-  // private static Transaction addLiquidate(List<Transaction> transactions)
-  // {
-  // Transaction transaction = new Transaction();
-  // transaction.date = transactions.get(transactions.size() - 1).date + 1;
-  // transaction.description = "Liquidate";
-  // transaction.fund = "All";
-  // transaction.amount = totalValue;
-  // transactions.add(transaction);
-  // }
-
-  private static double calcYearsOfGrowth(long a, long b)
-  {
-    LocalDate x = TimeLib.ms2date(a);
-    LocalDate y = TimeLib.ms2date(b);
-    long years = ChronoUnit.YEARS.between(x, y);
-    long days = ChronoUnit.DAYS.between(x.plusYears(years), y);
-    long daysInYear = Year.of(y.getYear()).length();
-    double yearsBetween = years + (double) days / daysInYear;
-    // System.out.printf("[%s] -> [%s] = %.3f years\n", x, y, yearsBetween);
-    return yearsBetween;
-  }
-
-  private static double calcTotal(List<Contribution> contributions, double rate)
-  {
-    double r = FinLib.ret2mul(rate);
-    double total = 0;
-    for (Contribution contrib : contributions) {
-      total += contrib.amount * Math.pow(r, contrib.yearsOfGrowth);
-    }
-    return total;
-  }
-
-  private static double solveIRR(List<Contribution> contributions, double balance)
-  {
-    double totalContributions = 0;
-    double meanGrowthYears = 0;
-    for (Contribution contrib : contributions) {
-      totalContributions += contrib.amount;
-      meanGrowthYears += contrib.yearsOfGrowth;
-    }
-    meanGrowthYears /= contributions.size();
-
-    double r = FinLib.mul2ret(Math.pow(balance / totalContributions, 1.0 / meanGrowthYears));
-    // System.out.printf("Initial guess: %.3f%%\n", r);
-    double rmin, rmax;
-    if (r < 0) {
-      rmin = 10 * r;
-      rmax = 0;
-    } else {
-      rmin = 0;
-      rmax = 10 * r;
-    }
-
-    // Binary search for IRR.
-    while (rmax - rmin > 1e-8) {
-      r = (rmin + rmax) / 2.0;
-      double total = calcTotal(contributions, r);
-      // System.out.printf("[%f -> %f] => %f = $%s\n", rmin, rmax, r, FinLib.currencyFormatter.format(total));
-      if (total > balance) {
-        rmax = r;
-      } else {
-        rmin = r;
-      }
-    }
-
-    return (rmin + rmax) / 2.0;
-  }
-
   public static void main(String[] args) throws IOException
   {
     // Load current holdings.
@@ -172,10 +104,10 @@ public class VanguardIRR
     double balance = 0.0;
     for (Holding holding : holdings) {
       balance += holding.totalValue;
-      System.out.println(" " + holding);
+      // System.out.println(" " + holding);
     }
     System.out.printf("Total value: $%s\n", FinLib.currencyFormatter.format(balance));
-    System.out.println();
+    // System.out.println();
 
     // Load transaction data.
     file = new File(DataIO.financePath, "vanguard-transactions-web-20131025-20180731.txt");
@@ -184,31 +116,31 @@ public class VanguardIRR
     System.out.printf("Transactions: %d\n", transactions.size());
     System.out.printf("Time range: [%s] -> [%s]\n", TimeLib.formatYMD(transactions.get(0).date),
         TimeLib.formatYMD(lastTransaction.date));
-    System.out.println();
+    // System.out.println();
 
     // Print all transaction types.
-    Map<String, Integer> types = new HashMap<>();
-    for (Transaction t : transactions) {
-      int count = types.getOrDefault(t.description, 0);
-      types.put(t.description, count + 1);
-    }
-    System.out.println("-- Transaction Types --");
-    for (Map.Entry<String, Integer> x : types.entrySet()) {
-      System.out.printf(" %54s: %d\n", x.getKey(), x.getValue());
-    }
-    System.out.println();
+    // Map<String, Integer> types = new HashMap<>();
+    // for (Transaction t : transactions) {
+    // int count = types.getOrDefault(t.description, 0);
+    // types.put(t.description, count + 1);
+    // }
+    // System.out.println("-- Transaction Types --");
+    // for (Map.Entry<String, Integer> x : types.entrySet()) {
+    // System.out.printf(" %54s: %d\n", x.getKey(), x.getValue());
+    // }
+    // System.out.println();
 
     // Print all funds.
-    Map<String, Integer> funds = new HashMap<>();
-    for (Transaction t : transactions) {
-      int count = funds.getOrDefault(t.fund, 0);
-      funds.put(t.fund, count + 1);
-    }
-    System.out.println("-- Funds --");
-    for (Map.Entry<String, Integer> x : funds.entrySet()) {
-      System.out.printf(" %26s: %d\n", x.getKey(), x.getValue());
-    }
-    System.out.println();
+    // Map<String, Integer> funds = new HashMap<>();
+    // for (Transaction t : transactions) {
+    // int count = funds.getOrDefault(t.fund, 0);
+    // funds.put(t.fund, count + 1);
+    // }
+    // System.out.println("-- Funds --");
+    // for (Map.Entry<String, Integer> x : funds.entrySet()) {
+    // System.out.printf(" %26s: %d\n", x.getKey(), x.getValue());
+    // }
+    // System.out.println();
 
     // Collect contributions.
     long today = lastTransaction.date;
@@ -217,8 +149,7 @@ public class VanguardIRR
     for (Transaction t : transactions) {
       // System.out.printf("%s | %52s | %25s | %9.2f\n", TimeLib.formatDate2(t.date), t.description, t.fund, t.amount);
       if (t.description.equalsIgnoreCase("Plan Contribution") || t.description.equalsIgnoreCase("Conversion In")) {
-        Contribution contrib = new Contribution(t.date, t.amount);
-        contrib.yearsOfGrowth = calcYearsOfGrowth(t.date, today);
+        Contribution contrib = new Contribution(t.date, t.amount, today);
         totalContributions += contrib.amount;
         contributions.add(contrib);
       } else if (t.description.equalsIgnoreCase("Fee")) {
@@ -240,11 +171,11 @@ public class VanguardIRR
         throw new RuntimeException(msg);
       }
     }
-    System.out.printf("Contributions: %d = $%s\n", contributions.size(),
+    System.out.printf("Contributions (%d): $%s\n", contributions.size(),
         FinLib.currencyFormatter.format(totalContributions));
 
     // Solve for IIR.
-    double r = solveIRR(contributions, balance);
+    double r = Contribution.solveIRR(contributions, balance);
     System.out.printf("IRR: %.3f%%\n", r);
   }
 }

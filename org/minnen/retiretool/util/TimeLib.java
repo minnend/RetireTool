@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.Month;
 import java.time.MonthDay;
+import java.time.Year;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
@@ -96,7 +97,13 @@ public class TimeLib
     return toMs(LocalDate.of(year, month, day));
   }
 
-  /** @return fractional months between the times. */
+  /** @return fractional years between the given times. */
+  public static double yearsBetween(long t1, long t2)
+  {
+    return monthsBetween(t1, t2) / 12.0;
+  }
+
+  /** @return fractional months between the given times. */
   public static double monthsBetween(long t1, long t2)
   {
     assert t1 != TimeLib.TIME_ERROR && t2 != TimeLib.TIME_ERROR;

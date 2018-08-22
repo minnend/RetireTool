@@ -425,7 +425,7 @@ public class FeatureVec
   }
 
   /**
-   * in-place natural logarithm
+   * in-place natural logarithm (signed)
    * 
    * @return this vector
    */
@@ -448,7 +448,7 @@ public class FeatureVec
   }
 
   /**
-   * in-place natural logarithm
+   * in-place natural logarithm plus one (signed)
    * 
    * @return this vector
    */
@@ -463,7 +463,7 @@ public class FeatureVec
   }
 
   /**
-   * @return new vector with each element replaced with its (signed) natural log
+   * @return new vector with each element replaced with log(x+1) (signed)
    */
   public FeatureVec log1p()
   {

@@ -173,8 +173,8 @@ public class ExploreCKDE
 
   public static void main(String[] args) throws IOException
   {
-    File outputDir = new File("g:/web");
-    File dataDir = new File("g:/research/finance/");
+    File outputDir = DataIO.outputPath;
+    File dataDir = DataIO.financePath;
     assert dataDir.isDirectory();
 
     Sequence tbillData = DataIO.loadDateValueCSV(new File(dataDir, "treasury-bills-3-month.csv"));
