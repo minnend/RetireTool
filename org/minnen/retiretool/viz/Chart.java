@@ -395,12 +395,13 @@ public class Chart
   /**
    * Convenience function that takes individual arguments and builds a ChartConfig.
    */
-  public static void saveScatterPlot(File file, String title, int width, int height, int radius, String[] dimNames,
-      Sequence scatter) throws IOException
+  public static ChartConfig saveScatterPlot(File file, String title, int width, int height, int radius,
+      String[] dimNames, Sequence scatter) throws IOException
   {
     ChartConfig config = new ChartConfig(file).setType(ChartConfig.Type.Scatter).setTitle(title).setSize(width, height)
         .setRadius(radius).setDimNames(dimNames).setData(scatter);
     saveScatterPlot(config);
+    return config;
   }
 
   public static void saveScatterPlot(ChartConfig config) throws IOException

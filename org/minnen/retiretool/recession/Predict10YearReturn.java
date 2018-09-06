@@ -1,4 +1,4 @@
-package org.minnen.retiretool.explore;
+package org.minnen.retiretool.recession;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,18 +13,20 @@ import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.LinearFunc;
 import org.minnen.retiretool.util.TimeLib;
-import org.minnen.retiretool.viz.Chart;
-import org.minnen.retiretool.viz.Chart.ChartScaling;
-import org.minnen.retiretool.viz.Chart.ChartTiming;
 
 /**
- * Visualize "single greatest predictor of future stock market returns" from ERN:
+ * Calculate the "single greatest predictor of future stock market returns" from ERN:
  * http://www.philosophicaleconomics.com/2013/12/the-single-greatest-predictor-of-future-stock-market-returns/
  * 
- * @author David Minnen
+ * This predictor estimates the equity allocation at the national level and fits that to historical 10-year forward
+ * returns (linear fit). We can then transform the current allocation to get a prediction for future returns.
  */
-public class SignalReturnPredictorERN
+public class Predict10YearReturn
 {
+  public static Sequence equityAllocation        = null;
+  public static Sequence predictedForwardReturns = null;
+  public static Sequence trueForwardReturns      = null;
+
   private static Sequence matchTimestamps(Sequence base, Sequence pool)
   {
     Sequence seq = new Sequence(pool.getName());
@@ -65,7 +67,7 @@ public class SignalReturnPredictorERN
     return adjusted;
   }
 
-  public static void main(String[] args) throws IOException
+  public static void calculate() throws IOException
   {
     String[] signalNames = new String[] { "NCBEILQ027S", "FBCELLQ027S", "TCMILBSNNCB", "TCMILBSHNO", "FGTCMDODNS",
         "SLGTCMDODNS", "WCMITCMFODNS" };
@@ -96,9 +98,9 @@ public class SignalReturnPredictorERN
     // Calculate average investor equity allocation percentage;
     Sequence x = signals[0].add(signals[1]);
     Sequence y = x.add(signals[2]).add(signals[3]).add(signals[4]).add(signals[5]).add(signals[6]);
-    Sequence indicator = x.div(y)._mul(100.0);
-    indicator.setName("Average Investor Equity Allocation (%)");
-    indicator.adjustDatesToEndOfQuarter();
+    Sequence equityAllocation = x.div(y)._mul(100.0);
+    equityAllocation.setName("Average Investor Equity Allocation (%)");
+    equityAllocation.adjustDatesToEndOfQuarter();
 
     // Load S&P 500 data.
     Sequence snp = ShillerIO.loadSNP(new File(DataIO.financePath, "shiller.csv"), ShillerIO.Dividends.INCLUDE);
@@ -112,24 +114,23 @@ public class SignalReturnPredictorERN
         TimeLib.formatDate(forwardReturns.getEndMS()));
 
     // Get forward returns that match the indicator timestamps.
-    forwardReturns = matchTimestamps(indicator, forwardReturns);
+    forwardReturns = matchTimestamps(equityAllocation, forwardReturns);
     System.out.printf("       Adjusted: [%s] -> [%s]\n", TimeLib.formatDate(forwardReturns.getStartMS()),
         TimeLib.formatDate(forwardReturns.getEndMS()));
+    forwardReturns.setName("S&P 10-year Forward Returns");
 
-    LinearFunc linearFunc = linearFit(indicator, forwardReturns);
+    LinearFunc linearFunc = linearFit(equityAllocation, forwardReturns);
     System.out.println(linearFunc);
-    Sequence adjustedIndicator = transform(indicator, linearFunc);
+    Sequence adjustedIndicator = transform(equityAllocation, linearFunc);
     adjustedIndicator.setName("Prediction (Linear Fit)");
 
     double corr = Library.correlation(adjustedIndicator.subseq(0, forwardReturns.size()).extractDim(0),
         forwardReturns.extractDim(0));
-    System.out.printf("Corr=%f\n", corr);
+    System.out.printf("10-Year Return Prediction Correlation: %f\n", corr);
 
-    File file = new File(DataIO.outputPath, "return-prediction.html");
-    Chart.saveLineChart(file, "Return Prediction", 1000, 600, ChartScaling.LINEAR, ChartTiming.MONTHLY, indicator,
-        forwardReturns, adjustedIndicator);
-
-    file = new File(DataIO.outputPath, "return-predictor-signals.html");
-    Chart.saveLineChart(file, "Return Predictor Signals", 1000, 600, ChartScaling.LINEAR, ChartTiming.MONTHLY, signals);
+    // Set class sequences to calculated values.
+    Predict10YearReturn.equityAllocation = equityAllocation;
+    Predict10YearReturn.predictedForwardReturns = adjustedIndicator;
+    Predict10YearReturn.trueForwardReturns = forwardReturns;
   }
 }
