@@ -29,12 +29,17 @@ public class RecessionReport
     config.addPlotLineY(new PlotLine(0.0, 2.0, "black"));
     Chart.saveChart(config);
 
-    // 10-2 Treasury Yield Spread.
+    // 10-2 treasury yield spread.
     YieldSpread.calculate();
     file = new File(DataIO.outputPath, "treasury-10x2-yield-spread.html");
     config = Chart.saveLineChart(file, "10-2 Treasury Yield Spread", 1000, 600, ChartScaling.LINEAR,
         ChartTiming.MONTHLY, YieldSpread.spread);
     config.addPlotLineY(new PlotLine(0.0, 2.0, "black"));
     Chart.saveChart(config);
+
+    // Unemployment rate.
+    UnemploymentRate.calculate();
+    Chart.saveLineChart(new File(DataIO.outputPath, "unrate.html"), "Unemployment Rate", 1000, 640, ChartScaling.LINEAR,
+        ChartTiming.MONTHLY, UnemploymentRate.unrate, UnemploymentRate.unrateSMA);
   }
 }

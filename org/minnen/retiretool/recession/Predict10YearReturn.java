@@ -1,6 +1,5 @@
 package org.minnen.retiretool.recession;
 
-import java.io.File;
 import java.io.IOException;
 
 import org.minnen.retiretool.data.DataIO;
@@ -44,17 +43,7 @@ public class Predict10YearReturn
     final int n = Math.min(seq.length(), target.length());
     double[] x = seq.extractDim(0, 0, n);
     double[] y = target.extractDim(0, 0, n);
-    final double meanX = Library.mean(x);
-    final double meanY = Library.mean(y);
-    double a = 0.0;
-    for (int i = 0; i < n; ++i) {
-      x[i] -= meanX;
-      y[i] -= meanY;
-      a += y[i] / x[i];
-    }
-    a /= n;
-    double b = meanY - meanX * a;
-    return new LinearFunc(a, b);
+    return Library.linearFit(x, y);
   }
 
   private static Sequence transform(Sequence seq, LinearFunc linearFunc)
@@ -103,9 +92,9 @@ public class Predict10YearReturn
     equityAllocation.adjustDatesToEndOfQuarter();
 
     // Load S&P 500 data.
-    Sequence snp = ShillerIO.loadSNP(new File(DataIO.financePath, "shiller.csv"), ShillerIO.Dividends.INCLUDE);
+    Sequence snp = ShillerIO.loadSNP(DataIO.shiller, FinLib.DividendMethod.MONTHLY);
     snp.adjustDatesToEndOfMonth();
-    System.out.printf("Shiller: [%s] -> [%s]\n", TimeLib.formatDate(snp.getStartMS()),
+    System.out.printf("Shiller (%d): [%s] -> [%s]\n", snp.length(), TimeLib.formatDate(snp.getStartMS()),
         TimeLib.formatDate(snp.getEndMS()));
 
     // Calculate 10-year future returns for S&P.
@@ -124,9 +113,20 @@ public class Predict10YearReturn
     Sequence adjustedIndicator = transform(equityAllocation, linearFunc);
     adjustedIndicator.setName("Prediction (Linear Fit)");
 
+    double se = 0.0, ad = 0.0;
+    for (int i = 0; i < forwardReturns.length(); ++i) {
+      double diff = forwardReturns.get(i, 0) - adjustedIndicator.get(i, 0);
+      ad += Math.abs(diff);
+      se += diff * diff;
+    }
+    se /= forwardReturns.length();
+    ad /= forwardReturns.length();
+    System.out.printf("MSE: %f\n", se);
+    System.out.printf("RMS: %f\n", Math.sqrt(se));
+    System.out.printf("MAD: %f\n", ad);
     double corr = Library.correlation(adjustedIndicator.subseq(0, forwardReturns.size()).extractDim(0),
         forwardReturns.extractDim(0));
-    System.out.printf("10-Year Return Prediction Correlation: %f\n", corr);
+    System.out.printf("Correlation: %f\n", corr);
 
     // Set class sequences to calculated values.
     Predict10YearReturn.equityAllocation = equityAllocation;

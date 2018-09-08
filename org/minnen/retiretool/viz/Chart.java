@@ -282,8 +282,8 @@ public class Chart
       writer.write(" });\n");
       writer.write("});\n");
 
-      writer.write("</script></head><body style=\"width:%dpx;\">\n", config.width);
-      writer.write("<div id=\"%s\" style=\"width:100%%; height:%dpx;\" />\n", config.containerName, config.height);
+      writer.write("</script></head><body>\n");
+      writer.write("<div id=\"%s\" style=\"width:%dpx; height:%dpx;\" />\n", config.containerName, config.width, config.height);
       writer.write("</body></html>\n");
     }
   }
@@ -312,7 +312,7 @@ public class Chart
     double vmax = Math.min(returns1.getMax().get(dim), returns2.getMax().get(dim));
 
     // Write HTML to generate the graph.
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+    try (Writer writer = new Writer(file)) {
       writer.write("<html><head>\n");
       writer.write("<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js\"></script>\n");
       writer.write("<script src=\"js/highcharts.js\"></script>\n");
@@ -386,8 +386,8 @@ public class Chart
       writer.write(" });\n");
       writer.write("});\n");
 
-      writer.write("</script></head><body style=\"width:" + width + "px;\">\n");
-      writer.write("<div id=\"chart\" style=\"width:100%; height:" + height + "px;\" />\n");
+      writer.write("</script></head><body>\n");
+      writer.write("<div id=\"chart\" style=\"width:%dpx; height:%dpx;\" />\n", width, height);
       writer.write("</body></html>\n");
     }
   }

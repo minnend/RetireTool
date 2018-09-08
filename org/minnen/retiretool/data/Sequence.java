@@ -1143,6 +1143,17 @@ public class Sequence implements Iterable<FeatureVec>
     return seq;
   }
 
+  /** @return sequence holding a simple moving average for this sequence. */
+  public Sequence calcSMA(int nBack)
+  {
+    Sequence seq = new Sequence(String.format("%s [SMA:%d]", getName(), nBack));
+    for (int i = 0; i < length(); ++i) {
+      int j = Math.max(0, i - nBack);
+      seq.addData(average(j, i), getTimeMS(i));
+    }
+    return seq;
+  }
+
   public static Comparator<Sequence> getStartDateComparator()
   {
     return new Comparator<Sequence>()

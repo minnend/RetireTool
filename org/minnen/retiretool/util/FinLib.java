@@ -451,6 +451,7 @@ public final class FinLib
     return getTotalReturn(cumulativeReturns, iFrom, iTo, 0);
   }
 
+  /** @return total return for full sequence (first to last date). */
   public static double getTotalReturn(Sequence cumulativeReturns)
   {
     return getTotalReturn(cumulativeReturns, 0, -1);
@@ -1426,7 +1427,7 @@ public final class FinLib
     final int n = corrMatrix.length;
     final boolean bConstrainedMaxWeight = (maxWeight > 0.0 && maxWeight < 1.0);
 
-    // Initial guess is equal weights; either uniform o
+    // Initial guess is equal weights.
     double[] guess = new double[n];
     Arrays.fill(guess, 1.0 / n);
 

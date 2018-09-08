@@ -82,18 +82,6 @@ public class TacticalWithRecessionFilter
     store.add(unemploymentRate, "unemployment rate");
   }
 
-  private static Sequence calcSMA(Sequence data, int nBack)
-  {
-    Sequence seq = new Sequence(String.format("%s [SMA:%d]", data.getName(), nBack));
-    for (int i = 0; i < data.length(); ++i) {
-      int j = Math.max(0, i - nBack);
-      FeatureVec sma = data.average(j, i);
-      seq.addData(sma, data.getTimeMS(i));
-    }
-    assert seq.length() == data.length();
-    return seq;
-  }
-
   public static void main(String[] args) throws IOException
   {
     setupData();
@@ -145,7 +133,7 @@ public class TacticalWithRecessionFilter
     }
 
     Sequence unrate = store.get(configUnemployment.analysisName);
-    Sequence unrateSMA = calcSMA(unrate, nMonthsUnrateSMA);
+    Sequence unrateSMA = unrate.calcSMA(nMonthsUnrateSMA);
     Chart.saveLineChart(new File(DataIO.outputPath, "unrate.html"), "Unemployment Rate", 1000, 640, ChartScaling.LINEAR,
         ChartTiming.MONTHLY, unrate, unrateSMA);
 

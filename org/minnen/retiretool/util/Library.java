@@ -4,6 +4,8 @@ import java.text.*;
 import java.util.*;
 import java.util.function.Predicate;
 
+import org.minnen.retiretool.data.Sequence;
+
 public final class Library
 {
   public final static long          LNAN         = Long.MIN_VALUE;
@@ -407,6 +409,15 @@ public final class Library
     }
 
     return sum / (a.length - 1);
+  }
+
+  public static LinearFunc linearFit(double[] x, double[] y)
+  {
+    final double meanX = Library.mean(x);
+    final double meanY = Library.mean(y);
+    double a = Library.covariance(x, y) / Library.variance(x);
+    double b = meanY - meanX * a;
+    return new LinearFunc(a, b);
   }
 
   /** Return the NxN identity matrix. */

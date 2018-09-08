@@ -27,6 +27,7 @@ public class DataIO
 {
   public static final File outputPath  = new File("f:/web");
   public static final File financePath = new File("f:/research/finance");
+  public static final File shiller = new File(financePath, "shiller.csv");
 
   static {
     // Create data and output directories if they doesn't exist.
