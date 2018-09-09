@@ -1075,14 +1075,15 @@ public class Sequence implements Iterable<FeatureVec>
     return deriv;
   }
 
+  /** @return Sequence holding ratio between neighboring elements of this sequences ("multiplicative derivative"). */
   public Sequence derivativeMul()
   {
     Sequence deriv = new Sequence(getName() + "- Multiplicative-Derivative");
     FeatureVec prev = get(0);
     for (int i = 1; i < length(); ++i) {
       FeatureVec cur = get(i);
-      FeatureVec diff = cur.div(prev);
-      deriv.addData(diff, prev.getTime());
+      FeatureVec growth = cur.div(prev);
+      deriv.addData(growth, prev.getTime());
       prev = cur;
     }
     return deriv;

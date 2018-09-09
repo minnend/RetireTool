@@ -13,10 +13,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.function.Predicate;
 
-import org.minnen.retiretool.Shiller;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStoreV1;
+import org.minnen.retiretool.data.Shiller;
 import org.minnen.retiretool.data.fred.FredSeries;
 import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
@@ -748,6 +748,14 @@ public final class FinLib
     return stats;
   }
 
+  /**
+   * Calculate quarterly dividend payments.
+   * 
+   * The time range is: [max(index-2, iMinIndex)..index], but the return value is zero if snp[index] does not represent
+   * the end of a quarter (March, June, September, or December).
+   * 
+   * @return value of quarterly dividend paid at time snp[index].
+   */
   private static double getQuarterlyDividendsPerShare(Sequence snp, int index, int iMinIndex)
   {
     double div = 0.0;
@@ -756,7 +764,7 @@ public final class FinLib
     LocalDate date = TimeLib.ms2date(snp.getTimeMS(index));
     Month month = date.getMonth();
     if (month == Month.MARCH || month == Month.JUNE || month == Month.SEPTEMBER || month == Month.DECEMBER) {
-      // time for a dividend!
+      // Time for a dividend!
       for (int j = 0; j < 3; j++) {
         if (index - j < iMinIndex) break;
         div += snp.get(index - j, Shiller.DIV);
@@ -766,13 +774,19 @@ public final class FinLib
   }
 
   /**
-   * Calculates S&P ROI for the given range.
+   * Calculates S&P returns from Shiller data for the given range.
    * 
-   * @param snp sequence of prices (d=0) and dividends (d=1)
-   * @param iStart first index in S&P to consider (negative => count back from end of sequence)
-   * @param iEnd last index in S&P to consider (negative => count back from end of sequence)
-   * @param divMethod how should we handle dividend reinvestment
-   * @return sequence of ROIs
+   * Note that Shiller's data uses monthly average closing prices, and dividends are interpolated from quarterly or
+   * annual payments. So the return results are reasonable for high-level analysis but are not useful for more detailed
+   * simulations (use adjusted daily data instead).
+   * 
+   * @param snp sequence of prices (dim=Shiller.PRICE) and dividends (dim=Shiller.DIV).
+   * @param iStart first index in S&P to consider (negative => count back from end of sequence).
+   * @param iEnd last index in S&P to consider (negative => count back from end of sequence).
+   * @param divMethod how should we handle dividend reinvestment.
+   * 
+   * @return sequence with two dimensions: the first (0) holds the invested balance, while the second (1) holds any cash
+   *         from dividends.
    */
   public static Sequence calcSnpReturns(Sequence snp, int iStart, int iEnd, DividendMethod divMethod)
   {
@@ -788,39 +802,37 @@ public final class FinLib
 
     Sequence seq = new Sequence("S&P-" + divMethod);
 
-    // note: it's equivalent to keep track of total value or number of shares
-    double divCash = 0.0;
-    double baseValue = 1.0;
-    double shares = baseValue / snp.get(iStart, 0);
-    seq.addData(new FeatureVec(2, baseValue, 0.0), snp.getTimeMS(iStart));
-    for (int i = iStart + 1; i <= iEnd; ++i) {
-      long timeMS = snp.getTimeMS(i);
+    double divCash = 0.0; // no cash from dividends to start
+    double shares = 1.0; // track number of shares to calculate total dividend payment
+
+    for (int i = iStart; i <= iEnd; ++i) {
+      final double price = snp.get(i, Shiller.PRICE);
+      final double divMonthly = shares * snp.get(i, Shiller.DIV);
+      final double divQuarterly = shares * getQuarterlyDividendsPerShare(snp, i, iStart);
+
       double divReinvest = 0.0;
-      if (divMethod == DividendMethod.NO_REINVEST_MONTHLY)
-        // No dividend reinvestment so all dividends go to cash.
-        divCash += shares * snp.get(i, Shiller.DIV);
-      else if (divMethod == DividendMethod.MONTHLY) {
-        // Dividends at the end of every month.
-        divReinvest = shares * snp.get(i, Shiller.DIV);
-      } else if (divMethod == DividendMethod.QUARTERLY) {
-        // Dividends at the end of every quarter (march, june, september, december).
-        divReinvest += shares * getQuarterlyDividendsPerShare(snp, i, iStart);
+      if (divMethod == DividendMethod.NO_REINVEST_MONTHLY) {
+        divCash += divMonthly; // No dividend reinvestment so all dividends go to cash.
+      } else if (divMethod == DividendMethod.MONTHLY) {
+        divReinvest = divMonthly; // Dividends reinvested at the end of every month.
       } else if (divMethod == DividendMethod.NO_REINVEST_QUARTERLY) {
-        // Dividends at the end of every quarter (march, june, september, december).
-        divCash += shares * getQuarterlyDividendsPerShare(snp, i, iStart);
+        divCash += divQuarterly; // Quarterly dividends saved as cash.
+      } else if (divMethod == DividendMethod.QUARTERLY) {
+        divReinvest += divQuarterly; // Quarterly dividends reinvested.
       } else {
         assert divMethod == DividendMethod.IGNORE_DIVIDENDS;
         // Nothing to do when we're ignoring dividends.
       }
 
-      // Apply the dividends (if any).
-      double price = snp.get(i, Shiller.PRICE);
+      // Dividends earmarked for reinvestment are used to buy more shares.
       shares += divReinvest / price;
-
-      // Add data point for current value.
-      double value = divCash + shares * price;
-      seq.addData(new FeatureVec(2, value, divCash), timeMS);
+      final double balance = shares * price + divCash;
+      seq.addData(balance, snp.getTimeMS(i));
     }
+
+    // Normalize sequence so that values correspond to total returns (multiplicative).
+    seq._div(seq.getFirst(Shiller.PRICE));
+
     return seq;
   }
 

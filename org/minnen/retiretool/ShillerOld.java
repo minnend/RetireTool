@@ -12,7 +12,7 @@ import org.minnen.retiretool.util.FinLib.DividendMethod;
  * Functions that operate on Shiller's data (S&P price, dividends, CPI, GS10, CAPE).
  * Data: http://www.econ.yale.edu/~shiller/data.htm
  */
-public class Shiller
+public class ShillerOld
 {
   public static int PRICE = 0;
   public static int DIV   = 1;
@@ -75,7 +75,7 @@ public class Shiller
       Sequence seq = new Sequence("Dividends");
       double div = 0.0;
       for (int i = 0; i < shiller.length(); ++i) {
-        div += shiller.get(i, Shiller.DIV);
+        div += shiller.get(i, ShillerOld.DIV);
         LocalDate date = TimeLib.ms2date(shiller.getTimeMS(i));
         Month month = date.getMonth();
         if (month == Month.MARCH || month == Month.JUNE || month == Month.SEPTEMBER || month == Month.DECEMBER) {

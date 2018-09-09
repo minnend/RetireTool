@@ -18,7 +18,7 @@ import org.minnen.retiretool.util.TimeLib;
  * 
  * The APIs in the class work with a CSV file, which must be saved from the excel spreadsheet that Shiller provides.
  */
-public class ShillerIO
+public class Shiller
 {
   public static int                        PRICE = 0;
   public static int                        DIV   = 1;
@@ -102,14 +102,14 @@ public class ShillerIO
    */
   public static Sequence loadSNP(File file, DividendMethod divMethod) throws IOException
   {
-    Sequence snp = ShillerIO.loadAll(file);
+    Sequence snp = Shiller.loadAll(file);
     return FinLib.calcSnpReturns(snp, 0, -1, divMethod);
   }
 
   public static void main(String[] args) throws IOException
   {
-    Sequence snpNoDivs = ShillerIO.loadSNP(DataIO.shiller, DividendMethod.NO_REINVEST_MONTHLY);
-    Sequence snpWithDivs = ShillerIO.loadSNP(DataIO.shiller, DividendMethod.MONTHLY);
+    Sequence snpNoDivs = Shiller.loadSNP(DataIO.shiller, DividendMethod.NO_REINVEST_MONTHLY);
+    Sequence snpWithDivs = Shiller.loadSNP(DataIO.shiller, DividendMethod.MONTHLY);
 
     System.out.printf("  No divs (%d): [%s] -> [%s]\n", snpNoDivs.length(), TimeLib.formatDate(snpNoDivs.getStartMS()),
         TimeLib.formatDate(snpNoDivs.getEndMS()));

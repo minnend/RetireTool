@@ -32,7 +32,7 @@ import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.data.Sequence.EndpointBehavior;
 import org.minnen.retiretool.data.SequenceStoreV1;
-import org.minnen.retiretool.data.ShillerIO;
+import org.minnen.retiretool.data.Shiller;
 import org.minnen.retiretool.data.YahooIO;
 import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
@@ -68,7 +68,7 @@ public class RetireToolMonthly
 
   public static void setupShillerData(File dataDir, File dir, boolean buildComplexStrategies) throws IOException
   {
-    Sequence shiller = ShillerIO.loadAll(new File(dataDir, "shiller.csv"));
+    Sequence shiller = Shiller.loadAll(new File(dataDir, "shiller.csv"));
     Sequence tbillData = DataIO.loadDateValueCSV(new File(dataDir, "treasury-bills-3-month.csv"));
     tbillData.setName("3-Month Treasury Bills");
     tbillData = FinLib.pad(tbillData, shiller, 0.0);
@@ -109,8 +109,8 @@ public class RetireToolMonthly
     final int iStartSimulation = 12;
 
     // Extract stock and bond data from shiller sequence.
-    Sequence stockData = Shiller.getStockData(shiller, iStartData, iEndData);
-    Sequence bondData = Shiller.getData(Shiller.GS10, "Bonds", shiller, iStartData, iEndData);
+    Sequence stockData = ShillerOld.getStockData(shiller, iStartData, iEndData);
+    Sequence bondData = ShillerOld.getData(ShillerOld.GS10, "Bonds", shiller, iStartData, iEndData);
     assert stockData.matches(bondData);
     System.out.printf("Build Store: [%s] -> [%s]\n", TimeLib.formatMonth(stockData.getStartMS()),
         TimeLib.formatMonth(stockData.getEndMS()));
@@ -118,7 +118,7 @@ public class RetireToolMonthly
     store.addMisc(bondData, "BondData");
 
     // Add CPI data.
-    Sequence cpi = Shiller.getData(Shiller.CPI, "cpi", shiller, iStartData, iEndData);
+    Sequence cpi = ShillerOld.getData(ShillerOld.CPI, "cpi", shiller, iStartData, iEndData);
     store.addMisc(cpi);
     store.alias("inflation", "cpi");
 
@@ -469,7 +469,7 @@ public class RetireToolMonthly
     System.out.printf("Int Stock: [%s] -> [%s]\n", TimeLib.formatMonth(istock.getStartMS()),
         TimeLib.formatMonth(istock.getEndMS()));
 
-    Sequence shiller = ShillerIO.loadAll(new File(dataDir, "shiller.csv"));
+    Sequence shiller = Shiller.loadAll(new File(dataDir, "shiller.csv"));
 
     long commonStart = TimeLib.calcCommonStart(stock, bonds, reits, istock, shiller);
     long commonEnd = TimeLib.calcCommonEnd(stock, bonds, reits, istock, shiller);
@@ -728,8 +728,8 @@ public class RetireToolMonthly
     int percentStock = 60;
     int percentBonds = 40;
 
-    Sequence snpData = Shiller.getStockData(shiller, iStartData, iEndData);
-    Sequence bondData = Shiller.getData(Shiller.GS10, "Bonds", shiller, iStartData, iEndData);
+    Sequence snpData = ShillerOld.getStockData(shiller, iStartData, iEndData);
+    Sequence bondData = ShillerOld.getData(ShillerOld.GS10, "Bonds", shiller, iStartData, iEndData);
 
     Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStartData, -1);
     bonds.setName("Bonds");
@@ -992,8 +992,8 @@ public class RetireToolMonthly
     // iStart = getIndexForDate(1900, 1);
     // iEnd = getIndexForDate(2010, 1);
 
-    Sequence snpData = Shiller.getStockData(shiller, iStart, iEnd);
-    Sequence bondData = Shiller.getData(Shiller.GS10, "Bonds", shiller, iStart, iEnd);
+    Sequence snpData = ShillerOld.getStockData(shiller, iStart, iEnd);
+    Sequence bondData = ShillerOld.getData(ShillerOld.GS10, "Bonds", shiller, iStart, iEnd);
 
     Sequence snp = FinLib.calcSnpReturns(snpData, iStart, -1, DividendMethod.MONTHLY);
     Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStart, -1);
@@ -1046,8 +1046,8 @@ public class RetireToolMonthly
     int iStart = 0;
     int iEnd = shiller.length() - 1;
 
-    Sequence stockData = Shiller.getStockData(shiller, iStart, iEnd);
-    Sequence bondData = Shiller.getData(Shiller.GS10, "Bonds", shiller, iStart, iEnd);
+    Sequence stockData = ShillerOld.getStockData(shiller, iStart, iEnd);
+    Sequence bondData = ShillerOld.getData(ShillerOld.GS10, "Bonds", shiller, iStart, iEnd);
 
     Sequence stock = FinLib.calcSnpReturns(stockData, iStart, -1, DividendMethod.MONTHLY);
     Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, iStart, -1);
@@ -1225,7 +1225,7 @@ public class RetireToolMonthly
 
   public static void genInterestRateGraph(Sequence shiller, Sequence tbills, File file) throws IOException
   {
-    Sequence bonds = Shiller.getData(Shiller.GS10, "Bonds", shiller);
+    Sequence bonds = ShillerOld.getData(ShillerOld.GS10, "Bonds", shiller);
     Chart.saveChart(file, ChartConfig.Type.Line, "Interest Rates", null, null, GRAPH_WIDTH, GRAPH_HEIGHT, 0.0, 16.0,
         1.0, ChartScaling.LINEAR, ChartTiming.MONTHLY, 0, bonds, tbills);
   }
@@ -1235,8 +1235,8 @@ public class RetireToolMonthly
     int iStartData = 0; // shiller.getIndexForDate(1999, 1);
     int iEndData = shiller.length() - 1;
 
-    Sequence stockData = Shiller.getStockData(shiller, iStartData, iEndData);
-    Sequence bondData = Shiller.getData(Shiller.GS10, "Bonds", shiller, iStartData, iEndData);
+    Sequence stockData = ShillerOld.getStockData(shiller, iStartData, iEndData);
+    Sequence bondData = ShillerOld.getData(ShillerOld.GS10, "Bonds", shiller, iStartData, iEndData);
 
     Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, -1);
     bonds.setName("Bonds");
@@ -1453,16 +1453,16 @@ public class RetireToolMonthly
 
   public static Sequence synthesizeData(File dataDir, File dir) throws IOException
   {
-    Sequence shiller = ShillerIO.loadAll(new File(dataDir, "shiller.csv"));
+    Sequence shiller = Shiller.loadAll(new File(dataDir, "shiller.csv"));
     Sequence tbillData = DataIO.loadDateValueCSV(new File(dataDir, "treasury-bills-3-month.csv"));
     tbillData.setName("3-Month Treasury Bills");
     tbillData = FinLib.pad(tbillData, shiller, 0.0);
 
-    Sequence stock = FinLib.calcSnpReturns(Shiller.getStockData(shiller), 0, -1, DividendMethod.QUARTERLY);
-    Sequence bondData = Shiller.getData(Shiller.GS10, "Bonds", shiller);
+    Sequence stock = FinLib.calcSnpReturns(ShillerOld.getStockData(shiller), 0, -1, DividendMethod.QUARTERLY);
+    Sequence bondData = ShillerOld.getData(ShillerOld.GS10, "Bonds", shiller);
     Sequence bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, -1);
     Sequence tbills = Bond.calcReturnsRebuy(BondFactory.bill3Month, tbillData, 0, -1);
-    Sequence cpi = Shiller.getData(Shiller.CPI, "cpi", shiller);
+    Sequence cpi = ShillerOld.getData(ShillerOld.CPI, "cpi", shiller);
 
     Sequence nikkeiDaily = DataIO.loadDateValueCSV(new File(dataDir, "nikkei225-daily.csv"));
     Sequence nikkei = FinLib.daily2monthly(nikkeiDaily);

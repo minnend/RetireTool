@@ -6,7 +6,7 @@ import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.Sequence.EndpointBehavior;
-import org.minnen.retiretool.data.ShillerIO;
+import org.minnen.retiretool.data.Shiller;
 import org.minnen.retiretool.data.fred.FredSeries;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Library;
@@ -92,7 +92,7 @@ public class Predict10YearReturn
     equityAllocation.adjustDatesToEndOfQuarter();
 
     // Load S&P 500 data.
-    Sequence snp = ShillerIO.loadSNP(DataIO.shiller, FinLib.DividendMethod.MONTHLY);
+    Sequence snp = Shiller.loadSNP(DataIO.shiller, FinLib.DividendMethod.MONTHLY);
     snp.adjustDatesToEndOfMonth();
     System.out.printf("Shiller (%d): [%s] -> [%s]\n", snp.length(), TimeLib.formatDate(snp.getStartMS()),
         TimeLib.formatDate(snp.getEndMS()));

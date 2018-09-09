@@ -38,7 +38,7 @@ import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
-import org.minnen.retiretool.data.ShillerIO;
+import org.minnen.retiretool.data.Shiller;
 import org.minnen.retiretool.data.YahooIO;
 
 public class RetireTool
@@ -69,7 +69,7 @@ public class RetireTool
     File file = YahooIO.downloadDailyData("^GSPC", 8 * TimeLib.MS_IN_HOUR);
     Sequence stock = YahooIO.loadData(file);
     Sequence bondRate = DataIO.loadDateValueCSV(new File(dataDir, "treasury-10year-daily.csv"));
-    Sequence shiller = ShillerIO.loadAll(new File(dataDir, "shiller.csv"));
+    Sequence shiller = Shiller.loadAll(new File(dataDir, "shiller.csv"));
     shiller.adjustDatesToEndOfMonth();
     Sequence tbillData = DataIO.loadDateValueCSV(new File(dataDir, "treasury-bills-3-month.csv"));
     tbillData.setName("3-Month Treasury Bills");
@@ -100,11 +100,11 @@ public class RetireTool
     store.alias("interest-rates", "tbilldata");
 
     // Monthly S&P dividends.
-    Sequence divPayments = Shiller.getDividendPayments(shiller, DividendMethod.QUARTERLY);
+    Sequence divPayments = ShillerOld.getDividendPayments(shiller, DividendMethod.QUARTERLY);
     store.add(divPayments, "stock-dividends");
 
     // Add CPI data.
-    store.add(Shiller.getData(Shiller.CPI, "cpi", shiller));
+    store.add(ShillerOld.getData(ShillerOld.CPI, "cpi", shiller));
     store.alias("inflation", "cpi");
 
     // Daily bond data.
