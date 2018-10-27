@@ -45,7 +45,10 @@ public class ComparePortfolios
   // TODO use cash instead of VFISX to get data from before 1991.
   // public static final String[] fundSymbols = new String[] { "VFINX", "VBMFX", "VWIGX", "VFISX", "VWINX", "NAESX" };
   public static final String[]      fundSymbols  = new String[] { "VFINX", "VBMFX", "VWIGX", "VWINX", "NAESX", "VGENX",
-      "FRESX", "VEXMX" };
+      "FRESX", "VEXMX",
+
+      // "VIVAX", "VTMSX", "VISVX", "VGSIX", "FSIIX", "VTRIX", "FSCOX", "VEIEX", "FIREX" // merriman
+  };
 
   public static final String[]      assetSymbols = new String[fundSymbols.length + 2];
 
@@ -140,6 +143,11 @@ public class ComparePortfolios
         0.3, 0.1);
     Sequence returnsLazy4 = portfolios.run(predictor, timeSimStart, timeSimEnd);
     returns.add(returnsLazy4);
+
+    // Merriman Aggressive.
+    // predictor = portfolios.merrimanAggressive();
+    // Sequence returnsMerriman = portfolios.run(predictor, timeSimStart, timeSimEnd);
+    // returns.add(returnsMerriman);
 
     // Set up defenders for comparison analysis based on previous portfolios.
     List<ComparisonStats> compStats = new ArrayList<>();

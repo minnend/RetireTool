@@ -84,6 +84,14 @@ public final class FinLib
 
   public static final String[] STOCK_MARKET_FUNDS      = new String[] { "^GSPC" };
 
+  /**
+   * https://paulmerriman.com/vanguard/
+   * http://paulmerriman.com/2014-new-site/mutual-funds/
+   */
+  // Admiral shares: VFIAX, VVIAX, VTMSX, VSIAX, VGSLX, VTMGX, VTRIX, VFSVX, VEMAX, VGRLX
+  public static final String[] MERRIMAN_AGGRESSIVE     = new String[] { "VFINX", "VIVAX", "VTMSX", "VISVX", "VGSIX",
+      "VDVIX", "VTRIX", "VFSVX", "VEIEX", "VGXRX" };
+
   /** Symbols in the S&P 500 in 2018. */
   public static final String[] SP500_FUNDS             = new String[] { "MMM", "ABT", "ABBV", "ACN", "ATVI", "AYI",
       "ADBE", "AMD", "AAP", "AES", "AET", "AMG", "AFL", "A", "APD", "AKAM", "ALK", "ALB", "ARE", "ALXN", "ALGN", "ALLE",

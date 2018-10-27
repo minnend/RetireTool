@@ -131,6 +131,11 @@ public class Chart
   public static void saveChart(ChartConfig config) throws IOException
   {
     Sequence[] seqs = config.data;
+    // for (Sequence seq : seqs) {
+    // System.out.printf("%20s (%d): [%s] -> [%s]\n", seq.getName(), seq.length(), TimeLib.formatDate(seq.getStartMS()),
+    // TimeLib.formatDate(seq.getEndMS()));
+    // }
+
     // saveDataCSV(config, seqs);
     try (Writer writer = new Writer(config.file)) {
       writer.write("<html><head>\n");
@@ -283,7 +288,8 @@ public class Chart
       writer.write("});\n");
 
       writer.write("</script></head><body>\n");
-      writer.write("<div id=\"%s\" style=\"width:%dpx; height:%dpx;\" />\n", config.containerName, config.width, config.height);
+      writer.write("<div id=\"%s\" style=\"width:%dpx; height:%dpx;\" />\n", config.containerName, config.width,
+          config.height);
       writer.write("</body></html>\n");
     }
   }

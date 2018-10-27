@@ -412,6 +412,7 @@ public class Simulation
       // End of day business.
       if (rebalanceDelay > 0) --rebalanceDelay;
       broker.doEndOfDayBusiness();
+      // TODO should deposit be on last day of month or first?
       if (timeInfo.isLastDayOfMonth && monthlyDeposit > 0.0 && runIndex > 0) {
         account.deposit(Fixed.toFixed(monthlyDeposit), Flow.InFlow, "Monthly Deposit");
       }

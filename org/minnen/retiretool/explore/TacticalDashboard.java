@@ -2,16 +2,24 @@ package org.minnen.retiretool.explore;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.StringWriter;
+import java.time.LocalDate;
 import java.time.Month;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.data.YahooIO;
+import org.minnen.retiretool.data.tiingo.TiingoFund;
 import org.minnen.retiretool.predictor.config.ConfigConst;
 import org.minnen.retiretool.predictor.config.ConfigMulti;
 import org.minnen.retiretool.predictor.config.ConfigSMA;
@@ -21,6 +29,7 @@ import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.predictor.daily.TimeCode;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.util.FinLib;
+import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.LinearFunc;
 import org.minnen.retiretool.util.PriceModel;
 import org.minnen.retiretool.util.Slippage;
@@ -42,7 +51,7 @@ public class TacticalDashboard
 
   public static final int               maxDelay      = 0;
   public static final long              gap           = 2 * TimeLib.MS_IN_DAY;
-  public static final PriceModel        priceModel    = PriceModel.closeModel;
+  public static final PriceModel        priceModel    = PriceModel.adjCloseModel;
 
   public static final String            riskyName     = "stock";
   public static final String            safeName      = "3-month-treasuries";
@@ -67,11 +76,15 @@ public class TacticalDashboard
   public static void setupData() throws IOException
   {
     String symbol = "^GSPC";
-    File file = YahooIO.downloadDailyData(symbol, 8 * TimeLib.MS_IN_HOUR);
-    Sequence stock = YahooIO.loadData(file);
+    Sequence stock = null;
 
-    // TiingoFund fund = TiingoFund.fromSymbol("VFINX", true);
-    // Sequence stock = fund.data;
+    if (symbol == "^GSPC") {
+      File file = YahooIO.downloadDailyData(symbol, 8 * TimeLib.MS_IN_HOUR);
+      stock = YahooIO.loadData(file);
+    } else {
+      TiingoFund fund = TiingoFund.fromSymbol(symbol, true);
+      stock = fund.data;
+    }
 
     System.out.printf("S&P (Daily): [%s] -> [%s]\n", TimeLib.formatDate(stock.getStartMS()),
         TimeLib.formatDate(stock.getEndMS()));
@@ -79,6 +92,43 @@ public class TacticalDashboard
 
     Sequence tb3mo = FinLib.inferAssetFrom3MonthTreasuries();
     store.add(tb3mo, "3-month-treasuries");
+  }
+
+  private static String genCodeStatsHtml(Map<Integer, List<Double>> returnsByCode, int currentCode)
+  {
+    StringWriter sw = new StringWriter();
+    try (Writer writer = new Writer(sw)) {
+      writer.write("<table id=\"decadeComparisonTable\" cellspacing=\"0\"><thead>\n");
+      writer.write(
+          "<tr><th>Code</th><th>Count</th><th>Total<br/>Return</th><th>Win<br/>Percent</th><th>Min</th><th>Mean</th><th>Max</th>\n");
+      writer.write("</thead><tbody>\n");
+
+      int iRow = 0;
+      for (Map.Entry<Integer, List<Double>> entry : returnsByCode.entrySet()) {
+        double[] returns = ArrayUtils.toPrimitive(entry.getValue().toArray(new Double[entry.getValue().size()]));
+        Arrays.sort(returns);
+        final int n = returns.length;
+        double total = 1.0;
+        int nLose = 0;
+        for (double r : returns) {
+          total *= r;
+          if (r < 1.0) ++nLose;
+        }
+        String className = (iRow % 2 == 0 ? "evenRow" : "oddRow");
+        if (entry.getKey() == currentCode) {
+          className += "Bold";
+        }
+        writer.write(
+            " <tr class=\"%s\"><td>%d</td><td>%d</td><td>%.2f</td><td>%.1f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>\n",
+            className, entry.getKey(), returns.length, FinLib.mul2ret(total), 100.0 - 100.0 * nLose / n,
+            FinLib.mul2ret(returns[0]), FinLib.mul2ret(Library.mean(returns)), FinLib.mul2ret(returns[n - 1]));
+
+        ++iRow;
+      }
+      writer.write("</tbody>\n</table>\n");
+    } catch (IOException e) {}
+
+    return sw.toString();
   }
 
   public static void runMulti3(Simulation sim, File dir) throws IOException
@@ -119,9 +169,10 @@ public class TacticalDashboard
       f.write("<table cellspacing=\"0\">\n");
       List<TimeCode> exitDates = new ArrayList<>();
       List<TimeCode> reenterDates = new ArrayList<>();
-      for (int iCode = predStrategy.timeCodes.size() - 1; iCode >= 0; --iCode) {
+      Map<Integer, List<Double>> returnsByCode = new TreeMap<>();
+      int nCodes = predStrategy.timeCodes.size();
+      for (int iCode = nCodes - 1; iCode >= 0; --iCode) {
         TimeCode timeCodeSingles = predStrategy.timeCodes.get(iCode);
-        // System.out.println(timeCodeSingles);
 
         long prevTime = baselineReturns.getStartMS();
         if (iCode > 0) {
@@ -147,7 +198,9 @@ public class TacticalDashboard
 
         // Final decision.
         int iTopCode = TimeCode.indexForTime(timeCodeSingles.time, predStrategy.timeCodes);
+        assert iTopCode == iCode;
         int iPrevTop = TimeCode.indexForTime(prevTime, predStrategy.timeCodes);
+        assert iPrevTop <= iTopCode;
         TimeCode timeCodeStrategy = predStrategy.timeCodes.get(iTopCode);
         TimeCode prevCodeStrategy = predStrategy.timeCodes.get(iPrevTop);
 
@@ -158,6 +211,13 @@ public class TacticalDashboard
         int index1 = baselineReturns.getClosestIndex(timeCodeSingles.time);
         int index2 = baselineReturns.getClosestIndex(nextTime);
         double totalMul = FinLib.getTotalReturn(baselineReturns, index1, index2);
+        // System.out.printf("%d = %f\n", timeCodeSingles.code, totalMul);
+        List<Double> returns = returnsByCode.get(timeCodeSingles.code);
+        if (returns == null) {
+          returns = new ArrayList<Double>();
+          returnsByCode.put(timeCodeSingles.code, returns);
+        }
+        returns.add(totalMul);
         f.write("<td>%.2f</td>", FinLib.mul2ret(totalMul));
 
         // Return for this time period (top-level change).
@@ -210,7 +270,9 @@ public class TacticalDashboard
       f.write(Chart.genDecadeTable(m2, m1) + "<br/>");
 
       // List of dates when the strategy moves to cash.
-      f.write("<b>Move to Safe Asset</b>: " + exitDates.size() + "<br/>\n");
+      // f.write("<b>Move to Safe Asset</b>: " + exitDates.size() + "<br/>\n");
+      f.write(TacticalDashboard.genCodeStatsHtml(returnsByCode, predStrategy.timeCodes.get(nCodes - 1).code));
+
       // f.write("<ul>\n");
       // for (int i = 0; i < exitDates.size(); ++i) {
       // TimeCode a = exitDates.get(i);
@@ -243,7 +305,8 @@ public class TacticalDashboard
     // Generate graphs.
     for (int i = 0; i < allParams.length; ++i) {
       int[] params = allParams[i];
-      final long startMs = TimeLib.toMs(2014, Month.JANUARY, 1);
+      // final long startMs = TimeLib.toMs(2014, Month.JANUARY, 1);
+      final long startMs = stock.getEndMS() - 365 * 4 * TimeLib.MS_IN_DAY;
       final long endMs = TimeLib.TIME_END;
       Sequence trigger = FinLib.sma(stock, params[0], params[1], FinLib.Close).subseq(startMs, endMs);
       Sequence base = FinLib.sma(stock, params[2], params[3], FinLib.Close).subseq(startMs, endMs);
@@ -253,7 +316,8 @@ public class TacticalDashboard
       trigger.setName("Trigger");
       base.setName("Base");
       Chart.saveLineChart(new File(DataIO.outputPath, String.format("sma%d.html", i + 1)),
-          String.format("SMA-%d", i + 1), 1200, 600, ChartScaling.LINEAR, ChartTiming.DAILY, trigger, baseLow, baseHigh, raw);
+          String.format("SMA-%d", i + 1), 1200, 600, ChartScaling.LINEAR, ChartTiming.DAILY, trigger, baseLow, baseHigh,
+          raw);
     }
   }
 }

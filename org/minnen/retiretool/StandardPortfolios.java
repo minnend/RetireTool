@@ -60,6 +60,21 @@ public class StandardPortfolios
     return passive(name, assets, mix);
   }
 
+  /**
+   * Passive portfolio using Paul Merriman's aggressive asset allocation Source: https://paulmerriman.com/vanguard/
+   */
+  public Predictor merrimanAggressive()
+  {
+    // Admiral shares: VFIAX, VVIAX, VTMSX, VSIAX, VGSLX, VTMGX, VTRIX, VFSVX, VEMAX, VGRLX
+    // Investor shares: "VFINX", "VIVAX", "VTMSX", "VISVX", "VGSIX", "VDVIX", "VTRIX", "VFSVX", "VEIEX", "VGXRX"
+
+    // Final set mixes in some Fidelity funds that have more historical data.
+    String[] assets = new String[] { "VFINX", "VIVAX", "VTMSX", "VISVX", "VGSIX", "FSIIX", "VTRIX", "FSCOX", "VEIEX",
+        "FIREX" };
+    double[] mix = new double[] { 11, 11, 11, 12, 5, 9, 18, 9, 9, 5 };
+    return passive("Merriman Aggressive", assets, mix);
+  }
+
   /** Standard dual-momentum strategy with 12-month look-back. */
   public Predictor dualMomentum(int nMaxKeep, String safeAsset, String... riskyAssets)
   {

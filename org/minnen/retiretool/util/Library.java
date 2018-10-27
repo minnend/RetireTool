@@ -4,8 +4,6 @@ import java.text.*;
 import java.util.*;
 import java.util.function.Predicate;
 
-import org.minnen.retiretool.data.Sequence;
-
 public final class Library
 {
   public final static long          LNAN         = Long.MIN_VALUE;
@@ -309,6 +307,23 @@ public final class Library
       if (a[i] < min) min = a[i];
     }
     return min;
+  }
+
+  /** @return maximum of the values in the given array. */
+  public static double max(double[] a)
+  {
+    return max(a, 0, a.length - 1);
+  }
+
+  /** @return maximum of the values in [iStart, iEnd] for the given array. */
+  public static double max(double[] a, int iStart, int iEnd)
+  {
+    assert iStart <= iEnd;
+    double max = a[iStart];
+    for (int i = iStart + 1; i <= iEnd; ++i) {
+      if (a[i] > max) max = a[i];
+    }
+    return max;
   }
 
   /** @return mean (average) of the values in the given array. */

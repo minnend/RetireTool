@@ -25,8 +25,8 @@ import org.minnen.retiretool.util.TimeLib;
 
 public class DataIO
 {
-  public static final File outputPath  = new File("f:/web");
-  public static final File financePath = new File("f:/research/finance");
+  public static final File outputPath  = new File("e:/web");
+  public static final File financePath = new File("e:/research/finance");
   public static final File shiller = new File(financePath, "shiller.csv");
 
   static {
