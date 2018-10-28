@@ -3,12 +3,9 @@ package org.minnen.retiretool.explore;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.time.LocalDate;
-import java.time.Month;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -41,21 +38,69 @@ import org.minnen.retiretool.viz.Chart.ChartTiming;
 
 public class TacticalDashboard
 {
-  public final static SequenceStore     store         = new SequenceStore();
+  public final static SequenceStore store      = new SequenceStore();
 
   /** Dimension to use in the price sequence for SMA predictions. */
-  public static int                     iPriceSMA     = 0;
+  public static int                 iPriceSMA  = 0;
 
-  public static final Slippage          slippage      = Slippage.None;
-  public static final LinearFunc        PriceSDev     = LinearFunc.Zero;
+  public static final Slippage      slippage   = Slippage.None;
+  public static final LinearFunc    PriceSDev  = LinearFunc.Zero;
 
-  public static final int               maxDelay      = 0;
-  public static final long              gap           = 2 * TimeLib.MS_IN_DAY;
-  public static final PriceModel        priceModel    = PriceModel.adjCloseModel;
+  public static final int           maxDelay   = 0;
+  public static final long          gap        = 2 * TimeLib.MS_IN_DAY;
+  public static final PriceModel    priceModel = PriceModel.adjCloseModel;
 
-  public static final String            riskyName     = "stock";
-  public static final String            safeName      = "3-month-treasuries";
-  public static final String[]          assetNames    = new String[] { riskyName, safeName };
+  public static final String        riskyName  = "stock";
+  public static final String        safeName   = "3-month-treasuries";
+  public static final String[]      assetNames = new String[] { riskyName, safeName };
+
+  public static final String        red        = "D12";
+  public static final String        green      = "1E2";
+
+  private static class CodePair implements Comparable<CodePair>
+  {
+    public int code1, code2;
+
+    public CodePair(int code1, int code2)
+    {
+      this.code1 = code1;
+      this.code2 = code2;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      final int prime = 31;
+      int result = 1;
+      result = prime * result + code1;
+      result = prime * result + code2;
+      return result;
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+      if (this == obj) return true;
+      if (obj == null) return false;
+      if (getClass() != obj.getClass()) return false;
+      CodePair other = (CodePair) obj;
+      if (code1 != other.code1) return false;
+      if (code2 != other.code2) return false;
+      return true;
+    }
+
+    @Override
+    public int compareTo(CodePair other)
+    {
+      if (other == this) return 0;
+      if (other == null) return -1;
+      if (code2 < other.code2) return -1;
+      if (code2 > other.code2) return 1;
+      if (code1 < other.code1) return -1;
+      if (code1 > other.code1) return 1;
+      return 0;
+    }
+  }
 
   // public static final PredictorConfig[] singleConfigs = new PredictorConfig[] {
   // new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap), new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap),
@@ -70,6 +115,7 @@ public class TacticalDashboard
   public static final PredictorConfig[] singleConfigs = new PredictorConfig[] {
       new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap), new ConfigSMA(25, 0, 155, 125, 0.75, FinLib.Close, gap),
       new ConfigSMA(5, 0, 165, 5, 0.5, FinLib.Close, gap) };
+
   public static final int[][]           allParams     = new int[][] { { 20, 0, 240, 150, 25 }, { 25, 0, 155, 125, 75 },
       { 5, 0, 165, 5, 50 } };
 
@@ -92,6 +138,16 @@ public class TacticalDashboard
 
     Sequence tb3mo = FinLib.inferAssetFrom3MonthTreasuries();
     store.add(tb3mo, "3-month-treasuries");
+  }
+
+  private static String genColoredCell(String data, boolean cond, String trueColor, String falseColor)
+  {
+    final String color = cond ? trueColor : falseColor;
+    if (color == null || color.isEmpty()) {
+      return String.format("<td>%s</td>", data);
+    } else {
+      return String.format("<td style=\"color: #%s;\">%s</td>", color, data);
+    }
   }
 
   private static String genCodeStatsHtml(Map<Integer, List<Double>> returnsByCode, int currentCode)
@@ -118,14 +174,59 @@ public class TacticalDashboard
         if (entry.getKey() == currentCode) {
           className += "Bold";
         }
+        double mean = FinLib.mul2ret(Library.mean(returns));
+        String sMean = genColoredCell(String.format("%.2f", mean), mean >= 0, null, red);
         writer.write(
-            " <tr class=\"%s\"><td>%d</td><td>%d</td><td>%.2f</td><td>%.1f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>\n",
+            " <tr class=\"%s\"><td>%d</td><td>%d</td><td>%.2f</td><td>%.1f</td><td>%.2f</td>%s<td>%.2f</td></tr>\n",
             className, entry.getKey(), returns.length, FinLib.mul2ret(total), 100.0 - 100.0 * nLose / n,
-            FinLib.mul2ret(returns[0]), FinLib.mul2ret(Library.mean(returns)), FinLib.mul2ret(returns[n - 1]));
+            FinLib.mul2ret(returns[0]), sMean, FinLib.mul2ret(returns[n - 1]));
 
         ++iRow;
       }
-      writer.write("</tbody>\n</table>\n");
+      writer.write("</tbody>\n</table><br/>\n");
+    } catch (IOException e) {}
+
+    return sw.toString();
+  }
+
+  private static String genPairStatsHtml(Map<CodePair, List<Double>> returnsByPair, CodePair currentPair)
+  {
+    StringWriter sw = new StringWriter();
+    try (Writer writer = new Writer(sw)) {
+      writer.write("<table id=\"decadeComparisonTable\" cellspacing=\"0\"><thead>\n");
+      writer.write(
+          "<tr><th>Previous<br/>Code</th><th>Current<br/>Code</th><th>Count</th><th>Total<br/>Return</th><th>Win<br/>Percent</th><th>Min</th><th>Mean</th><th>Max</th>\n");
+      writer.write("</thead><tbody>\n");
+
+      int iRow = 0;
+      for (Map.Entry<CodePair, List<Double>> entry : returnsByPair.entrySet()) {
+        CodePair pair = entry.getKey();
+        double[] returns = ArrayUtils.toPrimitive(entry.getValue().toArray(new Double[entry.getValue().size()]));
+        Arrays.sort(returns);
+        final int n = returns.length;
+        double total = 1.0;
+        int nLose = 0;
+        for (double r : returns) {
+          total *= r;
+          if (r < 1.0) ++nLose;
+        }
+        // System.out.printf("[%d,%d] (%d): %.2f [%.2f, %.2f, %.2f]\n", pair.code1, pair.code2, n,
+        // FinLib.mul2ret(total),
+        // FinLib.mul2ret(returns[0]), FinLib.mul2ret(Library.mean(returns)), FinLib.mul2ret(returns[n - 1]));
+
+        String className = (iRow % 2 == 0 ? "evenRow" : "oddRow");
+        if (pair.equals(currentPair)) {
+          className += "Bold";
+        }
+        double mean = FinLib.mul2ret(Library.mean(returns));
+        String sMean = genColoredCell(String.format("%.2f", mean), mean >= 0, null, red);
+        writer.write(
+            " <tr class=\"%s\"><td>%d</td><td>%d</td><td>%d</td><td>%.2f</td><td>%.1f</td><td>%.2f</td>%s<td>%.2f</td></tr>\n",
+            className, pair.code1, pair.code2, returns.length, FinLib.mul2ret(total), 100.0 - 100.0 * nLose / n,
+            FinLib.mul2ret(returns[0]), sMean, FinLib.mul2ret(returns[n - 1]));
+        ++iRow;
+      }
+      writer.write("</tbody>\n</table><br/>\n");
     } catch (IOException e) {}
 
     return sw.toString();
@@ -143,7 +244,8 @@ public class TacticalDashboard
     System.out.println(stats);
 
     // Multi-predictor to make final decisions.
-    PredictorConfig configStrategy = new ConfigMulti(254, singleConfigs);
+    long assetMap = 254;
+    PredictorConfig configStrategy = new ConfigMulti(assetMap, singleConfigs);
     MultiPredictor predStrategy = (MultiPredictor) configStrategy.build(sim.broker.accessObject, assetNames);
     sim.run(predStrategy, "Tactical");
     Sequence strategyReturns = sim.returnsDaily;
@@ -153,8 +255,6 @@ public class TacticalDashboard
     stats = CumulativeStats.calc(sim.returnsMonthly);
     System.out.println(stats);
 
-    final String green = "1E2";
-    final String red = "D12";
     final String sRowGap = "<td class=\"hgap\">&nbsp;</td>";
 
     try (Writer f = new Writer(new File(dir, "dashboard.html"))) {
@@ -170,6 +270,7 @@ public class TacticalDashboard
       List<TimeCode> exitDates = new ArrayList<>();
       List<TimeCode> reenterDates = new ArrayList<>();
       Map<Integer, List<Double>> returnsByCode = new TreeMap<>();
+      Map<CodePair, List<Double>> returnsByPair = new TreeMap<>();
       int nCodes = predStrategy.timeCodes.size();
       for (int iCode = nCodes - 1; iCode >= 0; --iCode) {
         TimeCode timeCodeSingles = predStrategy.timeCodes.get(iCode);
@@ -185,8 +286,8 @@ public class TacticalDashboard
         }
 
         // Date column.
-        f.write("<tr class=\"%s\"><td class=\"history\">%s</td>", iCode % 2 == 0 ? "evenRow" : "oddRow",
-            TimeLib.formatDate(timeCodeSingles.time));
+        f.write("<tr class=\"%s\"><td class=\"history\">%s</td>%s<td>%d</td>", iCode % 2 == 0 ? "evenRow" : "oddRow",
+            TimeLib.formatDate(timeCodeSingles.time), sRowGap, timeCodeSingles.code);
         f.write(sRowGap);
 
         // Single SMA predictors.
@@ -211,13 +312,27 @@ public class TacticalDashboard
         int index1 = baselineReturns.getClosestIndex(timeCodeSingles.time);
         int index2 = baselineReturns.getClosestIndex(nextTime);
         double totalMul = FinLib.getTotalReturn(baselineReturns, index1, index2);
-        // System.out.printf("%d = %f\n", timeCodeSingles.code, totalMul);
+
+        // Returns by code.
         List<Double> returns = returnsByCode.get(timeCodeSingles.code);
         if (returns == null) {
           returns = new ArrayList<Double>();
           returnsByCode.put(timeCodeSingles.code, returns);
         }
         returns.add(totalMul);
+
+        // Returns by code pair.
+        if (iCode > 0) {
+          TimeCode timeCodePrev = predStrategy.timeCodes.get(iCode - 1);
+          CodePair pair = new CodePair(timeCodePrev.code, timeCodeSingles.code);
+          returns = returnsByPair.get(pair);
+          if (returns == null) {
+            returns = new ArrayList<Double>();
+            returnsByPair.put(pair, returns);
+          }
+          returns.add(totalMul);
+        }
+
         f.write("<td>%.2f</td>", FinLib.mul2ret(totalMul));
 
         // Return for this time period (top-level change).
@@ -255,38 +370,29 @@ public class TacticalDashboard
       f.write("<b>Column Legend</b><br/>\n");
       f.write("<ol style=\"margin-top: 4px\">\n");
       f.write("<li>Date of event\n");
+      f.write("<li>Prediction Code\n");
       f.write("<li>Vote for each of the three SMA predictors\n");
       f.write("<li>Trade decision (combined vote; <font color=\"#%s\">"
           + "Green</font>=S&amp;P, <font color=\"#%s\">Red</font>=Cash)\n", green, red);
       f.write("<li>Price change between events\n");
       f.write("<li>Price change between trades\n");
       f.write("</ol>\n");
-      f.write("<p>\n");
-      f.write("[<a href=\"sma1.html\">SMA-1</a>]\n");
-      f.write("[<a href=\"sma2.html\">SMA-2</a>]\n");
-      f.write("[<a href=\"sma3.html\">SMA-3</a>]\n");
-      f.write("</p>\n");
-
-      f.write(Chart.genDecadeTable(m2, m1) + "<br/>");
+      f.write("<div><b>Graphs for SMA Predictors:</b>\n");
+      f.write("<a href=\"sma1.html\">SMA (4)</a>&nbsp;|&nbsp;\n");
+      f.write("<a href=\"sma2.html\">SMA (2)</a>&nbsp;|&nbsp;\n");
+      f.write("<a href=\"sma3.html\">SMA (1)</a>\n");
+      f.write("</div><br/>\n");
 
       // List of dates when the strategy moves to cash.
       // f.write("<b>Move to Safe Asset</b>: " + exitDates.size() + "<br/>\n");
       f.write(TacticalDashboard.genCodeStatsHtml(returnsByCode, predStrategy.timeCodes.get(nCodes - 1).code));
-
-      // f.write("<ul>\n");
-      // for (int i = 0; i < exitDates.size(); ++i) {
-      // TimeCode a = exitDates.get(i);
-      // TimeCode b = reenterDates.get(i);
-      // f.write("<li>[%s] &rarr; [%s] (%s)</li>\n", TimeLib.formatDate2(a.time), TimeLib.formatDate2(b.time),
-      // TimeLib.formatDuration(b.time - a.time));
-      //
-      // // Sequence seq = store.get(riskyName).subseq(a.time, b.time);
-      // // Chart.saveLineChart(
-      // // new File(DataIO.outputPath, String.format("exit-%02d-%s.html", i + 1, TimeLib.formatYMD(a.time))),
-      // // String.format("Exit %d", i + 1), 1200, 600, false, false, seq);
-      // }
-      // f.write("</ul>\n");
-      f.write("</div>\n");
+      if (nCodes > 1) {
+        int code = predStrategy.timeCodes.get(nCodes - 1).code;
+        int prev = predStrategy.timeCodes.get(nCodes - 2).code;
+        f.write(TacticalDashboard.genPairStatsHtml(returnsByPair, new CodePair(prev, code)));
+      }
+      f.write(Chart.genDecadeTable(m2, m1) + "<br/>");
+      f.write("</div>\n"); // end column 2
 
       f.write("</body></html>\n");
     }

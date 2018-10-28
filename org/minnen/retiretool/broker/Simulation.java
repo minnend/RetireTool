@@ -130,7 +130,7 @@ public class Simulation
       }
     }
     double sum = dist.sum();
-    // System.out.printf("  Step1: %s  (%f)\n", dist.toStringWithNames(2), sum);
+    // System.out.printf(" Step1: %s (%f)\n", dist.toStringWithNames(2), sum);
     // System.out.print("Can Change:");
     // for (int i = 0; i < N; ++i) {
     // if (!canChange[i]) continue;
@@ -359,7 +359,6 @@ public class Simulation
 
     Account account = broker.getAccount(AccountName);
     DiscreteDistribution targetDist = null;
-    PriceModel priceModel = PriceModel.adjOpenModel;
 
     // System.out.printf("Sim.runTo(Start,%d): [%s] -> [%s]\n", runIndex,
     // TimeLib.formatDate(guideSeq.getTimeMS(runIndex)),
@@ -373,7 +372,7 @@ public class Simulation
       broker.setNewDay(timeInfo);
 
       // Calculate return over next week.
-      predictor.futureReturns = calcFutureReturns(timeInfo, 5, priceModel);
+      // predictor.futureReturns = calcFutureReturns(timeInfo, 5, PriceModel.adjOpenModel);
 
       if (holdings.isEmpty()) {
         holdings.put(timeInfo.date, account.getDistribution());
@@ -406,7 +405,7 @@ public class Simulation
         // System.out.printf("[%s] %s\n", TimeLib.formatDate(timeInfo.time),
         // account.getDistribution().toStringWithNames(2));
         buyTowardTargetAllocation(targetDist, account);
-        // System.out.printf("             %s\n", account.getDistribution().toStringWithNames(2));
+        // System.out.printf(" %s\n", account.getDistribution().toStringWithNames(2));
       }
 
       // End of day business.
@@ -430,7 +429,7 @@ public class Simulation
       bNeedRebalance = ((timeInfo.time - lastRebalance) / TimeLib.MS_IN_DAY > REBALANCE_AFTER_N_DAYS
           || !targetDist.isSimilar(prevDist, DistributionEPS) || !targetDist.isSimilar(curDist, TargetEPS));
       // if (bNeedRebalance) {
-      // System.out.printf("Need Rebalance: [%s] vs [%s]   %s vs %s / %s\n", TimeLib.formatDate(timeInfo.time),
+      // System.out.printf("Need Rebalance: [%s] vs [%s] %s vs %s / %s\n", TimeLib.formatDate(timeInfo.time),
       // TimeLib.formatDate(lastRebalance), targetDist, prevDist, curDist.toStringWithNames(2));
       // }
 
