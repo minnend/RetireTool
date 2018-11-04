@@ -208,4 +208,14 @@ public class TestFinLib
     d2 = LocalDate.of(2000, 3, 1);
     assertTrue(FinLib.isLTG(d1, d2));
   }
+
+  @Test
+  public void testCalcDrawdown()
+  {
+    Sequence returns = new Sequence(new double[] { 1, 2, 1, 0, 1, 2, 3, 2, 1 });
+    Sequence drawdown = FinLib.calcDrawdown(returns);
+
+    double[] expected = new double[] { 0, 0, -50, -100, -50, 0, 0, -100.0 / 3, -200.0 / 3 };
+    assertArrayEquals(expected, drawdown.extractDim(0), 1e-5);
+  }
 }

@@ -86,6 +86,7 @@ public final class FinLib
 
   /**
    * https://paulmerriman.com/vanguard/
+   * 
    * http://paulmerriman.com/2014-new-site/mutual-funds/
    */
   // Admiral shares: VFIAX, VVIAX, VTMSX, VSIAX, VGSLX, VTMGX, VTRIX, VFSVX, VEMAX, VGRLX
@@ -1069,24 +1070,30 @@ public final class FinLib
     }
   }
 
+  /**
+   * Returns a sequence of drawdown values for the given return sequence.
+   * 
+   * Note that drawdown values are non-positive percentages (-50.0 = 50% drawdown).
+   * 
+   * @param cumulativeReturns Sequence of cumulative returns. This function assumes that the first dimension holds the
+   *          return values.
+   * @return Sequence with the same length as `cumulativeReturns` where each value is the corresponding drawdown.
+   */
   public static Sequence calcDrawdown(Sequence cumulativeReturns)
   {
     Sequence seq = new Sequence(cumulativeReturns.getName() + " - Drawdown");
     final int N = cumulativeReturns.size();
-    double peakReturn = 1.0;
-    double drawdown = 0.0;
-
-    final double firstValue = cumulativeReturns.getFirst(0);
-    seq.addData(0.0, cumulativeReturns.getStartMS());
-    for (int i = 1; i < N; ++i) {
-      double value = cumulativeReturns.get(i, 0) / firstValue;
-      if (value < peakReturn) {
-        drawdown = 100.0 * (peakReturn - value) / peakReturn;
-      } else if (value > peakReturn) {
+    double peakReturn = cumulativeReturns.getFirst(0);
+    for (int i = 0; i < N; ++i) {
+      final double value = cumulativeReturns.get(i, 0);
+      double drawdown;
+      if (value >= peakReturn) {
         peakReturn = value;
         drawdown = 0.0;
+      } else {
+        drawdown = -100.0 * (peakReturn - value) / peakReturn;
       }
-      seq.addData(-drawdown, cumulativeReturns.getTimeMS(i));
+      seq.addData(drawdown, cumulativeReturns.getTimeMS(i));
     }
 
     assert seq.length() == cumulativeReturns.length();
