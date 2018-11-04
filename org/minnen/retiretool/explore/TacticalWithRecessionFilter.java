@@ -5,7 +5,9 @@ import java.io.IOException;
 import java.time.Month;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.minnen.retiretool.StandardPortfolios;
 import org.minnen.retiretool.broker.Simulation;
@@ -138,7 +140,9 @@ public class TacticalWithRecessionFilter
         ChartTiming.MONTHLY, unrate, unrateSMA);
 
     // Tactical multi-predictor.
-    PredictorConfig config = new ConfigMulti(254, singleConfigs);
+    Set<Integer> contrary = new HashSet<Integer>();
+    contrary.add(0);
+    PredictorConfig config = new ConfigMulti(true, contrary, singleConfigs);
     Predictor predictor = config.build(sim.broker.accessObject, assetNames);
     sim.run(predictor, "Tactical");
     assert sim.returnsDaily.matches(baselineReturns);
@@ -157,10 +161,9 @@ public class TacticalWithRecessionFilter
     System.out.println(CumulativeStats.calc(sim.returnsMonthly));
 
     // Tactical + unemployment as a recession signal.
-    long x = 65534;
     // PredictorConfig configStrategy = new ConfigMulti(x, configSMA, configUnemployment);
-    PredictorConfig configStrategy = new ConfigMulti(x, singleConfigs[0], singleConfigs[1], singleConfigs[2],
-        configUnemployment);
+    PredictorConfig configStrategy = new ConfigMulti(true, contrary, singleConfigs[0], singleConfigs[1],
+        singleConfigs[2], configUnemployment);
     predictor = configStrategy.build(sim.broker.accessObject, assetNames);
     sim.run(predictor, "Tactical+Unemployment");
     assert sim.returnsDaily.matches(baselineReturns);

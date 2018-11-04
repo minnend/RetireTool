@@ -1,21 +1,28 @@
 package org.minnen.retiretool.predictor.daily;
 
+import java.util.Set;
+
 import org.minnen.retiretool.broker.BrokerInfoAccess;
-import org.minnen.retiretool.util.Library;
+import org.minnen.retiretool.util.IntPair;
 
 /** Combines the in/out votes from multiple predictors. */
 public class MultiPredictor extends Predictor
 {
-  private final long assetMap;
+  private final boolean      defaultDecision;
+  private final Set<Integer> contraryCodes;
+  private final Set<IntPair> contraryPairs;
+  private int                lastDifferentCode = -1;
 
   /** If the vote is positive ("in") hold `assetName`, else `alternativeAsset`. */
-  public MultiPredictor(Predictor[] predictors, long assetMap, String assetName, String alternativeAsset,
-      BrokerInfoAccess brokerAccess)
+  public MultiPredictor(Predictor[] predictors, boolean defaultDecision, Set<Integer> contraryCodes,
+      Set<IntPair> contraryPairs, String assetName, String alternativeAsset, BrokerInfoAccess brokerAccess)
   {
     super("MultiPredictor", brokerAccess, new String[] { assetName, alternativeAsset });
     this.predictorType = PredictorType.SelectOne;
     this.predictors = predictors;
-    this.assetMap = assetMap;
+    this.defaultDecision = defaultDecision;
+    this.contraryCodes = contraryCodes;
+    this.contraryPairs = contraryPairs;
     reset(); // child predictors may have already been used.
   }
 
@@ -41,18 +48,30 @@ public class MultiPredictor extends Predictor
     // Keep track of the times that the in/out decision changed.
     int prevCode = (timeCodes.isEmpty() ? -1 : timeCodes.get(timeCodes.size() - 1).code);
     if (code != prevCode) {
+      lastDifferentCode = prevCode;
       timeCodes.add(new TimeCode(brokerAccess.getTime(), code));
     }
+    IntPair pair = new IntPair(lastDifferentCode, code);
 
-    if (assetMap < 0) {
-      int nYes = Library.numBits(code);
-      int nNo = predictors.length - nYes;
-      // System.out.printf("code=%d (%d) #yes=%d #no=%d vote=%b\n", code, predictors.length, nYes, nNo,
-      // nNo <= Math.abs(assetMap));
-      return nNo <= Math.abs(assetMap); // combined vote is "in" if few enough constituents voted "out"
-    } else {
-      // Check the corresponding bit in the asset map.
-      return ((assetMap >> code) & 1L) > 0;
+    // Matching a contrary pair takes precedent over single matches.
+    if (contraryPairs != null && contraryPairs.contains(pair)) {
+      return !defaultDecision;
     }
+
+    if (contraryCodes != null && contraryCodes.contains(code)) {
+      return !defaultDecision;
+    } else {
+      return defaultDecision;
+    }
+    // if (assetMap < 0) {
+    // int nYes = Library.numBits(code);
+    // int nNo = predictors.length - nYes;
+    // // System.out.printf("code=%d (%d) #yes=%d #no=%d vote=%b\n", code, predictors.length, nYes, nNo,
+    // // nNo <= Math.abs(assetMap));
+    // return nNo <= Math.abs(assetMap); // combined vote is "in" if few enough constituents voted "out"
+    // } else {
+    // // Check the corresponding bit in the asset map.
+    // return ((assetMap >> code) & 1L) > 0;
+    // }
   }
 }

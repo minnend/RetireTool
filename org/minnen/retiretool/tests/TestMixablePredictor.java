@@ -144,7 +144,6 @@ public class TestMixablePredictor
   @Test
   public void testMulti()
   {
-    long assetMap = 254;
     int iIn = 0;
     int iOut = 1;
     PredictorConfig config;
@@ -152,14 +151,14 @@ public class TestMixablePredictor
 
     configs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, 0, 2, iIn, iOut),
         new ConfigSMA(50, 0, 180, 30, 1.0, 0, 2, iIn, iOut), new ConfigSMA(10, 0, 220, 0, 2.0, 0, 2, iIn, iOut), };
-    config = new ConfigMulti(assetMap, configs);
+    config = new ConfigMulti(true, 0, configs);
     assertTrue(checkWithMix(config));
 
     iIn = 1;
     iOut = 3;
     configs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, 0, 2, iIn, iOut),
         new ConfigSMA(50, 0, 180, 30, 1.0, 0, 2, iIn, iOut), new ConfigSMA(10, 0, 220, 0, 2.0, 0, 2, iIn, iOut), };
-    config = new ConfigMulti(assetMap, configs);
+    config = new ConfigMulti(true, 0, configs);
     assertTrue(checkWithMix(config));
   }
 }
