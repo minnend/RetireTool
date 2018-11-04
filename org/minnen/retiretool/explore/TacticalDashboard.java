@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import org.apache.commons.lang3.ArrayUtils;
 import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
@@ -63,6 +62,9 @@ public class TacticalDashboard
   /** overfitting? */
   public static final boolean           avoid62       = true;
 
+  public static final String            symbol        = "^GSPC";
+  // public static final String symbol = "VFINX";
+
   // public static final PredictorConfig[] singleConfigs = new PredictorConfig[] {
   // new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap), new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap),
   // new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap) };
@@ -80,11 +82,31 @@ public class TacticalDashboard
   public static final int[][]           allParams     = new int[][] { { 20, 0, 240, 150, 25 }, { 25, 0, 155, 125, 75 },
       { 5, 0, 165, 5, 50 } };
 
-  public static void setupData() throws IOException
+  public static class CodeInfo
   {
-    // String symbol = "^GSPC";
-    String symbol = "VFINX";
+    public CodeInfo(double returns, double drawdown)
+    {
+      this.returns = returns;
+      this.drawdown = drawdown;
+    }
 
+    public double returns;
+    public double drawdown;
+
+    public static double[] extract(List<CodeInfo> list, String field)
+    {
+      boolean extractReturns = (field.equals("returns"));
+      double[] r = new double[list.size()];
+      for (int i = 0; i < r.length; ++i) {
+        CodeInfo info = list.get(i);
+        r[i] = extractReturns ? info.returns : info.drawdown;
+      }
+      return r;
+    }
+  }
+
+  public static void setupData(String symbol) throws IOException
+  {
     Sequence stock = null;
     if (symbol == "^GSPC") {
       File file = YahooIO.downloadDailyData(symbol, 8 * TimeLib.MS_IN_HOUR);
@@ -112,18 +134,30 @@ public class TacticalDashboard
     }
   }
 
-  private static String genCodeStatsHtml(Map<Integer, List<Double>> returnsByCode, int currentCode)
+  private static String genTableRow(String tag, String... fields)
+  {
+    StringBuffer sb = new StringBuffer();
+    sb.append("<tr>");
+    for (String field : fields) {
+      field = field.replaceAll("\\n", "<br/>");
+      sb.append(String.format("<%s>%s</%s>", tag, field, tag));
+    }
+    sb.append("</tr>\n");
+    return sb.toString();
+  }
+
+  private static String genCodeStatsHtml(Map<Integer, List<CodeInfo>> returnsByCode, int currentCode)
   {
     StringWriter sw = new StringWriter();
     try (Writer writer = new Writer(sw)) {
       writer.write("<table id=\"decadeComparisonTable\" cellspacing=\"0\"><thead>\n");
-      writer.write(
-          "<tr><th>Code</th><th>Count</th><th>Total<br/>Return</th><th>Win<br/>Percent</th><th>Min</th><th>Mean</th><th>Max</th>\n");
+      writer.write(genTableRow("th", "Code", "Count", "Win\nPercent", "Total\nReturn", "Min\nReturn", "Mean\nReturn",
+          "Max\nReturn", "Worst\nDD", "Mean\nDD"));
       writer.write("</thead><tbody>\n");
 
       int iRow = 0;
-      for (Map.Entry<Integer, List<Double>> entry : returnsByCode.entrySet()) {
-        double[] returns = ArrayUtils.toPrimitive(entry.getValue().toArray(new Double[entry.getValue().size()]));
+      for (Map.Entry<Integer, List<CodeInfo>> entry : returnsByCode.entrySet()) {
+        double[] returns = CodeInfo.extract(entry.getValue(), "returns");
         Arrays.sort(returns);
         final int n = returns.length;
         double total = 1.0;
@@ -132,6 +166,7 @@ public class TacticalDashboard
           total *= r;
           if (r < 1.0) ++nLose;
         }
+        double[] drawdowns = CodeInfo.extract(entry.getValue(), "drawdowns");
         String className = (iRow % 2 == 0 ? "evenRow" : "oddRow");
         if (entry.getKey() == currentCode) {
           className += "Bold";
@@ -139,9 +174,10 @@ public class TacticalDashboard
         double mean = FinLib.mul2ret(Library.mean(returns));
         String sMean = genColoredCell(String.format("%.2f", mean), mean >= 0, null, red);
         writer.write(
-            " <tr class=\"%s\"><td>%d</td><td>%d</td><td>%.2f</td><td>%.1f</td><td>%.2f</td>%s<td>%.2f</td></tr>\n",
-            className, entry.getKey(), returns.length, FinLib.mul2ret(total), 100.0 - 100.0 * nLose / n,
-            FinLib.mul2ret(returns[0]), sMean, FinLib.mul2ret(returns[n - 1]));
+            " <tr class=\"%s\"><td>%d</td><td>%d</td><td>%.1f</td><td>%.2f</td><td>%.2f</td>%s<td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>\n",
+            className, entry.getKey(), returns.length, 100.0 - 100.0 * nLose / n, FinLib.mul2ret(total),
+            FinLib.mul2ret(returns[0]), sMean, FinLib.mul2ret(returns[n - 1]), Library.min(drawdowns),
+            Library.mean(drawdowns));
 
         ++iRow;
       }
@@ -151,19 +187,19 @@ public class TacticalDashboard
     return sw.toString();
   }
 
-  private static String genPairStatsHtml(Map<IntPair, List<Double>> returnsByPair, IntPair currentPair)
+  private static String genPairStatsHtml(Map<IntPair, List<CodeInfo>> returnsByPair, IntPair currentPair)
   {
     StringWriter sw = new StringWriter();
     try (Writer writer = new Writer(sw)) {
       writer.write("<table id=\"decadeComparisonTable\" cellspacing=\"0\"><thead>\n");
-      writer.write(
-          "<tr><th>Previous<br/>Code</th><th>Current<br/>Code</th><th>Count</th><th>Total<br/>Return</th><th>Win<br/>Percent</th><th>Min</th><th>Mean</th><th>Max</th>\n");
+      writer.write(genTableRow("th", "Previous\nCode", "Current\nCode", "Count", "Win\nPercent", "Total\nReturn",
+          "Min\nReturn", "Mean\nReturn", "Max\nReturn", "Worst\nDD", "Mean\nDD"));
       writer.write("</thead><tbody>\n");
 
       int iRow = 0;
-      for (Map.Entry<IntPair, List<Double>> entry : returnsByPair.entrySet()) {
+      for (Map.Entry<IntPair, List<CodeInfo>> entry : returnsByPair.entrySet()) {
         IntPair pair = entry.getKey();
-        double[] returns = ArrayUtils.toPrimitive(entry.getValue().toArray(new Double[entry.getValue().size()]));
+        double[] returns = CodeInfo.extract(entry.getValue(), "returns");
         Arrays.sort(returns);
         final int n = returns.length;
         double total = 1.0;
@@ -172,9 +208,8 @@ public class TacticalDashboard
           total *= r;
           if (r < 1.0) ++nLose;
         }
-        // System.out.printf("[%d,%d] (%d): %.2f [%.2f, %.2f, %.2f]\n", pair.code1, pair.code2, n,
-        // FinLib.mul2ret(total),
-        // FinLib.mul2ret(returns[0]), FinLib.mul2ret(Library.mean(returns)), FinLib.mul2ret(returns[n - 1]));
+
+        double[] drawdowns = CodeInfo.extract(entry.getValue(), "drawdowns");
 
         String className = (iRow % 2 == 0 ? "evenRow" : "oddRow");
         if (pair.equals(currentPair)) {
@@ -183,9 +218,10 @@ public class TacticalDashboard
         double mean = FinLib.mul2ret(Library.mean(returns));
         String sMean = genColoredCell(String.format("%.2f", mean), mean >= 0, null, red);
         writer.write(
-            " <tr class=\"%s\"><td>%d</td><td>%d</td><td>%d</td><td>%.2f</td><td>%.1f</td><td>%.2f</td>%s<td>%.2f</td></tr>\n",
-            className, pair.first, pair.second, returns.length, FinLib.mul2ret(total), 100.0 - 100.0 * nLose / n,
-            FinLib.mul2ret(returns[0]), sMean, FinLib.mul2ret(returns[n - 1]));
+            " <tr class=\"%s\"><td>%d</td><td>%d</td><td>%d</td><td>%.1f</td><td>%.2f</td><td>%.2f</td>%s<td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>\n",
+            className, pair.first, pair.second, returns.length, 100.0 - 100.0 * nLose / n, FinLib.mul2ret(total),
+            FinLib.mul2ret(returns[0]), sMean, FinLib.mul2ret(returns[n - 1]), Library.min(drawdowns),
+            Library.mean(drawdowns));
         ++iRow;
       }
       writer.write("</tbody>\n</table><br/>\n");
@@ -236,8 +272,8 @@ public class TacticalDashboard
       f.write("<table cellspacing=\"0\">\n");
       List<TimeCode> exitDates = new ArrayList<>();
       List<TimeCode> reenterDates = new ArrayList<>();
-      Map<Integer, List<Double>> returnsByCode = new TreeMap<>();
-      Map<IntPair, List<Double>> returnsByPair = new TreeMap<>();
+      Map<Integer, List<CodeInfo>> returnsByCode = new TreeMap<>();
+      Map<IntPair, List<CodeInfo>> returnsByPair = new TreeMap<>();
       int nCodes = predStrategy.timeCodes.size();
       for (int iCode = nCodes - 1; iCode >= 0; --iCode) {
         TimeCode timeCodeSingles = predStrategy.timeCodes.get(iCode);
@@ -279,14 +315,15 @@ public class TacticalDashboard
         int index1 = baselineReturns.getClosestIndex(timeCodeSingles.time);
         int index2 = baselineReturns.getClosestIndex(nextTime);
         double totalMul = FinLib.getTotalReturn(baselineReturns, index1, index2);
+        double drawdown = FinLib.calcDrawdown(baselineReturns, index1, index2).getMin().get(0);
 
         // Returns by code.
-        List<Double> returns = returnsByCode.get(timeCodeSingles.code);
+        List<CodeInfo> returns = returnsByCode.get(timeCodeSingles.code);
         if (returns == null) {
-          returns = new ArrayList<Double>();
+          returns = new ArrayList<CodeInfo>();
           returnsByCode.put(timeCodeSingles.code, returns);
         }
-        returns.add(totalMul);
+        returns.add(new CodeInfo(totalMul, drawdown));
 
         // Returns by code pair.
         if (iCode > 0) {
@@ -294,10 +331,10 @@ public class TacticalDashboard
           IntPair pair = new IntPair(timeCodePrev.code, timeCodeSingles.code);
           returns = returnsByPair.get(pair);
           if (returns == null) {
-            returns = new ArrayList<Double>();
+            returns = new ArrayList<CodeInfo>();
             returnsByPair.put(pair, returns);
           }
-          returns.add(totalMul);
+          returns.add(new CodeInfo(totalMul, drawdown));
         }
 
         f.write("<td>%.2f</td>", FinLib.mul2ret(totalMul));
@@ -352,11 +389,11 @@ public class TacticalDashboard
 
       // List of dates when the strategy moves to cash.
       // f.write("<b>Move to Safe Asset</b>: " + exitDates.size() + "<br/>\n");
-      f.write(TacticalDashboard.genCodeStatsHtml(returnsByCode, predStrategy.timeCodes.get(nCodes - 1).code));
+      f.write(genCodeStatsHtml(returnsByCode, predStrategy.timeCodes.get(nCodes - 1).code));
       if (nCodes > 1) {
         int code = predStrategy.timeCodes.get(nCodes - 1).code;
         int prev = predStrategy.timeCodes.get(nCodes - 2).code;
-        f.write(TacticalDashboard.genPairStatsHtml(returnsByPair, new IntPair(prev, code)));
+        f.write(genPairStatsHtml(returnsByPair, new IntPair(prev, code)));
       }
       f.write(Chart.genDecadeTable(m2, m1) + "<br/>");
       f.write("</div>\n"); // end column 2
@@ -367,7 +404,7 @@ public class TacticalDashboard
 
   public static void main(String[] args) throws IOException
   {
-    setupData();
+    setupData(symbol);
 
     Sequence stock = store.get(riskyName);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);

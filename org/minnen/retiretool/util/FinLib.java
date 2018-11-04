@@ -1070,6 +1070,11 @@ public final class FinLib
     }
   }
 
+  public static Sequence calcDrawdown(Sequence cumulativeReturns)
+  {
+    return calcDrawdown(cumulativeReturns, 0, -1);
+  }
+
   /**
    * Returns a sequence of drawdown values for the given return sequence.
    * 
@@ -1077,14 +1082,18 @@ public final class FinLib
    * 
    * @param cumulativeReturns Sequence of cumulative returns. This function assumes that the first dimension holds the
    *          return values.
+   * @param iFrom start with this index
+   * @param iTo end with this index (inclusive).
    * @return Sequence with the same length as `cumulativeReturns` where each value is the corresponding drawdown.
    */
-  public static Sequence calcDrawdown(Sequence cumulativeReturns)
+  public static Sequence calcDrawdown(Sequence cumulativeReturns, int iFrom, int iTo)
   {
+    if (iFrom < 0) iFrom += cumulativeReturns.length();
+    if (iTo < 0) iTo += cumulativeReturns.length();
+
     Sequence seq = new Sequence(cumulativeReturns.getName() + " - Drawdown");
-    final int N = cumulativeReturns.size();
-    double peakReturn = cumulativeReturns.getFirst(0);
-    for (int i = 0; i < N; ++i) {
+    double peakReturn = cumulativeReturns.get(iFrom, 0);
+    for (int i = iFrom; i <= iTo; ++i) {
       final double value = cumulativeReturns.get(i, 0);
       double drawdown;
       if (value >= peakReturn) {
@@ -1096,7 +1105,7 @@ public final class FinLib
       seq.addData(drawdown, cumulativeReturns.getTimeMS(i));
     }
 
-    assert seq.length() == cumulativeReturns.length();
+    assert seq.length() == (iTo - iFrom + 1);
     return seq;
   }
 
