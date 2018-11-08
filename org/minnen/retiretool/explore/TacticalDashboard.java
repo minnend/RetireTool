@@ -14,6 +14,7 @@ import java.util.TreeMap;
 
 import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.DataIO;
+import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.data.YahooIO;
@@ -84,14 +85,17 @@ public class TacticalDashboard
 
   public static class CodeInfo
   {
-    public CodeInfo(double returns, double drawdown)
+    public double returns;
+    public double drawdown;
+    public int    index1, index2;
+
+    public CodeInfo(double returns, double drawdown, int index1, int index2)
     {
       this.returns = returns;
       this.drawdown = drawdown;
+      this.index1 = index1;
+      this.index2 = index2;
     }
-
-    public double returns;
-    public double drawdown;
 
     public static double[] extract(List<CodeInfo> list, String field)
     {
@@ -146,7 +150,8 @@ public class TacticalDashboard
     return sb.toString();
   }
 
-  private static String genCodeStatsHtml(Map<Integer, List<CodeInfo>> returnsByCode, int currentCode)
+  private static String genCodeStatsHtml(Map<Integer, List<CodeInfo>> returnsByCode, int currentCode,
+      Sequence fullReturns) throws IOException
   {
     StringWriter sw = new StringWriter();
     try (Writer writer = new Writer(sw)) {
@@ -182,12 +187,40 @@ public class TacticalDashboard
         ++iRow;
       }
       writer.write("</tbody>\n</table><br/>\n");
-    } catch (IOException e) {}
+    }
+
+    for (Map.Entry<Integer, List<CodeInfo>> entry : returnsByCode.entrySet()) {
+      List<CodeInfo> list = entry.getValue();
+      System.out.printf("code=%d  num=%d\n", entry.getKey(), list.size());
+      List<Sequence> seqs = new ArrayList<>();
+
+      for (int index = 0; index < list.size(); ++index) {
+        CodeInfo info = list.get(index);
+
+        final long timeStart = fullReturns.getTimeMS(info.index1);
+        final long timeEnd = fullReturns.getTimeMS(info.index2);
+        int n = info.index2 - info.index1 + 1;
+        Sequence seq = fullReturns.subseq(info.index1, n);
+        seq = seq.div(seq.getFirst(0));
+        for (FeatureVec x : seq) {
+          x.set(0, FinLib.mul2ret(x.get(0))); // graph returns, not multipliers
+        }
+        seq.setName(
+            String.format("[%s -> %s] (%d)", TimeLib.formatDate(timeStart), TimeLib.formatDate(timeEnd), index));
+        seqs.add(seq);
+      }
+
+      String title = String.format("Code: %d (n=%d)", entry.getKey(), list.size());
+      String filename = String.format("graphs-code-%02d.html", entry.getKey());
+      Chart.saveLineChart(new File(DataIO.outputPath, filename), title, 1200, 900, ChartScaling.LINEAR,
+          ChartTiming.INDEX, seqs);
+    }
 
     return sw.toString();
   }
 
   private static String genPairStatsHtml(Map<IntPair, List<CodeInfo>> returnsByPair, IntPair currentPair)
+      throws IOException
   {
     StringWriter sw = new StringWriter();
     try (Writer writer = new Writer(sw)) {
@@ -225,7 +258,7 @@ public class TacticalDashboard
         ++iRow;
       }
       writer.write("</tbody>\n</table><br/>\n");
-    } catch (IOException e) {}
+    }
 
     return sw.toString();
   }
@@ -323,7 +356,7 @@ public class TacticalDashboard
           returns = new ArrayList<CodeInfo>();
           returnsByCode.put(timeCodeSingles.code, returns);
         }
-        returns.add(new CodeInfo(totalMul, drawdown));
+        returns.add(new CodeInfo(totalMul, drawdown, index1, index2));
 
         // Returns by code pair.
         if (iCode > 0) {
@@ -334,7 +367,7 @@ public class TacticalDashboard
             returns = new ArrayList<CodeInfo>();
             returnsByPair.put(pair, returns);
           }
-          returns.add(new CodeInfo(totalMul, drawdown));
+          returns.add(new CodeInfo(totalMul, drawdown, index1, index2));
         }
 
         f.write("<td>%.2f</td>", FinLib.mul2ret(totalMul));
@@ -389,7 +422,7 @@ public class TacticalDashboard
 
       // List of dates when the strategy moves to cash.
       // f.write("<b>Move to Safe Asset</b>: " + exitDates.size() + "<br/>\n");
-      f.write(genCodeStatsHtml(returnsByCode, predStrategy.timeCodes.get(nCodes - 1).code));
+      f.write(genCodeStatsHtml(returnsByCode, predStrategy.timeCodes.get(nCodes - 1).code, baselineReturns));
       if (nCodes > 1) {
         int code = predStrategy.timeCodes.get(nCodes - 1).code;
         int prev = predStrategy.timeCodes.get(nCodes - 2).code;

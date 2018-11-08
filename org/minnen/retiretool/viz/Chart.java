@@ -42,7 +42,7 @@ public class Chart
   };
 
   public enum ChartTiming {
-    DAILY, MONTHLY
+    DAILY, MONTHLY, INDEX
   };
 
   public static ChartConfig saveLineChart(File file, String title, int width, int height, ChartScaling scaling,
