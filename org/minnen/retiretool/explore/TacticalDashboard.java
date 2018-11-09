@@ -36,8 +36,8 @@ import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.util.Writer;
 import org.minnen.retiretool.viz.Chart;
-import org.minnen.retiretool.viz.Chart.ChartScaling;
-import org.minnen.retiretool.viz.Chart.ChartTiming;
+import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
+import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 
 public class TacticalDashboard
 {

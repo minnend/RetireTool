@@ -68,8 +68,8 @@ import org.minnen.retiretool.util.Random;
 import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
-import org.minnen.retiretool.viz.Chart.ChartScaling;
-import org.minnen.retiretool.viz.Chart.ChartTiming;
+import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
+import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 import org.ojalgo.matrix.BasicMatrix;
 import org.ojalgo.matrix.PrimitiveMatrix;
 

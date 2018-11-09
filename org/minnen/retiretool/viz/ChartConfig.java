@@ -13,10 +13,18 @@ public class ChartConfig
     Unknown, Line, Bar, Area, PosNegArea, Scatter, Bubble
   };
 
+  public enum ChartScaling {
+    LINEAR, LOGARITHMIC
+  };
+
+  public enum ChartTiming {
+    DAILY, MONTHLY, INDEX
+  };
+
   public File           file;
   public Sequence[]     data;
   public Type           type               = Type.Unknown;
-  public boolean        isMonthlyData;
+  public ChartTiming    timing             = ChartTiming.DAILY;
   public boolean        logarthimicYAxis;
   public double         minorTickIntervalY = Double.NaN;
   public String[]       labels;
@@ -123,9 +131,9 @@ public class ChartConfig
     return this;
   }
 
-  public ChartConfig setMonthlyData(boolean isMonthlyData)
+  public ChartConfig setTiming(ChartTiming timing)
   {
-    this.isMonthlyData = isMonthlyData;
+    this.timing = timing;
     return this;
   }
 

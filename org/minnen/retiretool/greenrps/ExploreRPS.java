@@ -16,6 +16,7 @@ import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
 import org.minnen.retiretool.viz.ChartConfig;
+import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 
 public class ExploreRPS
 {
@@ -112,8 +113,8 @@ public class ExploreRPS
     System.out.printf("Months: %.1f\n", nMonths);
 
     ChartConfig chartConfig = new ChartConfig(new File(outputDir, "rps-raw.html")).setType(ChartConfig.Type.Line)
-        .setTitle("Return Predictive Signals").setSize(1200, 800).setLogarthimicYAxis(true).setMonthlyData(true)
-        .setData(signals);
+        .setTitle("Return Predictive Signals").setSize(1200, 800).setLogarthimicYAxis(true)
+        .setTiming(ChartTiming.MONTHLY).setData(signals);
     Chart.saveChart(chartConfig);
 
     flipLosers();

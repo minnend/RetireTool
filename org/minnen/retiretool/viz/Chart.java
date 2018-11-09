@@ -18,6 +18,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.IndexRange;
@@ -32,18 +33,12 @@ import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.util.Writer;
+import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
+import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 
 public class Chart
 {
   public final static boolean bVerticalLine = false;
-
-  public enum ChartScaling {
-    LINEAR, LOGARITHMIC
-  };
-
-  public enum ChartTiming {
-    DAILY, MONTHLY, INDEX
-  };
 
   public static ChartConfig saveLineChart(File file, String title, int width, int height, ChartScaling scaling,
       ChartTiming timing, Sequence... seqs) throws IOException
@@ -66,8 +61,7 @@ public class Chart
   {
     ChartConfig config = new ChartConfig(file).setType(chartType).setTitle(title).setLabels(labels).setColors(colors)
         .setSize(width, height).setMinMaxY(ymin, ymax).setMinorTickIntervalY(minorTickIntervalY)
-        .setLogarthimicYAxis(scaling == ChartScaling.LOGARITHMIC).setMonthlyData(timing == ChartTiming.MONTHLY)
-        .setIndexY(dim).setData(seqs);
+        .setLogarthimicYAxis(scaling == ChartScaling.LOGARITHMIC).setTiming(timing).setIndexY(dim).setData(seqs);
     saveChart(config); // TODO support option to build config w/o saving chart
     return config;
   }
@@ -82,11 +76,16 @@ public class Chart
         writer.write("%s\n", String.join(",", config.labels));
       } else {
         for (int i = 0; i < seqs[0].size(); ++i) {
-          if (config.isMonthlyData) {
+          if (config.timing == ChartTiming.MONTHLY) {
             writer.write(TimeLib.formatMonth(seqs[0].getTimeMS(i)));
-          } else {
+          } else if (config.timing == ChartTiming.DAILY) {
             writer.write(TimeLib.formatDate(seqs[0].getTimeMS(i)));
+          } else if (config.timing == ChartTiming.INDEX) {
+            writer.write("%d", i);
+          } else {
+            throw new NotImplementedException("Unknown chart timing: " + config.timing);
           }
+
           if (i < seqs[0].size() - 1) {
             writer.write(",");
           }
@@ -160,28 +159,35 @@ public class Chart
         writer.write(String.format("  chart: { type: '%s' },\n", ChartConfig.chart2name(config.type)));
       }
       writer.write("  xAxis: {\n");
-      writer.write("  categories: [");
-      if (config.labels != null) {
-        assert config.labels.length == seqs[0].size();
-        for (int i = 0; i < config.labels.length; ++i) {
-          writer.write("'" + config.labels[i] + "'");
-          if (i < config.labels.length - 1) {
-            writer.write(",");
+
+      if (config.labels != null || config.timing != ChartTiming.INDEX) {
+        writer.write("  categories: [");
+        if (config.labels != null) {
+          assert config.labels.length == seqs[0].size();
+          for (int i = 0; i < config.labels.length; ++i) {
+            writer.write("'" + config.labels[i] + "'");
+            if (i < config.labels.length - 1) {
+              writer.write(",");
+            }
+          }
+        } else {
+          for (int i = 0; i < seqs[0].size(); ++i) {
+            if (config.timing == ChartTiming.MONTHLY) {
+              writer.write("'" + TimeLib.formatMonth(seqs[0].getTimeMS(i)) + "'");
+            } else if (config.timing == ChartTiming.DAILY) {
+              writer.write("'" + TimeLib.formatDate(seqs[0].getTimeMS(i)) + "'");
+            } else {
+              throw new NotImplementedException("Unknown chart timing: " + config.timing);
+            }
+
+            if (i < seqs[0].size() - 1) {
+              writer.write(",");
+            }
           }
         }
-      } else {
-        for (int i = 0; i < seqs[0].size(); ++i) {
-          if (config.isMonthlyData) {
-            writer.write("'" + TimeLib.formatMonth(seqs[0].getTimeMS(i)) + "'");
-          } else {
-            writer.write("'" + TimeLib.formatDate(seqs[0].getTimeMS(i)) + "'");
-          }
-          if (i < seqs[0].size() - 1) {
-            writer.write(",");
-          }
-        }
+        writer.write("],\n"); // categories
       }
-      writer.write("],\n"); // categories
+
       addPlotBands(config.xBands, writer);
       addPlotLines(config.xLines, writer);
       writer.write("  },\n"); // xAxis

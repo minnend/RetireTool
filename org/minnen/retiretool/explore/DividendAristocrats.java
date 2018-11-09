@@ -27,8 +27,8 @@ import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
-import org.minnen.retiretool.viz.Chart.ChartScaling;
-import org.minnen.retiretool.viz.Chart.ChartTiming;
+import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
+import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 
 // NOBL - based on dividend aristocrats
 // https://www.suredividend.com/wp-content/uploads/2016/07/NOBL-Index-Historical-Constituents.pdf

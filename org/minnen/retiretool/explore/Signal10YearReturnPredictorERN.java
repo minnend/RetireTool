@@ -15,8 +15,8 @@ import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.LinearFunc;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
-import org.minnen.retiretool.viz.Chart.ChartScaling;
-import org.minnen.retiretool.viz.Chart.ChartTiming;
+import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
+import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 
 /**
  * Visualize "single greatest predictor of future stock market returns" from ERN:

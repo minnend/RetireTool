@@ -10,8 +10,8 @@ import org.minnen.retiretool.data.YahooIO;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
-import org.minnen.retiretool.viz.Chart.ChartScaling;
-import org.minnen.retiretool.viz.Chart.ChartTiming;
+import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
+import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 
 /**
  * Calculate what percentage of days has a close that's lower than all future days. These are the best days to buy in.

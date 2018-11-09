@@ -5,8 +5,8 @@ import java.io.IOException;
 
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.viz.Chart;
-import org.minnen.retiretool.viz.Chart.ChartScaling;
-import org.minnen.retiretool.viz.Chart.ChartTiming;
+import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
+import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 import org.minnen.retiretool.viz.ChartConfig;
 import org.minnen.retiretool.viz.PlotLine;
 
