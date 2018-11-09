@@ -87,14 +87,14 @@ public class TacticalDashboard
   {
     public double returns;
     public double drawdown;
-    public int    index1, index2;
+    public long   timeStart, timeEnd;
 
-    public CodeInfo(double returns, double drawdown, int index1, int index2)
+    public CodeInfo(double returns, double drawdown, long timeStart, long timeEnd)
     {
       this.returns = returns;
       this.drawdown = drawdown;
-      this.index1 = index1;
-      this.index2 = index2;
+      this.timeStart = timeStart;
+      this.timeEnd = timeEnd;
     }
 
     public static double[] extract(List<CodeInfo> list, String field)
@@ -128,6 +128,16 @@ public class TacticalDashboard
     store.add(tb3mo, "3-month-treasuries");
   }
 
+  private static String genGraphFileName(int code)
+  {
+    return String.format("graphs-code-%02d.html", code);
+  }
+
+  private static String genGraphFileName(IntPair codePair)
+  {
+    return String.format("graphs-pair-%02d-%02d.html", codePair.first, codePair.second);
+  }
+
   private static String genColoredCell(String data, boolean cond, String trueColor, String falseColor)
   {
     final String color = cond ? trueColor : falseColor;
@@ -150,14 +160,29 @@ public class TacticalDashboard
     return sb.toString();
   }
 
-  private static String genCodeStatsHtml(Map<Integer, List<CodeInfo>> returnsByCode, int currentCode,
-      Sequence fullReturns) throws IOException
+  private static Sequence genGrowthSeq(int index, CodeInfo info)
+  {
+    final Sequence returns = store.get(riskyName);
+    final int index1 = returns.getClosestIndex(info.timeStart);
+    final int index2 = returns.getClosestIndex(info.timeEnd);
+    final int n = index2 - index1 + 1;
+    Sequence seq = returns.subseq(index1, n);
+    seq = seq.div(seq.getFirst(0));
+    for (FeatureVec x : seq) {
+      x.set(0, FinLib.mul2ret(x.get(0))); // graph returns, not multipliers
+    }
+    seq.setName(
+        String.format("[%s -> %s] (%d)", TimeLib.formatDate(info.timeStart), TimeLib.formatDate(info.timeEnd), index));
+    return seq;
+  }
+
+  private static String genCodeStatsHtml(Map<Integer, List<CodeInfo>> returnsByCode, int currentCode) throws IOException
   {
     StringWriter sw = new StringWriter();
     try (Writer writer = new Writer(sw)) {
       writer.write("<table id=\"decadeComparisonTable\" cellspacing=\"0\"><thead>\n");
-      writer.write(genTableRow("th", "Code", "Count", "Win\nPercent", "Total\nReturn", "Min\nReturn", "Mean\nReturn",
-          "Max\nReturn", "Worst\nDD", "Mean\nDD"));
+      writer.write(genTableRow("th", "Code", "Count", "Win\nPercent", "Total\nReturn", "Worst\nDD", "Min\nReturn",
+          "Mean\nReturn", "Max\nReturn", ""));
       writer.write("</thead><tbody>\n");
 
       int iRow = 0;
@@ -179,10 +204,10 @@ public class TacticalDashboard
         double mean = FinLib.mul2ret(Library.mean(returns));
         String sMean = genColoredCell(String.format("%.2f", mean), mean >= 0, null, red);
         writer.write(
-            " <tr class=\"%s\"><td>%d</td><td>%d</td><td>%.1f</td><td>%.2f</td><td>%.2f</td>%s<td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>\n",
+            " <tr class=\"%s\"><td>%d</td><td>%d</td><td>%.1f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td>%s<td>%.2f</td><td>%s</td></tr>\n",
             className, entry.getKey(), returns.length, 100.0 - 100.0 * nLose / n, FinLib.mul2ret(total),
-            FinLib.mul2ret(returns[0]), sMean, FinLib.mul2ret(returns[n - 1]), Library.min(drawdowns),
-            Library.mean(drawdowns));
+            Library.min(drawdowns), FinLib.mul2ret(returns[0]), sMean, FinLib.mul2ret(returns[n - 1]),
+            String.format("<a href=\"%s\">graph</a>", genGraphFileName(entry.getKey())));
 
         ++iRow;
       }
@@ -191,27 +216,13 @@ public class TacticalDashboard
 
     for (Map.Entry<Integer, List<CodeInfo>> entry : returnsByCode.entrySet()) {
       List<CodeInfo> list = entry.getValue();
-      System.out.printf("code=%d  num=%d\n", entry.getKey(), list.size());
       List<Sequence> seqs = new ArrayList<>();
-
       for (int index = 0; index < list.size(); ++index) {
-        CodeInfo info = list.get(index);
-
-        final long timeStart = fullReturns.getTimeMS(info.index1);
-        final long timeEnd = fullReturns.getTimeMS(info.index2);
-        int n = info.index2 - info.index1 + 1;
-        Sequence seq = fullReturns.subseq(info.index1, n);
-        seq = seq.div(seq.getFirst(0));
-        for (FeatureVec x : seq) {
-          x.set(0, FinLib.mul2ret(x.get(0))); // graph returns, not multipliers
-        }
-        seq.setName(
-            String.format("[%s -> %s] (%d)", TimeLib.formatDate(timeStart), TimeLib.formatDate(timeEnd), index));
-        seqs.add(seq);
+        seqs.add(genGrowthSeq(index, list.get(index)));
       }
 
       String title = String.format("Code: %d (n=%d)", entry.getKey(), list.size());
-      String filename = String.format("graphs-code-%02d.html", entry.getKey());
+      String filename = genGraphFileName(entry.getKey());
       Chart.saveLineChart(new File(DataIO.outputPath, filename), title, 1200, 900, ChartScaling.LINEAR,
           ChartTiming.INDEX, seqs);
     }
@@ -226,7 +237,7 @@ public class TacticalDashboard
     try (Writer writer = new Writer(sw)) {
       writer.write("<table id=\"decadeComparisonTable\" cellspacing=\"0\"><thead>\n");
       writer.write(genTableRow("th", "Previous\nCode", "Current\nCode", "Count", "Win\nPercent", "Total\nReturn",
-          "Min\nReturn", "Mean\nReturn", "Max\nReturn", "Worst\nDD", "Mean\nDD"));
+          "Worst\nDD", "Min\nReturn", "Mean\nReturn", "Max\nReturn", ""));
       writer.write("</thead><tbody>\n");
 
       int iRow = 0;
@@ -251,13 +262,27 @@ public class TacticalDashboard
         double mean = FinLib.mul2ret(Library.mean(returns));
         String sMean = genColoredCell(String.format("%.2f", mean), mean >= 0, null, red);
         writer.write(
-            " <tr class=\"%s\"><td>%d</td><td>%d</td><td>%d</td><td>%.1f</td><td>%.2f</td><td>%.2f</td>%s<td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>\n",
+            " <tr class=\"%s\"><td>%d</td><td>%d</td><td>%d</td><td>%.1f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td>%s<td>%.2f</td><td>%s</td></tr>\n",
             className, pair.first, pair.second, returns.length, 100.0 - 100.0 * nLose / n, FinLib.mul2ret(total),
-            FinLib.mul2ret(returns[0]), sMean, FinLib.mul2ret(returns[n - 1]), Library.min(drawdowns),
-            Library.mean(drawdowns));
+            Library.min(drawdowns), FinLib.mul2ret(returns[0]), sMean, FinLib.mul2ret(returns[n - 1]),
+            String.format("<a href=\"%s\">graph</a>", genGraphFileName(entry.getKey())));
         ++iRow;
       }
       writer.write("</tbody>\n</table><br/>\n");
+    }
+
+    for (Map.Entry<IntPair, List<CodeInfo>> entry : returnsByPair.entrySet()) {
+      IntPair codePair = entry.getKey();
+      List<CodeInfo> list = entry.getValue();
+      List<Sequence> seqs = new ArrayList<>();
+      for (int index = 0; index < list.size(); ++index) {
+        seqs.add(genGrowthSeq(index, list.get(index)));
+      }
+
+      String title = String.format("Code Pair: %d -> %d (n=%d)", codePair.first, codePair.second, list.size());
+      String filename = genGraphFileName(codePair);
+      Chart.saveLineChart(new File(DataIO.outputPath, filename), title, 1200, 900, ChartScaling.LINEAR,
+          ChartTiming.INDEX, seqs);
     }
 
     return sw.toString();
@@ -356,7 +381,7 @@ public class TacticalDashboard
           returns = new ArrayList<CodeInfo>();
           returnsByCode.put(timeCodeSingles.code, returns);
         }
-        returns.add(new CodeInfo(totalMul, drawdown, index1, index2));
+        returns.add(new CodeInfo(totalMul, drawdown, timeCodeSingles.time, nextTime));
 
         // Returns by code pair.
         if (iCode > 0) {
@@ -367,7 +392,7 @@ public class TacticalDashboard
             returns = new ArrayList<CodeInfo>();
             returnsByPair.put(pair, returns);
           }
-          returns.add(new CodeInfo(totalMul, drawdown, index1, index2));
+          returns.add(new CodeInfo(totalMul, drawdown, timeCodeSingles.time, nextTime));
         }
 
         f.write("<td>%.2f</td>", FinLib.mul2ret(totalMul));
@@ -422,7 +447,7 @@ public class TacticalDashboard
 
       // List of dates when the strategy moves to cash.
       // f.write("<b>Move to Safe Asset</b>: " + exitDates.size() + "<br/>\n");
-      f.write(genCodeStatsHtml(returnsByCode, predStrategy.timeCodes.get(nCodes - 1).code, baselineReturns));
+      f.write(genCodeStatsHtml(returnsByCode, predStrategy.timeCodes.get(nCodes - 1).code));
       if (nCodes > 1) {
         int code = predStrategy.timeCodes.get(nCodes - 1).code;
         int prev = predStrategy.timeCodes.get(nCodes - 2).code;
