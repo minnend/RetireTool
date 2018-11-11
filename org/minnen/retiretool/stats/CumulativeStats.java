@@ -111,7 +111,7 @@ public class CumulativeStats implements Comparable<CumulativeStats>
 
   public double scoreSimple()
   {
-    return cagr - drawdown / 10.0; // TODO divide by 20.0?
+    return cagr - drawdown / 20.0; // TODO improve composite score
   }
 
   public double scoreComplex()

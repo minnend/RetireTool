@@ -78,14 +78,27 @@ public class SearchConfigs
     return worstStats;
   }
 
+  private static int prefer(CumulativeStats s1, CumulativeStats s2)
+  {
+    if (s1.dominates(s2)) return 1;
+    if (s2.dominates(s1)) return -1;
+
+    double score1 = s1.scoreSimple();
+    double score2 = s2.scoreSimple();
+    if (score1 > score2 + 0.01) return 1;
+    if (score2 > score1 + 0.01) return -1;
+
+    return s1.compareTo(s2);
+  }
+
   private static ConfigSMA optimize(ConfigSMA baseConfig, CumulativeStats baseStats)
   {
     int nTries = 0;
     while (nTries < 10) {
       ConfigSMA config = genCandidate(baseConfig);
-      CumulativeStats stats = eval(config, "optimize");
-      if (stats.compareTo(baseStats) > 0) {
-        System.out.printf(" Improved! %s  (%s)\n", stats, config);
+      CumulativeStats stats = eval(config, "Improved");
+      if (prefer(stats, baseStats) > 0) {
+        System.out.printf(" %s  (%s)\n", stats, config);
         baseConfig = config;
         baseStats = stats;
         nTries = 0;

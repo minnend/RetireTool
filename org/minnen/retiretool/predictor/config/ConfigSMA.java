@@ -40,11 +40,11 @@ public class ConfigSMA extends PredictorConfig
   public static ConfigSMA genRandom(int iPrice, long minTimeBetweenFlips)
   {
     while (true) {
-      int nTriggerA = 5 * rng.nextInt(1, 12);
+      int nTriggerA = rng.nextInt(5, 60);
       int nTriggerB = 0;
-      int nBaseA = 5 * rng.nextInt(1, 50);
+      int nBaseA = rng.nextInt(5, 250);
       int nBaseB = Math.max(0, nBaseA - 10 * rng.nextInt(1, Math.max(1, nBaseA / 10)));
-      int margin = rng.nextInt(1, 12) * 25;
+      int margin = rng.nextInt(1, 300) * 10;
       ConfigSMA config = new ConfigSMA(nTriggerA, nTriggerB, nBaseA, nBaseB, margin, iPrice, minTimeBetweenFlips);
       if (config.isValid()) return config;
     }
