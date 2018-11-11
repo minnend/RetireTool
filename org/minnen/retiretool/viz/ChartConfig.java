@@ -51,6 +51,7 @@ public class ChartConfig
   public List<PlotBand> yBands             = new ArrayList<PlotBand>();
   public List<PlotLine> xLines             = new ArrayList<PlotLine>();
   public List<PlotLine> yLines             = new ArrayList<PlotLine>();
+  public String         pathToBase;                                    // relative path to base dir twith css and js
 
   // Specific to scatter plots.
   public int            radius             = 3;
@@ -338,6 +339,12 @@ public class ChartConfig
   public ChartConfig addPlotLineY(Collection<? extends PlotLine> Lines)
   {
     yLines.addAll(Lines);
+    return this;
+  }
+
+  public ChartConfig setPathToBase(String relPath)
+  {
+    pathToBase = relPath;
     return this;
   }
 }

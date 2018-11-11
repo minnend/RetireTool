@@ -60,6 +60,10 @@ public class TacticalDashboard
   public static final String            red           = "D12";
   public static final String            green         = "1E2";
 
+  public static final String            miscDirName   = "misc";
+  public static final File              miscPath      = new File(DataIO.outputPath, miscDirName);
+  public static final String            miscToBase    = "..";
+
   /** overfitting? */
   public static final boolean           avoid62       = true;
 
@@ -82,6 +86,11 @@ public class TacticalDashboard
 
   public static final int[][]           allParams     = new int[][] { { 20, 0, 240, 150, 25 }, { 25, 0, 155, 125, 75 },
       { 5, 0, 165, 5, 50 } };
+
+  static {
+    // Create misc directory if it doesn't exist.
+    if (!miscPath.exists()) miscPath.mkdirs();
+  }
 
   public static class CodeInfo
   {
@@ -130,12 +139,12 @@ public class TacticalDashboard
 
   private static String genGraphFileName(int code)
   {
-    return String.format("graphs-code-%02d.html", code);
+    return String.format("%s/graphs-code-%02d.html", miscDirName, code);
   }
 
   private static String genGraphFileName(IntPair codePair)
   {
-    return String.format("graphs-pair-%02d-%02d.html", codePair.first, codePair.second);
+    return String.format("%s/graphs-pair-%02d-%02d.html", miscDirName, codePair.first, codePair.second);
   }
 
   private static String genColoredCell(String data, boolean cond, String trueColor, String falseColor)
@@ -288,7 +297,7 @@ public class TacticalDashboard
     return sw.toString();
   }
 
-  public static void runMulti3(Simulation sim, File dir) throws IOException
+  public static void runMulti3(Simulation sim) throws IOException
   {
     // Buy-and-Hold 100% stock.
     PredictorConfig configRisky = new ConfigConst(riskyName);
@@ -318,7 +327,7 @@ public class TacticalDashboard
 
     final String sRowGap = "<td class=\"hgap\">&nbsp;</td>";
 
-    try (Writer f = new Writer(new File(dir, "dashboard-tactical.html"))) {
+    try (Writer f = new Writer(new File(DataIO.outputPath, "dashboard-tactical.html"))) {
       f.write("<html><head>\n");
       f.write("<title>Dashboard</title>\n");
       f.write("<script src=\"http://code.jquery.com/jquery.min.js\"></script>\n");
@@ -440,9 +449,9 @@ public class TacticalDashboard
       f.write("<li>Price change between trades\n");
       f.write("</ol>\n");
       f.write("<div><b>Graphs for SMA Predictors:</b>\n");
-      f.write("<a href=\"sma1-code4.html\">SMA (4)</a>&nbsp;|&nbsp;\n");
-      f.write("<a href=\"sma2-code2.html\">SMA (2)</a>&nbsp;|&nbsp;\n");
-      f.write("<a href=\"sma3-code1.html\">SMA (1)</a>\n");
+      f.write("<a href=\"%s/sma1-code4.html\">SMA (4)</a>&nbsp;|&nbsp;\n", miscDirName);
+      f.write("<a href=\"%s/sma2-code2.html\">SMA (2)</a>&nbsp;|&nbsp;\n", miscDirName);
+      f.write("<a href=\"%s/sma3-code1.html\">SMA (1)</a>\n", miscDirName);
       f.write("</div><br/>\n");
 
       // List of dates when the strategy moves to cash.
@@ -468,7 +477,7 @@ public class TacticalDashboard
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stock.subseq(iStart);
     Simulation sim = new Simulation(store, guideSeq, slippage, maxDelay, priceModel, priceModel);
-    runMulti3(sim, DataIO.outputPath);
+    runMulti3(sim);
 
     // Generate graphs.
     for (int i = 0; i < allParams.length; ++i) {
@@ -484,7 +493,7 @@ public class TacticalDashboard
       trigger.setName("Trigger");
       base.setName("Base");
       int code = 1 << (allParams.length - 1 - i);
-      Chart.saveLineChart(new File(DataIO.outputPath, String.format("sma%d-code%d.html", i + 1, code)),
+      Chart.saveLineChart(new File(miscPath, String.format("sma%d-code%d.html", i + 1, code)),
           String.format("SMA %d (Code: %d)", i + 1, code), 1200, 600, ChartScaling.LINEAR, ChartTiming.DAILY, trigger,
           baseLow, baseHigh, raw);
     }
