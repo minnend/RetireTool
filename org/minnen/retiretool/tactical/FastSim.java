@@ -1,8 +1,5 @@
 package org.minnen.retiretool.tactical;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.minnen.retiretool.broker.Account;
 import org.minnen.retiretool.broker.Broker;
 import org.minnen.retiretool.broker.TimeInfo;

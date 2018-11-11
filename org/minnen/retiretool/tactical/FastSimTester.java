@@ -1,22 +1,16 @@
 package org.minnen.retiretool.tactical;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
 
 import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.data.tiingo.TiingoFund;
 import org.minnen.retiretool.predictor.config.ConfigConst;
-import org.minnen.retiretool.predictor.config.ConfigMulti;
 import org.minnen.retiretool.predictor.config.ConfigSMA;
-import org.minnen.retiretool.predictor.config.PredictorConfig;
-import org.minnen.retiretool.predictor.daily.MultiPredictor;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.util.FinLib;
-import org.minnen.retiretool.util.IntPair;
 import org.minnen.retiretool.util.TimeLib;
 
 /**
@@ -69,10 +63,10 @@ public class FastSimTester
     CumulativeStats statsFast, statsSlow;
 
     // Pre-runs to minimize first-run effects.
-    sim.run(predRisky, "jit");
-    sim.run(predStrategy, "jit");
-    fastSim.run(predRisky, "jit");
-    fastSim.run(predStrategy, "jit");
+    sim.run(predRisky, "prep");
+    sim.run(predStrategy, "prep");
+    fastSim.run(predRisky, "prep");
+    fastSim.run(predStrategy, "prep");
 
     // Run buy & hold strategy.
     a = TimeLib.getTime();
