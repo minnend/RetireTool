@@ -74,7 +74,7 @@ public class SMAPredictor extends Predictor
 
     // Adjust threshold if we're using a trigger margin.
     if (config.margin > 0) {
-      threshold -= reloc * threshold * config.margin / 10000.0;  // 10,000 = 100 for basis points * 100 for percentage
+      threshold -= reloc * threshold * config.margin / 10000.0; // 10,000 = 100 for basis points * 100 for percentage
     }
 
     // Compare trigger to threshold and update state if there is a change.

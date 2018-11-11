@@ -52,8 +52,8 @@ public class TacticalWithRecessionFilter
   public static final String[]          assetNames    = new String[] { riskyName, safeName };
 
   public static final PredictorConfig[] singleConfigs = new PredictorConfig[] {
-      new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap), new ConfigSMA(25, 0, 155, 125, 0.75, FinLib.Close, gap),
-      new ConfigSMA(5, 0, 165, 5, 0.5, FinLib.Close, gap) };
+      new ConfigSMA(20, 0, 240, 150, 25, FinLib.Close, gap), new ConfigSMA(25, 0, 155, 125, 75, FinLib.Close, gap),
+      new ConfigSMA(5, 0, 165, 5, 50, FinLib.Close, gap) };
 
   public static void setupData() throws IOException
   {
@@ -146,7 +146,7 @@ public class TacticalWithRecessionFilter
     // Simple momentum.
     int nMonthsSMA = 10;
     int n = nMonthsSMA * 20;
-    PredictorConfig configSMA = new ConfigSMA(5, 0, n, n - 5, 0.1, FinLib.AdjClose, 2 * TimeLib.MS_IN_DAY);
+    PredictorConfig configSMA = new ConfigSMA(5, 0, n, n - 5, 10, FinLib.AdjClose, 2 * TimeLib.MS_IN_DAY);
     predictor = configSMA.build(sim.broker.accessObject, assetNames);
     sim.run(predictor, String.format("SMA:%d", nMonthsSMA));
     assert sim.returnsDaily.matches(baselineReturns);

@@ -80,7 +80,7 @@ public class ConfigSMA extends PredictorConfig
     throw new RuntimeException(String.format("Failed to generate a valid perturbed config after %d tries.", N));
   }
 
-  private static int perturbLookback(int x)
+  public static int perturbLookback(int x)
   {
     int halfWidth = Math.max(1, (int) Math.round(Math.abs(x) * 0.05));
     int xmin = Math.max(x - halfWidth, 0);
@@ -92,17 +92,16 @@ public class ConfigSMA extends PredictorConfig
     return px;
   }
 
-  private static int perturbMargin(int x)
+  public static int perturbMargin(int x)
   {
     assert x >= 0;
-    double halfWidth = Math.max(100, x * 0.1);
-    double xmin = Math.max(x - halfWidth, 0.0);
-    double xmax = x + halfWidth;
+    int halfWidth = Math.max(100, (x + 5) / 10);
+    int xmin = Math.max(x - halfWidth, 0);
+    int xmax = x + halfWidth;
     assert xmin <= x && xmax >= x && xmax >= xmin;
-    double range = xmax - xmin;
-    double px = rng.nextDouble(true, true) * range + xmin;
+    int px = rng.nextInt(xmin, xmax);
     assert px >= xmin && px <= xmax;
-    return (int) Math.round(px * 100.0);
+    return px;
   }
 
   @Override
@@ -110,5 +109,33 @@ public class ConfigSMA extends PredictorConfig
   {
     return String.format("[%d,%d] / [%d,%d] m=%d", nLookbackTriggerA, nLookbackTriggerB, nLookbackBaseA, nLookbackBaseB,
         margin);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + margin;
+    result = prime * result + nLookbackBaseA;
+    result = prime * result + nLookbackBaseB;
+    result = prime * result + nLookbackTriggerA;
+    result = prime * result + nLookbackTriggerB;
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj)
+  {
+    if (this == obj) return true;
+    if (obj == null) return false;
+    if (getClass() != obj.getClass()) return false;
+    ConfigSMA other = (ConfigSMA) obj;
+    if (margin != other.margin) return false;
+    if (nLookbackBaseA != other.nLookbackBaseA) return false;
+    if (nLookbackBaseB != other.nLookbackBaseB) return false;
+    if (nLookbackTriggerA != other.nLookbackTriggerA) return false;
+    if (nLookbackTriggerB != other.nLookbackTriggerB) return false;
+    return true;
   }
 }

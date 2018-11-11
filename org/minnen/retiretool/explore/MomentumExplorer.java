@@ -88,7 +88,7 @@ public class MomentumExplorer
     ComparisonStats best = null;
     for (int nMonths = 1; nMonths <= 24; ++nMonths) {
       int n = nMonths * 20; // ~20 days in a month
-      PredictorConfig config = new ConfigSMA(5, 0, n, n - 5, 0.5, FinLib.AdjClose, 5 * TimeLib.MS_IN_DAY);
+      PredictorConfig config = new ConfigSMA(5, 0, n, n - 5, 50, FinLib.AdjClose, 5 * TimeLib.MS_IN_DAY);
       predictor = config.build(sim.broker.accessObject, new String[] { symbol, cashSymbol });
       predictor.name = String.format("SMA:%d", n);
       Sequence returnsSMA = portfolios.run(predictor, timeSimStart, timeSimEnd, false);
