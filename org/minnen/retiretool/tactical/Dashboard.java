@@ -1,4 +1,4 @@
-package org.minnen.retiretool.explore;
+package org.minnen.retiretool.tactical;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,7 +40,7 @@ import org.minnen.retiretool.viz.ChartConfig;
 import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
 import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 
-public class TacticalDashboard
+public class Dashboard
 {
   public final static SequenceStore     store         = new SequenceStore();
 
