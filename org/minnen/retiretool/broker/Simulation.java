@@ -48,6 +48,7 @@ public class Simulation
   private int                                 rebalanceDelay;
   private DiscreteDistribution                prevDist;
   private Predictor                           predictor;
+  private boolean                             bCheckBusinessDay      = true;
 
   public Simulation(SequenceStore store, Sequence guideSeq)
   {
@@ -90,6 +91,16 @@ public class Simulation
   public void setPredictor(Predictor predictor)
   {
     this.predictor = predictor;
+  }
+
+  public boolean checksBusinessDays()
+  {
+    return bCheckBusinessDay;
+  }
+
+  public void setCheckBusinessDays(boolean skip)
+  {
+    bCheckBusinessDay = skip;
   }
 
   /**
@@ -371,7 +382,7 @@ public class Simulation
     // TimeLib.formatDate(timeEnd));
     while (runIndex < guideSeq.length() && guideSeq.getTimeMS(runIndex) <= timeEnd) {
       final TimeInfo timeInfo = new TimeInfo(runIndex, guideSeq);
-      if (!TimeLib.isBusinessDay(timeInfo.date)) {
+      if (bCheckBusinessDay && !TimeLib.isBusinessDay(timeInfo.date)) {
         ++runIndex;
         continue;
       }

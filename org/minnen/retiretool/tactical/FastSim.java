@@ -1,9 +1,7 @@
 package org.minnen.retiretool.tactical;
 
-import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.TreeMap;
 
 import org.minnen.retiretool.broker.Account;
 import org.minnen.retiretool.broker.Broker;
@@ -140,71 +138,6 @@ public class FastSim
     broker.reset();
     broker.setNewDay(new TimeInfo(runIndex, guideSeq));
     broker.openAccount(AccountName, Fixed.toFixed(startingBalance), Account.Type.Roth, true);
-
-    // TODO support prediction at start instead of on second tick
-    // if (predictor != null) {
-    // store.lock(TimeLib.TIME_BEGIN, guideSeq.getStartMS(), runKey);
-    // DiscreteDistribution targetDist = predictor.selectDistribution();
-    // }
-  }
-
-  private void buyTowardTargetAllocation(DiscreteDistribution targetDist, Account account)
-  {
-    if (targetDist == null) return;
-
-    Map<String, Long> cashToAdd = new HashMap<>();
-    long totalToAdd = Fixed.ZERO;
-    DiscreteDistribution currentDist = account.getDistribution();
-    long currentValue = account.getValue();
-    for (int i = 0; i < targetDist.size(); ++i) {
-      String name = targetDist.names[i];
-      if (name.equals("cash")) continue;
-      double targetWeight = targetDist.weights[i];
-      int j = currentDist.find(name);
-      double currentWeight = j < 0 ? 0.0 : currentDist.weights[j];
-      double missingWeight = Math.max(targetWeight - currentWeight, 0.0);
-
-      long valueNeeded = Math.round(currentValue * missingWeight);
-      totalToAdd += valueNeeded;
-      cashToAdd.put(name, valueNeeded);
-    }
-
-    final long cash = account.getCash();
-    if (totalToAdd > cash) {
-      long remaining = cash;
-      for (Map.Entry<String, Long> entry : cashToAdd.entrySet()) {
-        double percent = (double) entry.getValue() / totalToAdd;
-        long adjustedValue = (long) Math.ceil(percent * cash);
-        adjustedValue = Math.min(adjustedValue, remaining);
-        assert adjustedValue >= 0;
-        remaining -= adjustedValue;
-        assert remaining >= 0;
-        entry.setValue(adjustedValue);
-      }
-    } else if (totalToAdd < cash) {
-      long totalExcess = cash - totalToAdd;
-      long remaining = totalExcess;
-      for (Map.Entry<String, Long> entry : cashToAdd.entrySet()) {
-        long add = (long) Math.round(totalExcess * targetDist.get(entry.getKey()));
-        add = Math.min(add, remaining);
-        entry.setValue(entry.getValue() + add);
-        remaining -= add;
-      }
-    }
-
-    // Buy extra assets.
-    long sum = 0;
-    for (Map.Entry<String, Long> entry : cashToAdd.entrySet()) {
-      long value = entry.getValue();
-      assert value >= 0;
-      if (value > 0) {
-        assert value <= cash;
-        account.buyValue(entry.getKey(), value, "Buy toward target allocation");
-        sum += value;
-      }
-    }
-    assert sum >= 0;
-    assert sum <= cash;
   }
 
   public void runTo(long timeEnd)

@@ -52,6 +52,7 @@ public class FastSimTester
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 470 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stock.subseq(iStart);
     Simulation sim = new Simulation(store, guideSeq);
+    sim.setCheckBusinessDays(false); // assume data is correct wrt business days (faster but slightly dangerous)
     FastSim fastSim = new FastSim(store, guideSeq);
 
     final int nRuns = 10;
