@@ -213,10 +213,13 @@ public class TacticalDashboard
         }
         double mean = FinLib.mul2ret(Library.mean(returns));
         String sMean = genColoredCell(String.format("%.2f", mean), mean >= 0, null, red);
+
+        double totalReturn = FinLib.mul2ret(total);
+        String sTotal = genColoredCell(String.format("%.2f", totalReturn), totalReturn >= 0, null, red);
         writer.write(
-            " <tr class=\"%s\"><td>%d</td><td>%d</td><td>%.1f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td>%s<td>%.2f</td><td>%s</td></tr>\n",
-            className, entry.getKey(), returns.length, 100.0 - 100.0 * nLose / n, FinLib.mul2ret(total),
-            Library.min(drawdowns), FinLib.mul2ret(returns[0]), sMean, FinLib.mul2ret(returns[n - 1]),
+            " <tr class=\"%s\"><td>%d</td><td>%d</td><td>%.1f</td>%s<td>%.2f</td><td>%.2f</td>%s<td>%.2f</td><td>%s</td></tr>\n",
+            className, entry.getKey(), returns.length, 100.0 - 100.0 * nLose / n, sTotal, Library.min(drawdowns),
+            FinLib.mul2ret(returns[0]), sMean, FinLib.mul2ret(returns[n - 1]),
             String.format("<a href=\"%s\">graph</a>", genGraphFileName(entry.getKey())));
 
         ++iRow;
@@ -273,9 +276,11 @@ public class TacticalDashboard
         }
         double mean = FinLib.mul2ret(Library.mean(returns));
         String sMean = genColoredCell(String.format("%.2f", mean), mean >= 0, null, red);
+        double totalReturn = FinLib.mul2ret(total);
+        String sTotal = genColoredCell(String.format("%.2f", totalReturn), totalReturn >= 0, null, red);
         writer.write(
-            " <tr class=\"%s\"><td>%d</td><td>%d</td><td>%d</td><td>%.1f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td>%s<td>%.2f</td><td>%s</td></tr>\n",
-            className, pair.first, pair.second, returns.length, 100.0 - 100.0 * nLose / n, FinLib.mul2ret(total),
+            " <tr class=\"%s\"><td>%d</td><td>%d</td><td>%d</td><td>%.1f</td>%s<td>%.2f</td><td>%.2f</td>%s<td>%.2f</td><td>%s</td></tr>\n",
+            className, pair.first, pair.second, returns.length, 100.0 - 100.0 * nLose / n, sTotal,
             Library.min(drawdowns), FinLib.mul2ret(returns[0]), sMean, FinLib.mul2ret(returns[n - 1]),
             String.format("<a href=\"%s\">graph</a>", genGraphFileName(entry.getKey())));
         ++iRow;
@@ -316,10 +321,11 @@ public class TacticalDashboard
     // Multi-predictor to make final decisions.
     Set<Integer> contrary = new HashSet<Integer>();
     Set<IntPair> contraryPairs = new HashSet<IntPair>();
-    contrary.add(0);
+    contrary.add(0); // always be safe during code 0
     if (avoid62) {
       contraryPairs.add(new IntPair(6, 2));
     }
+
     PredictorConfig configStrategy = new ConfigMulti(true, contrary, contraryPairs, singleConfigs);
     MultiPredictor predStrategy = (MultiPredictor) configStrategy.build(sim.broker.accessObject, assetNames);
     sim.run(predStrategy, "Tactical");

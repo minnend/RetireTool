@@ -326,14 +326,22 @@ public final class Library
     return max;
   }
 
-  /** @return mean (average) of the values in the given array. */
+  /** @return arithmetic mean (average) of the values in the given array. */
   public static double mean(double[] a)
   {
+    if (a == null || a.length == 0) return Double.NaN;
+    return sum(a) / a.length;
+  }
+
+  /** @return geometry mean of the values in the given array. */
+  public static double geometricMean(double[] a)
+  {
+    if (a == null || a.length == 0) return Double.NaN;
     double sum = 0.0;
-    for (int i = 0; i < a.length; ++i) {
-      sum += a[i];
+    for (double x : a) {
+      sum += Math.log(x);
     }
-    return sum / a.length;
+    return Math.exp(sum / a.length);
   }
 
   public static double variance(double[] a)
