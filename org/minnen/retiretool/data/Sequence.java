@@ -1144,6 +1144,69 @@ public class Sequence implements Iterable<FeatureVec>
     return seq;
   }
 
+  /**
+   * Calculate the sum in [iStart, iEnd] assuming this is an integral sequence for dim=0.
+   */
+  public double integralSum(int iStart, int iEnd)
+  {
+    return integralSum(iStart, iEnd, 0);
+  }
+
+  /**
+   * Calculate the sum in [iStart, iEnd] assuming this is an integral sequence.
+   * 
+   * Use getIntegralSeq() to calculate an integral sequence from a raw sequence. The integral sequence holds the
+   * cumulative sum over the base sequence.
+   * 
+   * @param iStart first index (inclusive); negative indices are NOT adjusted.
+   * @param iEnd last index (inclusive); negative indices will be adjusted relative to end of sequence.
+   * @param iDim index of dimension over which to calculate the sum
+   * @return sum of values in [iStart, iEnd] assuming this is an integral sequence.
+   */
+  public double integralSum(int iStart, int iEnd, int iDim)
+  {
+    if (iEnd < 0) {
+      iEnd += length();
+    }
+    assert iStart <= iEnd;
+
+    double sum = get(iEnd, iDim);
+    if (iStart > 0) {
+      sum -= get(iStart - 1, iDim);
+    }
+
+    return sum;
+  }
+
+  /**
+   * Calculate the average over [iStart, iEnd] assuming this is an integral sequence for dim=0.
+   */
+  public double integralAverage(int iStart, int iEnd)
+  {
+    return integralAverage(iStart, iEnd, 0);
+  }
+
+  /**
+   * Calculate the average over [iStart, iEnd] assuming this is an integral sequence.
+   * 
+   * Use getIntegralSeq() to calculate an integral sequence from a raw sequence. The integral sequence holds the
+   * cumulative sum over the base sequence.
+   * 
+   * @param iStart first index (inclusive); negative indices are NOT adjusted.
+   * @param iEnd last index (inclusive); negative indices will be adjusted relative to end of sequence.
+   * @param iDim index of dimension over which to calculate the average
+   * @return average of values in [iStart, iEnd] assuming this is an integral sequence.
+   */
+  public double integralAverage(int iStart, int iEnd, int iDim)
+  {
+    if (iEnd < 0) {
+      iEnd += length();
+    }
+    final double sum = integralSum(iStart, iEnd, iDim);
+    final int n = iEnd - Math.max(iStart, 0) + 1;
+    return sum / n;
+  }
+
   /** @return sequence holding a simple moving average for this sequence. */
   public Sequence calcSMA(int nBack)
   {

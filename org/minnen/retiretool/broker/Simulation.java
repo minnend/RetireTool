@@ -49,6 +49,11 @@ public class Simulation
   private DiscreteDistribution                prevDist;
   private Predictor                           predictor;
 
+  public Simulation(SequenceStore store, Sequence guideSeq)
+  {
+    this(store, guideSeq, Slippage.None, 0, 10000.0, 0.0, PriceModel.adjCloseModel, PriceModel.adjCloseModel);
+  }
+
   public Simulation(SequenceStore store, Sequence guideSeq, Slippage slippage, int maxDelay, PriceModel valueModel,
       PriceModel quoteModel)
   {
@@ -256,6 +261,7 @@ public class Simulation
   public void setupRun(Predictor predictor, long timeStart, long timeEnd, String name)
   {
     assert timeStart != TimeLib.TIME_ERROR && timeEnd != TimeLib.TIME_ERROR;
+    predictor.setBroker(broker.accessObject);
     // System.out.printf("Run1: [%s] -> [%s] = [%s] -> [%s] (%d, %d)\n", TimeLib.formatDate(timeStart),
     // TimeLib.formatDate(timeEnd), TimeLib.formatDate(guideSeq.getStartMS()),
     // TimeLib.formatDate(guideSeq.getEndMS()), timeEnd, guideSeq.getStartMS());
@@ -380,13 +386,13 @@ public class Simulation
 
       store.lock(TimeLib.TIME_BEGIN, timeInfo.time, runKey);
       if (bNeedRebalance && targetDist != null && rebalanceDelay <= 0) {
-        DiscreteDistribution curDist = account.getDistribution(targetDist.names);
         // TODO figure out better approach for minimizing transactions. Some predictors may want to turn this off.
         // DiscreteDistribution submitDist = minimizeTransactions(curDist, targetDist, 4.0);
         DiscreteDistribution submitDist = new DiscreteDistribution(targetDist);
 
         // TODO improve & test submission distribution code.
         if (!submitDist.isNormalized()) {
+          DiscreteDistribution curDist = account.getDistribution(targetDist.names);
           System.out.printf("Curr: %s\n", curDist.toStringWithNames(2));
           System.out.printf("Prev: %s\n", prevDist.toStringWithNames(0));
           System.out.printf("Want: %s\n", targetDist.toStringWithNames(0));

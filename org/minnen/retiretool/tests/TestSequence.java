@@ -1,6 +1,7 @@
 package org.minnen.retiretool.tests;
 
 import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.Test;
 import org.minnen.retiretool.data.Sequence;
@@ -208,5 +209,45 @@ public class TestSequence
     assertEquals(3.0, integral.get(1, 0), eps);
     assertEquals(6.0, integral.get(2, 0), eps);
     assertEquals(10.0, integral.get(3, 0), eps);
+  }
+
+  @Test
+  public void testIntegralSum()
+  {
+    Sequence seq = new Sequence(new double[] { 1.0, 2.0, 3.0, 4.0 });
+    Sequence integral = seq.getIntegralSeq();
+    assert integral.matches(seq);
+
+    assertEquals(3.0, integral.integralSum(2, -2), eps);
+    assertEquals(10.0, integral.integralSum(0, -1), eps);
+    assertEquals(10.0, integral.integralSum(-1, -1), eps);
+    assertEquals(1.0, integral.integralSum(-1, 0), eps);
+    assertEquals(7.0, integral.integralSum(2, 3), eps);
+    assertEquals(3.0, integral.integralSum(2, 2), eps);
+    assertEquals(3.0, integral.integralSum(-5, 1), eps);
+
+    assertThrows(AssertionError.class, () -> {
+      integral.integralSum(3, 2);
+    });
+  }
+
+  @Test
+  public void testIntegralAverage()
+  {
+    Sequence seq = new Sequence(new double[] { 1.0, 2.0, 3.0, 4.0 });
+    Sequence integral = seq.getIntegralSeq();
+    assert integral.matches(seq);
+
+    assertEquals(3.0, integral.integralAverage(2, -2), eps);
+    assertEquals(2.5, integral.integralAverage(0, -1), eps);
+    assertEquals(2.5, integral.integralAverage(-1, -1), eps);
+    assertEquals(1.0, integral.integralAverage(-1, 0), eps);
+    assertEquals(3.5, integral.integralAverage(2, 3), eps);
+    assertEquals(3.0, integral.integralAverage(2, 2), eps);
+    assertEquals(1.5, integral.integralAverage(-5, 1), eps);
+
+    assertThrows(AssertionError.class, () -> {
+      integral.integralAverage(3, 2);
+    });
   }
 }

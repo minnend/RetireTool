@@ -22,9 +22,9 @@ public class TimeInfo
 
   public TimeInfo(int index, Sequence guideSeq)
   {
-    this(guideSeq.getTimeMS(index), index > 0 ? guideSeq.getTimeMS(index - 1) : TimeLib.toPreviousBusinessDay(guideSeq
-        .getStartMS()), index + 1 < guideSeq.length() ? guideSeq.getTimeMS(index + 1) : TimeLib
-        .toNextBusinessDay(guideSeq.getEndMS()));
+    this(guideSeq.getTimeMS(index),
+        index > 0 ? guideSeq.getTimeMS(index - 1) : TimeLib.toPreviousBusinessDay(guideSeq.getStartMS()),
+        index + 1 < guideSeq.length() ? guideSeq.getTimeMS(index + 1) : TimeLib.toNextBusinessDay(guideSeq.getEndMS()));
   }
 
   public TimeInfo(long time)

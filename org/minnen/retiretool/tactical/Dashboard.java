@@ -68,8 +68,8 @@ public class Dashboard
   /** overfitting? */
   public static final boolean           avoid62       = true;
 
-  public static final String            symbol        = "^GSPC";
-  // public static final String symbol = "VFINX";
+  // public static final String symbol = "^GSPC";
+  public static final String            symbol        = "VFINX";
 
   // public static final PredictorConfig[] singleConfigs = new PredictorConfig[] {
   // new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap), new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap),

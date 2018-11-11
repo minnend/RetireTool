@@ -26,30 +26,30 @@ public abstract class Predictor
   }
 
   /** Name of this predictor. */
-  public String                 name;
+  public String                name;
 
   /** Names of assets available to this predictor. */
-  public final String[]         assetChoices;
+  public final String[]        assetChoices;
 
   /** Access object for getting information from a broker. */
-  public final BrokerInfoAccess brokerAccess;
+  protected BrokerInfoAccess   brokerAccess;
 
   /** Sub-predictors that are aggregated by this predictor (e.g. to support ensembles). */
-  public Predictor[]            predictors;
+  public Predictor[]           predictors;
 
   /** Timestamp for last feedback; used to detect out-of-order feedback. */
-  protected long                lastFeedbackMS = TimeLib.TIME_BEGIN;
+  protected long               lastFeedbackMS = TimeLib.TIME_BEGIN;
 
   /** Type of predictor. */
-  protected PredictorType       predictorType;
+  protected PredictorType      predictorType;
 
   /** Reusable distribution array to reduce object creation. */
-  private DiscreteDistribution  distribution;
+  private DiscreteDistribution distribution;
 
-  public Map<String, Double>    futureReturns;
+  public Map<String, Double>   futureReturns;
 
   /** Stores information for each time the prediction changes. */
-  public final List<TimeCode>   timeCodes      = new ArrayList<>();
+  public final List<TimeCode>  timeCodes      = new ArrayList<>();
 
   public Predictor(String name, BrokerInfoAccess brokerAccess, String... assetChoices)
   {
@@ -117,5 +117,17 @@ public abstract class Predictor
         predictor.reset();
       }
     }
+  }
+
+  /** Modify this predictor to work with a different broker. */
+  public void setBroker(BrokerInfoAccess brokerAccess)
+  {
+    this.brokerAccess = brokerAccess;
+    if (predictors != null) {
+      for (Predictor predictor : predictors) {
+        predictor.setBroker(brokerAccess);
+      }
+    }
+    reset();
   }
 }

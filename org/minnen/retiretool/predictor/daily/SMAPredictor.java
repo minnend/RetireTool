@@ -12,18 +12,19 @@ public class SMAPredictor extends Predictor
   /** Relative location: -1 = below threshold; 1 = above threshold. */
   private int             reloc        = 0;
   private long            timeLastFlip = TimeLib.TIME_ERROR;
+  private final String    assetName;
   private final String    integralName;
-  private final int       assetID;
-  private final int       integralID;
+  private int             assetID;
+  private int             integralID;
 
   public SMAPredictor(ConfigSMA config, String assetName, String alternativeAsset, BrokerInfoAccess brokerAccess)
   {
     super("SMA", brokerAccess, assetName, alternativeAsset);
     this.predictorType = PredictorType.SelectOne;
     this.config = config;
-    this.assetID = brokerAccess.getID(assetName);
+    this.assetName = assetName;
     this.integralName = assetName + "-integral";
-    this.integralID = brokerAccess.getID(integralName);
+    setBroker(brokerAccess);
   }
 
   @Override
@@ -38,7 +39,7 @@ public class SMAPredictor extends Predictor
 
     // If it's too soon to change, repeat last decision.
     if (reloc != 0 && (timeLastFlip == TimeLib.TIME_ERROR || time - timeLastFlip < config.minTimeBetweenFlips)) {
-      return reloc > 0;
+      return reloc >= 0;
     }
 
     // Get either the price sequence or the integral sequence.
@@ -64,17 +65,8 @@ public class SMAPredictor extends Predictor
     // Calculate SMA values for base (threshold) and trigger.
     double threshold, trigger;
     if (integral != null) {
-      threshold = integral.get(iBaseB, config.iPrice);
-      if (iTriggerA > 0) {
-        threshold -= integral.get(iBaseA - 1, config.iPrice);
-      }
-      threshold /= (iBaseB - iBaseA + 1);
-
-      trigger = integral.get(iTriggerB, config.iPrice);
-      if (iTriggerA > 0) {
-        trigger -= integral.get(iTriggerA - 1, config.iPrice);
-      }
-      trigger /= (iTriggerB - iTriggerA + 1);
+      threshold = integral.integralAverage(iBaseA, iBaseB, config.iPrice);
+      trigger = integral.integralAverage(iTriggerA, iTriggerB, config.iPrice);
     } else {
       threshold = seq.average(iBaseA, iBaseB, config.iPrice);
       trigger = seq.average(iTriggerA, iTriggerB, config.iPrice);
@@ -88,6 +80,7 @@ public class SMAPredictor extends Predictor
     // Compare trigger to threshold and update state if there is a change.
     int newLoc = (trigger > threshold ? 1 : -1);
     if (reloc != newLoc) {
+      // System.out.printf("Change (%d -> %d) @ [%s]\n", reloc, newLoc, TimeLib.formatDate2(time));
       reloc = newLoc;
       timeLastFlip = time;
     }
@@ -100,5 +93,17 @@ public class SMAPredictor extends Predictor
     super.reset();
     reloc = 0;
     timeLastFlip = TimeLib.TIME_ERROR;
+  }
+
+  @Override
+  public void setBroker(BrokerInfoAccess brokerAccess)
+  {
+    super.setBroker(brokerAccess);
+    if (brokerAccess != null) {
+      this.assetID = brokerAccess.getID(assetName);
+      this.integralID = brokerAccess.getID(integralName);
+    } else {
+      this.assetID = this.integralID = -1;
+    }
   }
 }
