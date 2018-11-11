@@ -36,6 +36,7 @@ import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.util.Writer;
 import org.minnen.retiretool.viz.Chart;
+import org.minnen.retiretool.viz.ChartConfig;
 import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
 import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 
@@ -232,8 +233,10 @@ public class TacticalDashboard
 
       String title = String.format("Code: %d (n=%d)", entry.getKey(), list.size());
       String filename = genGraphFileName(entry.getKey());
-      Chart.saveLineChart(new File(DataIO.outputPath, filename), title, 1200, 900, ChartScaling.LINEAR,
-          ChartTiming.INDEX, seqs);
+      ChartConfig config = ChartConfig.buildLine(new File(DataIO.outputPath, filename), title, 1200, 900,
+          ChartScaling.LINEAR, ChartTiming.INDEX, seqs);
+      config.setPathToBase(miscToBase);
+      Chart.saveChart(config);
     }
 
     return sw.toString();
@@ -290,8 +293,10 @@ public class TacticalDashboard
 
       String title = String.format("Code Pair: %d -> %d (n=%d)", codePair.first, codePair.second, list.size());
       String filename = genGraphFileName(codePair);
-      Chart.saveLineChart(new File(DataIO.outputPath, filename), title, 1200, 900, ChartScaling.LINEAR,
-          ChartTiming.INDEX, seqs);
+      ChartConfig config = ChartConfig.buildLine(new File(DataIO.outputPath, filename), title, 1200, 900,
+          ChartScaling.LINEAR, ChartTiming.INDEX, seqs);
+      config.setPathToBase(miscToBase);
+      Chart.saveChart(config);
     }
 
     return sw.toString();
@@ -493,9 +498,13 @@ public class TacticalDashboard
       trigger.setName("Trigger");
       base.setName("Base");
       int code = 1 << (allParams.length - 1 - i);
-      Chart.saveLineChart(new File(miscPath, String.format("sma%d-code%d.html", i + 1, code)),
-          String.format("SMA %d (Code: %d)", i + 1, code), 1200, 600, ChartScaling.LINEAR, ChartTiming.DAILY, trigger,
-          baseLow, baseHigh, raw);
+
+      File file = new File(miscPath, String.format("sma%d-code%d.html", i + 1, code));
+      String title = String.format("SMA %d (Code: %d)", i + 1, code);
+      ChartConfig config = ChartConfig.buildLine(file, title, 1200, 600, ChartScaling.LINEAR, ChartTiming.DAILY,
+          trigger, baseLow, baseHigh, raw);
+      config.setPathToBase(miscToBase);
+      Chart.saveChart(config);
     }
   }
 }

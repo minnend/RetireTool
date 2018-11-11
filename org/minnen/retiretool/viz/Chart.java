@@ -43,7 +43,7 @@ public class Chart
   public static ChartConfig saveLineChart(File file, String title, int width, int height, ChartScaling scaling,
       ChartTiming timing, Sequence... seqs) throws IOException
   {
-    ChartConfig config = buildConfig(file, title, width, height, scaling, timing, seqs);
+    ChartConfig config = ChartConfig.buildLine(file, title, width, height, scaling, timing, seqs);
     saveChart(config);
     return config;
   }
@@ -51,7 +51,7 @@ public class Chart
   public static ChartConfig saveLineChart(File file, String title, int width, int height, ChartScaling scaling,
       ChartTiming timing, List<Sequence> seqs) throws IOException
   {
-    ChartConfig config = buildConfig(file, title, width, height, scaling, timing, seqs);
+    ChartConfig config = ChartConfig.buildLine(file, title, width, height, scaling, timing, seqs);
     saveChart(config);
     return config;
   }
@@ -60,32 +60,9 @@ public class Chart
       String[] colors, int width, int height, double ymin, double ymax, double minorTickIntervalY, ChartScaling scaling,
       ChartTiming timing, int dim, Sequence... seqs) throws IOException
   {
-    ChartConfig config = buildConfig(file, chartType, title, labels, colors, width, height, ymin, ymax,
+    ChartConfig config = ChartConfig.build(file, chartType, title, labels, colors, width, height, ymin, ymax,
         minorTickIntervalY, scaling, timing, dim, seqs);
     saveChart(config);
-    return config;
-  }
-
-  public static ChartConfig buildConfig(File file, String title, int width, int height, ChartScaling scaling,
-      ChartTiming timing, List<Sequence> seqs) throws IOException
-  {
-    return buildConfig(file, title, width, height, scaling, timing, seqs.toArray(new Sequence[seqs.size()]));
-  }
-
-  public static ChartConfig buildConfig(File file, String title, int width, int height, ChartScaling scaling,
-      ChartTiming timing, Sequence... seqs) throws IOException
-  {
-    return buildConfig(file, ChartConfig.Type.Line, title, null, null, width, height, Double.NaN, Double.NaN,
-        scaling == ChartScaling.LOGARITHMIC ? 0.5 : Double.NaN, scaling, timing, 0, seqs);
-  }
-
-  public static ChartConfig buildConfig(File file, ChartConfig.Type chartType, String title, String[] labels,
-      String[] colors, int width, int height, double ymin, double ymax, double minorTickIntervalY, ChartScaling scaling,
-      ChartTiming timing, int dim, Sequence... seqs)
-  {
-    ChartConfig config = new ChartConfig(file).setType(chartType).setTitle(title).setLabels(labels).setColors(colors)
-        .setSize(width, height).setMinMaxY(ymin, ymax).setMinorTickIntervalY(minorTickIntervalY)
-        .setLogarthimicYAxis(scaling == ChartScaling.LOGARITHMIC).setTiming(timing).setIndexY(dim).setData(seqs);
     return config;
   }
 
@@ -162,7 +139,8 @@ public class Chart
     try (Writer writer = new Writer(config.file)) {
       writer.write("<html><head>\n");
       writer.write("<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js\"></script>\n");
-      writer.write("<script src=\"js/highcharts.js\"></script>\n");
+      writer.write("<script src=\"%s/js/highcharts.js\"></script>\n",
+          config.pathToBase == null ? "." : config.pathToBase);
       writer.write("<script type=\"text/javascript\">\n");
 
       writer.write("$(function () {\n");
@@ -433,8 +411,7 @@ public class Chart
   public static ChartConfig saveScatterPlot(File file, String title, int width, int height, int radius,
       String[] dimNames, Sequence scatter) throws IOException
   {
-    ChartConfig config = new ChartConfig(file).setType(ChartConfig.Type.Scatter).setTitle(title).setSize(width, height)
-        .setRadius(radius).setDimNames(dimNames).setData(scatter);
+    ChartConfig config = ChartConfig.buildScatter(file, title, width, height, radius, dimNames, scatter);
     saveScatterPlot(config);
     return config;
   }

@@ -1,11 +1,14 @@
 package org.minnen.retiretool.viz;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
 import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
+import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 
 public class ChartConfig
 {
@@ -51,7 +54,7 @@ public class ChartConfig
   public List<PlotBand> yBands             = new ArrayList<PlotBand>();
   public List<PlotLine> xLines             = new ArrayList<PlotLine>();
   public List<PlotLine> yLines             = new ArrayList<PlotLine>();
-  public String         pathToBase;                                    // relative path to base dir twith css and js
+  public String         pathToBase;
 
   // Specific to scatter plots.
   public int            radius             = 3;
@@ -82,6 +85,36 @@ public class ChartConfig
   {
     if (s == null) return defaultIfNull;
     return "'" + s + "'";
+  }
+
+  public static ChartConfig buildLine(File file, String title, int width, int height, ChartScaling scaling,
+      ChartTiming timing, List<Sequence> seqs) throws IOException
+  {
+    return buildLine(file, title, width, height, scaling, timing, seqs.toArray(new Sequence[seqs.size()]));
+  }
+
+  public static ChartConfig buildLine(File file, String title, int width, int height, ChartScaling scaling,
+      ChartTiming timing, Sequence... seqs) throws IOException
+  {
+    return build(file, ChartConfig.Type.Line, title, null, null, width, height, Double.NaN, Double.NaN,
+        scaling == ChartScaling.LOGARITHMIC ? 0.5 : Double.NaN, scaling, timing, 0, seqs);
+  }
+
+  public static ChartConfig buildScatter(File file, String title, int width, int height, int radius, String[] dimNames,
+      Sequence scatter)
+  {
+    return new ChartConfig(file).setType(ChartConfig.Type.Scatter).setTitle(title).setSize(width, height)
+        .setRadius(radius).setDimNames(dimNames).setData(scatter);
+  }
+
+  public static ChartConfig build(File file, ChartConfig.Type chartType, String title, String[] labels, String[] colors,
+      int width, int height, double ymin, double ymax, double minorTickIntervalY, ChartScaling scaling,
+      ChartTiming timing, int dim, Sequence... seqs)
+  {
+    ChartConfig config = new ChartConfig(file).setType(chartType).setTitle(title).setLabels(labels).setColors(colors)
+        .setSize(width, height).setMinMaxY(ymin, ymax).setMinorTickIntervalY(minorTickIntervalY)
+        .setLogarthimicYAxis(scaling == ChartScaling.LOGARITHMIC).setTiming(timing).setIndexY(dim).setData(seqs);
+    return config;
   }
 
   public ChartConfig(File file)
@@ -342,6 +375,7 @@ public class ChartConfig
     return this;
   }
 
+  /** Set relative path to base dir that holds css and js subdirs. */
   public ChartConfig setPathToBase(String relPath)
   {
     pathToBase = relPath;
