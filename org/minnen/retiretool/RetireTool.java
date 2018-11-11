@@ -215,7 +215,7 @@ public class RetireTool
   public static void runSweep(File dir) throws IOException
   {
     // final double[] margins = new double[] { 0.1, 0.25, 0.5, 1.0, 2.0, 3.0, 5.0, 10.0 };
-    final double[] margins = new double[] { 0.25, 1.0, 2.0, 5.0 };
+    final int[] margins = new int[] { 25, 100, 200, 500 };
 
     // Build list of configs.
     List<PredictorConfig> configs = new ArrayList<PredictorConfig>();
@@ -359,8 +359,8 @@ public class RetireTool
     // new ConfigSMA(5, 0, 165, 5, 0.5, FinLib.Close, gap),
     // new ConfigSMA(5, 0, 145, 135, 1.0, FinLib.Close, gap) };
 
-    PredictorConfig[] singleConfigs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap),
-        new ConfigSMA(25, 0, 155, 125, 0.75, FinLib.Close, gap), new ConfigSMA(5, 0, 165, 5, 0.5, FinLib.Close, gap) };
+    PredictorConfig[] singleConfigs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 25, FinLib.Close, gap),
+        new ConfigSMA(25, 0, 155, 125, 75, FinLib.Close, gap), new ConfigSMA(5, 0, 165, 5, 50, FinLib.Close, gap) };
 
     // Multi-predictor to make final decisions.
     PredictorConfig config = new ConfigMulti(true, 0, singleConfigs);
@@ -376,103 +376,103 @@ public class RetireTool
     jitterStats.print();
   }
 
-//  public static long findBestAssetMap(ConfigMulti config, int nJitterRuns, int maxDelay)
-//  {
-//    // TODO return all dominating assetMap values
-//    int maxCode = (1 << config.size()) - 1;
-//    long maxMap = (1 << (maxCode + 1)) - 1;
-//    long startCode = (1 << maxCode);
-//    // System.out.printf("maxCode=%d maxMap=%d startCode=%d\n", maxCode, maxMap, startCode);
-//    long bestAssetMap = -1;
-//    JitterStats bestStats = null;
-//    // for (long assetMap = startCode; assetMap <= maxMap; assetMap += 2) {
-//    {
-//      long assetMap = -2;
-//      config.assetMap = assetMap;
-//      JitterStats jitterStats = collectJitterStats(nJitterRuns, config, assetNames, GlobalSlippage, PriceSDev, maxDelay,
-//          BuyAtNextOpen, 0);
-//      if (bestStats == null || jitterStats.score() > bestStats.score()) {
-//        bestAssetMap = assetMap;
-//        bestStats = jitterStats;
-//      }
-//
-//      if (jitterStats == bestStats || assetMap == maxCode) {
-//        System.out.printf(" %d: %s (%.3f)\n", assetMap, jitterStats, jitterStats.score());
-//        // bestStats == jitterStats ? " *" : "");
-//      }
-//    }
-//    config.assetMap = bestAssetMap;
-//    return bestAssetMap;
-//  }
+  // public static long findBestAssetMap(ConfigMulti config, int nJitterRuns, int maxDelay)
+  // {
+  // // TODO return all dominating assetMap values
+  // int maxCode = (1 << config.size()) - 1;
+  // long maxMap = (1 << (maxCode + 1)) - 1;
+  // long startCode = (1 << maxCode);
+  // // System.out.printf("maxCode=%d maxMap=%d startCode=%d\n", maxCode, maxMap, startCode);
+  // long bestAssetMap = -1;
+  // JitterStats bestStats = null;
+  // // for (long assetMap = startCode; assetMap <= maxMap; assetMap += 2) {
+  // {
+  // long assetMap = -2;
+  // config.assetMap = assetMap;
+  // JitterStats jitterStats = collectJitterStats(nJitterRuns, config, assetNames, GlobalSlippage, PriceSDev, maxDelay,
+  // BuyAtNextOpen, 0);
+  // if (bestStats == null || jitterStats.score() > bestStats.score()) {
+  // bestAssetMap = assetMap;
+  // bestStats = jitterStats;
+  // }
+  //
+  // if (jitterStats == bestStats || assetMap == maxCode) {
+  // System.out.printf(" %d: %s (%.3f)\n", assetMap, jitterStats, jitterStats.score());
+  // // bestStats == jitterStats ? " *" : "");
+  // }
+  // }
+  // config.assetMap = bestAssetMap;
+  // return bestAssetMap;
+  // }
 
-//  public static void runMultiSweep(File dir) throws IOException
-//  {
-//    Sequence stock = store.get(riskyName);
-//    final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
-//    Sequence guideSeq = stock.subseq(iStart);
-//    Broker broker = new Broker(store, GlobalSlippage, guideSeq);
-//
-//    // ConfigSMA[] configs = new ConfigSMA[] {
-//    // // new ConfigSMA(5, 0, 160, 0, 0.5, FinLib.Close, gap),
-//    // new ConfigSMA(35, 0, 50, 10, 2.0, FinLib.Close, gap), new ConfigSMA(15, 5, 30, 0, 2.0, FinLib.Close, gap),
-//    // new ConfigSMA(55, 30, 80, 70, 0.1, FinLib.Close, gap), new ConfigSMA(60, 0, 70, 10, 1.0, FinLib.Close, gap), };
-//
-//    // PredictorConfig[] configs = new PredictorConfig[] {
-//    // new ConfigSMA(10, 0, 240, 0, 2.0, FinLib.Close, gap),
-//    // new ConfigSMA(30, 0, 250, 40, 0.25, FinLib.Close, gap),
-//    // new ConfigSMA(20, 0, 240, 130, 1.0, FinLib.Close, gap),
-//    // new ConfigSMA(50, 0, 180, 30, 0.25, FinLib.Close, gap), };
-//
-//    PredictorConfig[] configs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap),
-//        new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap), new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap), };
-//
-//    int maxCode = (1 << configs.length) - 1;
-//    long maxMap = (1 << (maxCode + 1)) - 1;
-//    long startCode = (1 << maxCode);
-//    System.out.printf("maxCode=%d  maxMap=%d  startCode=%d\n", maxCode, maxMap, startCode);
-//    List<CumulativeStats> allStats = new ArrayList<CumulativeStats>();
-//    int n = 0;
-//    // long[] maps = new long[] { 0, 128, 254, 255 };
-//    long startTime = TimeLib.getTime();
-//    // for (long assetMap : maps) {
-//    for (long assetMap = startCode; assetMap <= maxMap; assetMap += 2) {
-//      // int nBits = Library.numBits(assetMap);
-//      // if (nBits < 6) continue;
-//      broker.reset();
-//      PredictorConfig config = new ConfigMulti(assetMap, configs);
-//      Predictor predictor = config.build(broker.accessObject, assetNames);
-//
-//      Sequence returns = runBrokerSim(predictor, broker, guideSeq, MaxDelay, BuyAtNextOpen);
-//      // JitterStats jitterStats = collectJitterStats(0, config, assetNames, GlobalSlippage, 1, true, 50);
-//      returns.setName(String.format("%d", assetMap));
-//
-//      CumulativeStats cstats = CumulativeStats.calc(returns);
-//      allStats.add(cstats);
-//      System.out.println(cstats);
-//      ++n;
-//      if (n % 50 == 0) {
-//        long duration = TimeLib.getTime() - startTime;
-//        System.out.printf("%d in %s @ %.1f/s\n", allStats.size(), TimeLib.formatDuration(duration),
-//            1000.0 * allStats.size() / duration);
-//      }
-//    }
-//    long duration = TimeLib.getTime() - startTime;
-//
-//    System.out.println();
-//    System.out.printf("Summary: %d runs in %s @ %.1f/s\n", allStats.size(), TimeLib.formatDuration(duration),
-//        1000.0 * allStats.size() / duration);
-//    CumulativeStats.filter(allStats);
-//    Collections.sort(allStats);
-//    for (CumulativeStats cstats : allStats) {
-//      System.out.printf("%s\n", cstats);
-//    }
-//  }
+  // public static void runMultiSweep(File dir) throws IOException
+  // {
+  // Sequence stock = store.get(riskyName);
+  // final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
+  // Sequence guideSeq = stock.subseq(iStart);
+  // Broker broker = new Broker(store, GlobalSlippage, guideSeq);
+  //
+  // // ConfigSMA[] configs = new ConfigSMA[] {
+  // // // new ConfigSMA(5, 0, 160, 0, 0.5, FinLib.Close, gap),
+  // // new ConfigSMA(35, 0, 50, 10, 2.0, FinLib.Close, gap), new ConfigSMA(15, 5, 30, 0, 2.0, FinLib.Close, gap),
+  // // new ConfigSMA(55, 30, 80, 70, 0.1, FinLib.Close, gap), new ConfigSMA(60, 0, 70, 10, 1.0, FinLib.Close, gap), };
+  //
+  // // PredictorConfig[] configs = new PredictorConfig[] {
+  // // new ConfigSMA(10, 0, 240, 0, 2.0, FinLib.Close, gap),
+  // // new ConfigSMA(30, 0, 250, 40, 0.25, FinLib.Close, gap),
+  // // new ConfigSMA(20, 0, 240, 130, 1.0, FinLib.Close, gap),
+  // // new ConfigSMA(50, 0, 180, 30, 0.25, FinLib.Close, gap), };
+  //
+  // PredictorConfig[] configs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap),
+  // new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap), new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap), };
+  //
+  // int maxCode = (1 << configs.length) - 1;
+  // long maxMap = (1 << (maxCode + 1)) - 1;
+  // long startCode = (1 << maxCode);
+  // System.out.printf("maxCode=%d maxMap=%d startCode=%d\n", maxCode, maxMap, startCode);
+  // List<CumulativeStats> allStats = new ArrayList<CumulativeStats>();
+  // int n = 0;
+  // // long[] maps = new long[] { 0, 128, 254, 255 };
+  // long startTime = TimeLib.getTime();
+  // // for (long assetMap : maps) {
+  // for (long assetMap = startCode; assetMap <= maxMap; assetMap += 2) {
+  // // int nBits = Library.numBits(assetMap);
+  // // if (nBits < 6) continue;
+  // broker.reset();
+  // PredictorConfig config = new ConfigMulti(assetMap, configs);
+  // Predictor predictor = config.build(broker.accessObject, assetNames);
+  //
+  // Sequence returns = runBrokerSim(predictor, broker, guideSeq, MaxDelay, BuyAtNextOpen);
+  // // JitterStats jitterStats = collectJitterStats(0, config, assetNames, GlobalSlippage, 1, true, 50);
+  // returns.setName(String.format("%d", assetMap));
+  //
+  // CumulativeStats cstats = CumulativeStats.calc(returns);
+  // allStats.add(cstats);
+  // System.out.println(cstats);
+  // ++n;
+  // if (n % 50 == 0) {
+  // long duration = TimeLib.getTime() - startTime;
+  // System.out.printf("%d in %s @ %.1f/s\n", allStats.size(), TimeLib.formatDuration(duration),
+  // 1000.0 * allStats.size() / duration);
+  // }
+  // }
+  // long duration = TimeLib.getTime() - startTime;
+  //
+  // System.out.println();
+  // System.out.printf("Summary: %d runs in %s @ %.1f/s\n", allStats.size(), TimeLib.formatDuration(duration),
+  // 1000.0 * allStats.size() / duration);
+  // CumulativeStats.filter(allStats);
+  // Collections.sort(allStats);
+  // for (CumulativeStats cstats : allStats) {
+  // System.out.printf("%s\n", cstats);
+  // }
+  // }
 
   public static void runMixSweep(File dir) throws IOException
   {
-    PredictorConfig[] singleConfigs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap),
-        new ConfigSMA(20, 0, 250, 50, 1.0, FinLib.Close, gap), new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap),
-        new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap), new ConfigSMA(10, 0, 230, 40, 2.0, FinLib.Close, gap), };
+    PredictorConfig[] singleConfigs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 25, FinLib.Close, gap),
+        new ConfigSMA(20, 0, 250, 50, 100, FinLib.Close, gap), new ConfigSMA(50, 0, 180, 30, 100, FinLib.Close, gap),
+        new ConfigSMA(10, 0, 220, 0, 200, FinLib.Close, gap), new ConfigSMA(10, 0, 230, 40, 200, FinLib.Close, gap), };
 
     final int nSingle = singleConfigs.length;
     final int nMulti = (nSingle * (nSingle - 1)) / 2;
@@ -553,8 +553,8 @@ public class RetireTool
     // new ConfigSMA(50, 0, 180, 30, 0.25, FinLib.Close, gap), };
     // PredictorConfig config = new ConfigMulti(assetMap, configs);
 
-    PredictorConfig[] configs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap),
-        new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap), new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap), };
+    PredictorConfig[] configs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 25, FinLib.Close, gap),
+        new ConfigSMA(50, 0, 180, 30, 100, FinLib.Close, gap), new ConfigSMA(10, 0, 220, 0, 200, FinLib.Close, gap), };
     PredictorConfig config = new ConfigMulti(true, 0, configs);
 
     // PredictorConfig configStock = new ConfigConst(0);
@@ -612,7 +612,7 @@ public class RetireTool
       int triggerB = Integer.parseInt(m.group(2));
       int baseA = Integer.parseInt(m.group(3));
       int baseB = Integer.parseInt(m.group(4));
-      double margin = Double.parseDouble(m.group(5));
+      int margin = (int) Math.round(Double.parseDouble(m.group(5)) * 100.0);
 
       ConfigSMA config = new ConfigSMA(triggerA, triggerB, baseA, baseB, margin, FinLib.Close, gap);
       all.add(config);
@@ -651,7 +651,7 @@ public class RetireTool
       int triggerB = Integer.parseInt(m.group(2));
       int baseA = Integer.parseInt(m.group(3));
       int baseB = Integer.parseInt(m.group(4));
-      double margin = Double.parseDouble(m.group(5));
+      int margin = (int) Math.round(Double.parseDouble(m.group(5)) * 100.0);
 
       PredictorConfig config = new ConfigSMA(triggerA, triggerB, baseA, baseB, margin, FinLib.Close, gap);
       JitterStats stats = new JitterStats(config, cagr, drawdown);

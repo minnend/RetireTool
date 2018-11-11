@@ -82,8 +82,8 @@ public class Dashboard
   // new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap), new ConfigSMA(10, 0, 230, 40, 2.0, FinLib.Close, gap) };
 
   public static final PredictorConfig[] singleConfigs = new PredictorConfig[] {
-      new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap), new ConfigSMA(25, 0, 155, 125, 0.75, FinLib.Close, gap),
-      new ConfigSMA(5, 0, 165, 5, 0.5, FinLib.Close, gap) };
+      new ConfigSMA(20, 0, 240, 150, 25, FinLib.Close, gap), new ConfigSMA(25, 0, 155, 125, 75, FinLib.Close, gap),
+      new ConfigSMA(5, 0, 165, 5, 50, FinLib.Close, gap) };
 
   public static final int[][]           allParams     = new int[][] { { 20, 0, 240, 150, 25 }, { 25, 0, 155, 125, 75 },
       { 5, 0, 165, 5, 50 } };

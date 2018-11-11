@@ -97,7 +97,7 @@ public class StandardPortfolios
   public Predictor simpleSMA(int nMonths, String riskyAsset, String safeAsset)
   {
     int n = nMonths * 20;
-    PredictorConfig config = new ConfigSMA(5, 0, n, n - 5, 0.1, FinLib.AdjClose, 2 * TimeLib.MS_IN_DAY);
+    PredictorConfig config = new ConfigSMA(5, 0, n, n - 5, 10, FinLib.AdjClose, 2 * TimeLib.MS_IN_DAY);
     Predictor predictor = config.build(sim.broker.accessObject, new String[] { riskyAsset, safeAsset });
     predictor.name = String.format("SMA:%d", nMonths);
     return predictor;

@@ -57,7 +57,7 @@ public class FastSimTester
 
     // SMA-based predictor.
     final long gap = 2 * TimeLib.MS_IN_DAY;
-    ConfigSMA configStrategy = new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap);
+    ConfigSMA configStrategy = new ConfigSMA(20, 0, 240, 150, 25, FinLib.Close, gap);
     Predictor predStrategy = configStrategy.build(null, assetNames);
     long a, b;
     CumulativeStats statsFast, statsSlow;

@@ -9,7 +9,7 @@ public class ConfigSMA extends PredictorConfig
 {
   public static final Random rng = new Random();
 
-  public final double        margin;
+  public final int           margin;             // basis points, i.e. 100 = 0.01%
   public final int           nLookbackBaseA;
   public final int           nLookbackBaseB;
   public final int           nLookbackTriggerA;
@@ -17,14 +17,14 @@ public class ConfigSMA extends PredictorConfig
   public final int           iPrice;
   public final long          minTimeBetweenFlips;
 
-  public ConfigSMA(int nLookbackTriggerA, int nLookbackTriggerB, int nLookbackBaseA, int nLookbackBaseB, double margin,
+  public ConfigSMA(int nLookbackTriggerA, int nLookbackTriggerB, int nLookbackBaseA, int nLookbackBaseB, int margin,
       int iPrice, long minTimeBetweenFlips)
   {
     this(nLookbackTriggerA, nLookbackTriggerB, nLookbackBaseA, nLookbackBaseB, margin, iPrice, minTimeBetweenFlips, 0,
         1);
   }
 
-  public ConfigSMA(int nLookbackTriggerA, int nLookbackTriggerB, int nLookbackBaseA, int nLookbackBaseB, double margin,
+  public ConfigSMA(int nLookbackTriggerA, int nLookbackTriggerB, int nLookbackBaseA, int nLookbackBaseB, int margin,
       int iPrice, long minTimeBetweenFlips, int iPredictIn, int iPredictOut)
   {
     super(iPredictIn, iPredictOut);
@@ -44,7 +44,7 @@ public class ConfigSMA extends PredictorConfig
       int nTriggerB = 0;
       int nBaseA = 5 * rng.nextInt(1, 50);
       int nBaseB = Math.max(0, nBaseA - 10 * rng.nextInt(1, Math.max(1, nBaseA / 10)));
-      double margin = rng.nextInt(1, 12) * 0.25;
+      int margin = rng.nextInt(1, 12) * 25;
       ConfigSMA config = new ConfigSMA(nTriggerA, nTriggerB, nBaseA, nBaseB, margin, iPrice, minTimeBetweenFlips);
       if (config.isValid()) return config;
     }
@@ -72,11 +72,10 @@ public class ConfigSMA extends PredictorConfig
       int nLookbackTriggerB = perturbLookback(this.nLookbackTriggerB);
       int nLookbackBaseA = perturbLookback(this.nLookbackBaseA);
       int nLookbackBaseB = perturbLookback(this.nLookbackBaseB);
-      double margin = perturbMargin(this.margin);
+      int margin = perturbMargin(this.margin);
       ConfigSMA perturbed = new ConfigSMA(nLookbackTriggerA, nLookbackTriggerB, nLookbackBaseA, nLookbackBaseB, margin,
           iPrice, minTimeBetweenFlips);
-      if (!perturbed.isValid()) continue;
-      return perturbed;
+      if (perturbed.isValid()) return perturbed;
     }
     throw new RuntimeException(String.format("Failed to generate a valid perturbed config after %d tries.", N));
   }
@@ -93,23 +92,23 @@ public class ConfigSMA extends PredictorConfig
     return px;
   }
 
-  private static double perturbMargin(double x)
+  private static int perturbMargin(int x)
   {
-    assert x >= 0.0;
-    double halfWidth = Math.max(0.01, x * 0.1);
+    assert x >= 0;
+    double halfWidth = Math.max(100, x * 0.1);
     double xmin = Math.max(x - halfWidth, 0.0);
     double xmax = x + halfWidth;
     assert xmin <= x && xmax >= x && xmax >= xmin;
     double range = xmax - xmin;
     double px = rng.nextDouble(true, true) * range + xmin;
     assert px >= xmin && px <= xmax;
-    return px;
+    return (int) Math.round(px * 100.0);
   }
 
   @Override
   public String toString()
   {
-    return String.format("[%d,%d] / [%d,%d] m=%.2f%%", nLookbackTriggerA, nLookbackTriggerB, nLookbackBaseA,
-        nLookbackBaseB, margin);
+    return String.format("[%d,%d] / [%d,%d] m=%d", nLookbackTriggerA, nLookbackTriggerB, nLookbackBaseA, nLookbackBaseB,
+        margin);
   }
 }

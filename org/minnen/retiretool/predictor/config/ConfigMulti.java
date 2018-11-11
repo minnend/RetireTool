@@ -111,9 +111,9 @@ public class ConfigMulti extends PredictorConfig
     contraryCodes.add(0);
     final long gap = 2 * TimeLib.MS_IN_DAY;
     PredictorConfig[] tacticalConfigs = new PredictorConfig[] {
-        new ConfigSMA(20, 0, 240, 150, 0.25, iPrice, gap, iPredictIn, iPredictOut),
-        new ConfigSMA(50, 0, 180, 30, 1.0, iPrice, gap, iPredictIn, iPredictOut),
-        new ConfigSMA(10, 0, 220, 0, 2.0, iPrice, gap, iPredictIn, iPredictOut), };
+        new ConfigSMA(20, 0, 240, 150, 25, iPrice, gap, iPredictIn, iPredictOut),
+        new ConfigSMA(50, 0, 180, 30, 100, iPrice, gap, iPredictIn, iPredictOut),
+        new ConfigSMA(10, 0, 220, 0, 200, iPrice, gap, iPredictIn, iPredictOut), };
     return new ConfigMulti(defaultDecision, contraryCodes, tacticalConfigs);
   }
 }

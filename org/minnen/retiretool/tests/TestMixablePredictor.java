@@ -116,10 +116,10 @@ public class TestMixablePredictor
   {
     PredictorConfig config;
 
-    config = new ConfigSMA(10, 0, 60, 40, 1.0, 0, 2);
+    config = new ConfigSMA(10, 0, 60, 40, 100, 0, 2);
     assertTrue(checkWithMix(config));
 
-    config = new ConfigSMA(50, 0, 100, 50, 0.0, 0, 0);
+    config = new ConfigSMA(50, 0, 100, 50, 0, 0, 0);
     assertTrue(checkWithMix(config));
   }
 
@@ -149,15 +149,15 @@ public class TestMixablePredictor
     PredictorConfig config;
     PredictorConfig[] configs;
 
-    configs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, 0, 2, iIn, iOut),
-        new ConfigSMA(50, 0, 180, 30, 1.0, 0, 2, iIn, iOut), new ConfigSMA(10, 0, 220, 0, 2.0, 0, 2, iIn, iOut), };
+    configs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 25, 0, 2, iIn, iOut),
+        new ConfigSMA(50, 0, 180, 30, 100, 0, 2, iIn, iOut), new ConfigSMA(10, 0, 220, 0, 200, 0, 2, iIn, iOut), };
     config = new ConfigMulti(true, 0, configs);
     assertTrue(checkWithMix(config));
 
     iIn = 1;
     iOut = 3;
-    configs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 0.25, 0, 2, iIn, iOut),
-        new ConfigSMA(50, 0, 180, 30, 1.0, 0, 2, iIn, iOut), new ConfigSMA(10, 0, 220, 0, 2.0, 0, 2, iIn, iOut), };
+    configs = new PredictorConfig[] { new ConfigSMA(20, 0, 240, 150, 25, 0, 2, iIn, iOut),
+        new ConfigSMA(50, 0, 180, 30, 100, 0, 2, iIn, iOut), new ConfigSMA(10, 0, 220, 0, 200, 0, 2, iIn, iOut), };
     config = new ConfigMulti(true, 0, configs);
     assertTrue(checkWithMix(config));
   }
