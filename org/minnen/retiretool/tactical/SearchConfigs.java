@@ -10,7 +10,6 @@ import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.data.tiingo.TiingoFund;
-import org.minnen.retiretool.predictor.config.ConfigSMA;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.stats.CumulativeStats;
@@ -19,32 +18,15 @@ import org.minnen.retiretool.util.TimeLib;
 
 public class SearchConfigs
 {
-  public static final SequenceStore     store             = new SequenceStore();
-  public static final String            riskyName         = "stock";
-  public static final String            safeName          = "3-month-treasuries";
-  public static final String[]          assetNames        = new String[] { riskyName, safeName };
-  public static final int               nEvalPerturb      = 20;
-  public static final int               nEvalPerturbKnown = 100;
-  public static final int               nMaxSeeds         = 10000;
+  public static final SequenceStore store             = new SequenceStore();
+  public static final String        riskyName         = "stock";
+  public static final String        safeName          = "3-month-treasuries";
+  public static final String[]      assetNames        = new String[] { riskyName, safeName };
+  public static final int           nEvalPerturb      = 20;
+  public static final int           nEvalPerturbKnown = 100;
+  public static final int           nMaxSeeds         = 10000;
 
-  private static Simulation             sim;
-
-  // List of good parameters for single SMA.
-  public static final int[][]           knownParams       = new int[][] { new int[] { 20, 240, 150, 25 },
-      new int[] { 15, 259, 125, 21 }, new int[] { 34, 182, 82, 684 }, new int[] { 5, 184, 44, 353 },
-      new int[] { 9, 176, 167, 1243 }, new int[] { 14, 246, 100, 900 }, new int[] { 21, 212, 143, 213 },
-      new int[] { 3, 205, 145, 438 }, new int[] { 15, 155, 105, 997 }, new int[] { 20, 126, 54, 690 },
-      new int[] { 32, 116, 94, 938 }, new int[] { 22, 124, 74, 904 }, new int[] { 19, 201, 143, 207 },
-      new int[] { 13, 186, 177, 1127 }, new int[] { 19, 147, 92, 885 }, new int[] { 18, 213, 79, 723 }, };
-
-  public static final PredictorConfig[] knownConfigs      = new PredictorConfig[knownParams.length];
-
-  static {
-    for (int i = 0; i < knownParams.length; ++i) {
-      int[] p = knownParams[i];
-      knownConfigs[i] = new ConfigSMA(p[0], 0, p[1], p[2], p[3], FinLib.AdjClose, GeneratorSMA.gap);
-    }
-  }
+  private static Simulation         sim;
 
   private static void setupData() throws IOException
   {
@@ -53,17 +35,19 @@ public class SearchConfigs
     System.out.printf("%s: [%s] -> [%s]\n", stock.getName(), TimeLib.formatDate(stock.getStartMS()),
         TimeLib.formatDate(stock.getEndMS()));
     store.add(stock, riskyName);
-    store.add(stock.getIntegralSeq());
+    store.add(stock.getIntegralSeq());  // pre-compute integral sequence to speed up SMA calculations
 
     Sequence tb3mo = FinLib.inferAssetFrom3MonthTreasuries();
     store.add(tb3mo, safeName);
   }
 
+  /** Convenience method to run eval with default number of eval perturbations. */
   private static CumulativeStats eval(PredictorConfig config, String name)
   {
     return eval(config, name, nEvalPerturb);
   }
 
+  /** Eval stats are *worst* results for the given number of perturbations. */
   private static CumulativeStats eval(PredictorConfig config, String name, int nPerturb)
   {
     Predictor pred = config.build(null, assetNames);
@@ -84,6 +68,7 @@ public class SearchConfigs
     return worstStats;
   }
 
+  /** Simple hill-climbing optimizer based on testing random perturbations. */
   private static CumulativeStats optimize(PredictorConfig baseConfig, CumulativeStats baseStats,
       ConfigGenerator generator)
   {
@@ -113,8 +98,9 @@ public class SearchConfigs
     sim = new Simulation(store, guideSeq);
     sim.setCheckBusinessDays(false); // assume data is correct wrt business days (faster but slightly dangerous)
 
+    // Set up "defenders" based on known-good configs.
     List<CumulativeStats> dominators = new ArrayList<>();
-    for (PredictorConfig config : knownConfigs) {
+    for (PredictorConfig config : GeneratorSMA.knownConfigs) {
       CumulativeStats stats = eval(config, "Known", nEvalPerturbKnown);
       System.out.printf("%s  (%s)\n", stats, config);
       dominators.add(stats);
@@ -127,6 +113,7 @@ public class SearchConfigs
 
     ConfigGenerator generator = new GeneratorSMA();
 
+    // Search for better configs.
     Set<PredictorConfig> set = new HashSet<>();
     int nSeedsFound = 0;
     while (nSeedsFound < nMaxSeeds) {
