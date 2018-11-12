@@ -1145,64 +1145,6 @@ public final class FinLib
     return winners.toArray(new RetirementStats[winners.size()]);
   }
 
-  /** Filter a list of strategies so that only "dominating" ones remain. */
-  public static void filterStrategies(List<String> candidates, SequenceStoreV1 store)
-  {
-    final double diffMargin = 0.01;
-    final int N = candidates.size();
-    for (int i = 0; i < N; ++i) {
-      String name1 = candidates.get(i);
-      if (name1 == null) {
-        continue;
-      }
-      CumulativeStats cstats1 = store.getCumulativeStats(name1);
-      DurationalStats dstats1 = store.getDurationalStats(name1);
-      for (int j = i + 1; j < N; ++j) {
-        String name2 = candidates.get(j);
-        if (name2 == null) {
-          continue;
-        }
-        CumulativeStats cstats2 = store.getCumulativeStats(name2);
-
-        if (cstats1.dominates(cstats2) || cstats1.compareTo(cstats2) == 0) {
-          candidates.set(j, null);
-          continue;
-        }
-
-        if (cstats2.dominates(cstats1)) {
-          candidates.set(i, null);
-          break;
-        }
-
-        final double eps = 1e-6;
-        DurationalStats dstats2 = store.getDurationalStats(name2);
-        if (dstats1 != null && dstats2 != null) {
-          ComparisonStats.Results comp = ComparisonStats.calcFromDurationReturns(dstats1.durationReturns,
-              dstats2.durationReturns, store.getLastStatsDuration(), diffMargin);
-          if (comp.winPercent1 > 100.0 - eps) {
-            candidates.set(j, null);
-            continue;
-          }
-
-          if (comp.winPercent2 > 100.0 - eps) {
-            candidates.set(i, null);
-            break;
-          }
-        }
-      }
-    }
-
-    // Remove all null entries.
-    candidates.removeIf(new Predicate<String>()
-    {
-      @Override
-      public boolean test(String name)
-      {
-        return name == null;
-      }
-    });
-  }
-
   public static Sequence daily2monthly(Sequence daily)
   {
     return daily2monthly(daily, 0, 0);

@@ -17,20 +17,23 @@ import org.minnen.retiretool.util.FinLib;
  */
 public class CumulativeStats implements Comparable<CumulativeStats>
 {
-  public Sequence        cumulativeReturns;
-  public double          cagr              = 1.0;
-  public double          meanAnnualReturn  = 1.0;
-  public double          devAnnualReturn;
-  public double          totalReturn       = 1.0;
-  public double          drawdown;
-  public double          percentNewHigh;
-  public double          percentDown10;
-  public double          peakReturn;
-  public double          percentUp;
-  public double          percentDown;
-  public double[]        annualPercentiles = new double[5];
-  public double          leverage          = 1.0;
-  public PredictorConfig config;
+  public static final double epsCAGR           = 0.008;
+  public static final double epsDrawdown       = 0.1;
+
+  public Sequence            cumulativeReturns;
+  public double              cagr              = 1.0;
+  public double              meanAnnualReturn  = 1.0;
+  public double              devAnnualReturn;
+  public double              totalReturn       = 1.0;
+  public double              drawdown;
+  public double              percentNewHigh;
+  public double              percentDown10;
+  public double              peakReturn;
+  public double              percentUp;
+  public double              percentDown;
+  public double[]            annualPercentiles = new double[5];
+  public double              leverage          = 1.0;
+  public PredictorConfig     config;
 
   public static CumulativeStats calc(Sequence cumulativeReturns)
   {
@@ -183,12 +186,38 @@ public class CumulativeStats implements Comparable<CumulativeStats>
     return stats;
   }
 
-  public boolean dominates(CumulativeStats cstats)
+  /**
+   * Conservative calculation of strategy dominance.
+   * 
+   * @return 0 if stats are similar else 1 if this stats object dominates and -1 if `other` dominates.
+   */
+  public int dominates(CumulativeStats other)
   {
-    final double epsCAGR = 0.008;
-    final double epsDrawdown = 0.4;
+    int resultCAGR = 0;
+    if (cagr > other.cagr + epsCAGR) resultCAGR = 1;
+    else if (other.cagr > cagr + epsCAGR) resultCAGR = -1;
 
-    return (cagr > cstats.cagr - epsCAGR) && (drawdown < cstats.drawdown + epsDrawdown);
+    int resultDD = 0;
+    if (drawdown < other.drawdown - epsDrawdown) resultDD = 1;
+    else if (other.drawdown < drawdown - epsDrawdown) resultDD = -1;
+
+    final int sum = resultCAGR + resultDD;
+    if (sum > 0) return 1;
+    if (sum < 0) return -1;
+    return 0;
+  }
+
+  /**
+   * Conservative calculation of strategy similarity.
+   * 
+   * @return true if both CAGR and DD are close.
+   */
+  public boolean isSimilar(CumulativeStats other)
+  {
+    if (Math.abs(cagr - other.cagr) > epsCAGR) return false;
+    if (Math.abs(drawdown - other.drawdown) > epsDrawdown) return false;
+    // TODO consider other stats? median?
+    return true;
   }
 
   @Override
@@ -215,6 +244,8 @@ public class CumulativeStats implements Comparable<CumulativeStats>
   public static void filter(List<CumulativeStats> stats)
   {
     final int N = stats.size();
+
+    // Compare all pairs and set dominated (or duplicate) stats to null.
     for (int i = 0; i < N; ++i) {
       CumulativeStats stats1 = stats.get(i);
       if (stats1 == null) {
@@ -226,15 +257,17 @@ public class CumulativeStats implements Comparable<CumulativeStats>
           continue;
         }
 
-        if (stats1.dominates(stats2) || stats1.compareTo(stats2) == 0) {
+        if (stats1.dominates(stats2) > 0 || stats1.isSimilar(stats2)) {
           stats.set(j, null);
           continue;
         }
 
-        if (stats2.dominates(stats1)) {
+        if (stats2.dominates(stats1) > 0) {
           stats.set(i, null);
           break;
         }
+
+        // TODO check if stats are very similar and pick one to reject.
       }
     }
 
@@ -248,15 +281,17 @@ public class CumulativeStats implements Comparable<CumulativeStats>
       }
     });
 
+    // Sort remaining elements by simple score.
     stats.sort(new Comparator<CumulativeStats>()
     {
-
       @Override
       public int compare(CumulativeStats c1, CumulativeStats c2)
       {
         double v1 = c1.scoreSimple();
         double v2 = c2.scoreSimple();
-        return ((Double) v2).compareTo(v1);
+        if (v1 > v2) return -1;
+        if (v2 > v1) return 1;
+        return 0;
       }
     });
   }
