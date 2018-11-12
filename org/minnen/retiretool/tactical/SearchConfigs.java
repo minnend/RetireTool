@@ -23,7 +23,6 @@ public class SearchConfigs
   public static final String            riskyName         = "stock";
   public static final String            safeName          = "3-month-treasuries";
   public static final String[]          assetNames        = new String[] { riskyName, safeName };
-  public static final long              gap               = 2 * TimeLib.MS_IN_DAY;
   public static final int               nEvalPerturb      = 20;
   public static final int               nEvalPerturbKnown = 100;
   public static final int               nMaxSeeds         = 10000;
@@ -43,7 +42,7 @@ public class SearchConfigs
   static {
     for (int i = 0; i < knownParams.length; ++i) {
       int[] p = knownParams[i];
-      knownConfigs[i] = new ConfigSMA(p[0], 0, p[1], p[2], p[3], FinLib.AdjClose, gap);
+      knownConfigs[i] = new ConfigSMA(p[0], 0, p[1], p[2], p[3], FinLib.AdjClose, GeneratorSMA.gap);
     }
   }
 
@@ -58,35 +57,6 @@ public class SearchConfigs
 
     Sequence tb3mo = FinLib.inferAssetFrom3MonthTreasuries();
     store.add(tb3mo, safeName);
-  }
-
-  private static PredictorConfig genRandom()
-  {
-    return ConfigSMA.genRandom(FinLib.AdjClose, gap);
-  }
-
-  private static PredictorConfig genCandidate(PredictorConfig config)
-  {
-    if (config instanceof ConfigSMA) {
-      return genCandidateSMA((ConfigSMA) config);
-    }
-    throw new IllegalArgumentException("Unsupported type: " + config.getClass().getName());
-  }
-
-  private static ConfigSMA genCandidateSMA(ConfigSMA config)
-  {
-    final int N = 1000;
-    for (int i = 0; i < N; ++i) {
-      int nLookbackTriggerA = ConfigSMA.perturbLookback(config.nLookbackTriggerA);
-      int nLookbackTriggerB = 0;
-      int nLookbackBaseA = ConfigSMA.perturbLookback(config.nLookbackBaseA);
-      int nLookbackBaseB = ConfigSMA.perturbLookback(config.nLookbackBaseB);
-      int margin = ConfigSMA.perturbMargin(config.margin);
-      ConfigSMA perturbed = new ConfigSMA(nLookbackTriggerA, nLookbackTriggerB, nLookbackBaseA, nLookbackBaseB, margin,
-          config.iPrice, config.minTimeBetweenFlips);
-      if (perturbed.isValid()) return perturbed;
-    }
-    throw new RuntimeException(String.format("Failed to generate a valid perturbed config after %d tries.", N));
   }
 
   private static CumulativeStats eval(PredictorConfig config, String name)
@@ -114,11 +84,12 @@ public class SearchConfigs
     return worstStats;
   }
 
-  private static CumulativeStats optimize(PredictorConfig baseConfig, CumulativeStats baseStats)
+  private static CumulativeStats optimize(PredictorConfig baseConfig, CumulativeStats baseStats,
+      ConfigGenerator generator)
   {
     int nTries = 0;
     while (nTries < 10) {
-      PredictorConfig config = genCandidate(baseConfig);
+      PredictorConfig config = generator.genCandidate(baseConfig);
       CumulativeStats stats = eval(config, "Improved");
       if (stats.prefer(baseStats) > 0) {
         // System.out.printf(" %s (%s)\n", stats, config);
@@ -154,17 +125,19 @@ public class SearchConfigs
       System.out.printf("Defender: %s  (%s)\n", x, x.config);
     }
 
+    ConfigGenerator generator = new GeneratorSMA();
+
     Set<PredictorConfig> set = new HashSet<>();
     int nSeedsFound = 0;
     while (nSeedsFound < nMaxSeeds) {
-      PredictorConfig config = genRandom();
+      PredictorConfig config = generator.genRandom();
       if (set.contains(config)) continue;
       set.add(config);
       ++nSeedsFound;
 
       CumulativeStats stats = eval(config, "random");
       System.out.printf("%d: %s  (%s)\n", nSeedsFound, stats, config);
-      CumulativeStats optimized = optimize(config, stats);
+      CumulativeStats optimized = optimize(config, stats, generator);
       if (!optimized.isDominated(dominators)) {
         System.out.printf("New dominator: %s (%s) *******\n", optimized, optimized.config);
         dominators.add(optimized);
