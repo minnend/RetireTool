@@ -114,7 +114,7 @@ public class CumulativeStats implements Comparable<CumulativeStats>
 
   public double scoreSimple()
   {
-    return cagr - drawdown / 20.0; // TODO improve composite score
+    return cagr - drawdown / 10.0; // TODO improve composite score
   }
 
   public double scoreComplex()
@@ -218,6 +218,27 @@ public class CumulativeStats implements Comparable<CumulativeStats>
     if (Math.abs(drawdown - other.drawdown) > epsDrawdown) return false;
     // TODO consider other stats? median?
     return true;
+  }
+
+  /** @return 1 if this is better than `other`, -1 if opposite, else 0 if too similar. */
+  public int prefer(CumulativeStats other)
+  {
+    // TODO improve comaprison; use complex score?
+    final double score1 = this.scoreSimple();
+    final double score2 = other.scoreSimple();
+    if (score1 > score2 + 0.05) return 1;
+    if (score2 > score1 + 0.05) return -1;
+
+    if (this.cagr > other.cagr + CumulativeStats.epsCAGR) return 1;
+    if (other.cagr > this.cagr + CumulativeStats.epsCAGR) return -1;
+
+    if (this.drawdown < other.drawdown - CumulativeStats.epsDrawdown) return 1;
+    if (other.drawdown < this.drawdown - CumulativeStats.epsDrawdown) return -1;
+
+    if (this.annualPercentiles[2] > other.annualPercentiles[2] + 0.1) return 1;
+    if (other.annualPercentiles[2] > this.annualPercentiles[2] + 0.1) return -1;
+
+    return 0;
   }
 
   @Override
