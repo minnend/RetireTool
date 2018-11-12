@@ -18,13 +18,14 @@ import org.minnen.retiretool.util.TimeLib;
 
 public class SearchConfigs
 {
-  public static final SequenceStore store             = new SequenceStore();
-  public static final String        riskyName         = "stock";
-  public static final String        safeName          = "3-month-treasuries";
-  public static final String[]      assetNames        = new String[] { riskyName, safeName };
-  public static final int           nEvalPerturb      = 20;
-  public static final int           nEvalPerturbKnown = 100;
-  public static final int           nMaxSeeds         = 10000;
+  public static final SequenceStore store                     = new SequenceStore();
+  public static final String        riskyName                 = "stock";
+  public static final String        safeName                  = "3-month-treasuries";
+  public static final String[]      assetNames                = new String[] { riskyName, safeName };
+  public static final int           nEvalPerturb              = 10;
+  public static final int           nEvalPerturbKnown         = 20;
+  public static final int           nMaxSeeds                 = 10000;
+  public static final boolean       initializeSingleDefenders = false;
 
   private static Simulation         sim;
 
@@ -35,7 +36,7 @@ public class SearchConfigs
     System.out.printf("%s: [%s] -> [%s]\n", stock.getName(), TimeLib.formatDate(stock.getStartMS()),
         TimeLib.formatDate(stock.getEndMS()));
     store.add(stock, riskyName);
-    store.add(stock.getIntegralSeq());  // pre-compute integral sequence to speed up SMA calculations
+    store.add(stock.getIntegralSeq()); // pre-compute integral sequence to speed up SMA calculations
 
     Sequence tb3mo = FinLib.inferAssetFrom3MonthTreasuries();
     store.add(tb3mo, safeName);
@@ -100,18 +101,22 @@ public class SearchConfigs
 
     // Set up "defenders" based on known-good configs.
     List<CumulativeStats> dominators = new ArrayList<>();
-    for (PredictorConfig config : GeneratorSMA.knownConfigs) {
-      CumulativeStats stats = eval(config, "Known", nEvalPerturbKnown);
-      System.out.printf("%s  (%s)\n", stats, config);
-      dominators.add(stats);
-    }
-    CumulativeStats.filter(dominators);
-    System.out.printf("Initial defenders: %d\n", dominators.size());
-    for (CumulativeStats x : dominators) {
-      System.out.printf("Defender: %s  (%s)\n", x, x.config);
+
+    if (initializeSingleDefenders) {
+      for (PredictorConfig config : GeneratorSMA.knownConfigs) {
+        CumulativeStats stats = eval(config, "Known", nEvalPerturbKnown);
+        System.out.printf("%s  (%s)\n", stats, config);
+        dominators.add(stats);
+      }
+      CumulativeStats.filter(dominators);
+      System.out.printf("Initial defenders: %d\n", dominators.size());
+      for (CumulativeStats x : dominators) {
+        System.out.printf("Defender: %s  (%s)\n", x, x.config);
+      }
     }
 
-    ConfigGenerator generator = new GeneratorSMA();
+    // ConfigGenerator generator = new GeneratorSMA();
+    ConfigGenerator generator = new GeneratorTwoSMA();
 
     // Search for better configs.
     Set<PredictorConfig> set = new HashSet<>();

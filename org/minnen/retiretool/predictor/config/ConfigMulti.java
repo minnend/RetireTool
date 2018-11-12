@@ -15,10 +15,10 @@ import org.minnen.retiretool.util.Writer;
 
 public class ConfigMulti extends PredictorConfig
 {
-  public boolean                  defaultDecision;
-  public Set<Integer>             contraryCodes;
-  public Set<IntPair>             contraryPairs;
-  private final PredictorConfig[] configs;
+  public boolean                 defaultDecision;
+  public Set<Integer>            contraryCodes;
+  public Set<IntPair>            contraryPairs;
+  public final PredictorConfig[] configs;
 
   public ConfigMulti(boolean defaultDecision, int exception, PredictorConfig... configs)
   {
@@ -96,9 +96,9 @@ public class ConfigMulti extends PredictorConfig
   {
     StringWriter sw = new StringWriter();
     try (Writer writer = new Writer(sw)) {
-      writer.write("MultiPredict default=%s", defaultDecision);
+      writer.write("MultiPredict: ");
       for (int i = 0; i < configs.length; ++i) {
-        writer.write(" %s%s", configs[i], i == configs.length - 1 ? "" : "\n");
+        writer.write("%s%s", configs[i], i == configs.length - 1 ? "" : " | ");
       }
     } catch (IOException e) {}
     return sw.toString();
