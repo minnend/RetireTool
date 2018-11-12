@@ -19,14 +19,33 @@ import org.minnen.retiretool.util.TimeLib;
 
 public class SearchConfigs
 {
-  public static final SequenceStore store        = new SequenceStore();
-  public static final String        riskyName    = "stock";
-  public static final String        safeName     = "3-month-treasuries";
-  public static final String[]      assetNames   = new String[] { riskyName, safeName };
-  public static final long          gap          = 2 * TimeLib.MS_IN_DAY;
-  public static final int           nEvalPerturb = 10;
+  public static final SequenceStore     store             = new SequenceStore();
+  public static final String            riskyName         = "stock";
+  public static final String            safeName          = "3-month-treasuries";
+  public static final String[]          assetNames        = new String[] { riskyName, safeName };
+  public static final long              gap               = 2 * TimeLib.MS_IN_DAY;
+  public static final int               nEvalPerturb      = 20;
+  public static final int               nEvalPerturbKnown = 100;
+  public static final int               nMaxSeeds         = 10000;
 
-  private static Simulation         sim;
+  private static Simulation             sim;
+
+  // List of good parameters for single SMA.
+  public static final int[][]           knownParams       = new int[][] { new int[] { 20, 240, 150, 25 },
+      new int[] { 15, 259, 125, 21 }, new int[] { 34, 182, 82, 684 }, new int[] { 5, 184, 44, 353 },
+      new int[] { 9, 176, 167, 1243 }, new int[] { 14, 246, 100, 900 }, new int[] { 21, 212, 143, 213 },
+      new int[] { 3, 205, 145, 438 }, new int[] { 15, 155, 105, 997 }, new int[] { 20, 126, 54, 690 },
+      new int[] { 32, 116, 94, 938 }, new int[] { 22, 124, 74, 904 }, new int[] { 19, 201, 143, 207 },
+      new int[] { 13, 186, 177, 1127 }, new int[] { 19, 147, 92, 885 }, new int[] { 18, 213, 79, 723 }, };
+
+  public static final PredictorConfig[] knownConfigs      = new PredictorConfig[knownParams.length];
+
+  static {
+    for (int i = 0; i < knownParams.length; ++i) {
+      int[] p = knownParams[i];
+      knownConfigs[i] = new ConfigSMA(p[0], 0, p[1], p[2], p[3], FinLib.AdjClose, gap);
+    }
+  }
 
   private static void setupData() throws IOException
   {
@@ -41,7 +60,20 @@ public class SearchConfigs
     store.add(tb3mo, safeName);
   }
 
-  private static ConfigSMA genCandidate(ConfigSMA config)
+  private static PredictorConfig genRandom()
+  {
+    return ConfigSMA.genRandom(FinLib.AdjClose, gap);
+  }
+
+  private static PredictorConfig genCandidate(PredictorConfig config)
+  {
+    if (config instanceof ConfigSMA) {
+      return genCandidateSMA((ConfigSMA) config);
+    }
+    throw new IllegalArgumentException("Unsupported type: " + config.getClass().getName());
+  }
+
+  private static ConfigSMA genCandidateSMA(ConfigSMA config)
   {
     final int N = 1000;
     for (int i = 0; i < N; ++i) {
@@ -69,11 +101,11 @@ public class SearchConfigs
     CumulativeStats worstStats = CumulativeStats.calc(sim.returnsMonthly);
 
     for (int i = 0; i < nPerturb; ++i) {
-      ConfigSMA perturbedConfig = (ConfigSMA) config.genPerturbed();
+      PredictorConfig perturbedConfig = config.genPerturbed();
       pred = perturbedConfig.build(null, assetNames);
       sim.run(pred, name);
       CumulativeStats stats = CumulativeStats.calc(sim.returnsMonthly);
-      if (stats.prefer(worstStats) < 0) {
+      if (stats.prefer(worstStats) < 0) { // performance of strategy = worst over perturbed params
         worstStats = stats;
       }
     }
@@ -82,28 +114,14 @@ public class SearchConfigs
     return worstStats;
   }
 
-  private static boolean isDominated(CumulativeStats challenger, List<CumulativeStats> defenders)
-  {
-    double bestCagr = 0.0;
-    double bestDrawdown = 999.0;
-    for (CumulativeStats defender : defenders) {
-      if (defender.dominates(challenger) > 0) return true;
-      bestCagr = Math.max(bestCagr, defender.cagr);
-      bestDrawdown = Math.min(bestDrawdown, defender.drawdown);
-    }
-
-    // Nothing dominates directly, but we still reject challenger unless it improves best CAGR or drawdown.
-    return (challenger.cagr < bestCagr + 0.008 && challenger.drawdown > bestDrawdown - 0.1);
-  }
-
-  private static CumulativeStats optimize(ConfigSMA baseConfig, CumulativeStats baseStats)
+  private static CumulativeStats optimize(PredictorConfig baseConfig, CumulativeStats baseStats)
   {
     int nTries = 0;
     while (nTries < 10) {
-      ConfigSMA config = genCandidate(baseConfig);
+      PredictorConfig config = genCandidate(baseConfig);
       CumulativeStats stats = eval(config, "Improved");
       if (stats.prefer(baseStats) > 0) {
-        System.out.printf(" %s  (%s)\n", stats, config);
+        // System.out.printf(" %s (%s)\n", stats, config);
         baseConfig = config;
         baseStats = stats;
         nTries = 0;
@@ -124,22 +142,9 @@ public class SearchConfigs
     sim = new Simulation(store, guideSeq);
     sim.setCheckBusinessDays(false); // assume data is correct wrt business days (faster but slightly dangerous)
 
-    ConfigSMA[] goodConfigs = new ConfigSMA[] { // list of good configs
-        new ConfigSMA(20, 0, 240, 150, 25, FinLib.AdjClose, gap),
-        new ConfigSMA(15, 0, 259, 125, 21, FinLib.AdjClose, gap),
-        new ConfigSMA(34, 0, 182, 82, 684, FinLib.AdjClose, gap),
-        new ConfigSMA(5, 0, 184, 44, 353, FinLib.AdjClose, gap),
-        new ConfigSMA(9, 0, 176, 167, 1243, FinLib.AdjClose, gap),
-        new ConfigSMA(14, 0, 246, 100, 900, FinLib.AdjClose, gap),
-        new ConfigSMA(21, 0, 212, 143, 213, FinLib.AdjClose, gap),
-        new ConfigSMA(3, 0, 205, 145, 438, FinLib.AdjClose, gap),
-        new ConfigSMA(15, 0, 155, 105, 997, FinLib.AdjClose, gap),
-        new ConfigSMA(20, 0, 126, 54, 690, FinLib.AdjClose, gap),
-        new ConfigSMA(32, 0, 116, 94, 938, FinLib.AdjClose, gap), };
-
     List<CumulativeStats> dominators = new ArrayList<>();
-    for (ConfigSMA config : goodConfigs) {
-      CumulativeStats stats = eval(config, "Known", 30);
+    for (PredictorConfig config : knownConfigs) {
+      CumulativeStats stats = eval(config, "Known", nEvalPerturbKnown);
       System.out.printf("%s  (%s)\n", stats, config);
       dominators.add(stats);
     }
@@ -149,25 +154,26 @@ public class SearchConfigs
       System.out.printf("Defender: %s  (%s)\n", x, x.config);
     }
 
-    Set<ConfigSMA> set = new HashSet<>();
-    final int nMaxSeeds = 10000;
+    Set<PredictorConfig> set = new HashSet<>();
     int nSeedsFound = 0;
     while (nSeedsFound < nMaxSeeds) {
-      ConfigSMA config = ConfigSMA.genRandom(FinLib.AdjClose, gap);
+      PredictorConfig config = genRandom();
       if (set.contains(config)) continue;
       set.add(config);
       ++nSeedsFound;
 
       CumulativeStats stats = eval(config, "random");
-      System.out.printf("%d: %s\n", nSeedsFound, stats);
+      System.out.printf("%d: %s  (%s)\n", nSeedsFound, stats, config);
       CumulativeStats optimized = optimize(config, stats);
-      if (!isDominated(optimized, dominators)) {
-        System.out.printf("New dominator: %s (%s) *****\n", optimized, optimized.config);
+      if (!optimized.isDominated(dominators)) {
+        System.out.printf("New dominator: %s (%s) *******\n", optimized, optimized.config);
         dominators.add(optimized);
         CumulativeStats.filter(dominators);
         for (CumulativeStats x : dominators) {
           System.out.printf("Defender: %s  (%s)\n", x, x.config);
         }
+      } else if (optimized.config != config) {
+        System.out.printf("    %s  (%s)\n", optimized, optimized.config);
       }
     }
   }

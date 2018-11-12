@@ -207,6 +207,21 @@ public class CumulativeStats implements Comparable<CumulativeStats>
     return 0;
   }
 
+  /** @return true if any of the `defenders` dominates this stats object. */
+  public boolean isDominated(List<CumulativeStats> defenders)
+  {
+    double bestCagr = 0.0;
+    double bestDrawdown = 999.0;
+    for (CumulativeStats defender : defenders) {
+      if (defender.dominates(this) > 0) return true;
+      bestCagr = Math.max(bestCagr, defender.cagr);
+      bestDrawdown = Math.min(bestDrawdown, defender.drawdown);
+    }
+
+    // Nothing dominates directly, but we still reject challenger unless it improves best CAGR or drawdown.
+    return (this.cagr < bestCagr + epsCAGR && this.drawdown > bestDrawdown - epsDrawdown);
+  }
+
   /**
    * Conservative calculation of strategy similarity.
    * 
