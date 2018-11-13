@@ -33,6 +33,11 @@ public class GeneratorSMA extends ConfigGenerator
     }
   }
 
+  public GeneratorSMA()
+  {
+    super(Mode.ALL_NEW);
+  }
+
   public static ConfigSMA getRandomKnownConfig()
   {
     final int i = rng.nextInt(knownConfigs.length);

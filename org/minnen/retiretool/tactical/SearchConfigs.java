@@ -12,9 +12,11 @@ import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.data.tiingo.TiingoFund;
+import org.minnen.retiretool.predictor.config.ConfigMulti;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.stats.CumulativeStats;
+import org.minnen.retiretool.tactical.ConfigGenerator.Mode;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.util.Writer;
@@ -26,11 +28,13 @@ public class SearchConfigs
   public static final String        safeName                  = "3-month-treasuries";
   public static final String[]      assetNames                = new String[] { riskyName, safeName };
   public static final int           nEvalPerturb              = 20;
-  public static final int           nEvalPerturbKnown         = 100;
+  public static final int           nEvalPerturbKnown         = 50;
   public static final int           nMaxSeeds                 = 10000;
-  public static final boolean       initializeSingleDefenders = true;
+  public static final boolean       initializeSingleDefenders = false;
   public static final boolean       initializeDoubleDefenders = true;
-  public static final String        saveFilename              = String.format("two-sma-winners-%s.txt",
+  public static final boolean       initializeTripleDefenders = true;
+  public static final Mode          searchMode                = Mode.EXTEND;
+  public static final String        saveFilename              = String.format("three-sma-winners-%s.txt",
       TimeLib.formatTimeSig(TimeLib.getTime()));
 
   private static Simulation         sim;
@@ -105,6 +109,9 @@ public class SearchConfigs
     sim = new Simulation(store, guideSeq);
     sim.setCheckBusinessDays(false); // assume data is correct wrt business days (faster but slightly dangerous)
 
+    ConfigMulti tacticalConfig = ConfigMulti.buildTactical(FinLib.AdjClose, 0, 1);
+    System.out.println(eval(tacticalConfig, "Tactical", nEvalPerturbKnown));
+
     // Set up "defenders" based on known-good configs.
     List<CumulativeStats> dominators = new ArrayList<>();
 
@@ -122,6 +129,13 @@ public class SearchConfigs
         dominators.add(stats);
       }
     }
+    if (initializeTripleDefenders) {
+      for (PredictorConfig config : GeneratorThreeSMA.knownConfigs) {
+        CumulativeStats stats = eval(config, "Known", nEvalPerturbKnown);
+        System.out.printf("%s (%s)\n", stats, config);
+        dominators.add(stats);
+      }
+    }
     CumulativeStats.filter(dominators);
     System.out.printf("Initial defenders: %d\n", dominators.size());
     for (CumulativeStats x : dominators) {
@@ -129,7 +143,8 @@ public class SearchConfigs
     }
 
     // ConfigGenerator generator = new GeneratorSMA();
-    ConfigGenerator generator = new GeneratorTwoSMA();
+    // ConfigGenerator generator = new GeneratorTwoSMA(searchMode);
+    ConfigGenerator generator = new GeneratorThreeSMA(searchMode);
 
     // Search for better configs.
     Set<PredictorConfig> set = new HashSet<>();
@@ -152,8 +167,8 @@ public class SearchConfigs
           dominators.add(optimized);
           CumulativeStats.filter(dominators);
           for (CumulativeStats x : dominators) {
-            System.out.printf("Defender: %s (%s)\n", x, x.config);
-            writer.write("Defender: %s  %s\n", x, x.config);
+            System.out.printf(" Defender: %s (%s)\n", x, x.config);
+            writer.write(" Defender: %s  %s\n", x, x.config);
           }
           writer.flush();
         } else if (optimized.config != config) {
