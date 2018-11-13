@@ -1,5 +1,8 @@
 package org.minnen.retiretool.tactical;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.minnen.retiretool.predictor.config.ConfigSMA;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
 import org.minnen.retiretool.util.FinLib;
@@ -11,6 +14,7 @@ public class GeneratorSMA extends ConfigGenerator
 {
   public static final Random      rng          = new Random();
   public static final long        gap          = 2 * TimeLib.MS_IN_DAY;
+  public static final Pattern     pattern      = Pattern.compile("\\[(\\d+),(\\d+)\\] / \\[(\\d+),(\\d+)\\] m=(\\d+)");
 
   // List of good parameters for single SMA.
   public static final int[][]     knownParams  = new int[][] { new int[] { 20, 240, 150, 25 },
@@ -59,4 +63,20 @@ public class GeneratorSMA extends ConfigGenerator
     throw new RuntimeException(String.format("Failed to generate a valid perturbed config after %d tries.", N));
   }
 
+  public static ConfigSMA parse(String line)
+  {
+    // Example: "[5,0] / [184,44] m=353"
+    Matcher m = pattern.matcher(line);
+    if (!m.matches()) {
+      throw new IllegalArgumentException(String.format("Failed to parse ConfigSMA: [%s]", line));
+    }
+
+    final int nLookbackTriggerA = Integer.parseInt(m.group(1));
+    final int nLookbackTriggerB = Integer.parseInt(m.group(2));
+    final int nLookbackBaseA = Integer.parseInt(m.group(3));
+    final int nLookbackBaseB = Integer.parseInt(m.group(4));
+    final int margin = Integer.parseInt(m.group(5));
+    return new ConfigSMA(nLookbackTriggerA, nLookbackTriggerB, nLookbackBaseA, nLookbackBaseB, margin, FinLib.AdjClose,
+        GeneratorSMA.gap);
+  }
 }

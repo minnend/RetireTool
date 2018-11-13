@@ -29,6 +29,7 @@ public class TimeLib
   public final static ZoneOffset        ZeroOffset = ZoneOffset.ofTotalSeconds(0);
 
   public final static DateTimeFormatter dtfTime    = DateTimeFormatter.ofPattern("yyyy MMM d hh:mm:ss a");
+  public final static DateTimeFormatter dtfTimeSig = DateTimeFormatter.ofPattern("yyyyMMdd-HHmm");
   public final static DateTimeFormatter dtfDate    = DateTimeFormatter.ofPattern("d MMM yyyy");
   public final static DateTimeFormatter dtfDate2   = DateTimeFormatter.ofPattern("dd MMM yyyy");
   public final static DateTimeFormatter dtfMonth   = DateTimeFormatter.ofPattern("MMM yyyy");
@@ -244,11 +245,22 @@ public class TimeLib
     return formatTime(ms, null);
   }
 
-  /** @return string representation of the given day (year, month, date) */
   public static String formatTime(long ms, ZoneId zone)
   {
+    return formatTime(ms, dtfTime, zone);
+  }
+
+  /** @return string representation of the given day (year, month, date) */
+  public static String formatTimeSig(long ms)
+  {
+    return formatTime(ms, dtfTimeSig, ZoneId.systemDefault());
+  }
+
+  /** @return string representation of the given day (year, month, date) */
+  public static String formatTime(long ms, DateTimeFormatter dtf, ZoneId zone)
+  {
     if (ms == TIME_ERROR || ms == Long.MAX_VALUE) return null;
-    return ms2time(ms, zone).format(dtfTime);
+    return ms2time(ms, zone).format(dtf);
   }
 
   /** @return string representation of the given day (d MMM YYY) */

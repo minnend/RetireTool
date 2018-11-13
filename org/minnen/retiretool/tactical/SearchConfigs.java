@@ -1,5 +1,6 @@
 package org.minnen.retiretool.tactical;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -7,6 +8,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.minnen.retiretool.broker.Simulation;
+import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.data.tiingo.TiingoFund;
@@ -15,6 +17,7 @@ import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
+import org.minnen.retiretool.util.Writer;
 
 public class SearchConfigs
 {
@@ -22,10 +25,13 @@ public class SearchConfigs
   public static final String        riskyName                 = "stock";
   public static final String        safeName                  = "3-month-treasuries";
   public static final String[]      assetNames                = new String[] { riskyName, safeName };
-  public static final int           nEvalPerturb              = 10;
-  public static final int           nEvalPerturbKnown         = 20;
+  public static final int           nEvalPerturb              = 20;
+  public static final int           nEvalPerturbKnown         = 100;
   public static final int           nMaxSeeds                 = 10000;
-  public static final boolean       initializeSingleDefenders = false;
+  public static final boolean       initializeSingleDefenders = true;
+  public static final boolean       initializeDoubleDefenders = true;
+  public static final String        saveFilename              = String.format("two-sma-winners-%s.txt",
+      TimeLib.formatTimeSig(TimeLib.getTime()));
 
   private static Simulation         sim;
 
@@ -105,14 +111,21 @@ public class SearchConfigs
     if (initializeSingleDefenders) {
       for (PredictorConfig config : GeneratorSMA.knownConfigs) {
         CumulativeStats stats = eval(config, "Known", nEvalPerturbKnown);
-        System.out.printf("%s  (%s)\n", stats, config);
+        System.out.printf("%s (%s)\n", stats, config);
         dominators.add(stats);
       }
-      CumulativeStats.filter(dominators);
-      System.out.printf("Initial defenders: %d\n", dominators.size());
-      for (CumulativeStats x : dominators) {
-        System.out.printf("Defender: %s  (%s)\n", x, x.config);
+    }
+    if (initializeDoubleDefenders) {
+      for (PredictorConfig config : GeneratorTwoSMA.knownConfigs) {
+        CumulativeStats stats = eval(config, "Known", nEvalPerturbKnown);
+        System.out.printf("%s (%s)\n", stats, config);
+        dominators.add(stats);
       }
+    }
+    CumulativeStats.filter(dominators);
+    System.out.printf("Initial defenders: %d\n", dominators.size());
+    for (CumulativeStats x : dominators) {
+      System.out.printf("Defender: %s (%s)\n", x, x.config);
     }
 
     // ConfigGenerator generator = new GeneratorSMA();
@@ -121,24 +134,31 @@ public class SearchConfigs
     // Search for better configs.
     Set<PredictorConfig> set = new HashSet<>();
     int nSeedsFound = 0;
-    while (nSeedsFound < nMaxSeeds) {
-      PredictorConfig config = generator.genRandom();
-      if (set.contains(config)) continue;
-      set.add(config);
-      ++nSeedsFound;
 
-      CumulativeStats stats = eval(config, "random");
-      System.out.printf("%d: %s  (%s)\n", nSeedsFound, stats, config);
-      CumulativeStats optimized = optimize(config, stats, generator);
-      if (!optimized.isDominated(dominators)) {
-        System.out.printf("New dominator: %s (%s) *******\n", optimized, optimized.config);
-        dominators.add(optimized);
-        CumulativeStats.filter(dominators);
-        for (CumulativeStats x : dominators) {
-          System.out.printf("Defender: %s  (%s)\n", x, x.config);
+    System.out.printf("Save file: %s\n", saveFilename);
+    try (Writer writer = new Writer(new File(DataIO.outputPath, saveFilename))) {
+      while (nSeedsFound < nMaxSeeds) {
+        PredictorConfig config = generator.genRandom();
+        if (set.contains(config)) continue;
+        set.add(config);
+        ++nSeedsFound;
+
+        CumulativeStats stats = eval(config, "random");
+        System.out.printf("%d: %s (%s)\n", nSeedsFound, stats, config);
+        CumulativeStats optimized = optimize(config, stats, generator);
+        if (!optimized.isDominated(dominators)) {
+          System.out.printf("New dominator: %s (%s) *******\n", optimized, optimized.config);
+          writer.write("New: %s  %s\n", optimized, optimized.config);
+          dominators.add(optimized);
+          CumulativeStats.filter(dominators);
+          for (CumulativeStats x : dominators) {
+            System.out.printf("Defender: %s (%s)\n", x, x.config);
+            writer.write("Defender: %s  %s\n", x, x.config);
+          }
+          writer.flush();
+        } else if (optimized.config != config) {
+          System.out.printf(" %s (%s)\n", optimized, optimized.config);
         }
-      } else if (optimized.config != config) {
-        System.out.printf("    %s  (%s)\n", optimized, optimized.config);
       }
     }
   }
