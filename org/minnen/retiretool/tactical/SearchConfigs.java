@@ -11,10 +11,8 @@ import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
-import org.minnen.retiretool.data.tiingo.TiingoFund;
 import org.minnen.retiretool.predictor.config.ConfigMulti;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
-import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.tactical.ConfigGenerator.Mode;
 import org.minnen.retiretool.util.FinLib;
@@ -24,33 +22,17 @@ import org.minnen.retiretool.util.Writer;
 public class SearchConfigs
 {
   public static final SequenceStore store                     = new SequenceStore();
-  public static final String        riskyName                 = "stock";
-  public static final String        safeName                  = "3-month-treasuries";
-  public static final String[]      assetNames                = new String[] { riskyName, safeName };
-  public static final int           nEvalPerturb              = 20;
+  public static final int           nEvalPerturb              = 10;
   public static final int           nEvalPerturbKnown         = 50;
   public static final int           nMaxSeeds                 = 10000;
   public static final boolean       initializeSingleDefenders = false;
   public static final boolean       initializeDoubleDefenders = true;
-  public static final boolean       initializeTripleDefenders = true;
+  public static final boolean       initializeTripleDefenders = false;
   public static final Mode          searchMode                = Mode.EXTEND;
   public static final String        saveFilename              = String.format("three-sma-winners-%s.txt",
       TimeLib.formatTimeSig(TimeLib.getTime()));
 
   private static Simulation         sim;
-
-  private static void setupData() throws IOException
-  {
-    TiingoFund fund = TiingoFund.fromSymbol("VFINX", true);
-    Sequence stock = fund.data;
-    System.out.printf("%s: [%s] -> [%s]\n", stock.getName(), TimeLib.formatDate(stock.getStartMS()),
-        TimeLib.formatDate(stock.getEndMS()));
-    store.add(stock, riskyName);
-    store.add(stock.getIntegralSeq()); // pre-compute integral sequence to speed up SMA calculations
-
-    Sequence tb3mo = FinLib.inferAssetFrom3MonthTreasuries();
-    store.add(tb3mo, safeName);
-  }
 
   /** Convenience method to run eval with default number of eval perturbations. */
   private static CumulativeStats eval(PredictorConfig config, String name)
@@ -61,22 +43,7 @@ public class SearchConfigs
   /** Eval stats are *worst* results for the given number of perturbations. */
   private static CumulativeStats eval(PredictorConfig config, String name, int nPerturb)
   {
-    Predictor pred = config.build(null, assetNames);
-    sim.run(pred, name);
-    CumulativeStats worstStats = CumulativeStats.calc(sim.returnsMonthly);
-
-    for (int i = 0; i < nPerturb; ++i) {
-      PredictorConfig perturbedConfig = config.genPerturbed();
-      pred = perturbedConfig.build(null, assetNames);
-      sim.run(pred, name);
-      CumulativeStats stats = CumulativeStats.calc(sim.returnsMonthly);
-      if (stats.prefer(worstStats) < 0) { // performance of strategy = worst over perturbed params
-        worstStats = stats;
-      }
-    }
-
-    worstStats.config = config;
-    return worstStats;
+    return TacticLib.eval(config, name, nPerturb, sim);
   }
 
   /** Simple hill-climbing optimizer based on testing random perturbations. */
@@ -101,19 +68,22 @@ public class SearchConfigs
 
   public static void main(String[] args) throws IOException
   {
-    setupData();
+    TacticLib.setupData("VFINX", store);
 
-    Sequence stock = store.get(riskyName);
+    Sequence stock = store.get(TacticLib.riskyName);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 470 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stock.subseq(iStart);
     sim = new Simulation(store, guideSeq);
     sim.setCheckBusinessDays(false); // assume data is correct wrt business days (faster but slightly dangerous)
 
-    ConfigMulti tacticalConfig = ConfigMulti.buildTactical(FinLib.AdjClose, 0, 1);
-    System.out.println(eval(tacticalConfig, "Tactical", nEvalPerturbKnown));
-
     // Set up "defenders" based on known-good configs.
     List<CumulativeStats> dominators = new ArrayList<>();
+
+    // TODO this vs. what's in the dashboard?
+    ConfigMulti tacticalConfig = ConfigMulti.buildTactical(FinLib.AdjClose, 0, 1);
+    CumulativeStats tacticalStats = eval(tacticalConfig, "Tactical", nEvalPerturbKnown);
+    System.out.println(tacticalConfig);
+    dominators.add(tacticalStats);
 
     if (initializeSingleDefenders) {
       for (PredictorConfig config : GeneratorSMA.knownConfigs) {

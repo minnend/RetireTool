@@ -17,8 +17,6 @@ import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
-import org.minnen.retiretool.data.YahooIO;
-import org.minnen.retiretool.data.tiingo.TiingoFund;
 import org.minnen.retiretool.predictor.config.ConfigConst;
 import org.minnen.retiretool.predictor.config.ConfigMulti;
 import org.minnen.retiretool.predictor.config.ConfigSMA;
@@ -42,34 +40,32 @@ import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 
 public class Dashboard
 {
-  public final static SequenceStore     store         = new SequenceStore();
+  public final static SequenceStore     store          = new SequenceStore();
 
   /** Dimension to use in the price sequence for SMA predictions. */
-  public static int                     iPriceSMA     = 0;
+  public static int                     iPriceSMA      = 0;
 
-  public static final Slippage          slippage      = Slippage.None;
-  public static final LinearFunc        PriceSDev     = LinearFunc.Zero;
+  public static final Slippage          slippage       = Slippage.None;
+  public static final LinearFunc        PriceSDev      = LinearFunc.Zero;
 
-  public static final int               maxDelay      = 0;
-  public static final long              gap           = 2 * TimeLib.MS_IN_DAY;
-  public static final PriceModel        priceModel    = PriceModel.adjCloseModel;
+  public static final int               maxDelay       = 0;
+  public static final long              gap            = 2 * TimeLib.MS_IN_DAY;
+  public static final PriceModel        priceModel     = PriceModel.adjCloseModel;
 
-  public static final String            riskyName     = "stock";
-  public static final String            safeName      = "3-month-treasuries";
-  public static final String[]          assetNames    = new String[] { riskyName, safeName };
+  public static final String            red            = "D12";
+  public static final String            green          = "1E2";
 
-  public static final String            red           = "D12";
-  public static final String            green         = "1E2";
-
-  public static final String            miscDirName   = "misc";
-  public static final File              miscPath      = new File(DataIO.outputPath, miscDirName);
-  public static final String            miscToBase    = "..";
+  public static final String            miscDirName    = "misc";
+  public static final File              miscPath       = new File(DataIO.outputPath, miscDirName);
+  public static final String            miscToBase     = "..";
 
   /** overfitting? */
-  public static final boolean           avoid62       = true;
+  public static final boolean           avoid62        = false;
 
-  // public static final String symbol = "^GSPC";
-  public static final String            symbol        = "VFINX";
+  public static final int               yearsOfHistory = 20;
+
+  public static final String            symbol         = "^GSPC";
+  // public static final String symbol = "VFINX";
 
   // public static final PredictorConfig[] singleConfigs = new PredictorConfig[] {
   // new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap), new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap),
@@ -81,16 +77,44 @@ public class Dashboard
   // new ConfigSMA(20, 0, 250, 50, 1.0, FinLib.Close, gap), new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap),
   // new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap), new ConfigSMA(10, 0, 230, 40, 2.0, FinLib.Close, gap) };
 
-  public static final PredictorConfig[] singleConfigs = new PredictorConfig[] {
-      new ConfigSMA(20, 0, 240, 150, 25, FinLib.Close, gap), new ConfigSMA(25, 0, 155, 125, 75, FinLib.Close, gap),
-      new ConfigSMA(5, 0, 165, 5, 50, FinLib.Close, gap) };
+  public static final PredictorConfig[] singleConfigs  = new PredictorConfig[3];
 
-  public static final int[][]           allParams     = new int[][] { { 20, 0, 240, 150, 25 }, { 25, 0, 155, 125, 75 },
-      { 5, 0, 165, 5, 50 } };
+  /** Old params found in 2016 */
+   public static final int[][] allParams = new int[][] { { 20, 0, 240, 150, 25 }, { 25, 0, 155, 125, 75 },
+   { 5, 0, 165, 5, 50 } };
+
+  // [15,0] / [259,125] m=21 | [8,0] / [21,15] m=1320 | [5,0] / [178,50] m=145 { 8, 0, 21, 15, 1320 }
+  // public static final int[][] allParams = new int[][] { { 15, 0, 259, 125, 21 }, { 15, 0, 259, 125, 21 },
+  // { 5, 0, 178, 50, 145 } };
+
+  // [15,0] / [259,125] m=21 | [8,0] / [21,15] m=1320 | [43,0] / [55,4] m=2025
+  // public static final int[][] allParams = new int[][] { { 15, 0, 259, 125, 21 }, { 15, 0, 259, 125, 21 },
+  // { 15, 0, 259, 125, 21 }, };
+
+  // [29,1] / [269,99] m=138 | [23,1] / [233,106] m=103 | [12,0] / [162,109] m=25
+  // public static final int[][] allParams = new int[][] { { 29, 1, 269, 99, 138 },
+  // { 23, 1, 233, 106, 103 }, { 12, 0, 162, 109, 25 } };
+
+  // [26,0] / [212,104] m=102 | [39,0] / [107,104] m=243 | [63,0] / [23,14] m=105
+  // public static final int[][] allParams = new int[][] { { 26, 0, 212, 104, 102 },
+  // { 39, 0, 107, 104, 243 }, { 63, 0, 23, 14, 105 } };
+
+  // MultiPredict: [15,0] / [259,125] m=21 | [5,0] / [178,50] m=145 | [19,0] / [213,83] m=269
+  // public static final int[][] allParams = new int[][] { { 15, 0, 259, 125, 21 }, { 5, 0, 178, 50, 145 },
+  // { 19, 0, 213, 83, 269 } };
 
   static {
     // Create misc directory if it doesn't exist.
     if (!miscPath.exists()) miscPath.mkdirs();
+
+    assert allParams.length == singleConfigs.length;
+    for (int i = 0; i < allParams.length; ++i) {
+      int[] p = allParams[i];
+      assert p.length == 5;
+      singleConfigs[i] = new ConfigSMA(p[0], p[1], p[2], p[3], p[4], FinLib.AdjClose, gap);
+      // new ConfigSMA(20, 0, 240, 150, 25, FinLib.Close, gap), new ConfigSMA(25, 0, 155, 125, 75, FinLib.Close, gap),
+      // new ConfigSMA(5, 0, 165, 5, 50, FinLib.Close, gap) };
+    }
   }
 
   public static class CodeInfo
@@ -117,25 +141,7 @@ public class Dashboard
       }
       return r;
     }
-  }
 
-  public static void setupData(String symbol) throws IOException
-  {
-    Sequence stock = null;
-    if (symbol == "^GSPC") {
-      File file = YahooIO.downloadDailyData(symbol, 8 * TimeLib.MS_IN_HOUR);
-      stock = YahooIO.loadData(file);
-    } else {
-      TiingoFund fund = TiingoFund.fromSymbol(symbol, true);
-      stock = fund.data;
-    }
-
-    System.out.printf("S&P (Daily): [%s] -> [%s]\n", TimeLib.formatDate(stock.getStartMS()),
-        TimeLib.formatDate(stock.getEndMS()));
-    store.add(stock, "stock");
-
-    Sequence tb3mo = FinLib.inferAssetFrom3MonthTreasuries();
-    store.add(tb3mo, "3-month-treasuries");
   }
 
   private static String genGraphFileName(int code)
@@ -172,7 +178,7 @@ public class Dashboard
 
   private static Sequence genGrowthSeq(int index, CodeInfo info)
   {
-    final Sequence returns = store.get(riskyName);
+    final Sequence returns = store.get(TacticLib.riskyName);
     final int index1 = returns.getClosestIndex(info.timeStart);
     final int index2 = returns.getClosestIndex(info.timeEnd);
     final int n = index2 - index1 + 1;
@@ -310,8 +316,8 @@ public class Dashboard
   public static void runMulti3(Simulation sim) throws IOException
   {
     // Buy-and-Hold 100% stock.
-    PredictorConfig configRisky = new ConfigConst(riskyName);
-    Predictor predRisky = configRisky.build(sim.broker.accessObject, assetNames);
+    PredictorConfig configRisky = new ConfigConst(TacticLib.riskyName);
+    Predictor predRisky = configRisky.build(sim.broker.accessObject, TacticLib.assetNames);
     sim.run(predRisky, "Buy & Hold");
     Sequence baselineReturns = sim.returnsDaily;
     Sequence m1 = sim.returnsMonthly;
@@ -322,12 +328,16 @@ public class Dashboard
     Set<Integer> contrary = new HashSet<Integer>();
     Set<IntPair> contraryPairs = new HashSet<IntPair>();
     contrary.add(0); // always be safe during code 0
-    if (avoid62) {
-      contraryPairs.add(new IntPair(6, 2));
-    }
+    // if (avoid62) {
+    // contraryPairs.add(new IntPair(6, 2));
+    // }
+    contraryPairs.add(new IntPair(-1, 0));
+    contraryPairs.add(new IntPair(1, 0));
+    contraryPairs.add(new IntPair(2, 0));
+    // contraryPairs.add(new IntPair(6, 2));
 
     PredictorConfig configStrategy = new ConfigMulti(true, contrary, contraryPairs, singleConfigs);
-    MultiPredictor predStrategy = (MultiPredictor) configStrategy.build(sim.broker.accessObject, assetNames);
+    MultiPredictor predStrategy = (MultiPredictor) configStrategy.build(sim.broker.accessObject, TacticLib.assetNames);
     sim.run(predStrategy, "Tactical");
     Sequence strategyReturns = sim.returnsDaily;
     Sequence m2 = sim.returnsMonthly;
@@ -482,9 +492,9 @@ public class Dashboard
 
   public static void main(String[] args) throws IOException
   {
-    setupData(symbol);
+    TacticLib.setupData(symbol, store);
 
-    Sequence stock = store.get(riskyName);
+    Sequence stock = store.get(TacticLib.riskyName);
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stock.subseq(iStart);
     Simulation sim = new Simulation(store, guideSeq, slippage, maxDelay, priceModel, priceModel);
@@ -494,7 +504,7 @@ public class Dashboard
     for (int i = 0; i < allParams.length; ++i) {
       int[] params = allParams[i];
       // final long startMs = TimeLib.toMs(2014, Month.JANUARY, 1);
-      final long startMs = stock.getEndMS() - 365 * 4 * TimeLib.MS_IN_DAY;
+      final long startMs = stock.getEndMS() - 365 * yearsOfHistory * TimeLib.MS_IN_DAY;
       final long endMs = TimeLib.TIME_END;
       Sequence trigger = FinLib.sma(stock, params[0], params[1], FinLib.Close).subseq(startMs, endMs);
       Sequence base = FinLib.sma(stock, params[2], params[3], FinLib.Close).subseq(startMs, endMs);

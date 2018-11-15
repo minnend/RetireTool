@@ -408,32 +408,36 @@ public class Chart
   /**
    * Convenience function that takes individual arguments and builds a ChartConfig.
    */
-  public static ChartConfig saveScatterPlot(File file, String title, int width, int height, int radius,
-      String[] dimNames, Sequence scatter) throws IOException
+  public static ChartConfig saveScatterPlot(File file, String title, int width, int height, double radius,
+      String[] dimNames, Sequence... scatter) throws IOException
   {
     ChartConfig config = ChartConfig.buildScatter(file, title, width, height, radius, dimNames, scatter);
+    config.showLegend(scatter.length > 1);
     saveScatterPlot(config);
     return config;
   }
 
   public static void saveScatterPlot(ChartConfig config) throws IOException
   {
-    Sequence scatter = config.data[0];
-    assert scatter.getNumDims() >= 2;
-
-    // Determine if any point has a name.
     boolean hasNames = false;
-    for (FeatureVec v : scatter) {
-      if (v.getName() != null && !v.getName().isEmpty()) {
-        hasNames = true;
-        break;
+    for (Sequence scatter : config.data) {
+      assert scatter.getNumDims() >= 2;
+
+      // Determine if any point has a name.
+      if (!hasNames) {
+        for (FeatureVec v : scatter) {
+          if (v.getName() != null && !v.getName().isEmpty()) {
+            hasNames = true;
+            break;
+          }
+        }
       }
     }
 
     String[] dimNames = config.dimNames == null ? new String[] { "x", "y" } : config.dimNames;
 
     // Write HTML to generate the graph.
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(config.file))) {
+    try (Writer writer = new Writer(config.file)) {
       writer.write("<html><head>\n");
       writer.write("<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js\"></script>\n");
       if (config.type == ChartConfig.Type.Scatter) {
@@ -471,7 +475,7 @@ public class Chart
       writer.write("  plotOptions: {\n");
       if (config.type == ChartConfig.Type.Scatter) {
         writer.write("   scatter: {\n");
-        writer.write(String.format("    marker: { radius: %d, symbol: 'circle' },\n", config.radius));
+        writer.write(String.format("    marker: { radius: %.1f, symbol: 'circle' },\n", config.radius));
         writer.write("    dataLabels: {\n");
         writer.write("     enabled: " + config.showDataLabels + "\n");
         writer.write("    },\n");
@@ -489,7 +493,9 @@ public class Chart
       writer.write("  tooltip: {\n");
       writer.write("   enabled: " + config.showToolTips + ",\n");
       if (config.showToolTips) {
-        writer.write("    headerFormat: '',\n");
+        if (config.data.length <= 1) {
+          writer.write("    headerFormat: '',\n");
+        }
         String header = hasNames ? "<b>{point.name}</b><br/>" : "";
         StringBuilder zs = new StringBuilder();
         int zIndex = 0;
@@ -504,27 +510,33 @@ public class Chart
         writer.write(format);
       }
       writer.write("  },\n");
-      writer.write("  series: [{\n");
-      writer.write("   data: [\n");
-      for (FeatureVec v : scatter) {
-        StringBuilder dataString = new StringBuilder(
-            String.format("x:%.3f,y:%.3f", v.get(config.xIndex), v.get(config.yIndex)));
-        int nDims = Math.min(v.getNumDims(), config.dimNames.length);
-        int zIndex = 0;
-        for (int i = 0; i < nDims; ++i) {
-          if (i == config.xIndex || i == config.yIndex) continue;
-          dataString.append(String.format(",z%s:%.3f", zIndex == 0 ? "" : String.format("%d", zIndex + 1), v.get(i)));
-          ++zIndex;
+      writer.write("  series: [\n");
+      for (Sequence scatter : config.data) {
+        writer.write("   {\n");
+        if (scatter.getName() != null && !scatter.getName().isEmpty()) {
+          writer.write("  name: '%s',\n", scatter.getName());
         }
-        if (hasNames) {
-          String name = FinLib.getBaseName(v.getName());
-          writer.write(String.format("{%s,name:'%s'},\n", dataString, FinLib.getBaseName(name)));
-        } else {
-          writer.write(String.format("{%s},\n", dataString));
+        writer.write("    data: [\n");
+        for (FeatureVec v : scatter) {
+          StringBuilder dataString = new StringBuilder(
+              String.format("x:%.3f,y:%.3f", v.get(config.xIndex), v.get(config.yIndex)));
+          int nDims = Math.min(v.getNumDims(), config.dimNames.length);
+          int zIndex = 0;
+          for (int i = 0; i < nDims; ++i) {
+            if (i == config.xIndex || i == config.yIndex) continue;
+            dataString.append(String.format(",z%s:%.3f", zIndex == 0 ? "" : String.format("%d", zIndex + 1), v.get(i)));
+            ++zIndex;
+          }
+          if (hasNames) {
+            String name = FinLib.getBaseName(v.getName());
+            writer.write(String.format("{%s,name:'%s'},\n", dataString, FinLib.getBaseName(name)));
+          } else {
+            writer.write(String.format("{%s},\n", dataString));
+          }
         }
+        writer.write("]},\n");
       }
-      writer.write("]}]\n");
-      writer.write(" });\n");
+      writer.write(" ]});\n");
       writer.write("});\n");
 
       writer.write("</script></head><body style=\"width:" + config.width + "px;\">\n");
@@ -1088,11 +1100,12 @@ public class Chart
 
       final double eps = 0.01; // epsilon for larger cagr
       int iRow = 0;
-      for (int i = iStart; i + 120 < returns1.length(); i += 120) {
+      for (int i = iStart; i + 12 * 6 < returns1.length(); i += 120) {
         assert returns1.getTimeMS(i) == returns2.getTimeMS(i);
         LocalDate date = TimeLib.ms2date(returns1.getTimeMS(i));
-        Sequence decade1 = returns1.subseq(i, 121);
-        Sequence decade2 = returns2.subseq(i, 121);
+        final int n = Math.min(121, returns1.length() - i);
+        Sequence decade1 = returns1.subseq(i, n);
+        Sequence decade2 = returns2.subseq(i, n);
         CumulativeStats stats1 = CumulativeStats.calc(decade1);
         CumulativeStats stats2 = CumulativeStats.calc(decade2);
 
@@ -1103,8 +1116,8 @@ public class Chart
           excess = "<font color=\"#700\">" + excess + "</font>";
         }
         writer.write(
-            " <tr class=\"%s\"><td>%ds</td><td>%.2f</td><td>%.2f</td><td>%s</td><td>%.2f</td><td>%.2f</td></tr>\n",
-            iRow % 2 == 0 ? "evenRow" : "oddRow", date.getYear(), stats1.cagr, stats2.cagr, excess,
+            " <tr class=\"%s\"><td>%d%s</td><td>%.2f</td><td>%.2f</td><td>%s</td><td>%.2f</td><td>%.2f</td></tr>\n",
+            iRow % 2 == 0 ? "evenRow" : "oddRow", date.getYear(), n == 121 ? "" : "*", stats1.cagr, stats2.cagr, excess,
             stats1.devAnnualReturn, stats2.devAnnualReturn);
         ++iRow;
       }

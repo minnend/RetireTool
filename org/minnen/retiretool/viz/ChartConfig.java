@@ -7,8 +7,6 @@ import java.util.Collection;
 import java.util.List;
 
 import org.minnen.retiretool.data.Sequence;
-import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
-import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 
 public class ChartConfig
 {
@@ -57,7 +55,7 @@ public class ChartConfig
   public String         pathToBase;
 
   // Specific to scatter plots.
-  public int            radius             = 3;
+  public double         radius             = 3;
 
   public static String chart2name(Type chartType)
   {
@@ -100,8 +98,8 @@ public class ChartConfig
         scaling == ChartScaling.LOGARITHMIC ? 0.5 : Double.NaN, scaling, timing, 0, seqs);
   }
 
-  public static ChartConfig buildScatter(File file, String title, int width, int height, int radius, String[] dimNames,
-      Sequence scatter)
+  public static ChartConfig buildScatter(File file, String title, int width, int height, double radius,
+      String[] dimNames, Sequence... scatter)
   {
     return new ChartConfig(file).setType(ChartConfig.Type.Scatter).setTitle(title).setSize(width, height)
         .setRadius(radius).setDimNames(dimNames).setData(scatter);
@@ -239,7 +237,7 @@ public class ChartConfig
     return this;
   }
 
-  public ChartConfig setRadius(int radius)
+  public ChartConfig setRadius(double radius)
   {
     this.radius = radius;
     return this;

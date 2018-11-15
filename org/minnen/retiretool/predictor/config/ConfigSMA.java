@@ -44,7 +44,7 @@ public class ConfigSMA extends PredictorConfig
       int nTriggerB = 0;
       int nBaseA = rng.nextInt(5, 250);
       int nBaseB = Math.max(0, nBaseA - 10 * rng.nextInt(1, Math.max(1, nBaseA / 10)));
-      int margin = rng.nextInt(1, 300) * 10;
+      int margin = rng.nextInt(1, 30) * 10;
       ConfigSMA config = new ConfigSMA(nTriggerA, nTriggerB, nBaseA, nBaseB, margin, iPrice, minTimeBetweenFlips);
       if (config.isValid()) return config;
     }
@@ -95,7 +95,7 @@ public class ConfigSMA extends PredictorConfig
   public static int perturbMargin(int x)
   {
     assert x >= 0;
-    int halfWidth = Math.max(100, (x + 5) / 10);
+    int halfWidth = Math.max(1, (x + 5) / 10);
     int xmin = Math.max(x - halfWidth, 0);
     int xmax = x + halfWidth;
     assert xmin <= x && xmax >= x && xmax >= xmin;
