@@ -1,14 +1,12 @@
 package org.minnen.retiretool.tactical;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
 import org.minnen.retiretool.broker.Simulation;
+import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
-import org.minnen.retiretool.data.YahooIO;
-import org.minnen.retiretool.data.tiingo.TiingoFund;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.stats.CumulativeStats;
@@ -23,21 +21,13 @@ public class TacticLib
 
   public static void setupData(String symbol, SequenceStore store) throws IOException
   {
-    Sequence stock = null;
-    if (symbol == "^GSPC") {
-      File file = YahooIO.downloadDailyData(symbol, 8 * TimeLib.MS_IN_HOUR);
-      stock = YahooIO.loadData(file);
-    } else {
-      TiingoFund fund = TiingoFund.fromSymbol(symbol, true);
-      stock = fund.data;
-    }
-
-    System.out.printf("S&P (Daily): [%s] -> [%s]\n", TimeLib.formatDate(stock.getStartMS()),
-        TimeLib.formatDate(stock.getEndMS()));
-    store.add(stock, "stock");
+    Sequence seq = DataIO.loadSymbol(symbol);
+    System.out.printf("%s (Daily): [%s] -> [%s]\n", symbol, TimeLib.formatDate(seq.getStartMS()),
+        TimeLib.formatDate(seq.getEndMS()));
+    store.add(seq, riskyName);
 
     Sequence tb3mo = FinLib.inferAssetFrom3MonthTreasuries();
-    store.add(tb3mo, "3-month-treasuries");
+    store.add(tb3mo, safeName);
   }
 
   public static CumulativeStats eval(PredictorConfig config, String name, int nPerturb, Simulation sim)

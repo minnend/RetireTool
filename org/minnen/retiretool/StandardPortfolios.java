@@ -103,6 +103,14 @@ public class StandardPortfolios
     return predictor;
   }
 
+  public Predictor simpleSMA(int nDaysTrigger, int nDaysBase, String riskyAsset, String safeAsset)
+  {
+    PredictorConfig config = new ConfigSMA(nDaysTrigger, 0, nDaysBase, 0, 1, FinLib.AdjClose, 2 * TimeLib.MS_IN_DAY);
+    Predictor predictor = config.build(sim.broker.accessObject, new String[] { riskyAsset, safeAsset });
+    predictor.name = String.format("SMA:%d/%s", nDaysTrigger, nDaysBase);
+    return predictor;
+  }
+
   public Sequence run(Predictor predictor, long timeSimStart, long timeSimEnd)
   {
     return run(predictor, timeSimStart, timeSimEnd, true);

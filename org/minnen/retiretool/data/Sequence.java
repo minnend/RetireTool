@@ -1006,8 +1006,8 @@ public class Sequence implements Iterable<FeatureVec>
     assert N > 0;
 
     double sum = 0.0;
-    for (int j = iStart; j <= iEnd; ++j) {
-      sum += get(j, iDim);
+    for (int i = iStart; i <= iEnd; ++i) {
+      sum += get(i, iDim);
     }
     return sum / N;
   }

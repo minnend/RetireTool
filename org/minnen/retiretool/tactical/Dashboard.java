@@ -62,10 +62,10 @@ public class Dashboard
   /** overfitting? */
   public static final boolean           avoid62        = false;
 
-  public static final int               yearsOfHistory = 20;
+  public static final int               yearsOfHistory = 3;
 
-  public static final String            symbol         = "^GSPC";
-  // public static final String symbol = "VFINX";
+  // public static final String symbol = "^GSPC";
+  public static final String            symbol         = "VFINX";
 
   // public static final PredictorConfig[] singleConfigs = new PredictorConfig[] {
   // new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap), new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap),
@@ -80,8 +80,8 @@ public class Dashboard
   public static final PredictorConfig[] singleConfigs  = new PredictorConfig[3];
 
   /** Old params found in 2016 */
-   public static final int[][] allParams = new int[][] { { 20, 0, 240, 150, 25 }, { 25, 0, 155, 125, 75 },
-   { 5, 0, 165, 5, 50 } };
+  // public static final int[][] allParams = new int[][] { { 20, 0, 240, 150, 25 }, { 25, 0, 155, 125, 75 },
+  // { 5, 0, 165, 5, 50 } };
 
   // [15,0] / [259,125] m=21 | [8,0] / [21,15] m=1320 | [5,0] / [178,50] m=145 { 8, 0, 21, 15, 1320 }
   // public static final int[][] allParams = new int[][] { { 15, 0, 259, 125, 21 }, { 15, 0, 259, 125, 21 },
@@ -99,9 +99,9 @@ public class Dashboard
   // public static final int[][] allParams = new int[][] { { 26, 0, 212, 104, 102 },
   // { 39, 0, 107, 104, 243 }, { 63, 0, 23, 14, 105 } };
 
-  // MultiPredict: [15,0] / [259,125] m=21 | [5,0] / [178,50] m=145 | [19,0] / [213,83] m=269
-  // public static final int[][] allParams = new int[][] { { 15, 0, 259, 125, 21 }, { 5, 0, 178, 50, 145 },
-  // { 19, 0, 213, 83, 269 } };
+  // [15,0] / [259,125] m=21 | [5,0] / [178,50] m=145 | [19,0] / [213,83] m=269
+  public static final int[][]           allParams      = new int[][] { { 15, 0, 259, 125, 21 }, { 5, 0, 178, 50, 145 },
+      { 19, 0, 213, 83, 269 } };
 
   static {
     // Create misc directory if it doesn't exist.
@@ -331,9 +331,9 @@ public class Dashboard
     // if (avoid62) {
     // contraryPairs.add(new IntPair(6, 2));
     // }
-    contraryPairs.add(new IntPair(-1, 0));
-    contraryPairs.add(new IntPair(1, 0));
-    contraryPairs.add(new IntPair(2, 0));
+    // contraryPairs.add(new IntPair(-1, 0));
+    // contraryPairs.add(new IntPair(1, 0));
+    // contraryPairs.add(new IntPair(2, 0));
     // contraryPairs.add(new IntPair(6, 2));
 
     PredictorConfig configStrategy = new ConfigMulti(true, contrary, contraryPairs, singleConfigs);
@@ -511,8 +511,8 @@ public class Dashboard
       Sequence baseLow = base.dup()._mul(1.0 - params[4] / 10000.0).setName("BaseLow");
       Sequence baseHigh = base.dup()._mul(1.0 + params[4] / 10000.0).setName("BaseHigh");
       Sequence raw = stock.subseq(startMs, endMs);
-      trigger.setName("Trigger");
-      base.setName("Base");
+      trigger.setName(String.format("Trigger[%d]", params[0]));
+      base.setName(String.format("Base[%d]", params[2]));
       int code = 1 << (allParams.length - 1 - i);
 
       File file = new File(miscPath, String.format("sma%d-code%d.html", i + 1, code));

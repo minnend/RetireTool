@@ -11,16 +11,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.function.Predicate;
 
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
-import org.minnen.retiretool.data.SequenceStoreV1;
 import org.minnen.retiretool.data.Shiller;
 import org.minnen.retiretool.data.fred.FredSeries;
-import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
-import org.minnen.retiretool.stats.DurationalStats;
 import org.minnen.retiretool.stats.RetirementStats;
 
 import com.joptimizer.functions.ConvexMultivariateRealFunction;
@@ -1457,6 +1453,7 @@ public final class FinLib
     }
   }
 
+  /** @return Sequence with average(t-ta, t-tb) values. */
   public static Sequence sma(Sequence seq, int ta, int tb, int iDim)
   {
     assert ta >= tb;

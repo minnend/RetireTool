@@ -21,13 +21,14 @@ import java.util.zip.ZipInputStream;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
+import org.minnen.retiretool.data.tiingo.TiingoFund;
 import org.minnen.retiretool.util.TimeLib;
 
 public class DataIO
 {
   public static final File outputPath  = new File("e:/web");
   public static final File financePath = new File("e:/research/finance");
-  public static final File shiller = new File(financePath, "shiller.csv");
+  public static final File shiller     = new File(financePath, "shiller.csv");
 
   static {
     // Create data and output directories if they doesn't exist.
@@ -331,5 +332,28 @@ public class DataIO
       toks[i] = toks[i].trim();
     }
     return toks;
+  }
+
+  public static Sequence loadSymbol(String symbol) throws IOException
+  {
+    Sequence seq = null;
+    if (symbol == "^GSPC") {
+      File file = YahooIO.downloadDailyData(symbol, 8 * TimeLib.MS_IN_HOUR);
+      seq = YahooIO.loadData(file);
+    } else if (symbol == "GOOG") {
+      // Create a single sequence that adjusts for the goog/googl split.
+      // Note: not handled by adjusted price due to unusual stock dividend.
+      Sequence googl = TiingoFund.fromSymbol("GOOGL", true).data;
+      Sequence goog = TiingoFund.fromSymbol("GOOG", true).data;
+      seq = new Sequence("GOOG");
+      int i = googl.getIndexAtOrBefore(goog.getStartMS() - 1);
+      seq.append(googl.subseq(0, i + 1));
+      seq.append(goog);
+    } else {
+      TiingoFund fund = TiingoFund.fromSymbol(symbol, true);
+      seq = fund.data;
+    }
+    seq.setName(symbol);
+    return seq;
   }
 }

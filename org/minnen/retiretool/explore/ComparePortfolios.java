@@ -46,7 +46,6 @@ public class ComparePortfolios
   // public static final String[] fundSymbols = new String[] { "VFINX", "VBMFX", "VWIGX", "VFISX", "VWINX", "NAESX" };
   public static final String[]      fundSymbols  = new String[] { "VFINX", "VBMFX", "VWIGX", "VWINX", "NAESX", "VGENX",
       "FRESX", "VEXMX",
-
       // "VIVAX", "VTMSX", "VISVX", "VGSIX", "FSIIX", "VTRIX", "FSCOX", "VEIEX", "FIREX" // merriman
   };
 
@@ -94,7 +93,7 @@ public class ComparePortfolios
 
     StandardPortfolios portfolios = new StandardPortfolios(sim);
 
-    predictor = portfolios.passive("S&P 500", stockSymbol);
+    predictor = portfolios.passive(stockSymbol, stockSymbol);
     Sequence returnsStock = portfolios.run(predictor, timeSimStart, timeSimEnd);
     returns.add(returnsStock);
 
@@ -143,6 +142,11 @@ public class ComparePortfolios
         0.3, 0.1);
     Sequence returnsLazy4 = portfolios.run(predictor, timeSimStart, timeSimEnd);
     returns.add(returnsLazy4);
+
+    // 50/200 SMA cross.
+    predictor = portfolios.simpleSMA(50, 200, stockSymbol, cashSymbol);
+    Sequence returnsCross = portfolios.run(predictor, timeSimStart, timeSimEnd);
+    returns.add(returnsCross);
 
     // Merriman Aggressive.
     // predictor = portfolios.merrimanAggressive();
