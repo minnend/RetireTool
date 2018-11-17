@@ -1,7 +1,9 @@
 package org.minnen.retiretool.broker;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -37,6 +39,8 @@ public class Simulation
   private final double                        startingBalance;
   private final double                        monthlyDeposit;
 
+  private List<TimeInfo>                      timeInfoCache;
+
   public Sequence                             returnsDaily;
   public Sequence                             returnsMonthly;
   public Map<LocalDate, DiscreteDistribution> holdings;
@@ -71,6 +75,7 @@ public class Simulation
     this.startingBalance = startingBalance;
     this.monthlyDeposit = monthlyDeposit;
     this.broker = new Broker(store, valueModel, quoteModel, slippage, guideSeq);
+    this.timeInfoCache = calcTimeInfo(guideSeq);
   }
 
   public long getStartMS()
@@ -299,7 +304,7 @@ public class Simulation
     holdings = new TreeMap<>();
 
     broker.reset();
-    broker.setNewDay(new TimeInfo(runIndex, guideSeq));
+    broker.setNewDay(timeInfoCache.get(runIndex));
     broker.openAccount(AccountName, Fixed.toFixed(startingBalance), Account.Type.Roth, true);
 
     // TODO support prediction at start instead of on second tick
@@ -381,8 +386,8 @@ public class Simulation
     // TimeLib.formatDate(guideSeq.getTimeMS(runIndex)),
     // TimeLib.formatDate(timeEnd));
     while (runIndex < guideSeq.length() && guideSeq.getTimeMS(runIndex) <= timeEnd) {
-      final TimeInfo timeInfo = new TimeInfo(runIndex, guideSeq);
-      if (bCheckBusinessDay && !TimeLib.isBusinessDay(timeInfo.date)) {
+      final TimeInfo timeInfo = timeInfoCache.get(runIndex);
+      if (bCheckBusinessDay && !timeInfo.isBusinessDay) {
         ++runIndex;
         continue;
       }
@@ -496,5 +501,15 @@ public class Simulation
       }
     }
     return futureReturns;
+  }
+
+  /** @return list of TimeInfo objects for the given Sequence. */
+  public static List<TimeInfo> calcTimeInfo(Sequence seq)
+  {
+    List<TimeInfo> cache = new ArrayList<>();
+    for (int i = 0; i < seq.length(); ++i) {
+      cache.add(new TimeInfo(i, seq));
+    }
+    return cache;
   }
 }

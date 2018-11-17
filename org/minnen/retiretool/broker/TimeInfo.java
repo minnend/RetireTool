@@ -19,6 +19,7 @@ public class TimeInfo
   public final boolean   isLastDayOfMonth;
   public final boolean   isFirstDayOfWeek;
   public final boolean   isLastDayOfWeek;
+  public final boolean   isBusinessDay;
 
   public TimeInfo(int index, Sequence guideSeq)
   {
@@ -69,6 +70,8 @@ public class TimeInfo
 
     isFirstDayOfWeek = !TimeLib.isSameWeek(prevDate, date);
     isLastDayOfWeek = !TimeLib.isSameWeek(date, nextDate);
+
+    isBusinessDay = TimeLib.isBusinessDay(date);
   }
 
   public String toString()

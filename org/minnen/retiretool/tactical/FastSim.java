@@ -1,7 +1,10 @@
 package org.minnen.retiretool.tactical;
 
+import java.util.List;
+
 import org.minnen.retiretool.broker.Account;
 import org.minnen.retiretool.broker.Broker;
+import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.broker.TimeInfo;
 import org.minnen.retiretool.broker.transactions.Transaction.Flow;
 import org.minnen.retiretool.data.DiscreteDistribution;
@@ -36,6 +39,8 @@ public class FastSim
   private final double       startingBalance;
   private final double       monthlyDeposit;
 
+  private List<TimeInfo>     timeInfoCache;
+
   public Sequence            returnsDaily;
   public Sequence            returnsMonthly;
 
@@ -63,6 +68,7 @@ public class FastSim
     this.startingBalance = startingBalance;
     this.monthlyDeposit = monthlyDeposit;
     this.broker = new Broker(store, valueModel, quoteModel, slippage, guideSeq);
+    this.timeInfoCache = Simulation.calcTimeInfo(guideSeq);
   }
 
   public long getStartMS()
@@ -133,7 +139,7 @@ public class FastSim
     returnsDaily.addData(1.0, guideSeq.getStartMS());
 
     broker.reset();
-    broker.setNewDay(new TimeInfo(runIndex, guideSeq));
+    broker.setNewDay(timeInfoCache.get(runIndex));
     broker.openAccount(AccountName, Fixed.toFixed(startingBalance), Account.Type.Roth, true);
   }
 
@@ -148,7 +154,7 @@ public class FastSim
 
     final int lastIndex = Math.min(guideSeq.length() - 1, guideSeq.getIndexAtOrBefore(timeEnd));
     for (; runIndex <= lastIndex; ++runIndex) {
-      final TimeInfo timeInfo = new TimeInfo(runIndex, guideSeq);
+      final TimeInfo timeInfo = timeInfoCache.get(runIndex);
       // Note: fast simulation doesn't check for business days.
       broker.setNewDay(timeInfo);
 
