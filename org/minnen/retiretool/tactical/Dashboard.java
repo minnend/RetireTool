@@ -242,7 +242,7 @@ public class Dashboard
 
       String title = String.format("Code: %d (n=%d)", entry.getKey(), list.size());
       String filename = genGraphFileName(entry.getKey());
-      ChartConfig config = ChartConfig.buildLine(new File(DataIO.outputPath, filename), title, 1200, 900,
+      ChartConfig config = ChartConfig.buildLine(new File(DataIO.outputPath, filename), title, "100%", "900px",
           ChartScaling.LINEAR, ChartTiming.INDEX, seqs);
       config.setPathToBase(miscToBase);
       Chart.saveChart(config);
@@ -304,7 +304,7 @@ public class Dashboard
 
       String title = String.format("Code Pair: %d -> %d (n=%d)", codePair.first, codePair.second, list.size());
       String filename = genGraphFileName(codePair);
-      ChartConfig config = ChartConfig.buildLine(new File(DataIO.outputPath, filename), title, 1200, 900,
+      ChartConfig config = ChartConfig.buildLine(new File(DataIO.outputPath, filename), title, "100%", "900px",
           ChartScaling.LINEAR, ChartTiming.INDEX, seqs);
       config.setPathToBase(miscToBase);
       Chart.saveChart(config);
@@ -517,7 +517,7 @@ public class Dashboard
 
       File file = new File(miscPath, String.format("sma%d-code%d.html", i + 1, code));
       String title = String.format("SMA %d (Code: %d)", i + 1, code);
-      ChartConfig config = ChartConfig.buildLine(file, title, 1200, 600, ChartScaling.LINEAR, ChartTiming.DAILY,
+      ChartConfig config = ChartConfig.buildLine(file, title, "100%", "600px", ChartScaling.LINEAR, ChartTiming.DAILY,
           trigger, baseLow, baseHigh, raw);
       config.setPathToBase(miscToBase);
       Chart.saveChart(config);

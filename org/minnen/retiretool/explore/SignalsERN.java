@@ -107,7 +107,7 @@ public class SignalsERN
 
     String[] dimNames = new String[] { seqX.getName(), seqY.getName() };
     File file = new File(DataIO.outputPath, String.format("%s vs %s.html", seqX.getName(), seqY.getName()));
-    Chart.saveScatterPlot(file, seqX.getName() + " vs. " + seqY.getName(), 1200, 640, 3, dimNames, scatter);
+    Chart.saveScatterPlot(file, seqX.getName() + " vs. " + seqY.getName(), "100%", "640px", 3, dimNames, scatter);
   }
 
   public static void main(String[] args) throws IOException
@@ -219,7 +219,7 @@ public class SignalsERN
     stockReturns._div(stockReturns.getFirst(0));
 
     File file = new File(DataIO.outputPath, "ern-signals-vs-stock.html");
-    Chart.saveLineChart(file, "Signals vs. Stock", 1200, 640, ChartScaling.LINEAR, ChartTiming.MONTHLY, pmi,
+    Chart.saveLineChart(file, "Signals vs. Stock", "100%", "640px", ChartScaling.LINEAR, ChartTiming.MONTHLY, pmi,
         treasurySpread, initialClaims.div(10000), stockReturns, returnsAfterMonths[6], returnsAfterMonths[3],
         returnsAfterMonths[12]);
 

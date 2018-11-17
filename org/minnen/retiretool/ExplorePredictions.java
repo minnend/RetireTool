@@ -285,7 +285,7 @@ public class ExplorePredictions
       System.out.printf("%.2f: %s\n", x, fv);
     }
 
-    Chart.saveScatterPlot(new File(outputDir, "momentum-6.html"), "Predictions", 1000, 1000, 3,
+    Chart.saveScatterPlot(new File(outputDir, "momentum-6.html"), "Predictions", "1000px", "1000px", 3,
         new String[] { "Predicted", "Actual" }, scatterData);
   }
 }

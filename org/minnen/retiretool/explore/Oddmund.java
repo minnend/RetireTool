@@ -80,7 +80,7 @@ public class Oddmund
     seq._div(seq.getFirst(0));
     returns.add(seq);
 
-    Chart.saveLineChart(new File(outputDir, "returns-oddmund.html"), "Returns", 1000, 640, ChartScaling.LOGARITHMIC,
-        ChartTiming.DAILY, returns);
+    Chart.saveLineChart(new File(outputDir, "returns-oddmund.html"), "Returns", "100%", "640px",
+        ChartScaling.LOGARITHMIC, ChartTiming.DAILY, returns);
   }
 }

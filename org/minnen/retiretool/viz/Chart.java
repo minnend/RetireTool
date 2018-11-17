@@ -40,7 +40,7 @@ public class Chart
 {
   public final static boolean bVerticalLine = false;
 
-  public static ChartConfig saveLineChart(File file, String title, int width, int height, ChartScaling scaling,
+  public static ChartConfig saveLineChart(File file, String title, String width, String height, ChartScaling scaling,
       ChartTiming timing, Sequence... seqs) throws IOException
   {
     ChartConfig config = ChartConfig.buildLine(file, title, width, height, scaling, timing, seqs);
@@ -48,7 +48,7 @@ public class Chart
     return config;
   }
 
-  public static ChartConfig saveLineChart(File file, String title, int width, int height, ChartScaling scaling,
+  public static ChartConfig saveLineChart(File file, String title, String width, String height, ChartScaling scaling,
       ChartTiming timing, List<Sequence> seqs) throws IOException
   {
     ChartConfig config = ChartConfig.buildLine(file, title, width, height, scaling, timing, seqs);
@@ -57,8 +57,8 @@ public class Chart
   }
 
   public static ChartConfig saveChart(File file, ChartConfig.Type chartType, String title, String[] labels,
-      String[] colors, int width, int height, double ymin, double ymax, double minorTickIntervalY, ChartScaling scaling,
-      ChartTiming timing, int dim, Sequence... seqs) throws IOException
+      String[] colors, String width, String height, double ymin, double ymax, double minorTickIntervalY,
+      ChartScaling scaling, ChartTiming timing, int dim, Sequence... seqs) throws IOException
   {
     ChartConfig config = ChartConfig.build(file, chartType, title, labels, colors, width, height, ymin, ymax,
         minorTickIntervalY, scaling, timing, dim, seqs);
@@ -295,13 +295,13 @@ public class Chart
       writer.write("});\n");
 
       writer.write("</script></head><body>\n");
-      writer.write("<div id=\"%s\" style=\"width:%dpx; height:%dpx;\" />\n", config.containerName, config.width,
+      writer.write("<div id=\"%s\" style=\"width:%s; height:%s;\" />\n", config.containerName, config.width,
           config.height);
       writer.write("</body></html>\n");
     }
   }
 
-  public static void saveScatter(File file, String title, int width, int height, int dim, Sequence returns1,
+  public static void saveScatter(File file, String title, String width, String height, int dim, Sequence returns1,
       Sequence returns2) throws IOException
   {
     assert returns1.length() == returns2.length();
@@ -400,7 +400,7 @@ public class Chart
       writer.write("});\n");
 
       writer.write("</script></head><body>\n");
-      writer.write("<div id=\"chart\" style=\"width:%dpx; height:%dpx;\" />\n", width, height);
+      writer.write("<div id=\"chart\" style=\"width:%s; height:%s;\" />\n", width, height);
       writer.write("</body></html>\n");
     }
   }
@@ -408,7 +408,7 @@ public class Chart
   /**
    * Convenience function that takes individual arguments and builds a ChartConfig.
    */
-  public static ChartConfig saveScatterPlot(File file, String title, int width, int height, double radius,
+  public static ChartConfig saveScatterPlot(File file, String title, String width, String height, double radius,
       String[] dimNames, Sequence... scatter) throws IOException
   {
     ChartConfig config = ChartConfig.buildScatter(file, title, width, height, radius, dimNames, scatter);
@@ -539,17 +539,17 @@ public class Chart
       writer.write(" ]});\n");
       writer.write("});\n");
 
-      writer.write("</script></head><body style=\"width:" + config.width + "px;\">\n");
-      writer.write("<div id=\"chart\" style=\"width:100%; height:" + config.height + "px;\" />\n");
+      writer.write("</script></head><body style=\"width:%s;\">\n", config.width);
+      writer.write("<div id=\"chart\" style=\"width:100%; height:%s;\" />\n", config.height);
       writer.write("</body></html>\n");
     }
   }
 
-  public static void saveHighChartSplines(File file, String title, int width, int height, Sequence... splines)
+  public static void saveHighChartSplines(File file, String title, String width, String height, Sequence... splines)
       throws IOException
   {
     // Write HTML to generate the graph.
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+    try (Writer writer = new Writer(file)) {
       writer.write("<html><head>\n");
       writer.write("<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js\"></script>\n");
       writer.write("<script src=\"js/highcharts.js\"></script>\n");
@@ -605,23 +605,23 @@ public class Chart
       writer.write(" });\n");
       writer.write("});\n");
 
-      writer.write("</script></head><body style=\"width:" + width + "px;\">\n");
-      writer.write("<div id=\"chart\" style=\"width:100%; height:" + height + "px;\" />\n");
+      writer.write("</script></head><body style=\"width:%s\">\n", width);
+      writer.write("<div id=\"chart\" style=\"width:100%; height:%s\" />\n", height);
       writer.write("</body></html>\n");
     }
   }
 
-  public static void saveBoxPlots(File file, String title, int width, int height, double minorTickInterval,
+  public static void saveBoxPlots(File file, String title, String width, String height, double minorTickInterval,
       List<DurationalStats> stats) throws IOException
   {
 
     saveBoxPlots(file, title, width, height, minorTickInterval, stats.toArray(new DurationalStats[stats.size()]));
   }
 
-  public static void saveBoxPlots(File file, String title, int width, int height, double minorTickInterval,
+  public static void saveBoxPlots(File file, String title, String width, String height, double minorTickInterval,
       DurationalStats... returnStats) throws IOException
   {
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+    try (Writer writer = new Writer(file)) {
       writer.write("<html><head>\n");
       writer.write("<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js\"></script>\n");
       writer.write("<script src=\"js/highcharts.js\"></script>\n");
@@ -671,8 +671,8 @@ public class Chart
       writer.write(" });\n");
       writer.write("});\n");
 
-      writer.write("</script></head><body style=\"width:" + width + "px;\">\n");
-      writer.write("<div id=\"chart\" style=\"width:100%; height:" + height + "px;\" />\n");
+      writer.write("</script></head><body style=\"width:%s;\">\n", width);
+      writer.write("<div id=\"chart\" style=\"width:100%; height:%s;\" />\n", height);
       writer.write("</body></html>\n");
     }
   }
@@ -687,7 +687,7 @@ public class Chart
    * @param stats List of strategies to include
    * @throws IOException if there is a problem writing to the file
    */
-  public static void saveStatsTable(File file, int width, boolean reduced, List<CumulativeStats> stats)
+  public static void saveStatsTable(File file, String width, boolean reduced, List<CumulativeStats> stats)
       throws IOException
   {
     saveStatsTable(file, width, reduced, stats.toArray(new CumulativeStats[stats.size()]));
@@ -699,11 +699,12 @@ public class Chart
    * Documentation for sortable table: http://tablesorter.com/docs/
    * 
    * @param file save HTML in this file
+   * @param width width of table
    * @param reduced true => hide some columns to save space
    * @param strategyStats List of strategies to include
    * @throws IOException if there is a problem writing to the file
    */
-  public static void saveStatsTable(File file, int width, boolean reduced, CumulativeStats... strategyStats)
+  public static void saveStatsTable(File file, String width, boolean reduced, CumulativeStats... strategyStats)
       throws IOException
   {
     final boolean includeRiskAdjusted = false;
@@ -728,7 +729,7 @@ public class Chart
       writer.write("</script>\n");
       writer.write(
           "<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
-      writer.write(String.format("</head><body style=\"width:%dpx\">\n", width));
+      writer.write(String.format("</head><body style=\"width:%s\">\n", width));
       writer.write("<h2>Statistics for Different Strategies / Assets</h2>\n");
       writer.write("<table id=\"statsTable\" class=\"tablesorter\">\n");
       writer.write("<thead><tr>\n");
@@ -926,12 +927,12 @@ public class Chart
     }
   }
 
-  public static void saveComparisonTable(File file, int width, List<ComparisonStats> stats) throws IOException
+  public static void saveComparisonTable(File file, String width, List<ComparisonStats> stats) throws IOException
   {
     saveComparisonTable(file, width, stats.toArray(new ComparisonStats[stats.size()]));
   }
 
-  public static void saveComparisonTable(File file, int width, ComparisonStats... allStats) throws IOException
+  public static void saveComparisonTable(File file, String width, ComparisonStats... allStats) throws IOException
   {
     try (Writer writer = new Writer(file)) {
       writer.write("<html><head>\n");
@@ -943,7 +944,7 @@ public class Chart
       writer.write("</script>\n");
       writer.write(
           "<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
-      writer.write("</head><body style=\"width:%dpx\">\n", width);
+      writer.write("</head><body style=\"width:%s\">\n", width);
       String defender = null;
       if (allStats[0].returns2 != null) {
         defender = FinLib.getBaseName(allStats[0].returns2.getName());
@@ -995,12 +996,12 @@ public class Chart
     }
   }
 
-  public static void saveBeatInflationTable(File file, int width, List<ComparisonStats> stats) throws IOException
+  public static void saveBeatInflationTable(File file, String width, List<ComparisonStats> stats) throws IOException
   {
     saveBeatInflationTable(file, width, stats.toArray(new ComparisonStats[stats.size()]));
   }
 
-  public static void saveBeatInflationTable(File file, int width, ComparisonStats... allStats) throws IOException
+  public static void saveBeatInflationTable(File file, String width, ComparisonStats... allStats) throws IOException
   {
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
       writer.write("<html><head>\n");
@@ -1012,7 +1013,7 @@ public class Chart
       writer.write("</script>\n");
       writer.write(
           "<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
-      writer.write(String.format("</head><body style=\"width:%dpx\">\n", width));
+      writer.write(String.format("</head><body style=\"width:%s\">\n", width));
       writer.write("<h2>Beat Inflation</h2>\n");
       writer.write("<table id=\"comparisonTable\" class=\"tablesorter\">\n");
       writer.write("<thead><tr>\n");

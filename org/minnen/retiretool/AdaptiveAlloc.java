@@ -515,10 +515,10 @@ public class AdaptiveAlloc
       System.out.printf("r = %f\n", r);
     }
 
-    Chart.saveScatterPlot(new File(outputDir, "predictions-raw.html"), "Predictions", 1000, 1000, 3,
+    Chart.saveScatterPlot(new File(outputDir, "predictions-raw.html"), "Predictions", "1000px", "1000px", 3,
         new String[] { "Predicted", "Actual" }, scatterData);
 
-    Chart.saveScatterPlot(new File(outputDir, "predictions-aligned.html"), "Predictions", 1000, 1000, 3,
+    Chart.saveScatterPlot(new File(outputDir, "predictions-aligned.html"), "Predictions", "1000px", "1000px", 3,
         new String[] { "Predicted", "Actual" }, scatterAligned);
   }
 
@@ -733,10 +733,10 @@ public class AdaptiveAlloc
       }
     }
 
-    Chart.saveScatterPlot(new File(outputDir, "recession-prob-cagr.html"), "CAGR vs prob", 1000, 600, 2, null,
+    Chart.saveScatterPlot(new File(outputDir, "recession-prob-cagr.html"), "CAGR vs prob", "1000px", "600px", 2, null,
         scatterProb);
-    Chart.saveScatterPlot(new File(outputDir, "recession-diffgood-cagr.html"), "CAGR vs diff-good", 1000, 600, 2, null,
-        scatterGood);
+    Chart.saveScatterPlot(new File(outputDir, "recession-diffgood-cagr.html"), "CAGR vs diff-good", "1000px", "600px",
+        2, null, scatterGood);
   }
 
   public static void main(String[] args) throws IOException
@@ -1029,7 +1029,7 @@ public class AdaptiveAlloc
     returns.add(sim.returnsMonthly);
     compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
     Chart.saveHoldings(new File(outputDir, "holdings-recession.html"), sim.holdings, sim.store);
-    Chart.saveLineChart(new File(outputDir, "recession-prob.html"), "Recession Probability", 1000, 640,
+    Chart.saveLineChart(new File(outputDir, "recession-prob.html"), "Recession Probability", "100%", "640px",
         ChartScaling.LINEAR, ChartTiming.MONTHLY, store.get("recession"));
 
     // Run adaptive asset allocation.
@@ -1193,11 +1193,11 @@ public class AdaptiveAlloc
     // }
 
     Chart.saveLineChart(new File(outputDir, "returns.html"),
-        String.format("Returns (%d\u00A2 Spread)", Math.round(slippage.constSlip * 200)), 1000, 640,
+        String.format("Returns (%d\u00A2 Spread)", Math.round(slippage.constSlip * 200)), "100%", "640px",
         ChartScaling.LOGARITHMIC, ChartTiming.MONTHLY, returns);
 
     // Chart.saveAnnualStatsTable(new File(outputDir, "annual-stats.html"), 1000, false, returns);
-    Chart.saveComparisonTable(new File(outputDir, "comparison.html"), 1000, compStats);
+    Chart.saveComparisonTable(new File(outputDir, "comparison.html"), "1000px", compStats);
 
     // Account account = sim.broker.getAccount(0);
     // account.printTransactions();//TimeLib.TIME_BEGIN, TimeLib.toMs(1996, Month.DECEMBER, 31));

@@ -119,10 +119,10 @@ public class MomentumExplorer
 
     // Save reports: graph of returns + comparison summary.
     String title = String.format("Returns (%d\u00A2 Spread)", Math.round(slippage.constSlip * 200));
-    Chart.saveLineChart(new File(DataIO.outputPath, "returns.html"), title, 1000, 640, ChartScaling.LOGARITHMIC,
+    Chart.saveLineChart(new File(DataIO.outputPath, "returns.html"), title, "100%", "640px", ChartScaling.LOGARITHMIC,
         ChartTiming.MONTHLY, returns);
 
-    Chart.saveComparisonTable(new File(DataIO.outputPath, "comparison.html"), 1000, compStats);
+    Chart.saveComparisonTable(new File(DataIO.outputPath, "comparison.html"), "100%", compStats);
 
     // Report: comparison of returns over next N months.
     for (int nMonths : new int[] { 12 * 5, 12 * 10 }) {
@@ -135,7 +135,7 @@ public class MomentumExplorer
       title = String.format("Returns (%s, %d\u00A2 Spread)", TimeLib.formatDurationMonths(nMonths),
           Math.round(slippage.constSlip * 200));
       File file = new File(DataIO.outputPath, String.format("duration-returns-%d-months.html", nMonths));
-      Chart.saveLineChart(file, title, 1000, 640, ChartScaling.LINEAR, ChartTiming.MONTHLY, durationalReturns);
+      Chart.saveLineChart(file, title, "100%", "640px", ChartScaling.LINEAR, ChartTiming.MONTHLY, durationalReturns);
     }
   }
 }

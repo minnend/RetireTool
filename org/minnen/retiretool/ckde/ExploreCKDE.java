@@ -337,12 +337,12 @@ public class ExploreCKDE
     // percentile20._mul(10.0);
     // percentile80._mul(10.0);
 
-    Chart.saveLineChart(new File(outputDir, "median.html"), assetName + ": Price vs. Median", 1000, 640,
+    Chart.saveLineChart(new File(outputDir, "median.html"), assetName + ": Price vs. Median", "100%", "640px",
         ChartScaling.LINEAR, ChartTiming.MONTHLY, new Sequence[] { actualReturn, median, percentile20, percentile80 });
 
     // Generate chart showing cumulative returns for all methods.
     Chart.saveLineChart(new File(outputDir, "returns.html"),
-        String.format("Returns (%d\u00A2 Spread)", Math.round(slippage.constSlip * 200)), 1000, 640,
+        String.format("Returns (%d\u00A2 Spread)", Math.round(slippage.constSlip * 200)), "100%", "640px",
         ChartScaling.LOGARITHMIC, ChartTiming.MONTHLY, returns);
   }
 }

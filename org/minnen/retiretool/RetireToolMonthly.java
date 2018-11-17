@@ -54,8 +54,8 @@ import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 
 public class RetireToolMonthly
 {
-  public static final int             GRAPH_WIDTH  = 710;
-  public static final int             GRAPH_HEIGHT = 450;
+  public static final String          GRAPH_WIDTH  = "710px";
+  public static final String          GRAPH_HEIGHT = "450px";
 
   public final static SequenceStoreV1 store        = new SequenceStoreV1();
 
@@ -947,7 +947,7 @@ public class RetireToolMonthly
 
     // Generate scatter plot comparing results.
     String title = String.format("%s vs. %s (%s)", name1, name2, TimeLib.formatDurationMonths(duration));
-    Chart.saveScatter(new File(dir, "duel-scatter.html"), title, 730, GRAPH_HEIGHT, 0, dstatsB.durationReturns,
+    Chart.saveScatter(new File(dir, "duel-scatter.html"), title, "730px", GRAPH_HEIGHT, 0, dstatsB.durationReturns,
         dstatsA.durationReturns);
 
     // Generate histogram summarizing excess returns of B over A.
@@ -1574,7 +1574,7 @@ public class RetireToolMonthly
     System.out.printf("Synthetic Data (%d): [%s] -> [%s]\n", synth.length(), TimeLib.formatMonth(synth.getStartMS()),
         TimeLib.formatMonth(synth.getEndMS()));
 
-    Chart.saveLineChart(new File(dir, "synth.html"), "Synthetic Data", 1600, 800, ChartScaling.LOGARITHMIC,
+    Chart.saveLineChart(new File(dir, "synth.html"), "Synthetic Data", "1600px", "800px", ChartScaling.LOGARITHMIC,
         ChartTiming.MONTHLY, synth.extractDims(0), synth.extractDims(1), synth.extractDims(2));
 
     return synth;

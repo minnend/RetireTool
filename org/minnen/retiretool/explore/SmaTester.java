@@ -55,7 +55,7 @@ public class SmaTester
         String.format("sma-%d-%d.html", config.nLookbackTriggerA, config.nLookbackBaseA));
     String title = String.format("%s - SMA[%d,%d]", symbol, config.nLookbackTriggerA, config.nLookbackBaseA);
 
-    ChartConfig chart = ChartConfig.buildLine(file, title, 1200, 600, ChartScaling.LINEAR, ChartTiming.DAILY, trigger,
+    ChartConfig chart = ChartConfig.buildLine(file, title, "100%", "600px", ChartScaling.LINEAR, ChartTiming.DAILY, trigger,
         base, raw);
 
     assert trigger.length() == base.length();
@@ -63,10 +63,10 @@ public class SmaTester
     int prevIndex = -1;
     for (int t = 0; t < trigger.length(); ++t) {
       int reloc = trigger.get(t, 0) >= base.get(t, 0) ? 1 : -1;
-      if (prevLoc != 0 && reloc != prevLoc) {
+      if (reloc != prevLoc) {
         if (reloc < 0) {
           prevIndex = t;
-        } else {
+        } else if (prevLoc != 0) {
           long prevTime = raw.getTimeMS(prevIndex);
           double prevPrice = raw.get(prevIndex, 0);
           double price = raw.get(t, 0);

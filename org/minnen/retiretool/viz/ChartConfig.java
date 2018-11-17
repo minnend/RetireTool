@@ -38,8 +38,8 @@ public class ChartConfig
   public int            iDim               = 0;
   public int            xIndex             = 0;
   public int            yIndex             = 1;
-  public int            width              = 1200;
-  public int            height             = 600;
+  public String         width              = "100%";
+  public String         height             = "600px";
   public int            axisTitleFontSize  = 16;
   public boolean        showLegend         = false;
   public boolean        showDataLabels     = false;
@@ -85,20 +85,20 @@ public class ChartConfig
     return "'" + s + "'";
   }
 
-  public static ChartConfig buildLine(File file, String title, int width, int height, ChartScaling scaling,
+  public static ChartConfig buildLine(File file, String title, String width, String height, ChartScaling scaling,
       ChartTiming timing, List<Sequence> seqs) throws IOException
   {
     return buildLine(file, title, width, height, scaling, timing, seqs.toArray(new Sequence[seqs.size()]));
   }
 
-  public static ChartConfig buildLine(File file, String title, int width, int height, ChartScaling scaling,
+  public static ChartConfig buildLine(File file, String title, String width, String height, ChartScaling scaling,
       ChartTiming timing, Sequence... seqs) throws IOException
   {
     return build(file, ChartConfig.Type.Line, title, null, null, width, height, Double.NaN, Double.NaN,
         scaling == ChartScaling.LOGARITHMIC ? 0.5 : Double.NaN, scaling, timing, 0, seqs);
   }
 
-  public static ChartConfig buildScatter(File file, String title, int width, int height, double radius,
+  public static ChartConfig buildScatter(File file, String title, String width, String height, double radius,
       String[] dimNames, Sequence... scatter)
   {
     return new ChartConfig(file).setType(ChartConfig.Type.Scatter).setTitle(title).setSize(width, height)
@@ -106,7 +106,7 @@ public class ChartConfig
   }
 
   public static ChartConfig build(File file, ChartConfig.Type chartType, String title, String[] labels, String[] colors,
-      int width, int height, double ymin, double ymax, double minorTickIntervalY, ChartScaling scaling,
+      String width, String height, double ymin, double ymax, double minorTickIntervalY, ChartScaling scaling,
       ChartTiming timing, int dim, Sequence... seqs)
   {
     ChartConfig config = new ChartConfig(file).setType(chartType).setTitle(title).setLabels(labels).setColors(colors)
@@ -220,21 +220,38 @@ public class ChartConfig
 
   public ChartConfig setWidth(int width)
   {
-    this.width = width;
+    this.width = String.format("%dpx", width);
     return this;
   }
 
   public ChartConfig setHeight(int height)
   {
-    this.height = height;
+    this.height = String.format("%dpx", height);
     return this;
   }
 
   public ChartConfig setSize(int width, int height)
   {
+    setWidth(width);
+    return setHeight(height);
+  }
+
+  public ChartConfig setWidth(String width)
+  {
     this.width = width;
+    return this;
+  }
+
+  public ChartConfig setHeight(String height)
+  {
     this.height = height;
     return this;
+  }
+
+  public ChartConfig setSize(String width, String height)
+  {
+    setWidth(width);
+    return setHeight(height);
   }
 
   public ChartConfig setRadius(double radius)

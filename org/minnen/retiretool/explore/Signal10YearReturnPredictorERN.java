@@ -118,10 +118,10 @@ public class Signal10YearReturnPredictorERN
     System.out.printf("Corr=%f\n", corr);
 
     File file = new File(DataIO.outputPath, "return-prediction.html");
-    Chart.saveLineChart(file, "10-Year Return Prediction", 1000, 600, ChartScaling.LINEAR, ChartTiming.MONTHLY,
+    Chart.saveLineChart(file, "10-Year Return Prediction", "100%", "600px", ChartScaling.LINEAR, ChartTiming.MONTHLY,
         indicator, forwardReturns, adjustedIndicator);
 
     file = new File(DataIO.outputPath, "return-predictor-signals.html");
-    Chart.saveLineChart(file, "Return Predictor Signals", 1000, 600, ChartScaling.LINEAR, ChartTiming.MONTHLY, signals);
+    Chart.saveLineChart(file, "Return Predictor Signals", "100%", "600px", ChartScaling.LINEAR, ChartTiming.MONTHLY, signals);
   }
 }

@@ -149,7 +149,7 @@ public class TacticScatter
       }
       System.out.printf("%d  %s  n=%d\n", i, scatterData[i].getName(), scatterData[i].length());
     }
-    Chart.saveScatterPlot(new File(DataIO.outputPath, "tactical-scatter.html"), "Tactical Scatter Plot", 1200, 900,
+    Chart.saveScatterPlot(new File(DataIO.outputPath, "tactical-scatter.html"), "Tactical Scatter Plot", "100%", "900px",
         radius, new String[] { "Deviation", "Average Return" }, scatterData);
   }
 }

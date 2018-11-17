@@ -129,7 +129,7 @@ public class TacticalWithRecessionFilter
 
     Sequence unrate = store.get(configUnemployment.analysisName);
     Sequence unrateSMA = unrate.calcSMA(nMonthsUnrateSMA);
-    Chart.saveLineChart(new File(DataIO.outputPath, "unrate.html"), "Unemployment Rate", 1000, 640, ChartScaling.LINEAR,
+    Chart.saveLineChart(new File(DataIO.outputPath, "unrate.html"), "Unemployment Rate", "100%", "640px", ChartScaling.LINEAR,
         ChartTiming.MONTHLY, unrate, unrateSMA);
 
     // Tactical multi-predictor.
@@ -164,11 +164,11 @@ public class TacticalWithRecessionFilter
     System.out.println(CumulativeStats.calc(sim.returnsMonthly));
     compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
 
-    ChartConfig chartConfig = Chart.saveLineChart(new File(DataIO.outputPath, "returns.html"), null, 1000, 600,
+    ChartConfig chartConfig = Chart.saveLineChart(new File(DataIO.outputPath, "returns.html"), null, "100%", "640px",
         ChartScaling.LOGARITHMIC, ChartTiming.MONTHLY, returns);
     chartConfig.addPlotBandX(bands);
     Chart.saveChart(chartConfig);
-    Chart.saveComparisonTable(new File(DataIO.outputPath, "comparison.html"), 1000, compStats);
+    Chart.saveComparisonTable(new File(DataIO.outputPath, "comparison.html"), "100%", compStats);
 
     // Report: comparison of returns over next N months.
     for (int nMonths : new int[] { 12 * 5, 12 * 10 }) {
@@ -181,7 +181,7 @@ public class TacticalWithRecessionFilter
       String title = String.format("Returns (%s, %d\u00A2 Spread)", TimeLib.formatDurationMonths(nMonths),
           Math.round(slippage.constSlip * 200));
       File file = new File(DataIO.outputPath, String.format("duration-returns-%d-months.html", nMonths));
-      Chart.saveLineChart(file, title, 1000, 640, ChartScaling.LINEAR, ChartTiming.MONTHLY, durationalReturns);
+      Chart.saveLineChart(file, title, "100%", "640px", ChartScaling.LINEAR, ChartTiming.MONTHLY, durationalReturns);
     }
   }
 }
