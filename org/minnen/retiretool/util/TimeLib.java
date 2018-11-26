@@ -518,7 +518,6 @@ public class TimeLib
     LocalDate nextDate = toNextBusinessDay(date);
 
     // Figure out which is closer.
-
     long daysPrev = ChronoUnit.DAYS.between(prevDate, date);
     long daysNext = ChronoUnit.DAYS.between(date, nextDate);
     LocalDate closestDate = (daysPrev <= daysNext ? prevDate : nextDate);

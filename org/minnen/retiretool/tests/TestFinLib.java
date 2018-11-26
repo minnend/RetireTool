@@ -9,6 +9,7 @@ import org.junit.Test;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.util.FinLib;
+import org.minnen.retiretool.util.TimeLib;
 
 public class TestFinLib
 {
@@ -238,11 +239,18 @@ public class TestFinLib
     }
     assertEquals(12, seq.length());
 
-    // Only one 12 month period.
-    Sequence returns = FinLib.calcReturnsForMonths(seq, 12);
+    // One partial 18 month period.
+    Sequence returns = FinLib.calcReturnsForMonths(seq, 18);
     assertEquals(1, returns.size());
     assertEquals(1, returns.getNumDims());
     double m = FinLib.ret2mul(returns.get(0, 0));
+    assertEquals(12.0, m, 1e-6);
+
+    // Only one 12 month period.
+    returns = FinLib.calcReturnsForMonths(seq, 12);
+    assertEquals(1, returns.size());
+    assertEquals(1, returns.getNumDims());
+    m = FinLib.ret2mul(returns.get(0, 0));
     assertEquals(12.0, m, 1e-6);
 
     // Two 11 month periods.
@@ -254,12 +262,39 @@ public class TestFinLib
 
     // Seven 6 month periods.
     returns = FinLib.calcReturnsForMonths(seq, 6);
-    System.out.println(returns);
     assertEquals(7, returns.size());
     assertEquals(1, returns.getNumDims());
     double[] expected = new double[] { 6.0, 7.0 / 2.0, 8.0 / 3.0, 9.0 / 4.0, 2.0, 11.0 / 6.0, 12.0 / 7.0 };
     for (int i = 0; i < expected.length; ++i) {
       assertEquals(expected[i], FinLib.ret2mul(returns.get(i, 0)), 1e-6);
     }
+  }
+
+  @Test
+  public void testDailyToMonthly()
+  {
+    // Create daily data.
+    Sequence daily = new Sequence("test");
+    LocalDate date = LocalDate.of(2000, Month.JANUARY, 25);
+    date = TimeLib.getClosestBusinessDay(date, false);
+    assertTrue(TimeLib.isBusinessDay(date));
+    LocalDate startDate = date;
+
+    daily.addData(1.0, date);
+    for (int i = 1; i < 1995; ++i) { // late Jan 2000 -> early July 2005
+      date = date.plusDays(1);
+      if (TimeLib.isBusinessDay(date)) {
+        daily.addData(daily.getLast(0) * 1.01, date);
+      }
+    }
+
+    // Convert to monthly data and validate timestamps.
+    date = startDate.plusMonths(1); // not enough days of data in first month
+    Sequence monthly = FinLib.dailyToMonthly(daily);
+    for (FeatureVec x : monthly) {
+      assertTrue(TimeLib.isSameMonth(date, TimeLib.ms2date(x.getTime())));
+      date = date.plusMonths(1);
+    }
+    assertEquals(Month.JULY, date.getMonth()); // not enough days in last month
   }
 }

@@ -446,26 +446,26 @@ public class RetireToolMonthly
 
     Sequence stockDaily = YahooIO.loadData(new File(dataDir, "VTSMX.csv"));
     store.addMisc(stockDaily, "Stock-Daily");
-    Sequence stock = FinLib.daily2monthly(stockDaily);
-    Sequence stockNoDiv = FinLib.daily2monthly(stockDaily, 1, 0);
+    Sequence stock = FinLib.dailyToMonthly(stockDaily);
+    Sequence stockNoDiv = FinLib.dailyToMonthly(stockDaily, 1, 0);
     System.out.printf("Stock: [%s] -> [%s]\n", TimeLib.formatMonth(stock.getStartMS()),
         TimeLib.formatMonth(stock.getEndMS()));
 
     Sequence bondsDaily = YahooIO.loadData(new File(dataDir, "VBMFX.csv"));
     store.addMisc(bondsDaily, "Bonds-Daily");
-    Sequence bonds = FinLib.daily2monthly(bondsDaily);
+    Sequence bonds = FinLib.dailyToMonthly(bondsDaily);
     System.out.printf("Bond: [%s] -> [%s]\n", TimeLib.formatMonth(bonds.getStartMS()),
         TimeLib.formatMonth(bonds.getEndMS()));
 
     Sequence reitsDaily = YahooIO.loadData(new File(dataDir, "VGSIX.csv"));
     store.addMisc(reitsDaily, "REITs-Daily");
-    Sequence reits = FinLib.daily2monthly(reitsDaily);
+    Sequence reits = FinLib.dailyToMonthly(reitsDaily);
     System.out.printf("REIT: [%s] -> [%s]\n", TimeLib.formatMonth(reits.getStartMS()),
         TimeLib.formatMonth(reits.getEndMS()));
 
     Sequence istockDaily = YahooIO.loadData(new File(dataDir, "VGTSX.csv"));
     store.addMisc(istockDaily, "IntStock-Daily");
-    Sequence istock = FinLib.daily2monthly(istockDaily);
+    Sequence istock = FinLib.dailyToMonthly(istockDaily);
     System.out.printf("Int Stock: [%s] -> [%s]\n", TimeLib.formatMonth(istock.getStartMS()),
         TimeLib.formatMonth(istock.getEndMS()));
 
@@ -1289,7 +1289,7 @@ public class RetireToolMonthly
     }
 
     System.out.println();
-    results = FinLib.filter(results);
+    results = RetirementStats.filter(results);
     Arrays.sort(results, Collections.reverseOrder());
     for (int i = 0; i < results.length; ++i) {
       System.out.printf("%60s: $%s  ($%s, $%.2fm, %.2f%%)\n", results[i].name,
@@ -1465,13 +1465,13 @@ public class RetireToolMonthly
     Sequence cpi = ShillerOld.getData(ShillerOld.CPI, "cpi", shiller);
 
     Sequence nikkeiDaily = DataIO.loadDateValueCSV(new File(dataDir, "nikkei225-daily.csv"));
-    Sequence nikkei = FinLib.daily2monthly(nikkeiDaily);
+    Sequence nikkei = FinLib.dailyToMonthly(nikkeiDaily);
 
     Sequence reitsDaily = YahooIO.loadData(new File(dataDir, "VGSIX.csv"));
-    Sequence reits = FinLib.daily2monthly(reitsDaily);
+    Sequence reits = FinLib.dailyToMonthly(reitsDaily);
 
     Sequence istockDaily = YahooIO.loadData(new File(dataDir, "VGTSX.csv"));
-    Sequence istock = FinLib.daily2monthly(istockDaily);
+    Sequence istock = FinLib.dailyToMonthly(istockDaily);
 
     // Normalize CPI to start at 1.0.
     // cpi = cpi.div(cpi.get(0, 0));
@@ -1766,8 +1766,8 @@ public class RetireToolMonthly
       System.out.printf("--------- %d ------------\n", iter + 1);
       store.clear();
 
-      Sequence stock = FinLib.daily2monthly(stockDaily, 0, nJitter);
-      Sequence bonds = FinLib.daily2monthly(bondsDaily, 0, nJitter);
+      Sequence stock = FinLib.dailyToMonthly(stockDaily, 0, nJitter);
+      Sequence bonds = FinLib.dailyToMonthly(bondsDaily, 0, nJitter);
 
       stock = stock.subseq(commonStart, commonEnd);
       bonds = bonds.subseq(commonStart, commonEnd);
@@ -1888,7 +1888,7 @@ public class RetireToolMonthly
     // genEndBalanceCharts(shiller, dir);
     // genBeatInflationChart(dir);
     // genDrawdownChart(dir);
-    // genSavingsTargetChart(dir);
+    genSavingsTargetChart(dir);
     // genChartsForDifficultTimePeriods(dir);
     // genFirstLastHalfResults(dir);
   }

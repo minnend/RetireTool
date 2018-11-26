@@ -9,7 +9,6 @@ import java.time.Year;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 
 import org.minnen.retiretool.data.FeatureVec;
@@ -29,7 +28,9 @@ import smile.math.Math;
 
 public final class FinLib
 {
-  public static final double SOC_SEC_AT70 = 3480.00; // http://www.ssa.gov/oact/quickcalc/
+  public static final double SOC_SEC_AT70 = 3834.00; // http://www.ssa.gov/oact/quickcalc/
+  public static final double SOC_SEC_AT65 = 2695.00; // pulled 11/2018
+  public static final double SOC_SEC_AT62 = 2171.00;
 
   public enum DividendMethod {
     NO_REINVEST_MONTHLY, NO_REINVEST_QUARTERLY, MONTHLY, QUARTERLY, IGNORE_DIVIDENDS
@@ -367,7 +368,7 @@ public final class FinLib
    * @param cumulativeReturns sequence of cumulative returns for the investment strategy
    * @param nDays number of days invested (interpreted as an index, not calendar day)
    * @param priceModel price model touse with cumulativeReturns
-   * @param cagr if true, the return sequence will CAGRs instead of total returns
+   * @param cagr if true, the return sequence will hold CAGRs instead of total returns
    * @return sequence containing total returns for each time period of the given duration
    */
   public static Sequence calcReturnsForDays(Sequence cumulativeReturns, int nDays, PriceModel priceModel, boolean cagr)
@@ -376,8 +377,8 @@ public final class FinLib
     assert nDays <= N;
     String name = String.format("%s (%d Days)", cumulativeReturns.getName(), nDays);
     Sequence rois = new Sequence(name);
-    for (int i = 0; i + nDays < N; i++) {
-      double roi = getTotalReturn(cumulativeReturns, i, i + nDays, priceModel);
+    for (int i = 0; i + nDays <= N; i++) {
+      double roi = getTotalReturn(cumulativeReturns, i, i + nDays - 1, priceModel);
       if (cagr) {
         long t1 = cumulativeReturns.getTimeMS(i);
         long t2 = cumulativeReturns.getTimeMS(i + nDays);
@@ -397,20 +398,19 @@ public final class FinLib
    * 
    * @param cumulativeReturns sequence of cumulative returns for the investment strategy (monthly data)
    * @param nMonths number of months in the market
-   * @return sequence containing returns (CAGRs) for each time period of the given duration
+   * @return Sequence containing returns for each time period of the given duration; if nMonths < 12 or there is
+   *         insufficient data to fill a single period, the values are total returns, else they are CAGRs.
    */
   public static Sequence calcReturnsForMonths(Sequence cumulativeReturns, int nMonths)
   {
-    // TODO update to use timestamps instead of assuming monthly data.
-
     final int N = cumulativeReturns.size();
     String name = String.format("%s (%s)", cumulativeReturns.getName(), TimeLib.formatDurationMonths(nMonths));
     Sequence rois = new Sequence(name);
     if (N <= 0) {
       return rois;
-    } else if (N <= nMonths) {
+    } else if (N < nMonths) { // no full periods so return ROI for the one partial period.
       double growth = FinLib.getTotalReturn(cumulativeReturns, 0, N - 1);
-      double roi = FinLib.getAnnualReturn(growth, nMonths);
+      double roi = mul2ret(growth);
       rois.addData(roi, cumulativeReturns.getStartMS());
     } else {
       for (int i = 0; i + nMonths <= N; ++i) {
@@ -450,6 +450,7 @@ public final class FinLib
    */
   public static double getTotalReturn(Sequence cumulativeReturns, int iFrom, int iTo, int iDim)
   {
+    if (cumulativeReturns.isEmpty()) return 1.0;
     return cumulativeReturns.get(iTo, iDim) / cumulativeReturns.get(iFrom, iDim);
   }
 
@@ -1115,108 +1116,78 @@ public final class FinLib
     return seq;
   }
 
-  public static RetirementStats[] filter(RetirementStats[] results)
+  /** @return Sequence of monthly values inferred from daily data. */
+  public static Sequence dailyToMonthly(Sequence daily)
   {
-    Arrays.sort(results, new Comparator<RetirementStats>()
-    {
-      @Override
-      public int compare(RetirementStats a, RetirementStats b)
-      {
-        if (a.principal < b.principal) return -1;
-        if (a.principal > b.principal) return 1;
-
-        if (a.percentile10 > b.percentile10) return -1;
-        if (a.percentile10 > b.percentile10) return 1;
-
-        if (a.percentile25 > b.percentile25) return -1;
-        if (a.percentile25 > b.percentile25) return 1;
-
-        return a.name.compareTo(b.name);
-      }
-    });
-    List<RetirementStats> winners = new ArrayList<>();
-    for (int i = 0; i < results.length;) {
-      double maxPrincipal = Math.ceil(results[i].principal / 5000.0) * 5000.0;
-      int iBest = i;
-      int j = i + 1;
-      while (j < results.length && results[j].principal <= maxPrincipal) {
-        if (results[j].percentile10 > results[iBest].percentile10) {
-          iBest = j;
-        }
-        ++j;
-      }
-      winners.add(results[iBest]);
-      i = j;
-    }
-    return winners.toArray(new RetirementStats[winners.size()]);
+    return dailyToMonthly(daily, 0, 0);
   }
 
-  public static Sequence daily2monthly(Sequence daily)
-  {
-    return daily2monthly(daily, 0, 0);
-  }
-
-  public static Sequence daily2monthly(Sequence daily, int dim, int nJitter)
+  /**
+   * Converts a Sequence with daily data to a Sequence with monthly data.
+   * 
+   * @param daily Sequence of daily data
+   * @param dim dimension in `daily` to extract
+   * @param nJitter amount of jitter to apply when choosing monthly close price.
+   * @return Sequence holding monthly data
+   */
+  public static Sequence dailyToMonthly(Sequence daily, int dim, int nJitter)
   {
     // TODO verify that we don't miss/skip any months.
     final int minDaysData = 12;
     final int N = daily.length();
-    List<Integer> monthEnds = new ArrayList<>();
+    List<Integer> monthEndIndices = new ArrayList<>();
 
     Sequence monthly = new Sequence(daily.getName());
     int i = 0;
     while (i < N) {
       FeatureVec v = daily.get(i);
       LocalDate date = TimeLib.ms2date(v.getTime());
-      int month = date.getMonthValue();
+      Month month = date.getMonth();
       FeatureVec m = new FeatureVec(5);
       m.fill(v.get(0));
-      int nn = 1;
+      int nDaysInMonth = 1;
       int j = i + 1;
       for (; j < N; ++j) {
         FeatureVec w = daily.get(j);
         date = TimeLib.ms2date(w.getTime());
-        if (date.getMonthValue() == month) {
-          double x = w.get(dim);
-          m.set(MonthlyClose, x);
-          m.set(MonthlyAverage, m.get(MonthlyAverage) + x);
-          ++nn;
-          if (x < m.get(MonthlyLow)) {
-            m.set(MonthlyLow, x);
-          }
-          if (x > m.get(MonthlyHigh)) {
-            m.set(MonthlyHigh, x);
-          }
-          m.set(MonthlyMisc, x);
-        } else {
-          break;
+        if (date.getMonth() != month) break; // new month
+
+        double x = w.get(dim);
+        m.set(MonthlyClose, x);
+        m.set(MonthlyAverage, m.get(MonthlyAverage) + x);
+        if (x < m.get(MonthlyLow)) {
+          m.set(MonthlyLow, x);
         }
+        if (x > m.get(MonthlyHigh)) {
+          m.set(MonthlyHigh, x);
+        }
+        m.set(MonthlyMisc, x);
+        ++nDaysInMonth;
       }
 
-      int n = j - i;
-      assert nn == n;
-      if (n >= minDaysData) {
-        monthEnds.add(j - 1);
-        m.set(MonthlyAverage, m.get(MonthlyAverage) / n);
+      assert nDaysInMonth == (j - i);
+      if (nDaysInMonth >= minDaysData) {
+        monthEndIndices.add(j - 1);
+        m.set(MonthlyAverage, m.get(MonthlyAverage) / nDaysInMonth);
         date = TimeLib.ms2date(v.getTime()).withDayOfMonth(1);
         date = TimeLib.getClosestBusinessDay(date, false);
         monthly.addData(m, TimeLib.toMs(date));
       }
 
-      i = j;
+      i = j; // skip to first index in new month
     }
 
     if (nJitter > 0) {
-      assert monthEnds.size() == monthly.size();
+      assert monthEndIndices.size() == monthly.size();
       Random rng = new Random();
       int offset = -nJitter + rng.nextInt(nJitter * 2 + 1);
       for (i = 0; i < monthly.size(); ++i) {
         // int offset = -nJitter + rng.nextInt(nJitter * 2 + 1);
         assert offset >= -nJitter && offset <= nJitter;
-        int x = monthEnds.get(i);
+        int x = monthEndIndices.get(i);
         int y = Math.min(Math.max(x + offset, 0), daily.length() - 1);
         monthly.get(i).set(MonthlyClose, daily.get(y, dim));
-        monthEnds.set(i, y);
+        monthEndIndices.set(i, y);
         // System.out.printf("%d: %d=[%s] -> [%s]\n", i, x, Library.formatDate(daily.getTimeMS(x)),
         // Library.formatDate(daily.getTimeMS(y)));
       }
@@ -1224,9 +1195,9 @@ public final class FinLib
       double alpha = 0.8;
       double ema = daily.get(0, dim);
       int iNext = 0;
-      for (i = 0; i < daily.size() && iNext < monthEnds.size(); ++i) {
+      for (i = 0; i < daily.size() && iNext < monthEndIndices.size(); ++i) {
         ema = ema * alpha + daily.get(i, dim) * (1.0 - alpha);
-        if (i == monthEnds.get(iNext)) {
+        if (i == monthEndIndices.get(iNext)) {
           monthly.get(iNext).set(MonthlyMisc, ema);
           ema = daily.get(Math.min(i + 1, daily.length() - 1), dim);
           ++iNext;
@@ -1325,12 +1296,6 @@ public final class FinLib
     return sb.toString();
   }
 
-  /** Compare dollar amounts. */
-  public static boolean equiv(double a, double b)
-  {
-    return Math.abs(a - b) < 1e-4;
-  }
-
   public static boolean isLTG(LocalDate buyDate, LocalDate sellDate)
   {
     if (sellDate.isBefore(buyDate)) { // handle nonsense case of sell before buy
@@ -1346,13 +1311,6 @@ public final class FinLib
     // If sell date is Feb 29, must hold one extra day.
     int nMinDays = (sellDate.getMonth() == Month.FEBRUARY && sellDate.getDayOfMonth() == 29 ? 2 : 1);
     return period.getMonths() > 0 || period.getDays() >= nMinDays;
-  }
-
-  public static long compareCash(double a, double b)
-  {
-    long x = Math.round(a * 1000.0);
-    long y = Math.round(b * 1000.0);
-    return x - y;
   }
 
   public static double portfolioDev(double[] w, double[] dev, double[][] corr)
