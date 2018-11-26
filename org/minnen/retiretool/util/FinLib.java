@@ -397,22 +397,24 @@ public final class FinLib
    * 
    * @param cumulativeReturns sequence of cumulative returns for the investment strategy (monthly data)
    * @param nMonths number of months in the market
-   * @return sequence containing returns for each time period of the given duration, if nMonths<12 then the returns are
-   *         raw, else they are CAGRs.
+   * @return sequence containing returns (CAGRs) for each time period of the given duration
    */
   public static Sequence calcReturnsForMonths(Sequence cumulativeReturns, int nMonths)
   {
     // TODO update to use timestamps instead of assuming monthly data.
+
     final int N = cumulativeReturns.size();
     String name = String.format("%s (%s)", cumulativeReturns.getName(), TimeLib.formatDurationMonths(nMonths));
     Sequence rois = new Sequence(name);
-    if (N <= nMonths) {
+    if (N <= 0) {
+      return rois;
+    } else if (N <= nMonths) {
       double growth = FinLib.getTotalReturn(cumulativeReturns, 0, N - 1);
       double roi = FinLib.getAnnualReturn(growth, nMonths);
       rois.addData(roi, cumulativeReturns.getStartMS());
     } else {
-      for (int i = 0; i + nMonths < N; i++) {
-        double roi = getTotalReturn(cumulativeReturns, i, i + nMonths);
+      for (int i = 0; i + nMonths <= N; ++i) {
+        double roi = getTotalReturn(cumulativeReturns, i, i + nMonths - 1);
         if (nMonths >= 12) {
           roi = getAnnualReturn(roi, nMonths);
         } else {
@@ -451,6 +453,14 @@ public final class FinLib
     return cumulativeReturns.get(iTo, iDim) / cumulativeReturns.get(iFrom, iDim);
   }
 
+  /**
+   * Calculate total return for the given segment.
+   * 
+   * @param cumulativeReturns sequence of cumulative returns for the investment strategy
+   * @param iFrom index of starting point for calculation
+   * @param iTo index of ending point for calculation (inclusive)
+   * @return total return from iFrom to iTo.
+   */
   public static double getTotalReturn(Sequence cumulativeReturns, int iFrom, int iTo)
   {
     return getTotalReturn(cumulativeReturns, iFrom, iTo, 0);

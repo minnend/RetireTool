@@ -3,8 +3,10 @@ package org.minnen.retiretool.tests;
 import static org.junit.Assert.*;
 
 import java.time.LocalDate;
+import java.time.Month;
 
 import org.junit.Test;
+import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.util.FinLib;
 
@@ -217,5 +219,47 @@ public class TestFinLib
 
     double[] expected = new double[] { 0, 0, -50, -100, -50, 0, 0, -100.0 / 3, -200.0 / 3 };
     assertArrayEquals(expected, drawdown.extractDim(0), 1e-5);
+  }
+
+  @Test
+  public void testCalcReturnsForMonthsEmpty()
+  {
+    Sequence seq = new Sequence("test");
+    Sequence returns = FinLib.calcReturnsForMonths(seq, 12);
+    assertEquals(0, returns.size());
+  }
+
+  @Test
+  public void testCalcReturnsForMonthsMonthly()
+  {
+    Sequence seq = new Sequence("test");
+    for (int i = 1; i <= 12; ++i) {
+      seq.addData(i, LocalDate.of(2000, i, 1));
+    }
+    assertEquals(12, seq.length());
+
+    // Only one 12 month period.
+    Sequence returns = FinLib.calcReturnsForMonths(seq, 12);
+    assertEquals(1, returns.size());
+    assertEquals(1, returns.getNumDims());
+    double m = FinLib.ret2mul(returns.get(0, 0));
+    assertEquals(12.0, m, 1e-6);
+
+    // Two 11 month periods.
+    returns = FinLib.calcReturnsForMonths(seq, 11);
+    assertEquals(2, returns.size());
+    assertEquals(1, returns.getNumDims());
+    assertEquals(11.0, FinLib.ret2mul(returns.get(0, 0)), 1e-6);
+    assertEquals(6.0, FinLib.ret2mul(returns.get(1, 0)), 1e-6);
+
+    // Seven 6 month periods.
+    returns = FinLib.calcReturnsForMonths(seq, 6);
+    System.out.println(returns);
+    assertEquals(7, returns.size());
+    assertEquals(1, returns.getNumDims());
+    double[] expected = new double[] { 6.0, 7.0 / 2.0, 8.0 / 3.0, 9.0 / 4.0, 2.0, 11.0 / 6.0, 12.0 / 7.0 };
+    for (int i = 0; i < expected.length; ++i) {
+      assertEquals(expected[i], FinLib.ret2mul(returns.get(i, 0)), 1e-6);
+    }
   }
 }
