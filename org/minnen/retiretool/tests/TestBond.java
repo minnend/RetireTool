@@ -7,7 +7,6 @@ import org.minnen.retiretool.Bond;
 
 public class TestBond
 {
-
   @Test
   public void testCalcPrice()
   {

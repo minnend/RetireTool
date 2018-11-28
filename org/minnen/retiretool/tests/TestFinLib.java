@@ -223,7 +223,7 @@ public class TestFinLib
   }
 
   @Test
-  public void testCalcReturnsForMonthsEmpty()
+  public void testCalcReturnsForMonths_Empty()
   {
     Sequence seq = new Sequence("test");
     Sequence returns = FinLib.calcReturnsForMonths(seq, 12);
@@ -231,7 +231,7 @@ public class TestFinLib
   }
 
   @Test
-  public void testCalcReturnsForMonthsMonthly()
+  public void testCalcReturnsForMonths_Monthly()
   {
     Sequence seq = new Sequence("test");
     for (int i = 1; i <= 12; ++i) {

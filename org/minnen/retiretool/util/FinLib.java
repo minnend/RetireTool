@@ -1119,7 +1119,13 @@ public final class FinLib
   /** @return Sequence of monthly values inferred from daily data. */
   public static Sequence dailyToMonthly(Sequence daily)
   {
-    return dailyToMonthly(daily, 0, 0);
+    return dailyToMonthly(daily, 0, 0, 12);
+  }
+
+  /** @return Sequence of monthly values inferred from daily data. */
+  public static Sequence dailyToMonthly(Sequence daily, int dim, int nJitter)
+  {
+    return dailyToMonthly(daily, dim, nJitter, 12);
   }
 
   /**
@@ -1128,16 +1134,17 @@ public final class FinLib
    * @param daily Sequence of daily data
    * @param dim dimension in `daily` to extract
    * @param nJitter amount of jitter to apply when choosing monthly close price.
+   * @param minDaysPerMonth skip a month if it doesn't have at least this many daily values.
    * @return Sequence holding monthly data
    */
-  public static Sequence dailyToMonthly(Sequence daily, int dim, int nJitter)
+  public static Sequence dailyToMonthly(Sequence daily, int dim, int nJitter, int minDaysPerMonth)
   {
-    // TODO verify that we don't miss/skip any months.
-    final int minDaysData = 12;
     final int N = daily.length();
     List<Integer> monthEndIndices = new ArrayList<>();
 
     Sequence monthly = new Sequence(daily.getName());
+    boolean haveGoodMonth = false;
+    boolean haveBadMonth = false;
     int i = 0;
     while (i < N) {
       FeatureVec v = daily.get(i);
@@ -1166,12 +1173,18 @@ public final class FinLib
       }
 
       assert nDaysInMonth == (j - i);
-      if (nDaysInMonth >= minDaysData) {
+      if (nDaysInMonth >= minDaysPerMonth) {
+        if (haveBadMonth) {
+          throw new IllegalArgumentException(String.format("Bad Month: %s", TimeLib.formatMonth(v.getTime())));
+        }
         monthEndIndices.add(j - 1);
         m.set(MonthlyAverage, m.get(MonthlyAverage) / nDaysInMonth);
         date = TimeLib.ms2date(v.getTime()).withDayOfMonth(1);
         date = TimeLib.getClosestBusinessDay(date, false);
         monthly.addData(m, TimeLib.toMs(date));
+        haveGoodMonth = true;
+      } else if (haveGoodMonth) {
+        haveBadMonth = true;
       }
 
       i = j; // skip to first index in new month

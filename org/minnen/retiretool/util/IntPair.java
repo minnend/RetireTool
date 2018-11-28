@@ -2,12 +2,12 @@ package org.minnen.retiretool.util;
 
 public class IntPair implements Comparable<IntPair>
 {
-  public int first, second;
+  public final int first, second;
 
-  public IntPair(int code1, int code2)
+  public IntPair(int first, int second)
   {
-    this.first = code1;
-    this.second = code2;
+    this.first = first;
+    this.second = second;
   }
 
   @Override
@@ -37,10 +37,10 @@ public class IntPair implements Comparable<IntPair>
   {
     if (other == this) return 0;
     if (other == null) return -1;
-    if (second < other.second) return -1;
-    if (second > other.second) return 1;
     if (first < other.first) return -1;
     if (first > other.first) return 1;
+    if (second < other.second) return -1;
+    if (second > other.second) return 1;
     return 0;
   }
 }
