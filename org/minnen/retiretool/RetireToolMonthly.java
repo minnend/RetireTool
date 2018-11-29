@@ -779,7 +779,7 @@ public class RetireToolMonthly
     int duration = 10 * 12;
     DurationalStats[] stats = new DurationalStats[all.length];
     for (int i = 0; i < all.length; ++i) {
-      stats[i] = DurationalStats.calc(all[i], duration);
+      stats[i] = DurationalStats.calcMonthly(all[i], duration);
     }
     Chart.saveBoxPlots(new File(dir, "rebalance-box.html"),
         String.format("Return Stats (%s)", TimeLib.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
@@ -1033,7 +1033,7 @@ public class RetireToolMonthly
     int duration = 1 * 12;
     DurationalStats[] stats = new DurationalStats[all.length];
     for (int i = 0; i < all.length; ++i) {
-      stats[i] = DurationalStats.calc(all[i], duration);
+      stats[i] = DurationalStats.calcMonthly(all[i], duration);
       all[i].setName(String.format("%d/%d (%.2f%%)", percentStock[i], 100 - percentStock[i], stats[i].mean));
     }
     Chart.saveBoxPlots(new File(dir, "stock-bond-sweep-box.html"),
@@ -1093,7 +1093,7 @@ public class RetireToolMonthly
         int pctBonds = 100 - percentStock[j];
         RebalanceInfo rebalance = new RebalanceInfo(new int[] { pctStock, pctBonds }, rebalanceMonths, rebalanceBand);
         Sequence mixed = Strategy.calcReturns(new Sequence[] { stock, bonds }, rebalance);
-        DurationalStats stats = DurationalStats.calc(mixed, duration);
+        DurationalStats stats = DurationalStats.calcMonthly(mixed, duration);
         String name = null;// String.format("%d", pctStock);
         // if (pctStock == 100) {
         // name = "100% Stock";

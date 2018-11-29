@@ -228,7 +228,7 @@ public class SummaryTools
   public static FeatureVec calcStats(Sequence cumulativeReturnsMonthly, int durStatsMonths)
   {
     CumulativeStats cstats = CumulativeStats.calc(cumulativeReturnsMonthly);
-    DurationalStats dstats = DurationalStats.calc(cumulativeReturnsMonthly, durStatsMonths);
+    DurationalStats dstats = DurationalStats.calcMonthly(cumulativeReturnsMonthly, durStatsMonths);
     return new FeatureVec(cumulativeReturnsMonthly.getName(), 5, cstats.cagr, -cstats.drawdown, dstats.min,
         dstats.percentile10, dstats.median);
   }

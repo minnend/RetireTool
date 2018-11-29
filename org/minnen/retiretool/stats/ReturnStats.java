@@ -47,7 +47,7 @@ public class ReturnStats implements Comparable<ReturnStats>
     // Calculate percent positive returns
     int index = Arrays.binarySearch(r, 0.0);
     if (index < 0) {
-      index = -index - 1;
+      index = -index - 1;  // insertion point if exact key is not found
     }
     while (index < r.length && r[index] < 1e-8) {
       ++index;

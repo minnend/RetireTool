@@ -8,6 +8,7 @@ import java.time.Month;
 import java.time.YearMonth;
 
 import org.junit.Test;
+import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.util.TimeLib;
 
 public class TestTimeLib
@@ -490,5 +491,25 @@ public class TestTimeLib
     assertEquals(19, TimeLib.getNumBusinessDays(YearMonth.of(2016, Month.JANUARY)));
     assertEquals(20, TimeLib.getNumBusinessDays(YearMonth.of(2016, Month.FEBRUARY)));
     assertEquals(22, TimeLib.getNumBusinessDays(YearMonth.of(2016, Month.MARCH)));
+  }
+
+  @Test
+  public void testIsMonthly_Yes()
+  {
+    Sequence seq = new Sequence("test");
+    for (int i = 1; i <= 12; ++i) {
+      seq.addData(i, LocalDate.of(2000, i, 1));
+    }
+    assertTrue(TimeLib.isMonthly(seq));
+  }
+
+  @Test
+  public void testIsMonthly_No()
+  {
+    Sequence seq = new Sequence("test");
+    for (int i = 1; i <= 12; ++i) {
+      seq.addData(i, LocalDate.of(2000, Month.JANUARY, i));
+    }
+    assertFalse(TimeLib.isMonthly(seq));
   }
 }

@@ -298,9 +298,7 @@ public class Simulation
     this.predictor = predictor;
 
     returnsMonthly = new Sequence(name);
-    returnsMonthly.addData(1.0, guideSeq.getStartMS());
     returnsDaily = new Sequence(name);
-    returnsDaily.addData(1.0, guideSeq.getStartMS());
     holdings = new TreeMap<>();
 
     broker.reset();
@@ -483,6 +481,8 @@ public class Simulation
     Account account = broker.getAccount(AccountName);
     account.liquidate("Liquidate Account");
     guideSeq.unlock(runKey);
+    FinLib.normalizeReturns(returnsMonthly);
+    FinLib.normalizeReturns(returnsDaily);
   }
 
   private Map<String, Double> calcFutureReturns(TimeInfo timeInfo, int daysInFuture, PriceModel priceModel)

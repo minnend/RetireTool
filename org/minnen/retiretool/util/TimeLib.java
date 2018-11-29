@@ -616,4 +616,20 @@ public class TimeLib
 
     return TimeLib.toMs(year, month, day);
   }
+
+  /** @return True if `seq` holds monthly data (one data point per month and contiguous). */
+  public static boolean isMonthly(Sequence seq)
+  {
+    if (seq == null) return false;
+    if (seq.isEmpty()) return true;
+
+    LocalDate prev = TimeLib.ms2date(seq.getTimeMS(0));
+    for (int i = 1; i < seq.length(); ++i) {
+      LocalDate expected = prev.plusMonths(1);
+      LocalDate current = TimeLib.ms2date(seq.getTimeMS(i));
+      if (current.getMonth() != expected.getMonth()) return false;
+      prev = current;
+    }
+    return true;
+  }
 }

@@ -2,6 +2,7 @@ package org.minnen.retiretool.stats;
 
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.util.FinLib;
+import org.minnen.retiretool.util.TimeLib;
 
 /**
  * Holds statistics that characterize the results of an investment strategy over a given duration.
@@ -14,12 +15,39 @@ public class DurationalStats extends ReturnStats
   public final Sequence durationReturns;
   public final int      nMonthsPerPeriod;
 
+  /** @return stats for the given returns (converts to monthly as needed). */
   public static DurationalStats calc(Sequence cumulativeReturns, int nMonthsPerPeriod)
   {
+    if (TimeLib.isMonthly(cumulativeReturns)) {
+      return calcMonthly(cumulativeReturns, nMonthsPerPeriod);
+    } else {
+      return calcDaily(cumulativeReturns, nMonthsPerPeriod);
+    }
+  }
+
+  /**
+   * Daily returns will be converted to monthly returns before calculation durational stats.
+   * 
+   * The default conversion will be used, which requries at least 12 days of data per month.
+   * 
+   * @param daily daily cumulative returns
+   * @param nMonthsPerPeriod number of months in each duration
+   * @return stats for the given returns
+   */
+  public static DurationalStats calcDaily(Sequence daily, int nMonthsPerPeriod)
+  {
+    Sequence monthly = FinLib.dailyToMonthly(daily);
+    return calcMonthly(monthly, nMonthsPerPeriod);
+  }
+
+  public static DurationalStats calcMonthly(Sequence cumulativeReturns, int nMonthsPerPeriod)
+  {
+    assert TimeLib.isMonthly(cumulativeReturns);
     Sequence durationReturns = FinLib.calcReturnsForMonths(cumulativeReturns, nMonthsPerPeriod);
     return new DurationalStats(cumulativeReturns, durationReturns, nMonthsPerPeriod);
   }
 
+  /** @return stats for the given returns (assumed to be one per month). */
   public static DurationalStats calc(String name, double[] returns, int nMonthsPerPeriod)
   {
     return new DurationalStats(name, returns, nMonthsPerPeriod);
@@ -68,7 +96,7 @@ public class DurationalStats extends ReturnStats
     System.out.printf("</thead><tbody>\n");
     int[] dur = new int[] { 1, 2, 5, 10, 20, 30, 40 };
     for (int d = 0; d < dur.length; ++d) {
-      DurationalStats rstats = DurationalStats.calc(cumulativeReturns, 12 * dur[d]);
+      DurationalStats rstats = DurationalStats.calcMonthly(cumulativeReturns, 12 * dur[d]);
       rstats.printDurationTableRow(String.format("%d", dur[d]));
     }
     System.out.printf("</tbody></table>\n");
