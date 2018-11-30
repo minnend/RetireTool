@@ -24,6 +24,7 @@ import org.minnen.retiretool.predictor.config.PredictorConfig;
 import org.minnen.retiretool.predictor.daily.MultiPredictor;
 import org.minnen.retiretool.predictor.daily.Predictor;
 import org.minnen.retiretool.predictor.daily.TimeCode;
+import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.IntPair;
@@ -59,9 +60,7 @@ public class Dashboard
   public static final File              miscPath       = new File(DataIO.outputPath, miscDirName);
   public static final String            miscToBase     = "..";
 
-  /** overfitting? */
-  public static final boolean           avoid62        = false;
-
+  // Years of history for SMA graphs.
   public static final int               yearsOfHistory = 3;
 
   // public static final String symbol = "^GSPC";
@@ -313,16 +312,55 @@ public class Dashboard
     return sw.toString();
   }
 
+  private static String genStatsTableHtml(ComparisonStats comparison, CumulativeStats... strategyStats)
+      throws IOException
+  {
+    StringWriter sw = new StringWriter();
+    ComparisonStats.Results[] comparisons = new ComparisonStats.Results[] { comparison.durationToResults.get(5 * 12),
+        comparison.durationToResults.get(10 * 12), comparison.durationToResults.get(20 * 12) };
+    try (Writer writer = new Writer(sw)) {
+      writer.write("<table id=\"decadeComparisonTable\" cellspacing=\"0\"><thead>\n");
+      writer.write("<thead>\n");
+      writer.write(genTableRow("th", "Strategy", "CAGR", "Std. Dev", "Worst<br/>DD", "Sharpe<br/>Ratio",
+          "Median<br/>Return", String.format("Regret<br/>%s", TimeLib.formatDurationMonths(comparisons[0].duration)),
+          String.format("Regret<br/>%s", TimeLib.formatDurationMonths(comparisons[1].duration)),
+          String.format("Regret<br/>%s", TimeLib.formatDurationMonths(comparisons[2].duration))));
+      writer.write("</thead>\n");
+      writer.write("<tbody>\n");
+
+      int iRow = 0;
+      for (CumulativeStats stats : strategyStats) {
+        writer.write("<tr class=\"%s\">\n", iRow % 2 == 0 ? "evenRow" : "oddRow");
+        String name = stats.name();
+        writer.write(String.format("<td><b>%s</b></td>\n", name));
+        writer.write(String.format("<td>%.2f</td>\n", stats.cagr));
+        writer.write(String.format("<td>%.2f</td>\n", stats.devAnnualReturn));
+        writer.write(String.format("<td>%.2f</td>\n", stats.drawdown));
+        double sharpe = FinLib.sharpeDaily(stats.cumulativeReturns, null);
+        writer.write(String.format("<td>%.2f</td>\n", sharpe));
+        writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[2]));
+        // Regret is other strategy's win percent.
+        for (int i = 0; i < comparisons.length; ++i) {
+          writer.write(String.format("<td>%.1f%%</td>\n", comparisons[i].getWinPercent(1 - iRow)));
+        }
+        writer.write("</tr>\n");
+        ++iRow;
+      }
+      writer.write("</tbody>\n</table>\n");
+    }
+    return sw.toString();
+  }
+
   public static void runMulti3(Simulation sim) throws IOException
   {
     // Buy-and-Hold 100% stock.
     PredictorConfig configRisky = new ConfigConst(TacticLib.riskyName);
     Predictor predRisky = configRisky.build(sim.broker.accessObject, TacticLib.assetNames);
-    sim.run(predRisky, "Buy & Hold");
-    Sequence baselineReturns = sim.returnsDaily;
-    Sequence m1 = sim.returnsMonthly;
-    CumulativeStats stats = CumulativeStats.calc(sim.returnsMonthly);
-    System.out.println(stats);
+    sim.run(predRisky, "Baseline");
+    Sequence baselineDailyReturns = sim.returnsDaily;
+    Sequence baselineMonthlyReturns = sim.returnsMonthly;
+    CumulativeStats statsBaseline = CumulativeStats.calc(sim.returnsDaily);
+    System.out.println(statsBaseline);
 
     // Multi-predictor to make final decisions.
     Set<Integer> contrary = new HashSet<Integer>();
@@ -339,12 +377,13 @@ public class Dashboard
     PredictorConfig configStrategy = new ConfigMulti(true, contrary, contraryPairs, singleConfigs);
     MultiPredictor predStrategy = (MultiPredictor) configStrategy.build(sim.broker.accessObject, TacticLib.assetNames);
     sim.run(predStrategy, "Tactical");
-    Sequence strategyReturns = sim.returnsDaily;
-    Sequence m2 = sim.returnsMonthly;
-    assert strategyReturns.matches(baselineReturns);
+    Sequence tacticalDailyReturns = sim.returnsDaily;
+    Sequence tacticalMonthlyReturns = sim.returnsMonthly;
+    assert tacticalDailyReturns.matches(baselineDailyReturns);
+    CumulativeStats statsTactical = CumulativeStats.calc(sim.returnsDaily);
+    System.out.println(statsTactical);
 
-    stats = CumulativeStats.calc(sim.returnsMonthly);
-    System.out.println(stats);
+    ComparisonStats comparison = ComparisonStats.calc(baselineMonthlyReturns, tacticalMonthlyReturns, 0.25);
 
     final String sRowGap = "<td class=\"hgap\">&nbsp;</td>";
 
@@ -366,12 +405,12 @@ public class Dashboard
       for (int iCode = nCodes - 1; iCode >= 0; --iCode) {
         TimeCode timeCodeSingles = predStrategy.timeCodes.get(iCode);
 
-        long prevTime = baselineReturns.getStartMS();
+        long prevTime = baselineDailyReturns.getStartMS();
         if (iCode > 0) {
           prevTime = predStrategy.timeCodes.get(iCode - 1).time;
         }
 
-        long nextTime = baselineReturns.getEndMS();
+        long nextTime = baselineDailyReturns.getEndMS();
         if (iCode < predStrategy.timeCodes.size() - 1) {
           nextTime = predStrategy.timeCodes.get(iCode + 1).time;
         }
@@ -400,10 +439,10 @@ public class Dashboard
         boolean b = (timeCodeStrategy.code != 0);
         f.write("<td><div class=\"color\" style=\"background: #%s;\">&nbsp;</div></td>", b ? green : red);
         // Return for this time period (single change).
-        int index1 = baselineReturns.getClosestIndex(timeCodeSingles.time);
-        int index2 = baselineReturns.getClosestIndex(nextTime);
-        double totalMul = FinLib.getTotalReturn(baselineReturns, index1, index2);
-        double drawdown = FinLib.calcDrawdown(baselineReturns, index1, index2).getMin().get(0);
+        int index1 = baselineDailyReturns.getClosestIndex(timeCodeSingles.time);
+        int index2 = baselineDailyReturns.getClosestIndex(nextTime);
+        double totalMul = FinLib.getTotalReturn(baselineDailyReturns, index1, index2);
+        double drawdown = FinLib.calcDrawdown(baselineDailyReturns, index1, index2).getMin().get(0);
 
         // Returns by code.
         List<CodeInfo> returns = returnsByCode.get(timeCodeSingles.code);
@@ -443,10 +482,10 @@ public class Dashboard
           boolean bb = (predStrategy.timeCodes.get(iNextTop).code != 0);
           if (bb != ba) break;
         }
-        long nextTopTime = (iNextTop >= predStrategy.timeCodes.size() ? baselineReturns.getEndMS()
+        long nextTopTime = (iNextTop >= predStrategy.timeCodes.size() ? baselineDailyReturns.getEndMS()
             : predStrategy.timeCodes.get(iNextTop).time);
-        index2 = baselineReturns.getClosestIndex(nextTopTime);
-        totalMul = FinLib.getTotalReturn(baselineReturns, index1, index2);
+        index2 = baselineDailyReturns.getClosestIndex(nextTopTime);
+        totalMul = FinLib.getTotalReturn(baselineDailyReturns, index1, index2);
         f.write(sRowGap);
         f.write("<td>%s</td>", bTopChange ? String.format("%.2f", FinLib.mul2ret(totalMul)) : "");
         f.write(sRowGap);
@@ -464,8 +503,8 @@ public class Dashboard
       f.write("<li>Date of event\n");
       f.write("<li>Prediction Code\n");
       f.write("<li>Vote for each of the three SMA predictors\n");
-      f.write("<li>Trade decision (combined vote; <font color=\"#%s\">"
-          + "Green</font>=S&amp;P, <font color=\"#%s\">Red</font>=Cash)\n", green, red);
+      f.write("<li>Trade decision (combined vote: <font color=\"#%s\">"
+          + "Green</font>=Risky, <font color=\"#%s\">Red</font>=Safe)\n", green, red);
       f.write("<li>Price change between events\n");
       f.write("<li>Price change between trades\n");
       f.write("</ol>\n");
@@ -475,15 +514,15 @@ public class Dashboard
       f.write("<a href=\"%s/sma3-code1.html\">SMA (1)</a>\n", miscDirName);
       f.write("</div><br/>\n");
 
-      // List of dates when the strategy moves to cash.
-      // f.write("<b>Move to Safe Asset</b>: " + exitDates.size() + "<br/>\n");
+      f.write(genStatsTableHtml(comparison, statsBaseline, statsTactical) + "<br/>");
+
       f.write(genCodeStatsHtml(returnsByCode, predStrategy.timeCodes.get(nCodes - 1).code));
       if (nCodes > 1) {
         int code = predStrategy.timeCodes.get(nCodes - 1).code;
         int prev = predStrategy.timeCodes.get(nCodes - 2).code;
         f.write(genPairStatsHtml(returnsByPair, new IntPair(prev, code)));
       }
-      f.write(Chart.genDecadeTable(m2, m1) + "<br/>");
+      f.write(Chart.genDecadeTable(tacticalMonthlyReturns, baselineMonthlyReturns) + "<br/>");
       f.write("</div>\n"); // end column 2
 
       f.write("</body></html>\n");

@@ -687,10 +687,11 @@ public class Chart
    * @param stats List of strategies to include
    * @throws IOException if there is a problem writing to the file
    */
-  public static void saveStatsTable(File file, String width, boolean reduced, List<CumulativeStats> stats)
-      throws IOException
+  public static void saveStatsTable(File file, String width, boolean reduced, boolean includeRiskAdjusted,
+      boolean includeQuartiles, List<CumulativeStats> stats) throws IOException
   {
-    saveStatsTable(file, width, reduced, stats.toArray(new CumulativeStats[stats.size()]));
+    saveStatsTable(file, width, reduced, includeRiskAdjusted, includeQuartiles,
+        stats.toArray(new CumulativeStats[stats.size()]));
   }
 
   /**
@@ -704,21 +705,10 @@ public class Chart
    * @param strategyStats List of strategies to include
    * @throws IOException if there is a problem writing to the file
    */
-  public static void saveStatsTable(File file, String width, boolean reduced, CumulativeStats... strategyStats)
-      throws IOException
+  public static void saveStatsTable(File file, String width, boolean reduced, boolean includeRiskAdjusted,
+      boolean includeQuartiles, CumulativeStats... strategyStats) throws IOException
   {
-    final boolean includeRiskAdjusted = false;
-    final boolean includeQuartiles = false;
-
-    // Figure out if leverage should be included.
-    boolean includeLeverage = false;
-    for (CumulativeStats stats : strategyStats) {
-      if (stats.leverage != 1.0) {
-        includeLeverage = true;
-        break;
-      }
-    }
-
+    String tableHtml = genStatsTable(reduced, includeRiskAdjusted, includeQuartiles, strategyStats);
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
       writer.write("<html><head>\n");
       writer.write("<title>Strategy Report</title>\n");
@@ -731,108 +721,14 @@ public class Chart
           "<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
       writer.write(String.format("</head><body style=\"width:%s\">\n", width));
       writer.write("<h2>Statistics for Different Strategies / Assets</h2>\n");
-      writer.write("<table id=\"statsTable\" class=\"tablesorter\">\n");
-      writer.write("<thead><tr>\n");
-      writer.write(" <th>Strategy</th>\n");
-      writer.write(" <th>CAGR</th>\n");
-      writer.write(" <th>Drawdown</th>\n");
-      writer.write(" <th>Dev</th>\n");
-      if (includeLeverage) {
-        writer.write(" <th>Leverage</th>\n");
-      }
-      if (!reduced && includeRiskAdjusted) {
-        writer.write(" <th>Risk-Adjusted<br/>Return</th>\n");
-      }
-      writer.write(" <th>Down 10%</th>\n");
 
-      if (!reduced) {
-        writer.write(" <th>New High %</th>\n");
-      }
-      writer.write(" <th>Worst AR</th>\n");
-      if (!reduced && includeQuartiles) {
-        writer.write(" <th>25% AR</th>\n");
-      }
-      writer.write(" <th>Median AR</th>\n");
-      if (!reduced && includeQuartiles) {
-        writer.write(" <th>75% AR</th>\n");
-      }
-      writer.write(" <th>Best AR</th>\n");
-      if (!reduced) {
-        writer.write(" <th>Speedup</th>\n");
-        writer.write(" <th>Score</th>\n");
-      }
+      writer.write(tableHtml);
 
-      writer.write("</tr></thead>\n");
-      writer.write("<tbody>\n");
-
-      // Calculate base total returns.
-      double baseReturn = 1.0;
-      if (!reduced) {
-        baseReturn = Double.POSITIVE_INFINITY;
-        for (CumulativeStats stats : strategyStats) {
-          if (stats.cagr < baseReturn) {
-            baseReturn = stats.cagr;
-          }
-        }
-        if (baseReturn < 1.0) {
-          baseReturn = 1.0;
-        }
-      }
-
-      for (CumulativeStats stats : strategyStats) {
-        writer.write("<tr>\n");
-        String name = stats.name();
-        Pattern p = Pattern.compile("(.+)\\s+\\(\\d.*\\)$");
-        Matcher m = p.matcher(name);
-        if (m.matches()) {
-          name = m.group(1);
-        }
-        writer.write(String.format("<td><b>%s</b></td>\n", name));
-        writer.write(String.format("<td>%.2f</td>\n", stats.cagr));
-        writer.write(String.format("<td>%.2f</td>\n", stats.drawdown));
-        writer.write(String.format("<td>%.2f</td>\n", stats.devAnnualReturn));
-        if (includeLeverage) {
-          writer.write(String.format("<td>%.2f</td>\n", stats.leverage));
-        }
-        if (!reduced && includeRiskAdjusted) {
-          writer.write(
-              String.format("<td>%.2f</td>\n", stats.cagr * strategyStats[0].devAnnualReturn / stats.devAnnualReturn));
-        }
-        writer.write(String.format("<td>%.2f</td>\n", stats.percentDown10));
-
-        if (!reduced) {
-          writer.write(String.format("<td>%.2f</td>\n", stats.percentNewHigh));
-        }
-        writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[0]));
-        if (!reduced && includeQuartiles) {
-          writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[1]));
-        }
-        writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[2]));
-        if (!reduced && includeQuartiles) {
-          writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[3]));
-        }
-        writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[4]));
-        if (!reduced) {
-          if (stats.cagr < baseReturn + 0.005) {
-            writer.write("<td>--</td>\n");
-          } else {
-            double speedup = FinLib.speedup(stats.cagr, baseReturn);
-            writer.write(String.format("<td>%.1f%%</td>\n", speedup * 100.0));
-          }
-          writer.write(String.format("<td>%.2f</td>\n", stats.scoreComplex()));
-        }
-
-        writer.write("</tr>\n");
-      }
-      writer.write("</tbody>\n</table>\n");
       writer.write("<h2>Explanation of Each Column</h2>");
       writer.write("<div><ul>");
       writer.write(" <li><b>Strategy</b> - Name of the strategy or asset class</li>\n");
       writer.write(" <li><b>CAGR</b> - Compound Annual Growth Rate</li>\n");
       writer.write(" <li><b>Dev</b> - Standard deviation of annual returns</li>\n");
-      if (includeLeverage) {
-        writer.write(" <li><b>Leverage</b> - Multiplier for investments (via borrowing additional funds)</li>\n");
-      }
       if (!reduced && includeRiskAdjusted) {
         writer.write(" <li><b>Risk-Adjusted Return</b> - Adjusted CAGR after accounting for volatility</li>\n");
       }
@@ -857,7 +753,93 @@ public class Chart
       }
       writer.write("</ul></div>");
       writer.write("</body></html>\n");
+
     }
+  }
+
+  public static String genStatsTable(boolean reduced, boolean includeRiskAdjusted, boolean includeQuartiles,
+      CumulativeStats... strategyStats) throws IOException
+  {
+    StringWriter sw = new StringWriter();
+    try (Writer writer = new Writer(sw)) {
+      writer.write("<table id=\"statsTable\" class=\"tablesorter\" cellpadding=\"0\">\n");
+      writer.write("<thead><tr>\n");
+      writer.write(" <th>Strategy</th>\n");
+      writer.write(" <th>CAGR</th>\n");
+      writer.write(" <th>Drawdown</th>\n");
+      writer.write(" <th>Dev</th>\n");
+      if (!reduced && includeRiskAdjusted) {
+        writer.write(" <th>Risk-Adjusted<br/>Return</th>\n");
+      }
+      writer.write(" <th>Down 10%</th>\n");
+
+      if (!reduced) {
+        writer.write(" <th>New High %</th>\n");
+      }
+      writer.write(" <th>Worst AR</th>\n");
+      if (!reduced && includeQuartiles) {
+        writer.write(" <th>25% AR</th>\n");
+      }
+      writer.write(" <th>Median AR</th>\n");
+      if (!reduced && includeQuartiles) {
+        writer.write(" <th>75% AR</th>\n");
+      }
+      writer.write(" <th>Best AR</th>\n");
+      // if (!reduced) {
+      // writer.write(" <th>Speedup</th>\n");
+      // writer.write(" <th>Score</th>\n");
+      // }
+
+      writer.write("</tr></thead>\n");
+      writer.write("<tbody>\n");
+
+      int iRow = 0;
+      for (CumulativeStats stats : strategyStats) {
+        writer.write("<tr class=\"%s\">\n", iRow % 2 == 0 ? "evenRow" : "oddRow");
+        String name = stats.name();
+        Pattern p = Pattern.compile("(.+)\\s+\\(\\d.*\\)$");
+        Matcher m = p.matcher(name);
+        if (m.matches()) {
+          name = m.group(1);
+        }
+        writer.write(String.format("<td><b>%s</b></td>\n", name));
+        writer.write(String.format("<td>%.2f</td>\n", stats.cagr));
+        writer.write(String.format("<td>%.2f</td>\n", stats.drawdown));
+        writer.write(String.format("<td>%.2f</td>\n", stats.devAnnualReturn));
+        if (!reduced && includeRiskAdjusted) {
+          writer.write(
+              String.format("<td>%.2f</td>\n", stats.cagr * strategyStats[0].devAnnualReturn / stats.devAnnualReturn));
+        }
+        writer.write(String.format("<td>%.2f</td>\n", stats.percentDown10));
+
+        if (!reduced) {
+          writer.write(String.format("<td>%.2f</td>\n", stats.percentNewHigh));
+        }
+        writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[0]));
+        if (!reduced && includeQuartiles) {
+          writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[1]));
+        }
+        writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[2]));
+        if (!reduced && includeQuartiles) {
+          writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[3]));
+        }
+        writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[4]));
+        // if (!reduced) {
+        // if (stats.cagr < baseReturn + 0.005) {
+        // writer.write("<td>--</td>\n");
+        // } else {
+        // double speedup = FinLib.speedup(stats.cagr, baseReturn);
+        // writer.write(String.format("<td>%.1f%%</td>\n", speedup * 100.0));
+        // }
+        // writer.write(String.format("<td>%.2f</td>\n", stats.scoreComplex()));
+        // }
+
+        writer.write("</tr>\n");
+        ++iRow;
+      }
+      writer.write("</tbody>\n</table>\n");
+    }
+    return sw.toString();
   }
 
   /**

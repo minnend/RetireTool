@@ -47,7 +47,7 @@ public class CumulativeStats implements Comparable<CumulativeStats>
 
     if (cumulativeReturns != null && !cumulativeReturns.isEmpty()) {
       double nMonths = cumulativeReturns.getLengthMonths();
-      stats.totalReturn = cumulativeReturns.getLast(0) / cumulativeReturns.getFirst(0);
+      stats.totalReturn = FinLib.getTotalReturn(cumulativeReturns);
       stats.cagr = FinLib.getAnnualReturn(stats.totalReturn, nMonths);
 
       if (calcDurationalStats) {

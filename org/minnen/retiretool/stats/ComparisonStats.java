@@ -7,6 +7,7 @@ import java.util.TreeMap;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.util.FinLib;
 
+/** Calculates statistics comparing two strategies using their cumulative returns. */
 public class ComparisonStats
 {
   public static class Results
@@ -18,6 +19,15 @@ public class ComparisonStats
     public double worstExcess;
     public double medianExcess;
     public double bestExcess;
+
+    public double getWinPercent(int i)
+    {
+      if (i == 0) return winPercent1;
+      else if (i == 1) return winPercent2;
+      else {
+        throw new IllegalArgumentException(String.format("Only indices {0,1} are supported, not %d", i));
+      }
+    }
   };
 
   public Sequence              returns1, returns2;
@@ -35,7 +45,8 @@ public class ComparisonStats
 
   public static ComparisonStats calc(Sequence cumulativeReturns, double diffMargin, Sequence... defenders)
   {
-    assert cumulativeReturns.length() == defenders[0].length() : String.format("%d vs. %d", cumulativeReturns.length(), defenders[0].length());
+    assert cumulativeReturns.length() == defenders[0].length() : String.format("%d vs. %d", cumulativeReturns.length(),
+        defenders[0].length());
     ComparisonStats stats = new ComparisonStats();
     stats.returns1 = cumulativeReturns;
     stats.defenders = defenders;

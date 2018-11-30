@@ -54,17 +54,20 @@ import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 
 public class RetireToolMonthly
 {
-  public static final String          GRAPH_WIDTH  = "710px";
-  public static final String          GRAPH_HEIGHT = "450px";
+  public static final String          GRAPH_WIDTH         = "710px";
+  public static final String          GRAPH_HEIGHT        = "450px";
 
-  public final static SequenceStoreV1 store        = new SequenceStoreV1();
+  public static final boolean         includeRiskAdjusted = false;
+  public static final boolean         includeQuartiles    = false;
 
-  public static final Disposition[]   dispositions = Disposition.values();
+  public final static SequenceStoreV1 store               = new SequenceStoreV1();
+
+  public static final Disposition[]   dispositions        = Disposition.values();
 
   /** Dimension to use in the price sequence for SMA predictions. */
-  public static int                   iPriceSMA    = 0;
-  public static int                   nMinTradeGap = 0;
-  public static double                smaMargin    = 0.0;
+  public static int                   iPriceSMA           = 0;
+  public static int                   nMinTradeGap        = 0;
+  public static double                smaMargin           = 0.0;
 
   public static void setupShillerData(File dataDir, File dir, boolean buildComplexStrategies) throws IOException
   {
@@ -774,7 +777,8 @@ public class RetireToolMonthly
 
     Chart.saveLineChart(new File(dir, "rebalance-cumulative.html"), "Cumulative Market Returns", GRAPH_WIDTH,
         GRAPH_HEIGHT, ChartScaling.LOGARITHMIC, ChartTiming.MONTHLY, all);
-    Chart.saveStatsTable(new File(dir, "rebalance-table.html"), GRAPH_WIDTH, false, cumulativeStats);
+    Chart.saveStatsTable(new File(dir, "rebalance-table.html"), GRAPH_WIDTH, false, includeRiskAdjusted,
+        includeQuartiles, cumulativeStats);
 
     int duration = 10 * 12;
     DurationalStats[] stats = new DurationalStats[all.length];
@@ -821,7 +825,8 @@ public class RetireToolMonthly
     for (int i = 0; i < names.length; ++i) {
       System.out.printf("%d [%.1f]: %s\n", i + 1, scores[i], cstats.get(ii[i]));
     }
-    Chart.saveStatsTable(new File(dir, "strategy-report.html"), GRAPH_WIDTH, true, cstats);
+    Chart.saveStatsTable(new File(dir, "strategy-report.html"), GRAPH_WIDTH, true, includeRiskAdjusted,
+        includeQuartiles, cstats);
 
     Chart.saveBoxPlots(new File(dir, "strategy-box.html"),
         String.format("Return Stats (%s)", TimeLib.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
@@ -933,7 +938,8 @@ public class RetireToolMonthly
 
     ComparisonStats comparison = ComparisonStats.calc(player1, player2, diffMargin);
     Chart.saveComparisonTable(new File(dir, "duel-comparison.html"), GRAPH_WIDTH, comparison);
-    Chart.saveStatsTable(new File(dir, "duel-chart.html"), GRAPH_WIDTH, false, store.getCumulativeStats(name1, name2));
+    Chart.saveStatsTable(new File(dir, "duel-chart.html"), GRAPH_WIDTH, false, includeRiskAdjusted, includeQuartiles,
+        store.getCumulativeStats(name1, name2));
 
     Chart.saveChart(new File(dir, "duel-cumulative.html"), ChartConfig.Type.Line, "Cumulative Market Returns", null,
         null, GRAPH_WIDTH, GRAPH_HEIGHT, 1, Double.NaN, 1.0, ChartScaling.LOGARITHMIC, ChartTiming.MONTHLY, 0, player2,
@@ -1024,7 +1030,8 @@ public class RetireToolMonthly
     Chart.saveChart(new File(dir, "stock-bond-sweep.html"), ChartConfig.Type.Line,
         "Cumulative Market Returns: Stock/Bond Mix", null, null, GRAPH_WIDTH, GRAPH_HEIGHT, 1.0, 262144.0, 1.0,
         ChartScaling.LOGARITHMIC, ChartTiming.MONTHLY, 0, all);
-    Chart.saveStatsTable(new File(dir, "chart-stock-bond-sweep.html"), GRAPH_WIDTH, false, cumulativeStats);
+    Chart.saveStatsTable(new File(dir, "chart-stock-bond-sweep.html"), GRAPH_WIDTH, false, includeRiskAdjusted,
+        includeQuartiles, cumulativeStats);
 
     // all[0].setName("Stock");
     // all[all.length - 1].setName("Bonds");
@@ -1124,7 +1131,8 @@ public class RetireToolMonthly
     }
     nameList.addAll(store.getNames("sma-\\d+-"));
     String[] names = nameList.toArray(new String[nameList.size()]);
-    Chart.saveStatsTable(new File(dir, "sma-sweep.html"), GRAPH_WIDTH, true, store.getCumulativeStats(names));
+    Chart.saveStatsTable(new File(dir, "sma-sweep.html"), GRAPH_WIDTH, true, includeRiskAdjusted, includeQuartiles,
+        store.getCumulativeStats(names));
   }
 
   public static List<String> genDominationChart(List<String> candidates, File dir) throws IOException
@@ -1142,7 +1150,8 @@ public class RetireToolMonthly
     }
     // Collections.sort(winners, Collections.reverseOrder());
     System.out.printf("Winners: %d\n", winners.size());
-    Chart.saveStatsTable(new File(dir, "domination-chart.html"), GRAPH_WIDTH, true, winners);
+    Chart.saveStatsTable(new File(dir, "domination-chart.html"), GRAPH_WIDTH, true, includeRiskAdjusted,
+        includeQuartiles, winners);
 
     System.out.printf("Done (%s).\n", TimeLib.formatDuration(TimeLib.getTime() - startMS));
 
@@ -1166,7 +1175,8 @@ public class RetireToolMonthly
       nameList.add("momentum-" + momentumMonths[i]);
     }
     String[] names = nameList.toArray(new String[nameList.size()]);
-    Chart.saveStatsTable(new File(dir, "momentum-sweep.html"), GRAPH_WIDTH, true, store.getCumulativeStats(names));
+    Chart.saveStatsTable(new File(dir, "momentum-sweep.html"), GRAPH_WIDTH, true, includeRiskAdjusted, includeQuartiles,
+        store.getCumulativeStats(names));
     // Chart.printDecadeTable(store.get("momentum-12"), store.get("stock"));
 
     Chart.saveBoxPlots(new File(dir, "momentum-box-plots.html"),
@@ -1186,7 +1196,8 @@ public class RetireToolMonthly
       nameList.add("NewHigh-" + i);
     }
     String[] names = nameList.toArray(new String[nameList.size()]);
-    Chart.saveStatsTable(new File(dir, "NewHigh-sweep.html"), GRAPH_WIDTH, true, store.getCumulativeStats(names));
+    Chart.saveStatsTable(new File(dir, "NewHigh-sweep.html"), GRAPH_WIDTH, true, includeRiskAdjusted, includeQuartiles,
+        store.getCumulativeStats(names));
     System.out.print(Chart.genDecadeTable(store.get("NewHigh-12"), store.get("stock")));
     Chart.saveLineChart(new File(dir, "NewHigh-cumulative.html"), "Cumulative Market Returns: NewHigh Strategy",
         GRAPH_WIDTH, GRAPH_HEIGHT, ChartScaling.LOGARITHMIC, ChartTiming.MONTHLY, store.getReturns(names));
@@ -1194,7 +1205,8 @@ public class RetireToolMonthly
         String.format("NewHigh Returns (%s)", TimeLib.formatDurationMonths(duration)), GRAPH_WIDTH, GRAPH_HEIGHT, 2.0,
         store.getDurationalStats(names));
     List<CumulativeStats> cstats = store.getCumulativeStats(names);
-    Chart.saveStatsTable(new File(dir, "NewHigh-chart.html"), GRAPH_WIDTH, true, cstats);
+    Chart.saveStatsTable(new File(dir, "NewHigh-chart.html"), GRAPH_WIDTH, true, includeRiskAdjusted, includeQuartiles,
+        cstats);
   }
 
   public static void genDrawdownChart(File dir) throws IOException
