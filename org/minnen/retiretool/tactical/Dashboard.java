@@ -82,10 +82,6 @@ public class Dashboard
   // public static final int[][] allParams = new int[][] { { 20, 0, 240, 150, 25 }, { 25, 0, 155, 125, 75 },
   // { 5, 0, 165, 5, 50 } };
 
-  // [15,0] / [259,125] m=21 | [8,0] / [21,15] m=1320 | [5,0] / [178,50] m=145 { 8, 0, 21, 15, 1320 }
-  // public static final int[][] allParams = new int[][] { { 15, 0, 259, 125, 21 }, { 15, 0, 259, 125, 21 },
-  // { 5, 0, 178, 50, 145 } };
-
   // [15,0] / [259,125] m=21 | [8,0] / [21,15] m=1320 | [43,0] / [55,4] m=2025
   // public static final int[][] allParams = new int[][] { { 15, 0, 259, 125, 21 }, { 15, 0, 259, 125, 21 },
   // { 15, 0, 259, 125, 21 }, };
@@ -94,13 +90,18 @@ public class Dashboard
   // public static final int[][] allParams = new int[][] { { 29, 1, 269, 99, 138 },
   // { 23, 1, 233, 106, 103 }, { 12, 0, 162, 109, 25 } };
 
+  // Weird but good results: 5.45% regret at 20 years.
   // [26,0] / [212,104] m=102 | [39,0] / [107,104] m=243 | [63,0] / [23,14] m=105
   // public static final int[][] allParams = new int[][] { { 26, 0, 212, 104, 102 },
   // { 39, 0, 107, 104, 243 }, { 63, 0, 23, 14, 105 } };
 
   // [15,0] / [259,125] m=21 | [5,0] / [178,50] m=145 | [19,0] / [213,83] m=269
-  public static final int[][]           allParams      = new int[][] { { 15, 0, 259, 125, 21 }, { 5, 0, 178, 50, 145 },
-      { 19, 0, 213, 83, 269 } };
+  // public static final int[][] allParams = new int[][] { { 15, 0, 259, 125, 21 }, { 5, 0, 178, 50, 145 },
+  // { 19, 0, 213, 83, 269 } };
+
+  // [15,0] / [259,125] m=21 | [5,0] / [178,50] m=145
+  public static final int[][]           allParams      = new int[][] { { 15, 0, 259, 125, 21 }, { 15, 0, 259, 125, 21 },
+      { 5, 0, 178, 50, 145 } };
 
   static {
     // Create misc directory if it doesn't exist.
@@ -342,6 +343,11 @@ public class Dashboard
         // Regret is other strategy's win percent.
         for (int i = 0; i < comparisons.length; ++i) {
           writer.write(String.format("<td>%.1f%%</td>\n", comparisons[i].getWinPercent(1 - iRow)));
+          if (iRow == 1) {
+            System.out.printf(" Regret [%8s]: %5.2f%%  (win: %5.2f%%)\n",
+                TimeLib.formatDurationMonths(comparisons[i].duration), comparisons[i].getWinPercent(1 - iRow),
+                comparisons[i].getWinPercent(iRow));
+          }
         }
         writer.write("</tr>\n");
         ++iRow;
