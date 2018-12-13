@@ -76,22 +76,19 @@ public class Dashboard
   // new ConfigSMA(20, 0, 250, 50, 1.0, FinLib.Close, gap), new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap),
   // new ConfigSMA(10, 0, 220, 0, 2.0, FinLib.Close, gap), new ConfigSMA(10, 0, 230, 40, 2.0, FinLib.Close, gap) };
 
-  public static final PredictorConfig[] singleConfigs  = new PredictorConfig[3];
-
   /** Old params found in 2016 */
   // public static final int[][] allParams = new int[][] { { 20, 0, 240, 150, 25 }, { 25, 0, 155, 125, 75 },
   // { 5, 0, 165, 5, 50 } };
 
-  // [15,0] / [259,125] m=21 | [8,0] / [21,15] m=1320 | [43,0] / [55,4] m=2025
-  // public static final int[][] allParams = new int[][] { { 15, 0, 259, 125, 21 }, { 15, 0, 259, 125, 21 },
-  // { 15, 0, 259, 125, 21 }, };
+  // [15,0] / [259,125] m=21
+  // public static final int[][] allParams = new int[][] { { 15, 0, 259, 125, 21 } };
 
-  // [29,1] / [269,99] m=138 | [23,1] / [233,106] m=103 | [12,0] / [162,109] m=25
+  // [29,1] / [269,99] m=138 | [23,1] / [233,106] m=103 | [12,0] / [162,109] m=25 regret[5,10,20]=[39,33,10]
   // public static final int[][] allParams = new int[][] { { 29, 1, 269, 99, 138 },
   // { 23, 1, 233, 106, 103 }, { 12, 0, 162, 109, 25 } };
 
-  // Weird but good results: 5.45% regret at 20 years.
-  // [26,0] / [212,104] m=102 | [39,0] / [107,104] m=243 | [63,0] / [23,14] m=105
+  // Weird but good results: 5.43% regret at 20 years.
+  // [26,0] / [212,104] m=102 | [39,0] / [107,104] m=243 | [63,0] / [23,14] m=105 regret[5,10,20]=[39,25,5]
   // public static final int[][] allParams = new int[][] { { 26, 0, 212, 104, 102 },
   // { 39, 0, 107, 104, 243 }, { 63, 0, 23, 14, 105 } };
 
@@ -99,9 +96,15 @@ public class Dashboard
   // public static final int[][] allParams = new int[][] { { 15, 0, 259, 125, 21 }, { 5, 0, 178, 50, 145 },
   // { 19, 0, 213, 83, 269 } };
 
-  // [15,0] / [259,125] m=21 | [5,0] / [178,50] m=145
-  public static final int[][]           allParams      = new int[][] { { 15, 0, 259, 125, 21 }, { 15, 0, 259, 125, 21 },
-      { 5, 0, 178, 50, 145 } };
+  // [15,0] / [259,125] m=21 | [5,0] / [178,50] m=145 regret[5,10,20]=[50,31,2]
+  // public static final int[][] allParams = new int[][] { { 15, 0, 259, 125, 21 },
+  // { 5, 0, 178, 50, 145 } };
+
+  // regret[5,10,20] = 43, 31, 0
+  public static final int[][]           allParams      = new int[][] { { 15, 0, 259, 125, 21 }, { 5, 0, 178, 50, 145 },
+      { 63, 0, 23, 14, 105 } };
+
+  public static final PredictorConfig[] singleConfigs  = new PredictorConfig[allParams.length];
 
   static {
     // Create misc directory if it doesn't exist.
@@ -515,9 +518,15 @@ public class Dashboard
       f.write("<li>Price change between trades\n");
       f.write("</ol>\n");
       f.write("<div><b>Graphs for SMA Predictors:</b>\n");
-      f.write("<a href=\"%s/sma1-code4.html\">SMA (4)</a>&nbsp;|&nbsp;\n", miscDirName);
-      f.write("<a href=\"%s/sma2-code2.html\">SMA (2)</a>&nbsp;|&nbsp;\n", miscDirName);
-      f.write("<a href=\"%s/sma3-code1.html\">SMA (1)</a>\n", miscDirName);
+      for (int i = 0; i < allParams.length; ++i) {
+        int code = 1 << (allParams.length - 1 - i);
+        String filename = String.format("sma%d-code%d.html", i + 1, code);
+        f.write("<a href=\"%s/%s\">SMA (%d)</a>", miscDirName, filename, code);
+        if (i + 1 < allParams.length) {
+          f.write("&nbsp;|&nbsp;");
+        }
+        f.write("\n");
+      }
       f.write("</div><br/>\n");
 
       f.write(genStatsTableHtml(comparison, statsBaseline, statsTactical) + "<br/>");

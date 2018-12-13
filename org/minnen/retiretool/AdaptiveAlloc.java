@@ -2,67 +2,48 @@ package org.minnen.retiretool;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.LocalDate;
-import java.time.Month;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 import org.minnen.retiretool.broker.Broker;
-import org.minnen.retiretool.broker.BrokerInfoAccess;
 import org.minnen.retiretool.broker.SimFactory;
 import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.broker.TimeInfo;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.FeatureVec;
-import org.minnen.retiretool.data.FredIO;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.data.YahooIO;
 import org.minnen.retiretool.data.Sequence.EndpointBehavior;
 import org.minnen.retiretool.data.fred.FredSeries;
 import org.minnen.retiretool.ml.ClassificationModel;
-import org.minnen.retiretool.ml.PositiveQuadrant;
 import org.minnen.retiretool.ml.RegressionModel;
 import org.minnen.retiretool.ml.Example;
 import org.minnen.retiretool.ml.Stump;
-import org.minnen.retiretool.ml.rank.ColleyRanker;
-import org.minnen.retiretool.ml.rank.Ranker;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive;
 import org.minnen.retiretool.predictor.config.ConfigAdaptive.TradeFreq;
-import org.minnen.retiretool.predictor.config.ConfigAdaptive.Weighting;
 import org.minnen.retiretool.predictor.config.ConfigRecession;
 import org.minnen.retiretool.predictor.config.ConfigConst;
 import org.minnen.retiretool.predictor.config.ConfigMixed;
 import org.minnen.retiretool.predictor.config.ConfigTactical;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
-import org.minnen.retiretool.predictor.daily.AdaptiveMomentumPredictor;
 import org.minnen.retiretool.predictor.daily.AdaptivePredictor;
 import org.minnen.retiretool.predictor.daily.MixedPredictor;
 import org.minnen.retiretool.predictor.daily.Predictor;
-import org.minnen.retiretool.predictor.daily.RecessionPredictor;
 import org.minnen.retiretool.predictor.daily.VolResPredictor;
 import org.minnen.retiretool.predictor.features.FeatureExtractor;
 import org.minnen.retiretool.predictor.features.FeatureSet;
 import org.minnen.retiretool.predictor.features.ITAScore;
 import org.minnen.retiretool.predictor.features.Momentum;
-import org.minnen.retiretool.predictor.features.BasicStats;
-import org.minnen.retiretool.predictor.features.RiskAdjustedReturn;
-import org.minnen.retiretool.predictor.features.StdDev;
 import org.minnen.retiretool.predictor.optimize.AdaptiveScanner;
-import org.minnen.retiretool.predictor.optimize.ConfigScanner;
 import org.minnen.retiretool.predictor.optimize.Optimizer;
 import org.minnen.retiretool.stats.BinaryPredictionStats;
 import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.ReturnStats;
 import org.minnen.retiretool.util.FinLib;
-import org.minnen.retiretool.util.Histogram;
-import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.PriceModel;
 import org.minnen.retiretool.util.Random;
 import org.minnen.retiretool.util.Slippage;
@@ -70,7 +51,7 @@ import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
 import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
 import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
-import org.ojalgo.matrix.BasicMatrix;
+import org.ojalgo.matrix.BasicMatrix.PhysicalBuilder;
 import org.ojalgo.matrix.PrimitiveMatrix;
 
 import smile.stat.distribution.KernelDensity;
@@ -488,14 +469,14 @@ public class AdaptiveAlloc
     Sequence scatterAligned = scatterData.dup();
     {
       int nr = scatterData.size();
-      BasicMatrix.Builder<PrimitiveMatrix> builder = PrimitiveMatrix.getBuilder(nr, 1);
+      PhysicalBuilder<Double, PrimitiveMatrix> builder = PrimitiveMatrix.FACTORY.getBuilder(nr, 1);
       for (int i = 0; i < nr; ++i) {
         double v = scatterData.get(i, 0);
         builder.set(i, 0, v);
       }
       PrimitiveMatrix A = builder.build();
 
-      builder = PrimitiveMatrix.getBuilder(nr, 1);
+      builder = PrimitiveMatrix.FACTORY.getBuilder(nr, 1);
       for (int i = 0; i < nr; ++i) {
         builder.set(i, 0, scatterData.get(i, 1));
       }

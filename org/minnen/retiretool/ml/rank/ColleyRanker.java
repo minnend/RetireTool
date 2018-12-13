@@ -1,7 +1,7 @@
 package org.minnen.retiretool.ml.rank;
 
 import org.minnen.retiretool.util.Library;
-import org.ojalgo.matrix.BasicMatrix;
+import org.ojalgo.matrix.BasicMatrix.PhysicalBuilder;
 import org.ojalgo.matrix.PrimitiveMatrix;
 
 public class ColleyRanker extends Ranker
@@ -17,8 +17,8 @@ public class ColleyRanker extends Ranker
     }
 
     // Construct the Colley matrix.
-    BasicMatrix.Builder<PrimitiveMatrix> builderA = PrimitiveMatrix.getBuilder(N, N);
-    BasicMatrix.Builder<PrimitiveMatrix> builderB = PrimitiveMatrix.getBuilder(N);
+    PhysicalBuilder<Double, PrimitiveMatrix> builderA = PrimitiveMatrix.FACTORY.getBuilder(N, N);
+    PhysicalBuilder<Double, PrimitiveMatrix> builderB = PrimitiveMatrix.FACTORY.getBuilder(N);
     for (int i = 0; i < N; ++i) {
       int wi = 0;
       int li = 0;

@@ -1,12 +1,27 @@
 package org.minnen.retiretool.data;
 
 import java.io.BufferedReader;
+
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.hssf.util.CellReference;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.CellValue;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.FormulaEvaluator;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.FinLib.DividendMethod;
 import org.minnen.retiretool.util.Library;
@@ -20,13 +35,15 @@ import org.minnen.retiretool.util.TimeLib;
  */
 public class Shiller
 {
-  public static int                        PRICE = 0;
-  public static int                        DIV   = 1;
-  public static int                        CPI   = 2;
-  public static int                        GS10  = 3;
-  public static int                        CAPE  = 4;
+  public static int                        PRICE         = 0;
+  public static int                        DIV           = 1;
+  public static int                        CPI           = 2;
+  public static int                        GS10          = 3;
+  public static int                        CAPE          = 4;
 
-  private static final Map<File, Sequence> cache = new HashMap<File, Sequence>();
+  public static final String               dataUrlString = "http://www.econ.yale.edu/~shiller/data/ie_data.xls";
+
+  private static final Map<File, Sequence> cache         = new HashMap<File, Sequence>();
 
   /**
    * Load data from CSV export of Shiller's SNP/CPI excel spreadsheet.
@@ -80,7 +97,7 @@ public class Shiller
 
           // System.out.printf("%d/%d: $%.2f $%.2f $%.2f\n", year, month, price, div, cpi);
         } catch (NumberFormatException nfe) {
-          // System.err.println("Bad Line: " + line);
+          System.err.println("Bad Line: " + line);
           if (seq.isEmpty()) continue;
           else break;
         }
@@ -106,8 +123,59 @@ public class Shiller
     return FinLib.calcSnpReturns(snp, 0, -1, divMethod);
   }
 
+  /** Download Shiller data in .xls format and convert to .csv. */
+  public static boolean downloadData() throws IOException
+  {
+    if (DataIO.shouldDownloadUpdate(DataIO.shillerExcel)) {
+      if (!DataIO.copyUrlToFile(dataUrlString, DataIO.shillerExcel)) {
+        throw new IOException("Failed to download Shiller Excel file.");
+      }
+    }
+
+    FileInputStream file = new FileInputStream(DataIO.shillerExcel);
+    StringBuilder sb = new StringBuilder();
+    try (Workbook workbook = new HSSFWorkbook(file)) {
+      FormulaEvaluator evaluator = workbook.getCreationHelper().createFormulaEvaluator();
+      Sheet sheet = workbook.getSheet("Data");
+      String[] values = new String[11];
+      for (Row row : sheet) {
+        int cellIndex = 0;
+        int n = 0;
+        for (Cell cell : row) {
+          cell = evaluator.evaluateInCell(cell);
+          switch (cell.getCellTypeEnum()) {
+          case NUMERIC:
+            values[cellIndex] = String.format("%.2f", cell.getNumericCellValue());
+            ++n;
+            break;
+          case STRING:
+            values[cellIndex] = cell.getStringCellValue();
+            break;
+          default:
+            values[cellIndex] = "";
+            break;
+          }
+          ++cellIndex;
+        }
+        if (n > 2) {
+          String line = String.join(",", values);
+          sb.append(line);
+          sb.append('\n');
+        }
+      }
+    }
+
+    try (FileWriter writer = new FileWriter(DataIO.shiller)) {
+      writer.write(sb.toString());
+    }
+
+    return true;
+  }
+
   public static void main(String[] args) throws IOException
   {
+    downloadData();
+
     Sequence snpNoDivs = Shiller.loadSNP(DataIO.shiller, DividendMethod.NO_REINVEST_MONTHLY);
     Sequence snpWithDivs = Shiller.loadSNP(DataIO.shiller, DividendMethod.MONTHLY);
 
