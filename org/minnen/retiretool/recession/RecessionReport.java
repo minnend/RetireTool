@@ -41,5 +41,10 @@ public class RecessionReport
     UnemploymentRate.calculate();
     Chart.saveLineChart(new File(DataIO.outputPath, "unrate.html"), "Unemployment Rate", "100%", "640px",
         ChartScaling.LINEAR, ChartTiming.MONTHLY, UnemploymentRate.unrate, UnemploymentRate.unrateSMA);
+
+    // Initial claims (unemployment).
+    InitialClaims.calculate();
+    Chart.saveLineChart(new File(DataIO.outputPath, "initial-claims.html"), "Unemployment Initial Claims", "100%",
+        "640px", ChartScaling.LINEAR, ChartTiming.DAILY, InitialClaims.claims, InitialClaims.claimsSMA);
   }
 }

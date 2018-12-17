@@ -1,6 +1,7 @@
 package org.minnen.retiretool.tactical;
 
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.List;
 
 import org.minnen.retiretool.broker.Simulation;
@@ -30,17 +31,18 @@ public class TacticLib
     store.add(tb3mo, safeName);
   }
 
-  public static CumulativeStats eval(PredictorConfig config, String name, int nPerturb, Simulation sim)
+  public static CumulativeStats eval(PredictorConfig config, String name, int nPerturb, Simulation sim,
+      Comparator<CumulativeStats> comp)
   {
-    return eval(config, name, nPerturb, sim, null);
+    return eval(config, name, nPerturb, sim, comp, null);
   }
 
   public static CumulativeStats eval(PredictorConfig config, String name, int nPerturb, Simulation sim,
-      List<CumulativeStats> allStats)
+      Comparator<CumulativeStats> comp, List<CumulativeStats> allStats)
   {
     Predictor pred = config.build(null, TacticLib.assetNames);
     sim.run(pred, name);
-    CumulativeStats worstStats = CumulativeStats.calc(sim.returnsMonthly);
+    CumulativeStats worstStats = CumulativeStats.calc(sim.returnsDaily);
     worstStats.config = config;
     if (allStats != null) {
       allStats.clear();
@@ -51,10 +53,10 @@ public class TacticLib
       PredictorConfig perturbedConfig = config.genPerturbed();
       pred = perturbedConfig.build(null, TacticLib.assetNames);
       sim.run(pred, name);
-      CumulativeStats stats = CumulativeStats.calc(sim.returnsMonthly);
+      CumulativeStats stats = CumulativeStats.calc(sim.returnsDaily);
       stats.config = perturbedConfig;
       if (allStats != null) allStats.add(stats);
-      if (stats.prefer(worstStats) < 0) { // performance of strategy = worst over perturbed params
+      if (comp.compare(stats, worstStats) < 0) { // performance of strategy = worst over perturbed params
         worstStats = stats;
       }
     }

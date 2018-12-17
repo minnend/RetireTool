@@ -39,7 +39,6 @@ import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.DurationalStats;
 import org.minnen.retiretool.stats.RetirementStats;
 import org.minnen.retiretool.stats.ReturnStats;
-import org.minnen.retiretool.stats.WinStats;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Histogram;
 import org.minnen.retiretool.util.Library;
@@ -1007,7 +1006,6 @@ public class RetireToolMonthly
     int[] percentStock = new int[] { 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0 };
     int rebalanceMonths = 12;
     double rebalanceBand = 0.0;
-    boolean useLeverage = true;
 
     Sequence[] all = new Sequence[percentStock.length];
     for (int i = 0; i < percentStock.length; ++i) {
@@ -1017,15 +1015,6 @@ public class RetireToolMonthly
       all[i].setName(String.format("%d / %d", percentStock[i], 100 - percentStock[i]));
     }
     CumulativeStats[] cumulativeStats = CumulativeStats.calc(all);
-
-    if (useLeverage) {
-      for (int i = 0; i < all.length; ++i) {
-        double leverage = FinLib.calcEqualizingLeverage(all[i], cumulativeStats[0].cagr);
-        all[i] = FinLib.calcLeveragedReturns(all[i], leverage);
-        cumulativeStats[i] = CumulativeStats.calc(all[i]);
-        cumulativeStats[i].leverage = leverage;
-      }
-    }
 
     Chart.saveChart(new File(dir, "stock-bond-sweep.html"), ChartConfig.Type.Line,
         "Cumulative Market Returns: Stock/Bond Mix", null, null, GRAPH_WIDTH, GRAPH_HEIGHT, 1.0, 262144.0, 1.0,

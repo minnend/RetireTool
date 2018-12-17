@@ -6,6 +6,7 @@ import java.util.List;
 import org.minnen.retiretool.broker.BrokerInfoAccess;
 import org.minnen.retiretool.data.FeatureVec;
 
+/** A FeatureExtractor made up of a list of other FeatureExtractors. */ 
 public class FeatureSet extends FeatureExtractor
 {
   private final List<FeatureExtractor> extractors = new ArrayList<>();

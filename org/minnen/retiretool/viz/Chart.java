@@ -1261,7 +1261,7 @@ public class Chart
             Sequence seq = store.tryGet(dist.names[i]);
             if (seq != null) {
               IndexRange range = seq.getIndices(TimeLib.toMs(date), TimeLib.toMs(prevDate), EndpointBehavior.Closest);
-              double tr = FinLib.getTotalReturn(seq, range.iStart, range.iEnd, FinLib.AdjClose);
+              double tr = FinLib.getTotalReturn(seq, range.first, range.second, FinLib.AdjClose);
               double r = FinLib.mul2ret(tr);
               combinedReturn += r * dist.weights[i];
               returnString = String.format(" (%.2f)", r);

@@ -13,6 +13,7 @@ import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.Sequence.EndpointBehavior;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.predictor.daily.Predictor;
+import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Fixed;
 import org.minnen.retiretool.util.PriceModel;
 import org.minnen.retiretool.util.Random;
@@ -118,9 +119,6 @@ public class FastSim
   {
     assert timeStart != TimeLib.TIME_ERROR && timeEnd != TimeLib.TIME_ERROR;
     predictor.setBroker(broker.accessObject);
-    // System.out.printf("Run1: [%s] -> [%s] = [%s] -> [%s] (%d, %d)\n", TimeLib.formatDate(timeStart),
-    // TimeLib.formatDate(timeEnd), TimeLib.formatDate(guideSeq.getStartMS()),
-    // TimeLib.formatDate(guideSeq.getEndMS()), timeEnd, guideSeq.getStartMS());
     if (timeStart == TimeLib.TIME_BEGIN) {
       timeStart = guideSeq.getStartMS();
     }
@@ -129,14 +127,12 @@ public class FastSim
     }
     IndexRange range = guideSeq.getIndices(timeStart, timeEnd, EndpointBehavior.Closest);
     runKey = Sequence.Lock.genKey();
-    guideSeq.lock(range.iStart, range.iEnd, runKey);
+    guideSeq.lock(range.first, range.second, runKey);
     runIndex = 0;
     this.predictor = predictor;
 
     returnsMonthly = new Sequence(name);
-    returnsMonthly.addData(1.0, guideSeq.getStartMS());
     returnsDaily = new Sequence(name);
-    returnsDaily.addData(1.0, guideSeq.getStartMS());
 
     broker.reset();
     broker.setNewDay(timeInfoCache.get(runIndex));
@@ -183,6 +179,8 @@ public class FastSim
   {
     Account account = broker.getAccount(AccountName);
     account.liquidate("Liquidate Account");
+    FinLib.normalizeReturns(returnsMonthly);
+    FinLib.normalizeReturns(returnsDaily);
     guideSeq.unlock(runKey);
   }
 }

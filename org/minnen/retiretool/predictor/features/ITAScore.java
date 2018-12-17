@@ -8,7 +8,7 @@ import org.minnen.retiretool.predictor.features.Momentum.ReturnOrMul;
 public class ITAScore extends FeatureExtractor
 {
   // Described here: http://itawealth.com/2015/04/20/deciphering-the-dual-momentum-model/
-  public final int iPrice;
+  public final int      iPrice;
   public final Momentum mom60, mom120, mom240;
   public final StdDev   sdev;
 

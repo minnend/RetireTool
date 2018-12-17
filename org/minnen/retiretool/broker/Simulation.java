@@ -289,7 +289,7 @@ public class Simulation
     }
     IndexRange range = guideSeq.getIndices(timeStart, timeEnd, EndpointBehavior.Closest);
     runKey = Sequence.Lock.genKey();
-    guideSeq.lock(range.iStart, range.iEnd, runKey);
+    guideSeq.lock(range.first, range.second, runKey);
     runIndex = 0;
     lastRebalance = TimeLib.TIME_BEGIN;
     bNeedRebalance = false;
@@ -494,8 +494,8 @@ public class Simulation
       Sequence seq = store.get(assetName);
       if (seq.getNumDims() > 1) {
         IndexRange range = seq.getIndices(timeInfo.time, timeNextWeek, EndpointBehavior.Closest);
-        double p1 = priceModel.getPrice(seq.get(range.iStart));
-        double p2 = priceModel.getPrice(seq.get(range.iEnd));
+        double p1 = priceModel.getPrice(seq.get(range.first));
+        double p2 = priceModel.getPrice(seq.get(range.second));
         double r = FinLib.mul2ret(p2 / p1);
         futureReturns.put(assetName, r);
       }

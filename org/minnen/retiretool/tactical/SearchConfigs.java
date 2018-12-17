@@ -3,6 +3,7 @@ package org.minnen.retiretool.tactical;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -21,18 +22,19 @@ import org.minnen.retiretool.util.Writer;
 
 public class SearchConfigs
 {
-  public static final SequenceStore store                     = new SequenceStore();
-  public static final int           nEvalPerturb              = 10;
-  public static final int           nEvalPerturbKnown         = 50;
-  public static final int           nMaxSeeds                 = 10000;
-  public static final boolean       initializeSingleDefenders = false;
-  public static final boolean       initializeDoubleDefenders = true;
-  public static final boolean       initializeTripleDefenders = false;
-  public static final Mode          searchMode                = Mode.EXTEND;
-  public static final String        saveFilename              = String.format("three-sma-winners-%s.txt",
+  public static final SequenceStore               store                     = new SequenceStore();
+  public static final int                         nEvalPerturb              = 10;
+  public static final int                         nEvalPerturbKnown         = 50;
+  public static final int                         nMaxSeeds                 = 10000;
+  public static final boolean                     initializeSingleDefenders = false;
+  public static final boolean                     initializeDoubleDefenders = false;
+  public static final boolean                     initializeTripleDefenders = false;
+  public static final Mode                        searchMode                = Mode.EXTEND;
+  public static final String                      saveFilename              = String.format("one-sma-winners-%s.txt",
       TimeLib.formatTimeSig(TimeLib.getTime()));
+  public static final Comparator<CumulativeStats> comp                      = CumulativeStats.getComparatorBasic();
 
-  private static Simulation         sim;
+  private static Simulation                       sim;
 
   /** Convenience method to run eval with default number of eval perturbations. */
   private static CumulativeStats eval(PredictorConfig config, String name)
@@ -43,7 +45,7 @@ public class SearchConfigs
   /** Eval stats are *worst* results for the given number of perturbations. */
   private static CumulativeStats eval(PredictorConfig config, String name, int nPerturb)
   {
-    return TacticLib.eval(config, name, nPerturb, sim);
+    return TacticLib.eval(config, name, nPerturb, sim, comp);
   }
 
   /** Simple hill-climbing optimizer based on testing random perturbations. */
@@ -80,10 +82,10 @@ public class SearchConfigs
     List<CumulativeStats> dominators = new ArrayList<>();
 
     // TODO this vs. what's in the dashboard?
-    ConfigMulti tacticalConfig = ConfigMulti.buildTactical(FinLib.AdjClose, 0, 1);
-    CumulativeStats tacticalStats = eval(tacticalConfig, "Tactical", nEvalPerturbKnown);
-    System.out.println(tacticalConfig);
-    dominators.add(tacticalStats);
+    // ConfigMulti tacticalConfig = ConfigMulti.buildTactical(FinLib.AdjClose, 0, 1);
+    // CumulativeStats tacticalStats = eval(tacticalConfig, "Tactical", nEvalPerturbKnown);
+    // System.out.println(tacticalConfig);
+    // dominators.add(tacticalStats);
 
     if (initializeSingleDefenders) {
       for (PredictorConfig config : GeneratorSMA.knownConfigs) {
@@ -112,9 +114,9 @@ public class SearchConfigs
       System.out.printf("Defender: %s (%s)\n", x, x.config);
     }
 
-    // ConfigGenerator generator = new GeneratorSMA();
+    ConfigGenerator generator = new GeneratorSMA();
     // ConfigGenerator generator = new GeneratorTwoSMA(searchMode);
-    ConfigGenerator generator = new GeneratorThreeSMA(searchMode);
+    // ConfigGenerator generator = new GeneratorThreeSMA(searchMode);
 
     // Search for better configs.
     Set<PredictorConfig> set = new HashSet<>();

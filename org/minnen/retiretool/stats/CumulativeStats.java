@@ -10,6 +10,8 @@ import org.minnen.retiretool.data.WeightedValue;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
 import org.minnen.retiretool.util.FinLib;
 
+import kotlin.NotImplementedError;
+
 /**
  * Holds statistics that characterize the results of an investment strategy over the full investment duration.
  * 
@@ -17,23 +19,24 @@ import org.minnen.retiretool.util.FinLib;
  */
 public class CumulativeStats implements Comparable<CumulativeStats>
 {
-  public static final double epsCAGR           = 0.008;
-  public static final double epsDrawdown       = 0.1;
+  public static final double                epsCAGR           = 0.008;
+  public static final double                epsDrawdown       = 0.1;
 
-  public Sequence            cumulativeReturns;
-  public double              cagr              = 1.0;
-  public double              meanAnnualReturn  = 1.0;
-  public double              devAnnualReturn;
-  public double              totalReturn       = 1.0;
-  public double              drawdown;
-  public double              percentNewHigh;
-  public double              percentDown10;
-  public double              peakReturn;
-  public double              percentUp;
-  public double              percentDown;
-  public double[]            annualPercentiles = new double[5];
-  public double              leverage          = 1.0;
-  public PredictorConfig     config;
+  public Sequence                           cumulativeReturns;
+  public double                             cagr              = 1.0;
+  public double                             meanAnnualReturn  = 1.0;
+  public double                             devAnnualReturn;
+  public double                             totalReturn       = 1.0;
+  public double                             drawdown;
+  public double                             percentNewHigh;
+  public double                             percentDown10;
+  public double                             peakReturn;
+  public double                             percentUp;
+  public double                             percentDown;
+  public double[]                           annualPercentiles = new double[5];
+  public PredictorConfig                    config;
+
+  public static Comparator<CumulativeStats> compBasic;
 
   public static CumulativeStats calc(Sequence cumulativeReturns)
   {
@@ -229,16 +232,35 @@ public class CumulativeStats implements Comparable<CumulativeStats>
    */
   public boolean isSimilar(CumulativeStats other)
   {
+    if (this == other) return true;
     if (Math.abs(cagr - other.cagr) > epsCAGR) return false;
     if (Math.abs(drawdown - other.drawdown) > epsDrawdown) return false;
     // TODO consider other stats? median?
     return true;
   }
 
+  /** @return Comparator that calls CumulativeStats.prefer(). */
+  public static Comparator<CumulativeStats> getComparatorBasic()
+  {
+    if (compBasic == null) {
+      compBasic = new Comparator<CumulativeStats>()
+      {
+        @Override
+        public int compare(CumulativeStats a, CumulativeStats b)
+        {
+          return a.prefer(b);
+        }
+      };
+    }
+    return compBasic;
+  }
+
   /** @return 1 if this is better than `other`, -1 if opposite, else 0 if too similar. */
   public int prefer(CumulativeStats other)
   {
-    // TODO improve comaprison; use complex score?
+    if (this == other) return 0;
+
+    // TODO improve comparison; use complex score?
     final double score1 = this.scoreSimple();
     final double score2 = other.scoreSimple();
     if (score1 > score2 + 0.05) return 1;
@@ -259,22 +281,7 @@ public class CumulativeStats implements Comparable<CumulativeStats>
   @Override
   public int compareTo(CumulativeStats other)
   {
-    assert other != null && other instanceof CumulativeStats;
-    if (this == other) return 0;
-
-    if (cagr > other.cagr) return 1;
-    if (other.cagr > cagr) return -1;
-
-    if (drawdown > other.drawdown) return -1;
-    if (other.drawdown > drawdown) return 1;
-
-    if (annualPercentiles[2] > other.annualPercentiles[2]) return 1;
-    if (other.annualPercentiles[2] > annualPercentiles[2]) return -1;
-
-    if (percentDown10 > other.percentDown10) return -1;
-    if (other.percentDown10 > percentDown10) return 1;
-
-    return 0;
+    return getComparatorBasic().compare(this, other);
   }
 
   public static void filter(List<CumulativeStats> stats)
@@ -318,17 +325,6 @@ public class CumulativeStats implements Comparable<CumulativeStats>
     });
 
     // Sort remaining elements by simple score.
-    stats.sort(new Comparator<CumulativeStats>()
-    {
-      @Override
-      public int compare(CumulativeStats c1, CumulativeStats c2)
-      {
-        double v1 = c1.scoreSimple();
-        double v2 = c2.scoreSimple();
-        if (v1 > v2) return -1;
-        if (v2 > v1) return 1;
-        return 0;
-      }
-    });
+    stats.sort(getComparatorBasic());
   }
 }

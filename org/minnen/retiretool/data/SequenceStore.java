@@ -259,7 +259,7 @@ public class SequenceStore implements Iterable<Sequence>
   {
     for (Sequence seq : seqs) {
       IndexRange range = seq.getIndices(startMs, endMs, EndpointBehavior.Inside);
-      seq.lock(range.iStart, range.iEnd, key);
+      seq.lock(range.first, range.second, key);
     }
   }
 

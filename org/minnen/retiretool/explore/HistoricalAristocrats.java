@@ -121,8 +121,8 @@ public class HistoricalAristocrats
           continue;
         }
         ++nSymbols;
-        double v1 = seq.get(indices.iStart, FinLib.AdjOpen);
-        for (int i = indices.iStart; i <= indices.iEnd; ++i) {
+        double v1 = seq.get(indices.first, FinLib.AdjOpen);
+        for (int i = indices.first; i <= indices.second; ++i) {
           FeatureVec x = seq.get(i);
           int n = days.getOrDefault(x.getTime(), 0);
           days.put(x.getTime(), n + 1);

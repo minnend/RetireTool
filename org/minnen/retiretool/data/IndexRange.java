@@ -1,25 +1,23 @@
 package org.minnen.retiretool.data;
 
-/** Holds a start and end index. */
-public class IndexRange
-{
-  public final int iStart;
-  public final int iEnd;
+import org.minnen.retiretool.util.IntPair;
 
+/** Holds a start and end index. */
+public class IndexRange extends IntPair
+{
   public IndexRange(int iStart, int iEnd)
   {
-    this.iStart = iStart;
-    this.iEnd = iEnd;
+    super(iStart, iEnd);
   }
 
   public int length()
   {
-    return iEnd - iStart + 1;
+    return second - first + 1;
   }
 
   @Override
   public String toString()
   {
-    return String.format("[%d,%d]", iStart, iEnd);
+    return String.format("[%d,%d]", first, second);
   }
 }

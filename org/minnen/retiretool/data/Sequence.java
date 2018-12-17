@@ -237,7 +237,7 @@ public class Sequence implements Iterable<FeatureVec>
     }
 
     IndexRange range = getIndices(startMs, endMs, endpointBehavior);
-    return lockReal(range.iStart, range.iEnd, iPrevEnd, key);
+    return lockReal(range.first, range.second, iPrevEnd, key);
   }
 
   /**
@@ -880,7 +880,7 @@ public class Sequence implements Iterable<FeatureVec>
   public Sequence subseq(long startMs, long endMs, EndpointBehavior endpointBehavior)
   {
     IndexRange range = getIndices(startMs, endMs, endpointBehavior);
-    return subseq(range.iStart, range.length());
+    return subseq(range.first, range.length());
   }
 
   /** @return subsequence that does not extend beyond start/end times. */
