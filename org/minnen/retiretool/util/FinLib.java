@@ -396,31 +396,31 @@ public final class FinLib
   /**
    * Calculate forward returns for all periods with the given duration.
    * 
-   * @param cumulativeReturns sequence of cumulative returns for the investment strategy (monthly data)
+   * @param monthlyReturns sequence of cumulative returns for the investment strategy (monthly data)
    * @param nMonths number of months in the market
    * @return Sequence containing returns for each time period of the given duration; if nMonths < 12 or there is
    *         insufficient data to fill a single period, the values are total returns, else they are CAGRs.
    */
-  public static Sequence calcReturnsForMonths(Sequence cumulativeReturns, int nMonths)
+  public static Sequence calcReturnsForMonths(Sequence monthlyReturns, int nMonths)
   {
-    final int N = cumulativeReturns.size();
-    String name = String.format("%s (%s)", cumulativeReturns.getName(), TimeLib.formatDurationMonths(nMonths));
+    final int N = monthlyReturns.size();
+    String name = String.format("%s (%s)", monthlyReturns.getName(), TimeLib.formatDurationMonths(nMonths));
     Sequence rois = new Sequence(name);
     if (N <= 0) {
       return rois;
     } else if (N < nMonths) { // no full periods so return ROI for the one partial period.
-      double growth = FinLib.getTotalReturn(cumulativeReturns, 0, N - 1);
+      double growth = FinLib.getTotalReturn(monthlyReturns, 0, N - 1);
       double roi = mul2ret(growth);
-      rois.addData(roi, cumulativeReturns.getStartMS());
+      rois.addData(roi, monthlyReturns.getStartMS());
     } else {
       for (int i = 0; i + nMonths <= N; ++i) {
-        double roi = getTotalReturn(cumulativeReturns, i, i + nMonths - 1);
+        double roi = getTotalReturn(monthlyReturns, i, i + nMonths - 1);
         if (nMonths >= 12) {
           roi = getAnnualReturn(roi, nMonths);
         } else {
           roi = mul2ret(roi);
         }
-        rois.addData(roi, cumulativeReturns.getTimeMS(i));
+        rois.addData(roi, monthlyReturns.getTimeMS(i));
       }
       assert rois.size() > 0;
     }

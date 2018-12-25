@@ -30,11 +30,11 @@ public class RiskAdjustedReturn extends FeatureExtractor
   }
 
   @Override
-  public FeatureVec calculate(BrokerInfoAccess brokerAccess, String assetName)
+  public FeatureVec calculate(BrokerInfoAccess brokerAccess, int assetID)
   {
-    double tr = momentum.calculate(brokerAccess, assetName).get(0);
-    double dev = sdev.calculate(brokerAccess, assetName).get(0);
+    double tr = momentum.calculate(brokerAccess, assetID).get(0);
+    double dev = sdev.calculate(brokerAccess, assetID).get(0);
     double rar = tr / (dev + addDev);
-    return new FeatureVec(assetName, 3, rar, tr, dev).setTime(brokerAccess.getTime());
+    return new FeatureVec(brokerAccess.getName(assetID), 3, rar, tr, dev).setTime(brokerAccess.getTime());
   }
 }

@@ -17,19 +17,28 @@ public class GeneratorSMA extends ConfigGenerator
   public static final Pattern     pattern      = Pattern.compile("\\[(\\d+),(\\d+)\\] / \\[(\\d+),(\\d+)\\] m=(\\d+)");
 
   // List of good parameters for single SMA.
-  public static final int[][]     knownParams  = new int[][] { new int[] { 20, 240, 150, 25 },
-      new int[] { 15, 259, 125, 21 }, new int[] { 34, 182, 82, 684 }, new int[] { 5, 184, 44, 353 },
-      new int[] { 9, 176, 167, 1243 }, new int[] { 14, 246, 100, 900 }, new int[] { 21, 212, 143, 213 },
-      new int[] { 3, 205, 145, 438 }, new int[] { 15, 155, 105, 997 }, new int[] { 20, 126, 54, 690 },
-      new int[] { 32, 116, 94, 938 }, new int[] { 22, 124, 74, 904 }, new int[] { 19, 201, 143, 207 },
-      new int[] { 13, 186, 177, 1127 }, new int[] { 19, 147, 92, 885 }, new int[] { 18, 213, 79, 723 }, };
+  // public static final int[][] knownParams = new int[][] { new int[] { 20, 240, 150, 25 },
+  // new int[] { 15, 259, 125, 21 }, new int[] { 34, 182, 82, 684 }, new int[] { 5, 184, 44, 353 },
+  // new int[] { 9, 176, 167, 1243 }, new int[] { 14, 246, 100, 900 }, new int[] { 21, 212, 143, 213 },
+  // new int[] { 3, 205, 145, 438 }, new int[] { 15, 155, 105, 997 }, new int[] { 20, 126, 54, 690 },
+  // new int[] { 32, 116, 94, 938 }, new int[] { 22, 124, 74, 904 }, new int[] { 19, 201, 143, 207 },
+  // new int[] { 13, 186, 177, 1127 }, new int[] { 19, 147, 92, 885 }, new int[] { 18, 213, 79, 723 }, };
+  public static final String[]    knownParams  = new String[] {
+      "[23,0] / [200,152] m=168",
+      "[15,0] / [259,125] m=21",
+      "[45,0] / [131,42] m=247",
+      "[5,0] / [178,50] m=145",
+      "[63,0] / [23,14] m=105",
+      "[67,0] / [34,21] m=9",
+  };
 
   public static final ConfigSMA[] knownConfigs = new ConfigSMA[knownParams.length];
 
   static {
     for (int i = 0; i < knownParams.length; ++i) {
-      int[] p = knownParams[i];
-      knownConfigs[i] = new ConfigSMA(p[0], 0, p[1], p[2], p[3], FinLib.AdjClose, GeneratorSMA.gap);
+      // int[] p = knownParams[i];
+      // knownConfigs[i] = new ConfigSMA(p[0], 0, p[1], p[2], p[3], FinLib.AdjClose, GeneratorSMA.gap);
+      knownConfigs[i] = parse(knownParams[i]);
     }
   }
 

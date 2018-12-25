@@ -12,51 +12,62 @@ import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
-import org.minnen.retiretool.predictor.config.ConfigMulti;
+import org.minnen.retiretool.predictor.config.ConfigConst;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
-import org.minnen.retiretool.stats.CumulativeStats;
+import org.minnen.retiretool.stats.AllStats;
+import org.minnen.retiretool.stats.ComparisonStats;
 import org.minnen.retiretool.tactical.ConfigGenerator.Mode;
-import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.util.Writer;
 
 public class SearchConfigs
 {
-  public static final SequenceStore               store                     = new SequenceStore();
-  public static final int                         nEvalPerturb              = 10;
-  public static final int                         nEvalPerturbKnown         = 50;
-  public static final int                         nMaxSeeds                 = 10000;
-  public static final boolean                     initializeSingleDefenders = false;
-  public static final boolean                     initializeDoubleDefenders = false;
-  public static final boolean                     initializeTripleDefenders = false;
-  public static final Mode                        searchMode                = Mode.EXTEND;
-  public static final String                      saveFilename              = String.format("one-sma-winners-%s.txt",
+  public static final SequenceStore        store                     = new SequenceStore();
+  public static final int                  nEvalPerturb              = 20;
+  public static final int                  nEvalPerturbKnown         = 20;
+  public static final int                  nMaxSeeds                 = 10000;
+  public static final boolean              initializeSingleDefenders = false;
+  public static final boolean              initializeDoubleDefenders = false;
+  public static final boolean              initializeTripleDefenders = false;
+  public static final Mode                 searchMode                = Mode.EXTEND;
+  public static final String               targetNum                 = "two";
+  public static final String               saveFilename              = String.format("%s-sma-winners-%s.txt", targetNum,
       TimeLib.formatTimeSig(TimeLib.getTime()));
-  public static final Comparator<CumulativeStats> comp                      = CumulativeStats.getComparatorBasic();
 
-  private static Simulation                       sim;
+  // public static final Comparator<AllStats> comp = AllStats
+  // .getCompare(CumulativeStats.getComparatorBasic());
+  // Comparator<AllStats> compCumDom = AllStats
+  // .getCompare(CumulativeStats.getComparatorDominates());
+
+  public static final Comparator<AllStats> comp                      = AllStats
+      .getCompare(ComparisonStats.getComparatorBasic(), "Baseline");
+
+  public static final Comparator<AllStats> compCumDom                = AllStats
+      .getCompare(ComparisonStats.getComparatorDominates(), "Baseline");
+
+  private static Simulation                sim;
+  private static Sequence                  baselineMonthlyReturns, baselineDailyReturns;
 
   /** Convenience method to run eval with default number of eval perturbations. */
-  private static CumulativeStats eval(PredictorConfig config, String name)
+  private static AllStats eval(PredictorConfig config, String name)
   {
     return eval(config, name, nEvalPerturb);
   }
 
   /** Eval stats are *worst* results for the given number of perturbations. */
-  private static CumulativeStats eval(PredictorConfig config, String name, int nPerturb)
+  private static AllStats eval(PredictorConfig config, String name, int nPerturb)
   {
-    return TacticLib.eval(config, name, nPerturb, sim, comp);
+    return TacticLib.eval(config, name, nPerturb, sim, comp, baselineMonthlyReturns);
   }
 
   /** Simple hill-climbing optimizer based on testing random perturbations. */
-  private static CumulativeStats optimize(PredictorConfig baseConfig, CumulativeStats baseStats,
-      ConfigGenerator generator)
+  private static AllStats optimize(PredictorConfig baseConfig, AllStats baseStats, ConfigGenerator generator)
   {
     int nTries = 0;
     while (nTries < 10) {
       PredictorConfig config = generator.genCandidate(baseConfig);
-      CumulativeStats stats = eval(config, "Improved");
-      if (stats.prefer(baseStats) > 0) {
+      AllStats stats = eval(config, "Improved");
+      if (comp.compare(stats, baseStats) > 0) {
         // System.out.printf(" %s (%s)\n", stats, config);
         baseConfig = config;
         baseStats = stats;
@@ -78,45 +89,53 @@ public class SearchConfigs
     sim = new Simulation(store, guideSeq);
     sim.setCheckBusinessDays(false); // assume data is correct wrt business days (faster but slightly dangerous)
 
-    // Set up "defenders" based on known-good configs.
-    List<CumulativeStats> dominators = new ArrayList<>();
+    ConfigConst baselineConfig = new ConfigConst(stock.getName());
+    AllStats baselineStats = TacticLib.eval(baselineConfig, "Baseline", sim);
+    baselineDailyReturns = baselineStats.cumulative.dailyReturns;
+    baselineMonthlyReturns = baselineStats.cumulative.monthlyReturns;
+    System.out.printf("%s: %s\n", baselineDailyReturns.getName(), baselineStats);
 
-    // TODO this vs. what's in the dashboard?
-    // ConfigMulti tacticalConfig = ConfigMulti.buildTactical(FinLib.AdjClose, 0, 1);
-    // CumulativeStats tacticalStats = eval(tacticalConfig, "Tactical", nEvalPerturbKnown);
-    // System.out.println(tacticalConfig);
-    // dominators.add(tacticalStats);
+    // Set up "defenders" based on known-good configs.
+    List<AllStats> dominators = new ArrayList<>();
 
     if (initializeSingleDefenders) {
       for (PredictorConfig config : GeneratorSMA.knownConfigs) {
-        CumulativeStats stats = eval(config, "Known", nEvalPerturbKnown);
+        AllStats stats = eval(config, "Known", nEvalPerturbKnown);
         System.out.printf("%s (%s)\n", stats, config);
         dominators.add(stats);
       }
     }
     if (initializeDoubleDefenders) {
       for (PredictorConfig config : GeneratorTwoSMA.knownConfigs) {
-        CumulativeStats stats = eval(config, "Known", nEvalPerturbKnown);
+        AllStats stats = eval(config, "Known", nEvalPerturbKnown);
         System.out.printf("%s (%s)\n", stats, config);
         dominators.add(stats);
       }
     }
     if (initializeTripleDefenders) {
       for (PredictorConfig config : GeneratorThreeSMA.knownConfigs) {
-        CumulativeStats stats = eval(config, "Known", nEvalPerturbKnown);
+        AllStats stats = eval(config, "Known", nEvalPerturbKnown);
         System.out.printf("%s (%s)\n", stats, config);
         dominators.add(stats);
       }
     }
-    CumulativeStats.filter(dominators);
+
+    AllStats.filter(dominators, compCumDom);
     System.out.printf("Initial defenders: %d\n", dominators.size());
-    for (CumulativeStats x : dominators) {
+    for (AllStats x : dominators) {
       System.out.printf("Defender: %s (%s)\n", x, x.config);
     }
 
-    ConfigGenerator generator = new GeneratorSMA();
-    // ConfigGenerator generator = new GeneratorTwoSMA(searchMode);
-    // ConfigGenerator generator = new GeneratorThreeSMA(searchMode);
+    ConfigGenerator generator;
+    if (targetNum.equals("one")) {
+      generator = new GeneratorSMA();
+    } else if (targetNum.equals("two")) {
+      generator = new GeneratorTwoSMA(searchMode);
+    } else if (targetNum.equals("three")) {
+      generator = new GeneratorThreeSMA(searchMode);
+    } else {
+      throw new RuntimeException("Invalid target: " + targetNum);
+    }
 
     // Search for better configs.
     Set<PredictorConfig> set = new HashSet<>();
@@ -130,15 +149,16 @@ public class SearchConfigs
         set.add(config);
         ++nSeedsFound;
 
-        CumulativeStats stats = eval(config, "random");
+        AllStats stats = eval(config, "random");
         System.out.printf("%d: %s (%s)\n", nSeedsFound, stats, config);
-        CumulativeStats optimized = optimize(config, stats, generator);
-        if (!optimized.isDominated(dominators)) {
+        AllStats optimized = optimize(config, stats, generator);
+        // System.out.printf(" Optimized: %s\n", optimized);
+        if (!optimized.isBeaten(dominators, compCumDom)) {
           System.out.printf("New dominator: %s (%s) *******\n", optimized, optimized.config);
           writer.write("New: %s  %s\n", optimized, optimized.config);
           dominators.add(optimized);
-          CumulativeStats.filter(dominators);
-          for (CumulativeStats x : dominators) {
+          AllStats.filter(dominators, compCumDom);
+          for (AllStats x : dominators) {
             System.out.printf(" Defender: %s (%s)\n", x, x.config);
             writer.write(" Defender: %s  %s\n", x, x.config);
           }

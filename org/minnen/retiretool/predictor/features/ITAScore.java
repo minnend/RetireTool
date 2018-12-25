@@ -23,13 +23,13 @@ public class ITAScore extends FeatureExtractor
   }
 
   @Override
-  public FeatureVec calculate(BrokerInfoAccess brokerAccess, String assetName)
+  public FeatureVec calculate(BrokerInfoAccess brokerAccess, int assetID)
   {
-    double m60 = mom60.calculate(brokerAccess, assetName).get(0);
-    double m120 = mom120.calculate(brokerAccess, assetName).get(0);
-    double m240 = mom240.calculate(brokerAccess, assetName).get(0);
-    double dev = sdev.calculate(brokerAccess, assetName).get(0);
+    double m60 = mom60.calculate(brokerAccess, assetID).get(0);
+    double m120 = mom120.calculate(brokerAccess, assetID).get(0);
+    double m240 = mom240.calculate(brokerAccess, assetID).get(0);
+    double dev = sdev.calculate(brokerAccess, assetID).get(0);
     double score = 0.7 * m60 + 0.5 * m120 + 0.1 * m240 - 0.3 * dev;
-    return new FeatureVec(assetName, 1, score).setTime(brokerAccess.getTime());
+    return new FeatureVec(brokerAccess.getName(assetID), 1, score).setTime(brokerAccess.getTime());
   }
 }

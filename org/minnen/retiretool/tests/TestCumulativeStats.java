@@ -26,7 +26,7 @@ public class TestCumulativeStats
     }
 
     CumulativeStats stats = CumulativeStats.calc(seq);
-    assertEquals(seq, stats.cumulativeReturns);
+    assertEquals(seq, stats.dailyReturns);
     assertEquals(6.0640215, stats.cagr, 1e-6);
     assertEquals(1.0, stats.drawdown, 1e-6);
     assertEquals(11.566618, stats.totalReturn, 1e-6);

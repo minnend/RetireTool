@@ -43,8 +43,7 @@ public class Dashboard
 {
   public final static SequenceStore     store          = new SequenceStore();
 
-  /** Dimension to use in the price sequence for SMA predictions. */
-  public static int                     iPriceSMA      = 0;
+  public static int                     iPrice         = FinLib.AdjClose;
 
   public static final Slippage          slippage       = Slippage.None;
   public static final LinearFunc        PriceSDev      = LinearFunc.Zero;
@@ -100,7 +99,7 @@ public class Dashboard
   // public static final int[][] allParams = new int[][] { { 15, 0, 259, 125, 21 },
   // { 5, 0, 178, 50, 145 } };
 
-  // regret[5,10,20] = 43, 31, 0
+  // regret[5,10,20] = 34, 31, 0
   public static final int[][]           allParams      = new int[][] { { 15, 0, 259, 125, 21 }, { 5, 0, 178, 50, 145 },
       { 63, 0, 23, 14, 105 } };
 
@@ -114,7 +113,7 @@ public class Dashboard
     for (int i = 0; i < allParams.length; ++i) {
       int[] p = allParams[i];
       assert p.length == 5;
-      singleConfigs[i] = new ConfigSMA(p[0], p[1], p[2], p[3], p[4], FinLib.AdjClose, gap);
+      singleConfigs[i] = new ConfigSMA(p[0], p[1], p[2], p[3], p[4], iPrice, gap);
       // new ConfigSMA(20, 0, 240, 150, 25, FinLib.Close, gap), new ConfigSMA(25, 0, 155, 125, 75, FinLib.Close, gap),
       // new ConfigSMA(5, 0, 165, 5, 50, FinLib.Close, gap) };
     }
@@ -340,7 +339,7 @@ public class Dashboard
         writer.write(String.format("<td>%.2f</td>\n", stats.cagr));
         writer.write(String.format("<td>%.2f</td>\n", stats.devAnnualReturn));
         writer.write(String.format("<td>%.2f</td>\n", stats.drawdown));
-        double sharpe = FinLib.sharpeDaily(stats.cumulativeReturns, null);
+        double sharpe = FinLib.sharpeDaily(stats.dailyReturns, null);
         writer.write(String.format("<td>%.2f</td>\n", sharpe));
         writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[2]));
         // Regret is other strategy's win percent.
@@ -560,8 +559,8 @@ public class Dashboard
       // final long startMs = TimeLib.toMs(2014, Month.JANUARY, 1);
       final long startMs = stock.getEndMS() - 365 * yearsOfHistory * TimeLib.MS_IN_DAY;
       final long endMs = TimeLib.TIME_END;
-      Sequence trigger = FinLib.sma(stock, params[0], params[1], FinLib.Close).subseq(startMs, endMs);
-      Sequence base = FinLib.sma(stock, params[2], params[3], FinLib.Close).subseq(startMs, endMs);
+      Sequence trigger = FinLib.sma(stock, params[0], params[1], iPrice).subseq(startMs, endMs);
+      Sequence base = FinLib.sma(stock, params[2], params[3], iPrice).subseq(startMs, endMs);
       Sequence baseLow = base.dup()._mul(1.0 - params[4] / 10000.0).setName("BaseLow");
       Sequence baseHigh = base.dup()._mul(1.0 + params[4] / 10000.0).setName("BaseHigh");
       Sequence raw = stock.subseq(startMs, endMs);

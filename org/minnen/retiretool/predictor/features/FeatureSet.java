@@ -6,7 +6,7 @@ import java.util.List;
 import org.minnen.retiretool.broker.BrokerInfoAccess;
 import org.minnen.retiretool.data.FeatureVec;
 
-/** A FeatureExtractor made up of a list of other FeatureExtractors. */ 
+/** A FeatureExtractor made up of a list of other FeatureExtractors. */
 public class FeatureSet extends FeatureExtractor
 {
   private final List<FeatureExtractor> extractors = new ArrayList<>();
@@ -44,14 +44,14 @@ public class FeatureSet extends FeatureExtractor
   }
 
   @Override
-  public FeatureVec calculate(BrokerInfoAccess brokerAccess, String assetName)
+  public FeatureVec calculate(BrokerInfoAccess brokerAccess, int assetID)
   {
-    FeatureVec features = new FeatureVec(assetName, size());
+    FeatureVec features = new FeatureVec(brokerAccess.getName(assetID), size());
     features.setTime(brokerAccess.getTime());
     int iDim = 0;
     for (int i = 0; i < extractors.size(); ++i) {
       FeatureExtractor fe = extractors.get(i);
-      FeatureVec fv = fe.calculate(brokerAccess, assetName);
+      FeatureVec fv = fe.calculate(brokerAccess, assetID);
       assert fv.getNumDims() == fe.size();
       iDim = features.set(iDim, fv);
     }

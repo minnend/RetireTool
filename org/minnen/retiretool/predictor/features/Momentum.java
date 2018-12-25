@@ -37,9 +37,9 @@ public class Momentum extends FeatureExtractor
   }
 
   @Override
-  public FeatureVec calculate(BrokerInfoAccess brokerAccess, String assetName)
+  public FeatureVec calculate(BrokerInfoAccess brokerAccess, int assetID)
   {
-    Sequence seq = brokerAccess.getSeq(assetName);
+    Sequence seq = brokerAccess.getSeq(assetID);
 
     // Base momentum is the ratio of the trigger average over the base average.
     double now = seq.average(-nTriggerA, -nTriggerB, iPrice);
@@ -50,7 +50,7 @@ public class Momentum extends FeatureExtractor
     if (compoundPeriod != CompoundPeriod.Total) {
       int nBusinessDays = ((nBaseA + nBaseB + 1) - (nTriggerA + nTriggerB)) / 2;
       double nWeeks = nBusinessDays / 5.0;
-      // System.out.printf("%s  nbd=%d  nw=%.2f\n", this, nBusinessDays, nWeeks);
+      // System.out.printf("%s nbd=%d nw=%.2f\n", this, nBusinessDays, nWeeks);
       if (compoundPeriod == CompoundPeriod.Annually) {
         double nYears = nWeeks / 52.0;
         momentum = Math.pow(momentum, 1.0 / nYears);
@@ -67,6 +67,6 @@ public class Momentum extends FeatureExtractor
       momentum = FinLib.mul2ret(momentum);
     }
 
-    return new FeatureVec(assetName, 1, momentum).setTime(brokerAccess.getTime());
+    return new FeatureVec(seq.getName(), 1, momentum).setTime(brokerAccess.getTime());
   }
 }

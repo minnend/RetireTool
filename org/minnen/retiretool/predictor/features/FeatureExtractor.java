@@ -13,7 +13,12 @@ public abstract class FeatureExtractor
     this.name = name;
   }
 
-  public abstract FeatureVec calculate(BrokerInfoAccess brokerAccess, String assetName);
+  public FeatureVec calculate(BrokerInfoAccess brokerAccess, String assetName)
+  {
+    return calculate(brokerAccess, brokerAccess.getID(assetName));
+  }
+
+  public abstract FeatureVec calculate(BrokerInfoAccess brokerAccess, int assetID);
 
   /** @return number of features calculated by this extractor. */
   public int size()

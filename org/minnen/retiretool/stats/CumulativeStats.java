@@ -1,16 +1,12 @@
 package org.minnen.retiretool.stats;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Predicate;
 
 import org.minnen.retiretool.data.Sequence;
-import org.minnen.retiretool.data.WeightedValue;
-import org.minnen.retiretool.predictor.config.PredictorConfig;
 import org.minnen.retiretool.util.FinLib;
-
-import kotlin.NotImplementedError;
+import org.minnen.retiretool.util.TimeLib;
 
 /**
  * Holds statistics that characterize the results of an investment strategy over the full investment duration.
@@ -19,24 +15,25 @@ import kotlin.NotImplementedError;
  */
 public class CumulativeStats implements Comparable<CumulativeStats>
 {
-  public static final double                epsCAGR           = 0.008;
-  public static final double                epsDrawdown       = 0.1;
+  public static final double                 epsCAGR           = 0.008;
+  public static final double                 epsDrawdown       = 0.1;
 
-  public Sequence                           cumulativeReturns;
-  public double                             cagr              = 1.0;
-  public double                             meanAnnualReturn  = 1.0;
-  public double                             devAnnualReturn;
-  public double                             totalReturn       = 1.0;
-  public double                             drawdown;
-  public double                             percentNewHigh;
-  public double                             percentDown10;
-  public double                             peakReturn;
-  public double                             percentUp;
-  public double                             percentDown;
-  public double[]                           annualPercentiles = new double[5];
-  public PredictorConfig                    config;
+  public Sequence                            dailyReturns;
+  public Sequence                            monthlyReturns;
+  public double                              cagr              = 1.0;
+  public double                              meanAnnualReturn  = 1.0;
+  public double                              devAnnualReturn;
+  public double                              totalReturn       = 1.0;
+  public double                              drawdown;
+  public double                              percentNewHigh;
+  public double                              percentDown10;
+  public double                              peakReturn;
+  public double                              percentUp;
+  public double                              percentDown;
+  public double[]                            annualPercentiles = new double[5];
 
-  public static Comparator<CumulativeStats> compBasic;
+  private static Comparator<CumulativeStats> compBasic;
+  private static Comparator<CumulativeStats> compDominates;
 
   public static CumulativeStats calc(Sequence cumulativeReturns)
   {
@@ -45,27 +42,40 @@ public class CumulativeStats implements Comparable<CumulativeStats>
 
   public static CumulativeStats calc(Sequence cumulativeReturns, boolean calcDurationalStats)
   {
+    if (TimeLib.isMonthly(cumulativeReturns)) {
+      return calc(null, cumulativeReturns, calcDurationalStats);
+    } else {
+      return calc(cumulativeReturns, null, calcDurationalStats);
+    }
+  }
+
+  public static CumulativeStats calc(Sequence dailyReturns, Sequence monthlyReturns, boolean calcDurationalStats)
+  {
     CumulativeStats stats = new CumulativeStats();
-    stats.cumulativeReturns = cumulativeReturns;
+    stats.dailyReturns = dailyReturns;
+    stats.monthlyReturns = monthlyReturns;
 
-    if (cumulativeReturns != null && !cumulativeReturns.isEmpty()) {
-      double nMonths = cumulativeReturns.getLengthMonths();
-      stats.totalReturn = FinLib.getTotalReturn(cumulativeReturns);
-      stats.cagr = FinLib.getAnnualReturn(stats.totalReturn, nMonths);
-
-      if (calcDurationalStats) {
-        DurationalStats rstats = DurationalStats.calc(cumulativeReturns, 12);
-        stats.meanAnnualReturn = rstats.mean;
-        stats.devAnnualReturn = rstats.sdev;
-
-        stats.annualPercentiles[0] = rstats.min;
-        stats.annualPercentiles[1] = rstats.percentile25;
-        stats.annualPercentiles[2] = rstats.median;
-        stats.annualPercentiles[3] = rstats.percentile75;
-        stats.annualPercentiles[4] = rstats.max;
+    if (dailyReturns != null && !dailyReturns.isEmpty()) {
+      if (monthlyReturns == null) {
+        monthlyReturns = FinLib.dailyToMonthly(dailyReturns);
       }
 
+      double nMonths = dailyReturns.getLengthMonths();
+      stats.totalReturn = FinLib.getTotalReturn(dailyReturns);
+      stats.cagr = FinLib.getAnnualReturn(stats.totalReturn, nMonths);
       stats.calcDrawdownStats();
+    }
+
+    if (calcDurationalStats && monthlyReturns != null && !monthlyReturns.isEmpty()) {
+      DurationalStats rstats = DurationalStats.calc(monthlyReturns, 12);
+      stats.meanAnnualReturn = rstats.mean;
+      stats.devAnnualReturn = rstats.sdev;
+
+      stats.annualPercentiles[0] = rstats.min;
+      stats.annualPercentiles[1] = rstats.percentile25;
+      stats.annualPercentiles[2] = rstats.median;
+      stats.annualPercentiles[3] = rstats.percentile75;
+      stats.annualPercentiles[4] = rstats.max;
     }
 
     return stats;
@@ -73,46 +83,46 @@ public class CumulativeStats implements Comparable<CumulativeStats>
 
   private void calcDrawdownStats()
   {
-    final int N = cumulativeReturns.size();
+    final int N = dailyReturns.size();
     final double eps = 1e-5;
     peakReturn = 1.0;
     drawdown = 0.0;
 
-    if (N > 1) {
-      final double firstValue = cumulativeReturns.getFirst(0);
-      double prevValue = 1.0; // normalized first value
-      int nNewHigh = 0;
-      int nDown10 = 0;
-      int numUp = 0;
-      int numDown = 0;
-      for (int i = 1; i < N; ++i) {
-        double value = cumulativeReturns.get(i, 0) / firstValue;
-        double change = value / prevValue - 1.0;
-        prevValue = value;
-        if (change > eps) {
-          ++numUp;
-        } else if (change < -eps) {
-          ++numDown;
-        }
-        if (value < peakReturn) {
-          double currentDrawdown = 100.0 * (peakReturn - value) / peakReturn;
-          if (currentDrawdown > drawdown) {
-            drawdown = currentDrawdown;
-          }
-          if (currentDrawdown >= 10.0) {
-            ++nDown10;
-          }
-        } else if (value > peakReturn) {
-          peakReturn = value;
-          ++nNewHigh;
-        }
-      }
+    if (N <= 1) return;
 
-      percentNewHigh = 100.0 * nNewHigh / (N - 1);
-      percentDown10 = 100.0 * nDown10 / (N - 1);
-      percentUp = 100.0 * numUp / (N - 1);
-      percentDown = 100.0 * numDown / (N - 1);
+    final double firstValue = dailyReturns.getFirst(0);
+    double prevValue = 1.0; // normalized first value
+    int nNewHigh = 0;
+    int nDown10 = 0;
+    int numUp = 0;
+    int numDown = 0;
+    for (int i = 1; i < N; ++i) {
+      double value = dailyReturns.get(i, 0) / firstValue;
+      double change = value / prevValue - 1.0;
+      prevValue = value;
+      if (change > eps) {
+        ++numUp;
+      } else if (change < -eps) {
+        ++numDown;
+      }
+      if (value < peakReturn) {
+        double currentDrawdown = 100.0 * (peakReturn - value) / peakReturn;
+        if (currentDrawdown > drawdown) {
+          drawdown = currentDrawdown;
+        }
+        if (currentDrawdown >= 10.0) {
+          ++nDown10;
+        }
+      } else if (value > peakReturn) {
+        peakReturn = value;
+        ++nNewHigh;
+      }
     }
+
+    percentNewHigh = 100.0 * nNewHigh / (N - 1);
+    percentDown10 = 100.0 * nDown10 / (N - 1);
+    percentUp = 100.0 * numUp / (N - 1);
+    percentDown = 100.0 * numDown / (N - 1);
   }
 
   public double scoreSimple()
@@ -120,31 +130,9 @@ public class CumulativeStats implements Comparable<CumulativeStats>
     return cagr - drawdown / 10.0; // TODO improve composite score
   }
 
-  public double scoreComplex()
-  {
-    List<WeightedValue> terms = new ArrayList<WeightedValue>();
-    double multiYearReturn = FinLib.mul2ret(Math.pow(FinLib.ret2mul(cagr), 10));
-    terms.add(new WeightedValue(multiYearReturn, 1000));
-    terms.add(new WeightedValue(devAnnualReturn, -10));
-    terms.add(new WeightedValue(drawdown + 10.0, -1000));
-    terms.add(new WeightedValue(percentDown10, -10));
-    terms.add(new WeightedValue(percentNewHigh, 5));
-    terms.add(new WeightedValue(annualPercentiles[0], 5));
-    terms.add(new WeightedValue(annualPercentiles[1], 10));
-    terms.add(new WeightedValue(annualPercentiles[2], 20));
-    terms.add(new WeightedValue(annualPercentiles[3], 10));
-    terms.add(new WeightedValue(annualPercentiles[4], 5));
-
-    double score = 0.0;
-    for (WeightedValue wv : terms) {
-      score += wv.value * wv.weight;
-    }
-    return score / 10000.0;
-  }
-
   public String name()
   {
-    return cumulativeReturns == null ? "Unknown" : cumulativeReturns.getName();
+    return dailyReturns == null ? "Unknown" : dailyReturns.getName();
   }
 
   @Override
@@ -222,6 +210,7 @@ public class CumulativeStats implements Comparable<CumulativeStats>
     }
 
     // Nothing dominates directly, but we still reject challenger unless it improves best CAGR or drawdown.
+    // TODO is this extra criteria correct / appropriate here?
     return (this.cagr < bestCagr + epsCAGR && this.drawdown > bestDrawdown - epsDrawdown);
   }
 
@@ -255,12 +244,31 @@ public class CumulativeStats implements Comparable<CumulativeStats>
     return compBasic;
   }
 
+  /** @return Comparator based on domination. */
+  public static Comparator<CumulativeStats> getComparatorDominates()
+  {
+    if (compDominates == null) {
+      compDominates = new Comparator<CumulativeStats>()
+      {
+        @Override
+        public int compare(CumulativeStats a, CumulativeStats b)
+        {
+          int decision = a.dominates(b);
+          if (decision == 0 && a.isSimilar(b)) {
+            decision = a.prefer(b);
+          }
+          return decision;
+        }
+      };
+    }
+    return compDominates;
+  }
+
   /** @return 1 if this is better than `other`, -1 if opposite, else 0 if too similar. */
   public int prefer(CumulativeStats other)
   {
     if (this == other) return 0;
 
-    // TODO improve comparison; use complex score?
     final double score1 = this.scoreSimple();
     final double score2 = other.scoreSimple();
     if (score1 > score2 + 0.05) return 1;
@@ -287,30 +295,23 @@ public class CumulativeStats implements Comparable<CumulativeStats>
   public static void filter(List<CumulativeStats> stats)
   {
     final int N = stats.size();
+    Comparator<CumulativeStats> filter = getComparatorDominates();
 
     // Compare all pairs and set dominated (or duplicate) stats to null.
     for (int i = 0; i < N; ++i) {
       CumulativeStats stats1 = stats.get(i);
-      if (stats1 == null) {
-        continue;
-      }
+      if (stats1 == null) continue;
       for (int j = i + 1; j < N; ++j) {
         CumulativeStats stats2 = stats.get(j);
-        if (stats2 == null) {
-          continue;
-        }
+        if (stats2 == null) continue;
 
-        if (stats1.dominates(stats2) > 0 || stats1.isSimilar(stats2)) {
+        final int decision = filter.compare(stats1, stats2);
+        if (decision > 0) {
           stats.set(j, null);
-          continue;
-        }
-
-        if (stats2.dominates(stats1) > 0) {
+        } else if (decision < 0) {
           stats.set(i, null);
           break;
         }
-
-        // TODO check if stats are very similar and pick one to reject.
       }
     }
 

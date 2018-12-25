@@ -116,4 +116,30 @@ public class ConfigMulti extends PredictorConfig
         new ConfigSMA(10, 0, 220, 0, 200, iPrice, gap, iPredictIn, iPredictOut), };
     return new ConfigMulti(defaultDecision, contraryCodes, tacticalConfigs);
   }
+
+  @Override
+  public int hashCode()
+  {
+    final int prime = 31;
+    int result = 1;
+    for (int i = 0; i < configs.length; ++i) {
+      result = prime * result + configs[i].hashCode();
+    }
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj)
+  {
+    if (this == obj) return true;
+    if (obj == null) return false;
+    if (getClass() != obj.getClass()) return false;
+    ConfigMulti other = (ConfigMulti) obj;
+    if (configs.length != other.configs.length) return false;
+    for (int i = 0; i < configs.length; ++i) {
+      if (!configs[i].equals(other.configs[i])) return false;
+    }
+    return true;
+  }
+
 }

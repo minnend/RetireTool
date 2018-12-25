@@ -185,7 +185,6 @@ public class SequenceStore implements Iterable<Sequence>
 
   public int getIndex(String name)
   {
-    // name = aliasMap.getOrDefault(name, name);
     int index = nameToIndex.getOrDefault(name, -1);
     if (index < 0) {
       String s = FinLib.getBaseName(name);

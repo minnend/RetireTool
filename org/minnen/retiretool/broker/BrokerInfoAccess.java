@@ -28,27 +28,16 @@ public class BrokerInfoAccess
     return broker.getTimeInfo();
   }
 
-  public long getPrice(String name)
-  {
-    return broker.getPrice(name, getTime());
-  }
-
-  public long getPrice(String name, long time)
-  {
-    assert time <= getTime();
-    return broker.getPrice(name, time);
-  }
-
-  public boolean hasSeq(String name)
-  {
-    SequenceStore store = broker.store;
-    return store.hasName(name);
-  }
-
   public int getID(String name)
   {
     SequenceStore store = broker.store;
     return store.getIndex(name);
+  }
+
+  /** @return name of the sequence with the given ID. */
+  public String getName(int id)
+  {
+    return broker.store.tryGet(id).getName();
   }
 
   public Sequence getSeq(String name)
