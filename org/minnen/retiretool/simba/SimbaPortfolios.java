@@ -257,18 +257,19 @@ public class SimbaPortfolios
   /** @return index of first non-null return sequence. */
   private static int getFirstReturnIndex()
   {
+    // TODO cache result or simplify data by dropping unused symbols.
     for (int i = 0; i < returnSeqs.length; ++i) {
       if (returnSeqs[i] != null) return i;
     }
     return -1;
   }
 
+  /** @return sequence of returns (as multiplier) per year for the given portfolio. */
   private static Sequence runPortfolio(DiscreteDistribution targetAllocation)
   {
     int nYears = returnSeqs[getFirstReturnIndex()].size();
     Sequence returns = new Sequence(targetAllocation.toStringWithNames(nSigDig));
     returns.setMeta("portfolio", targetAllocation);
-    // TODO allow minimum year to avoid gold weirdness in early 70s.
     for (int iYear = 0; iYear < nYears; ++iYear) {
       double r = returnForYear(iYear, targetAllocation);
       returns.addData(FinLib.mul2ret(r), index2ms(iYear));
@@ -295,6 +296,7 @@ public class SimbaPortfolios
     return true;
   }
 
+  /** @return DiscreteDistribution object representing the given `weights`. */
   private static DiscreteDistribution buildDistribution(int[] weights)
   {
     assert weights.length == symbols.length;
@@ -383,18 +385,24 @@ public class SimbaPortfolios
     for (int i = 0; i < domdir.length; ++i) {
       if (Math.abs(domdir[i]) < 0.1) continue; // skip this feature
       double v = x.get(i) - y.get(i);
-      if (domdir[i] > 0) {
+      if (domdir[i] > 0) { // bigger is better
         if (v < -threshold[i]) ++nLoss;
-        else if (v < threshold[i]) {
+        else if (v <= threshold[i]) { // within threshold range => tie
           if (v >= 0) ++nTiePlus;
           else++nTieMinus;
-        } else++nWin;
-      } else {
+        } else {
+          assert v > threshold[i];
+          ++nWin;
+        }
+      } else { // smaller is better
         if (v > threshold[i]) ++nLoss;
-        else if (v > -threshold[i]) {
+        else if (v >= -threshold[i]) {
           if (v <= 0) ++nTiePlus;
           else++nTieMinus;
-        } else++nWin;
+        } else {
+          assert v < -threshold[i];
+          ++nWin;
+        }
       }
     }
     return nLoss == 0 && nWin > 0 && nTiePlus >= nTieMinus;
@@ -417,37 +425,6 @@ public class SimbaPortfolios
     return seq;
   }
 
-  private static void findWinners(List<Sequence> durationReturns, double diffMargin)
-  {
-    int nPortfolios = durationReturns.size();
-    int[] wins = new int[nPortfolios];
-    int nYears = durationReturns.get(0).size();
-    System.out.printf("Start Years: %d\n", nYears);
-    for (int iYear = 0; iYear < nYears; ++iYear) {
-      double[] returns = new double[nPortfolios];
-      for (int i = 0; i < nPortfolios; ++i) {
-        returns[i] = durationReturns.get(i).get(iYear, 0);
-      }
-      double rmax = returns[Library.argmax(returns)];
-      for (int i = 0; i < nPortfolios; ++i) {
-        if (returns[i] >= rmax - diffMargin) ++wins[i];
-      }
-    }
-
-    int nWithWins = 0;
-    for (int i = 0; i < nPortfolios; ++i) {
-      if (wins[i] > 0) ++nWithWins;
-    }
-    System.out.printf("Portfolios with wins: %d\n", nWithWins);
-
-    int[] ii = Library.sort(wins, false);
-    for (int i = 0; i < wins.length && wins[i] > 0; ++i) {
-      Sequence returns = durationReturns.get(ii[i]);
-      DiscreteDistribution dist = (DiscreteDistribution) returns.getMeta("portfolio");
-      System.out.printf("%d: %d  %s\n", i, wins[i], dist.toStringWithNames(nSigDig));
-    }
-  }
-
   private static void savePortfolios(File file, Sequence portfolioStats) throws IOException
   {
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
@@ -457,6 +434,7 @@ public class SimbaPortfolios
     }
   }
 
+  /** Simulate the given portfolio and calculate metrics. */
   private static FeatureVec getStats(DiscreteDistribution dist)
   {
     String name = dist.toStringWithNames(nSigDig);
@@ -484,8 +462,6 @@ public class SimbaPortfolios
     boolean[] avoid = buildUniverseMask(universe);
     // TODO setup scan at top of class (create config object?)
     scanDistributions(3, 6, 10, 30, 10, avoid, portfolios);
-    // scanDistributions(3, 5, 10, 40, 10, avoid, portfolios);
-    // scanDistributionsEW(1, 8, avoid, portfolios);
     System.out.printf("Portfolios: %d\n", portfolios.size());
 
     System.out.println("Calculate Returns...");
@@ -497,9 +473,6 @@ public class SimbaPortfolios
       if (i % 100000 == 0 && i > 0) System.out.printf("%d  (%.1f%%)\n", i, 100.0 * (i + 1) / portfolios.size());
     }
     System.out.printf("Time: %s  (%d)\n", TimeLib.formatDuration(TimeLib.getTime() - start), portfolios.size());
-
-    // findWinners(new ArrayList<>(portfolioLongReturns), 1.0);
-    // System.exit(0);
 
     int[] indices = new int[] { 0, 4, 3, 7, 5, 1 };
     String sPeriodLength = String.format("%d-year Period", nLongYears);
@@ -800,7 +773,6 @@ public class SimbaPortfolios
     }
 
     prepareUniverse();
-
     generate();
     // filterPortfolios(new File(outputDir, "simba-filtered-all.txt"));
   }
