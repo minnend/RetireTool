@@ -1468,7 +1468,7 @@ public final class FinLib
     // Infer time one step before `returnSeq` starts.
     long t0 = returnSeq.getStartMS();
     long t1 = returnSeq.getTimeMS(1);
-    seq.addData(balance, t0 - (t1 - t0));
+    seq.addData(balance, t0 - (t1 - t0)); // TODO detect and force time to last day of month / year?
     for (FeatureVec fv : returnSeq) {
       balance *= ret2mul(fv.get(0));
       seq.addData(new FeatureVec(1, balance), fv.getTime());

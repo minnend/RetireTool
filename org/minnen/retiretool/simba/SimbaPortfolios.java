@@ -41,32 +41,38 @@ import org.minnen.retiretool.viz.ChartConfig;
  */
 public class SimbaPortfolios
 {
-  public static final int                  nLongYears          = 10;
-  public static final boolean              bAdjustForInflation = false;
+  public static final int                  nLongYears              = 10;
+  public static final boolean              bAdjustForInflation     = false;
 
-  public static final boolean              bPrintStartYearInfo = false;
-  public static final int                  nSigDig             = 0;
-  public static final Map<String, Integer> stat2index          = new HashMap<>();
-  public static final String[]             stats;
+  public static final boolean              bPrintStartYearInfo     = false;
+  public static final boolean              bSaveChartAllPortfolios = false;
+  public static final int                  nSigDig                 = 0;
 
-  public static final Map<String, Integer> symbol2index        = new HashMap<>();
-  public static String[]                   symbols;                              // VTSMX, VIVAX, etc.
-  public static String[]                   descriptions;                         // TSM, LCV, etc.
-  public static Sequence[]                 returnSeqs;                           // one per symbol
+  public static final Map<String, Integer> stat2index;
+  public static final String[]             statNames;
 
-  public static final String[]             universe;                             // list of symbols to explore
-  public static final Map<String, Integer> symbolCap;                            // max percentage for each symbol
-  public static final List<Set<String>>    requiredSets;                         // must use one symbol in each set
+  public static final Map<String, Integer> symbol2index;
+  public static String[]                   symbols;                        // VTSMX, VIVAX, etc.
+  public static String[]                   descriptions;                   // TSM, LCV, etc.
+  public static Sequence[]                 returnSeqs;                     // one per symbol
+
+  public static final String[]             universe;                       // list of symbols to explore
+  public static final Map<String, Integer> symbolCap;                      // max percentage for each symbol
+  public static final List<Set<String>>    requiredSets;                   // must use one symbol in each set
 
   static {
+    symbol2index = new HashMap<>();
+
     // Build reverse map from statistic name to index.
-    stats = new String[] { "Worst Period", "10th Percentile", "25th Percentile", "Median", "CAGR", "Std Dev",
+    statNames = new String[] { "Worst Period", "10th Percentile", "25th Percentile", "Median", "CAGR", "Std Dev",
         "Worst Year", "Max Drawdown" };
-    for (int i = 0; i < stats.length; ++i) {
-      stat2index.put(stats[i], i);
+    stat2index = new HashMap<>();
+    for (int i = 0; i < statNames.length; ++i) {
+      stat2index.put(statNames[i], i);
     }
 
-    universe = new String[] { // Only symbols in the "universe" are considered for each portfolio
+    // Define universe of symbols and constraints on portfolios.
+    universe = new String[] { // only symbols in the universe are considered for each portfolio
         "VBMFX", "VCIT", "VUSXX", // total bond, intermediate corp bonds, treasuries
         "FSAGX", "GSG", // precious metals, commodities
         "VGSIX", // REITs
@@ -87,21 +93,15 @@ public class SimbaPortfolios
     for (String symbol : minorSymbols) {
       symbolCap.put(symbol, 10); // no more than 10% for each "minor" symbol
     }
+    symbolCap.put("VGSIX", 20); // don't go crazy with REITS
 
     // Create sets of required symbols (at least one per set must be used).
     requiredSets = new ArrayList<>();
     requiredSets.add(new HashSet<>(Arrays.asList("VIVAX", "VIGRX", "VHDYX"))); // large cap
     requiredSets.add(new HashSet<>(Arrays.asList("VGTSX", "EFV", "VFSVX", "VEIEX"))); // international
-  }
-
-  /** @return boolean array matching `symbols` where true elements should be avoided (never used in a portfolio). */
-  private static boolean[] buildAvoidMask(String... avoidNames)
-  {
-    boolean[] avoid = new boolean[symbols.length];
-    for (String name : avoidNames) {
-      avoid[symbol2index.get(name)] = true;
-    }
-    return avoid;
+    // requiredSets.add(new HashSet<>(Arrays.asList("VBMFX", "VCIT", "VUSXX"))); // cash-like
+    // requiredSets.add(new HashSet<>(Arrays.asList("FSAGX", "GSG", "VGSIX"))); // stock/bond alternative
+    requiredSets.add(new HashSet<>(Arrays.asList("VGSIX"))); // must have REITs
   }
 
   /** @return boolean array matching `symbols` where true elements should be avoided (never used in a portfolio). */
@@ -373,43 +373,8 @@ public class SimbaPortfolios
         weightStep, avoid, portfolios);
   }
 
-  public static void scanDistributionsEW(int minAssets, int maxAssets, boolean[] avoid,
-      List<DiscreteDistribution> portfolios)
-  {
-    int[] weights = new int[returnSeqs.length];
-    scanDistributionsEW(weights, 0, 0, minAssets, maxAssets, avoid, portfolios);
-  }
-
-  public static void scanDistributionsEW(int[] weights, int index, int nAssetsSoFar, int minAssets, int maxAssets,
-      boolean[] avoid, List<DiscreteDistribution> portfolios)
-  {
-    if (index >= weights.length) {
-      if (nAssetsSoFar >= minAssets && nAssetsSoFar <= maxAssets) {
-        DiscreteDistribution dist = buildDistribution(weights);
-        dist.normalize();
-        portfolios.add(dist);
-        if (portfolios.size() % 100000 == 0) {
-          System.out.printf("%d\n", portfolios.size());
-        }
-        // System.out.printf("%02d: %s\n", portfolios.size(), dist.toString("%3.0f"));
-      }
-      return;
-    }
-    if (nAssetsSoFar > maxAssets) return;
-
-    if (avoid == null || !avoid[index]) {
-      // Include asset[index].
-      weights[index] = 1;
-      scanDistributionsEW(weights, index + 1, nAssetsSoFar + 1, minAssets, maxAssets, avoid, portfolios);
-    }
-
-    // Skip asset[index].
-    weights[index] = 0;
-    scanDistributionsEW(weights, index + 1, nAssetsSoFar, minAssets, maxAssets, avoid, portfolios);
-  }
-
-  /** @return true if x dominates y */
-  public static boolean dominates(FeatureVec x, FeatureVec y, double[] domdir, double[] threshold)
+  /** @return true if x dominates y (better according to all metrics). */
+  private static boolean dominates(FeatureVec x, FeatureVec y, double[] domdir, double[] threshold)
   {
     int nLoss = 0;
     int nTiePlus = 0;
@@ -436,7 +401,7 @@ public class SimbaPortfolios
   }
 
   /** @return Sequence containing CAGR for each `nYears` period. */
-  public static Sequence calcLongReturns(Sequence cumulativeReturns, int nYears)
+  private static Sequence calcLongReturns(Sequence cumulativeReturns, int nYears)
   {
     Sequence seq = new Sequence(cumulativeReturns.getName() + String.format(" %d year returns", nYears));
     seq.copyMeta(cumulativeReturns);
@@ -452,7 +417,7 @@ public class SimbaPortfolios
     return seq;
   }
 
-  public static void findWinners(List<Sequence> durationReturns, double diffMargin)
+  private static void findWinners(List<Sequence> durationReturns, double diffMargin)
   {
     int nPortfolios = durationReturns.size();
     int[] wins = new int[nPortfolios];
@@ -483,7 +448,7 @@ public class SimbaPortfolios
     }
   }
 
-  public static void savePortfolios(File file, Sequence portfolioStats) throws IOException
+  private static void savePortfolios(File file, Sequence portfolioStats) throws IOException
   {
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
       for (FeatureVec v : portfolioStats) {
@@ -492,7 +457,7 @@ public class SimbaPortfolios
     }
   }
 
-  public static FeatureVec getStats(DiscreteDistribution dist)
+  private static FeatureVec getStats(DiscreteDistribution dist)
   {
     String name = dist.toStringWithNames(nSigDig);
     Sequence returnSeq = runPortfolio(dist);
@@ -513,12 +478,12 @@ public class SimbaPortfolios
     return v;
   }
 
-  public static void generate() throws IOException
+  private static void generate() throws IOException
   {
     List<DiscreteDistribution> portfolios = new ArrayList<>();
     boolean[] avoid = buildUniverseMask(universe);
     // TODO setup scan at top of class (create config object?)
-    scanDistributions(1, 9, 10, 30, 10, avoid, portfolios);
+    scanDistributions(3, 6, 10, 30, 10, avoid, portfolios);
     // scanDistributions(3, 5, 10, 40, 10, avoid, portfolios);
     // scanDistributionsEW(1, 8, avoid, portfolios);
     System.out.printf("Portfolios: %d\n", portfolios.size());
@@ -536,22 +501,28 @@ public class SimbaPortfolios
     // findWinners(new ArrayList<>(portfolioLongReturns), 1.0);
     // System.exit(0);
 
-    // int[] indices = new int[] { 7, 1, 3, 0, 5, 4 };
     int[] indices = new int[] { 0, 4, 3, 7, 5, 1 };
     String sPeriodLength = String.format("%d-year Period", nLongYears);
     String[] descriptions = new String[] { "Worst " + sPeriodLength, "10th Percentile for " + sPeriodLength + "s",
         "25th Percentile for " + sPeriodLength + "s", "Median for " + sPeriodLength + "s", "Long-term CAGR",
         "Std Dev (" + sPeriodLength + "s)", "Worst Year", "Max Drawdown" };
+    String[] dimNames = new String[indices.length];
+    for (int i = 0; i < dimNames.length; ++i) {
+      dimNames[i] = descriptions[indices[i]];
+    }
 
-    Sequence scatter = new Sequence();
-    // System.out.println("Save...");
-    // for (FeatureVec v : portfolioStats) {
-    // scatter.addData(new FeatureVec(v.getName(), 3, v.get(xindex), v.get(yindex), v.get(zindex)));
-    // }
-
-    // Chart.saveScatterPlot(new File(outputDir, "simba-all.html"), descriptions[yindex] + " vs. " +
-    // descriptions[xindex],
-    // 1200, 600, 1, new String[] { descriptions[xindex], descriptions[yindex], descriptions[zindex] }, scatter);
+    if (bSaveChartAllPortfolios) {
+      Sequence scatter = new Sequence();
+      System.out.println("Save...");
+      for (FeatureVec v : portfolioStats) {
+        scatter.addData(v.subspace(indices));
+      }
+      ChartConfig chartConfig = new ChartConfig(new File(DataIO.outputPath, "simba-all.html"))
+          .setType(ChartConfig.Type.Scatter).setTitle(descriptions[indices[1]] + " vs. " + descriptions[indices[0]])
+          .setYAxisTitle(descriptions[indices[1]]).setXAxisTitle(descriptions[indices[0]]).setSize("100%", "100%")
+          .setRadius(1).setDimNames(dimNames).setData(scatter).showToolTips(true);
+      Chart.saveScatterPlot(chartConfig);
+    }
 
     // Filter results.
     double[] domdir = new double[] { 1, 1, 1, 1, 0, -1, 1, 1 };
@@ -593,21 +564,14 @@ public class SimbaPortfolios
     });
     System.out.printf("Filtered: %d\n", portfolioStats.size());
 
-    scatter = new Sequence();
+    Sequence scatter = new Sequence();
     for (FeatureVec v : portfolioStats) {
       scatter.addData(v.subspace(indices));
     }
-
-    // Chart.saveScatterPlot(new File(outputDir, "simba-filtered.html"), "CAGR vs. Standard Deviation", 1200, 600, 3,
-    // new String[] { "Std Dev", "CAGR" }, scatter);
-    String[] dimNames = new String[indices.length];
-    for (int i = 0; i < dimNames.length; ++i) {
-      dimNames[i] = descriptions[indices[i]];
-    }
     ChartConfig chartConfig = new ChartConfig(new File(DataIO.outputPath, "simba-filtered.html"))
         .setType(ChartConfig.Type.Scatter).setTitle(descriptions[indices[1]] + " vs. " + descriptions[indices[0]])
-        .setYAxisTitle(descriptions[indices[1]]).setXAxisTitle(descriptions[indices[0]]).setSize(1200, 900).setRadius(3)
-        .setDimNames(dimNames).setData(scatter).showToolTips(true);
+        .setYAxisTitle(descriptions[indices[1]]).setXAxisTitle(descriptions[indices[0]]).setSize("100%", "100%")
+        .setRadius(3).setDimNames(dimNames).setData(scatter).showToolTips(true);
     Chart.saveScatterPlot(chartConfig);
 
     portfolioStats.getData().sort(new Comparator<FeatureVec>()
