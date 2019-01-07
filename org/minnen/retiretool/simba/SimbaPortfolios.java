@@ -56,7 +56,7 @@ public class SimbaPortfolios
 
   public static final String[]             universe;                             // list of symbols to explore
   public static final Map<String, Integer> symbolCap;                            // max percentage for each symbol
-                                                                                 // (optional)
+  public static final List<Set<String>>    requiredSets;                         // must use one symbol in each set
 
   static {
     // Build reverse map from statistic name to index.
@@ -66,20 +66,32 @@ public class SimbaPortfolios
       stat2index.put(stats[i], i);
     }
 
-    // universe = new String[] { "VBMFX", "VFINX", "VTSMX", "VUSXX", "NAESX", "FSAGX", "GSG", "VGSIX", "VGTSX" };
-
-    universe = new String[] { //
-        "VBMFX", "VUSXX", // total bond, treasuries
+    universe = new String[] { // Only symbols in the "universe" are considered for each portfolio
+        "VBMFX", "VCIT", "VUSXX", // total bond, intermediate corp bonds, treasuries
         "FSAGX", "GSG", // precious metals, commodities
         "VGSIX", // REITs
-        "VGTSX", "EFV", // international - total, value
-        "VIVAX", "VMVIX", "VISVX", // large, mid, small - value
-        "VIGRX", "VMGIX", "VISGX", // large, mid, small - growth
+        "VGTSX", "EFV", // international: total, value
+        "VIVAX", "VMVIX", "VISVX", // value: large, mid, small
+        "VIGRX", "VMGIX", "VISGX", // growth: large, mid, small
+        // "BRSIX", // micro-cap
+        "VFSVX", // international small-cap (from 1975)
+        "VEIEX", // emerging markets (from 1976)
+        "VHDYX", // high dividend yield (from 1976)
+        // "VGENX", // energy (from 1985)
+        // "VGHCX", // health care (from 1985)
     };
 
+    // Additional allocation limits for specific asset classes.
+    String[] minorSymbols = new String[] { "FSAGX", "IAU", "GSG", "BRSIX", "VGENX", "VGHCX" };
     symbolCap = new HashMap<>();
-    symbolCap.put("FSAGX", 10); // additional allocation limit for materials and commodities
-    symbolCap.put("GSG", 10);
+    for (String symbol : minorSymbols) {
+      symbolCap.put(symbol, 10); // no more than 10% for each "minor" symbol
+    }
+
+    // Create sets of required symbols (at least one per set must be used).
+    requiredSets = new ArrayList<>();
+    requiredSets.add(new HashSet<>(Arrays.asList("VIVAX", "VIGRX", "VHDYX"))); // large cap
+    requiredSets.add(new HashSet<>(Arrays.asList("VGTSX", "EFV", "VFSVX", "VEIEX"))); // international
   }
 
   /** @return boolean array matching `symbols` where true elements should be avoided (never used in a portfolio). */
@@ -293,6 +305,24 @@ public class SimbaPortfolios
     return dist;
   }
 
+  /** @return true if the portfolio represented by `weights` meets the `requiredSets` constraints. */
+  private static boolean hasRequiredSets(int[] weights)
+  {
+    // Build set for symbols with positive weight.
+    Set<String> symbolsInPortfolio = new HashSet<String>();
+    for (int i = 0; i < weights.length; ++i) {
+      if (weights[i] <= 0) continue;
+      symbolsInPortfolio.add(symbols[i]);
+    }
+
+    for (Set<String> set : requiredSets) {
+      set = new HashSet<String>(set); // copy set to avoid modifying the original
+      set.retainAll(symbolsInPortfolio); // calculate intersection
+      if (set.isEmpty()) return false;
+    }
+    return true;
+  }
+
   /** Generates all valid portfolios and stores them in the `portfolios` list. */
   private static void scanDistributions(int minAssets, int maxAssets, int minWeight, int maxWeight, int weightStep,
       boolean[] avoid, List<DiscreteDistribution> portfolios)
@@ -307,10 +337,11 @@ public class SimbaPortfolios
       int maxAssets, int minWeight, int maxWeight, int weightStep, boolean[] avoid,
       List<DiscreteDistribution> portfolios)
   {
-    assert weightLeft >= 0;
+    assert weightLeft >= 0 && weightLeft <= 100;
     if (weightLeft == 0) { // reached the end of this path but result may not be valid
       assert nAssetsSoFar <= maxAssets;
       if (nAssetsSoFar < minAssets) return;
+      if (!hasRequiredSets(weights)) return;
 
       assert isValid(weights, minAssets, maxAssets, minWeight, maxWeight);
       DiscreteDistribution dist = buildDistribution(weights);
@@ -487,7 +518,7 @@ public class SimbaPortfolios
     List<DiscreteDistribution> portfolios = new ArrayList<>();
     boolean[] avoid = buildUniverseMask(universe);
     // TODO setup scan at top of class (create config object?)
-    scanDistributions(1, 99, 10, 30, 10, avoid, portfolios);
+    scanDistributions(1, 9, 10, 30, 10, avoid, portfolios);
     // scanDistributions(3, 5, 10, 40, 10, avoid, portfolios);
     // scanDistributionsEW(1, 8, avoid, portfolios);
     System.out.printf("Portfolios: %d\n", portfolios.size());
