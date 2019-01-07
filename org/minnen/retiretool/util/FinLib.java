@@ -1348,6 +1348,7 @@ public final class FinLib
   /** @return sharpe ratio for `returns` relative to `benchmark`, which can be null */
   public static double sharpeDaily(Sequence returns, Sequence benchmark)
   {
+    if (returns == null || returns.isEmpty()) return 0.0;
     final int N = returns.length();
     assert benchmark == null || benchmark.length() == N;
 

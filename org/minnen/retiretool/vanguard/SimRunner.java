@@ -7,8 +7,6 @@ import org.minnen.retiretool.predictor.config.ConfigConst;
 import org.minnen.retiretool.predictor.config.ConfigMixed;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
 import org.minnen.retiretool.predictor.daily.Predictor;
-import org.minnen.retiretool.stats.CumulativeStats;
-import org.minnen.retiretool.stats.DurationalStats;
 
 public class SimRunner implements PortfolioRunner
 {

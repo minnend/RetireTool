@@ -30,7 +30,7 @@ public class SearchConfigs
   public static final boolean              initializeDoubleDefenders = false;
   public static final boolean              initializeTripleDefenders = false;
   public static final Mode                 searchMode                = Mode.EXTEND;
-  public static final String               targetNum                 = "two";
+  public static final String               targetNum                 = "three";
   public static final String               saveFilename              = String.format("%s-sma-winners-%s.txt", targetNum,
       TimeLib.formatTimeSig(TimeLib.getTime()));
 

@@ -36,8 +36,6 @@ public class GeneratorSMA extends ConfigGenerator
 
   static {
     for (int i = 0; i < knownParams.length; ++i) {
-      // int[] p = knownParams[i];
-      // knownConfigs[i] = new ConfigSMA(p[0], 0, p[1], p[2], p[3], FinLib.AdjClose, GeneratorSMA.gap);
       knownConfigs[i] = parse(knownParams[i]);
     }
   }

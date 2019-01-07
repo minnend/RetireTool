@@ -100,8 +100,16 @@ public class Dashboard
   // { 5, 0, 178, 50, 145 } };
 
   // regret[5,10,20] = 34, 31, 0
-  public static final int[][]           allParams      = new int[][] { { 15, 0, 259, 125, 21 }, { 5, 0, 178, 50, 145 },
-      { 63, 0, 23, 14, 105 } };
+  // public static final int[][] allParams = new int[][] { { 15, 0, 259, 125, 21 }, { 5, 0, 178, 50, 145 },
+  // { 63, 0, 23, 14, 105 } };
+
+  // regret[5,10,20] = 26, 29, 0
+  // public static final int[][] allParams = new int[][] { { 22, 0, 190, 147, 170 }, { 67, 0, 34, 21, 9 } };
+
+  // [23,0] / [188,143] m=154 | [66,0] / [34,20] m=8 | [52,0] / [103,23] m=272
+  // regret[5,10,20] = 13.2, 1.6, 0
+  public static final int[][]           allParams      = new int[][] { { 23, 0, 188, 143, 154 }, { 66, 0, 34, 20, 8 },
+      { 52, 0, 103, 23, 272 } };
 
   public static final PredictorConfig[] singleConfigs  = new PredictorConfig[allParams.length];
 
@@ -367,28 +375,28 @@ public class Dashboard
     sim.run(predRisky, "Baseline");
     Sequence baselineDailyReturns = sim.returnsDaily;
     Sequence baselineMonthlyReturns = sim.returnsMonthly;
-    CumulativeStats statsBaseline = CumulativeStats.calc(sim.returnsDaily);
+    CumulativeStats statsBaseline = CumulativeStats.calc(baselineDailyReturns);
     System.out.println(statsBaseline);
 
     // Multi-predictor to make final decisions.
     Set<Integer> contrary = new HashSet<Integer>();
     Set<IntPair> contraryPairs = new HashSet<IntPair>();
     contrary.add(0); // always be safe during code 0
-    // if (avoid62) {
-    // contraryPairs.add(new IntPair(6, 2));
-    // }
-    // contraryPairs.add(new IntPair(-1, 0));
-    // contraryPairs.add(new IntPair(1, 0));
-    // contraryPairs.add(new IntPair(2, 0));
-    // contraryPairs.add(new IntPair(6, 2));
+
+    // TODO test stability with these contrary pairs.
+    for (int next_code : new int[] { 1 }) {
+      for (int prev_code = next_code + 1; prev_code <= 7; ++prev_code) {
+        contraryPairs.add(new IntPair(prev_code, next_code));
+      }
+    }
 
     PredictorConfig configStrategy = new ConfigMulti(true, contrary, contraryPairs, singleConfigs);
     MultiPredictor predStrategy = (MultiPredictor) configStrategy.build(sim.broker.accessObject, TacticLib.assetNames);
     sim.run(predStrategy, "Tactical");
     Sequence tacticalDailyReturns = sim.returnsDaily;
     Sequence tacticalMonthlyReturns = sim.returnsMonthly;
-    assert tacticalDailyReturns.matches(baselineDailyReturns);
-    CumulativeStats statsTactical = CumulativeStats.calc(sim.returnsDaily);
+    assert tacticalDailyReturns.matches(tacticalDailyReturns);
+    CumulativeStats statsTactical = CumulativeStats.calc(tacticalDailyReturns);
     System.out.println(statsTactical);
 
     ComparisonStats comparison = ComparisonStats.calc(baselineMonthlyReturns, tacticalMonthlyReturns, 0.25);
@@ -535,6 +543,7 @@ public class Dashboard
         int code = predStrategy.timeCodes.get(nCodes - 1).code;
         int prev = predStrategy.timeCodes.get(nCodes - 2).code;
         f.write(genPairStatsHtml(returnsByPair, new IntPair(prev, code)));
+        System.out.printf("Final codes: %d -> %d\n", prev, code);
       }
       f.write(Chart.genDecadeTable(tacticalMonthlyReturns, baselineMonthlyReturns) + "<br/>");
       f.write("</div>\n"); // end column 2

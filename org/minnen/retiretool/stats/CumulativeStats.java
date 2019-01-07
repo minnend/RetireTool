@@ -20,6 +20,7 @@ public class CumulativeStats implements Comparable<CumulativeStats>
 
   public Sequence                            dailyReturns;
   public Sequence                            monthlyReturns;
+  public Sequence                            preferredReturns;
   public double                              cagr              = 1.0;
   public double                              meanAnnualReturn  = 1.0;
   public double                              devAnnualReturn;
@@ -56,14 +57,20 @@ public class CumulativeStats implements Comparable<CumulativeStats>
     stats.monthlyReturns = monthlyReturns;
 
     if (dailyReturns != null && !dailyReturns.isEmpty()) {
+      stats.preferredReturns = dailyReturns;
       if (monthlyReturns == null) {
         monthlyReturns = FinLib.dailyToMonthly(dailyReturns);
       }
+    } else if (monthlyReturns != null && !monthlyReturns.isEmpty()) {
+      stats.preferredReturns = monthlyReturns;
+    }
 
-      double nMonths = dailyReturns.getLengthMonths();
-      stats.totalReturn = FinLib.getTotalReturn(dailyReturns);
+    // Calculate statistics based on the best data we have (daily preferred to monthly).
+    if (stats.preferredReturns != null) {
+      stats.totalReturn = FinLib.getTotalReturn(stats.preferredReturns);
+      double nMonths = stats.preferredReturns.getLengthMonths();
       stats.cagr = FinLib.getAnnualReturn(stats.totalReturn, nMonths);
-      stats.calcDrawdownStats();
+      stats.calcDrawdownStats(stats.preferredReturns);
     }
 
     if (calcDurationalStats && monthlyReturns != null && !monthlyReturns.isEmpty()) {
@@ -81,23 +88,23 @@ public class CumulativeStats implements Comparable<CumulativeStats>
     return stats;
   }
 
-  private void calcDrawdownStats()
+  private void calcDrawdownStats(Sequence cumulativeReturns)
   {
-    final int N = dailyReturns.size();
+    final int N = cumulativeReturns.size();
     final double eps = 1e-5;
     peakReturn = 1.0;
     drawdown = 0.0;
 
     if (N <= 1) return;
 
-    final double firstValue = dailyReturns.getFirst(0);
+    final double firstValue = cumulativeReturns.getFirst(0);
     double prevValue = 1.0; // normalized first value
     int nNewHigh = 0;
     int nDown10 = 0;
     int numUp = 0;
     int numDown = 0;
     for (int i = 1; i < N; ++i) {
-      double value = dailyReturns.get(i, 0) / firstValue;
+      double value = cumulativeReturns.get(i, 0) / firstValue;
       double change = value / prevValue - 1.0;
       prevValue = value;
       if (change > eps) {
@@ -132,7 +139,9 @@ public class CumulativeStats implements Comparable<CumulativeStats>
 
   public String name()
   {
-    return dailyReturns == null ? "Unknown" : dailyReturns.getName();
+    if (dailyReturns != null) return dailyReturns.getName();
+    else if (monthlyReturns != null) return monthlyReturns.getName();
+    else return "Unknown";
   }
 
   @Override

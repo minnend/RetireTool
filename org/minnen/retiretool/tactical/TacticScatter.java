@@ -30,10 +30,14 @@ public class TacticScatter
   public static final boolean           initializeDoubleDefenders = false;
   public static final boolean           initializeTripleDefenders = false;
   public static final boolean           initializeFavorites       = true;
-  public static final int               nPerturb                  = 300;
+  public static final int               nPerturb                  = 500;
   public static final double            radius                    = 2.5;
+
   public static Comparator<AllStats>    comp                      = AllStats
       .getCompare(CumulativeStats.getComparatorBasic());
+
+  public static Comparator<AllStats>    compCumDom                = AllStats
+      .getCompare(CumulativeStats.getComparatorDominates());
 
   private static Simulation             sim;
 
@@ -50,12 +54,19 @@ public class TacticScatter
       // "[14,0] / [190,172] m=332",
       // "[23,0] / [200,152] m=168",
       // "[16,0] / [272,124] m=23 | [23,0] / [18,9] m=32",
-      "[22,0] / [190,147] m=170 | [67,0] / [34,21] m=9",
-      "[64,1] / [34,21] m=8 | [21,0] / [201,150] m=184",
-      "[66,0] / [36,21] m=9 | [23,0] / [224,60] m=221",
-      "[65,0] / [36,22] m=10 | [21,1] / [239,27] m=199",
-      "[63,1] / [24,15] m=115 | [59,1] / [119,53] m=61",
-      //"[70,1] / [36,20] m=10 | [55,1] / [220,55] m=175",
+      "[22,0] / [190,147] m=170 | [67,0] / [34,21] m=9", "[64,0] / [34,21] m=8 | [21,0] / [201,150] m=184",
+      "[66,0] / [36,21] m=9 | [23,0] / [224,60] m=221", "[65,0] / [36,22] m=10 | [21,0] / [239,27] m=199",
+      "[63,0] / [24,15] m=115 | [59,0] / [119,53] m=61",
+      // "[70,1] / [36,20] m=10 | [55,1] / [220,55] m=175",
+      
+      "[60,0] / [23,14] m=120 | [57,0] / [115,51] m=62 | [26,0] / [20,4] m=308",
+      "[23,0] / [183,150] m=154 | [64,0] / [33,22] m=9 | [38,0] / [43,16] m=66",
+      "[23,0] / [183,147] m=153 | [69,0] / [35,20] m=10 | [50,0] / [121,42] m=63",
+      "[21,0] / [182,141] m=158 | [66,0] / [35,21] m=10 | [42,0] / [127,49] m=54",
+      "[21,0] / [189,149] m=162 | [65,0] / [36,21] m=10 | [52,0] / [94,66] m=253",
+      "[22,0] / [198,151] m=184 | [64,0] / [36,21] m=10 | [32,0] / [44,14] m=59",
+      "[21,0] / [188,141] m=171 | [67,0] / [33,20] m=8 | [30,0] / [136,48] m=29",
+      "[23,0] / [188,143] m=154 | [66,0] / [34,20] m=8 | [52,0] / [103,23] m=272",
 
       // "[15,0] / [259,125] m=21", // *
       "[15,0] / [259,125] m=21 | [5,0] / [178,50] m=145",                                                      // *
@@ -70,9 +81,9 @@ public class TacticScatter
       // "[14,0] / [247,129] m=19 | [6,1] / [172,49] m=149 | [33,1] / [127,89] m=266",
 
       // Old (2016) configs.
-      //"[20,0] / [240,150] m=25 | [25,0] / [155,125] m=75 | [5,0] / [165,5] m=50",
-      //"[20,0] / [240,150] m=25 | [50,0] / [180,30] m=100 | [10,0] / [220,0] m=200",
-      };
+      // "[20,0] / [240,150] m=25 | [25,0] / [155,125] m=75 | [5,0] / [165,5] m=50",
+      // "[20,0] / [240,150] m=25 | [50,0] / [180,30] m=100 | [10,0] / [220,0] m=200",
+  };
 
   public static final PredictorConfig[] favoriteConfigs           = new PredictorConfig[favoriteParams.length];
 
@@ -157,7 +168,6 @@ public class TacticScatter
     }
     System.out.printf("Strategies: %d\n", allStats.size());
 
-    Comparator<AllStats> compCumDom = AllStats.getCompare(CumulativeStats.getComparatorDominates());
     AllStats.filter(dominators, compCumDom);
     System.out.printf("Defenders: %d\n", dominators.size());
     for (AllStats x : dominators) {

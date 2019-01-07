@@ -293,7 +293,24 @@ public final class Library
   }
 
   /** @return minimum of the values in the given array. */
-  public static double min(double[] a)
+  public static int min(int... a)
+  {
+    return min(a, 0, a.length - 1);
+  }
+
+  /** @return minimum of the values in [iStart, iEnd] for the given array. */
+  public static int min(int[] a, int iStart, int iEnd)
+  {
+    assert iStart <= iEnd;
+    int min = a[iStart];
+    for (int i = iStart + 1; i <= iEnd; ++i) {
+      if (a[i] < min) min = a[i];
+    }
+    return min;
+  }
+
+  /** @return minimum of the values in the given array. */
+  public static double min(double... a)
   {
     return min(a, 0, a.length - 1);
   }
@@ -310,7 +327,7 @@ public final class Library
   }
 
   /** @return maximum of the values in the given array. */
-  public static double max(double[] a)
+  public static double max(double... a)
   {
     return max(a, 0, a.length - 1);
   }
@@ -327,14 +344,14 @@ public final class Library
   }
 
   /** @return arithmetic mean (average) of the values in the given array. */
-  public static double mean(double[] a)
+  public static double mean(double... a)
   {
     if (a == null || a.length == 0) return Double.NaN;
     return sum(a) / a.length;
   }
 
   /** @return geometry mean of the values in the given array. */
-  public static double geometricMean(double[] a)
+  public static double geometricMean(double... a)
   {
     if (a == null || a.length == 0) return Double.NaN;
     double sum = 0.0;
@@ -344,7 +361,7 @@ public final class Library
     return Math.exp(sum / a.length);
   }
 
-  public static double variance(double[] a)
+  public static double variance(double... a)
   {
     if (a.length < 2) {
       return 0.0;
@@ -360,7 +377,7 @@ public final class Library
     return (s1 - s2 * s2 / a.length) / (a.length - 1);
   }
 
-  public static double stdev(double[] a)
+  public static double stdev(double... a)
   {
     return Math.sqrt(variance(a));
   }

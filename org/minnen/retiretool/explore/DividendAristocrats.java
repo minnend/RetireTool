@@ -39,6 +39,9 @@ public class DividendAristocrats
 
   // Dividend Aristocrats for 2018 from: https://www.retirebeforedad.com/dividend-aristocrats/
   // 2017 list + changes back to 2011: https://investorjunkie.com/3974/dividend-aristocrats/
+  
+  // Free screener that includes years of dividend growth:
+  // https://www.marketbeat.com/dividends/screener/
 
   // Dropped ABBC since data only goes 2013 when it spun off from ABT.
   // TODO use historical data to avoid "future knowledge" (look-ahead / survivorship bias).
