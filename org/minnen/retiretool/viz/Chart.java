@@ -539,8 +539,8 @@ public class Chart
       writer.write(" ]});\n");
       writer.write("});\n");
 
-      writer.write("</script></head><body style=\"width:%s;\">\n", config.width);
-      writer.write("<div id=\"chart\" style=\"width:100%%; height:%s;\" />\n", config.height);
+      writer.write("</script></head><body>\n");
+      writer.write("<div id=\"chart\" style=\"width:%s; height:%s;\" />\n", config.width, config.height);
       writer.write("</body></html>\n");
     }
   }
@@ -605,8 +605,8 @@ public class Chart
       writer.write(" });\n");
       writer.write("});\n");
 
-      writer.write("</script></head><body style=\"width:%s\">\n", width);
-      writer.write("<div id=\"chart\" style=\"width:100%; height:%s\" />\n", height);
+      writer.write("</script></head><body>\n");
+      writer.write("<div id=\"chart\" style=\"width:%s; height:%s\" />\n", width, height);
       writer.write("</body></html>\n");
     }
   }
@@ -671,8 +671,8 @@ public class Chart
       writer.write(" });\n");
       writer.write("});\n");
 
-      writer.write("</script></head><body style=\"width:%s;\">\n", width);
-      writer.write("<div id=\"chart\" style=\"width:100%; height:%s;\" />\n", height);
+      writer.write("</script></head><body>\n");
+      writer.write("<div id=\"chart\" style=\"width:%s; height:%s;\" />\n", width, height);
       writer.write("</body></html>\n");
     }
   }
