@@ -44,9 +44,10 @@ public class ComparePortfolios
 
   // TODO use cash instead of VFISX to get data from before 1991.
   // public static final String[] fundSymbols = new String[] { "VFINX", "VBMFX", "VWIGX", "VFISX", "VWINX", "NAESX" };
-  public static final String[]      fundSymbols  = new String[] { "VFINX", "VBMFX", "VWIGX", "VWINX", "NAESX", "VGENX",
-      "FRESX", "VEXMX",
-      // "VIVAX", "VTMSX", "VISVX", "VGSIX", "FSIIX", "VTRIX", "FSCOX", "VEIEX", "FIREX" // merriman
+  public static final String[]      fundSymbols  = new String[] {                                //
+      "VFINX", "VBMFX", "VWIGX", "VWINX", "NAESX", "VGENX", "FRESX", "VEXMX",                    // standard
+      "VMVIX", "VISVX", "VGSIX", "VEIEX", "VHDYX", "FSAGX",                                      // simba
+      "VIVAX", "VTMSX", "VISVX", "VGSIX", "FSIIX", "VTRIX", "FSCOX", "VEIEX", "FIREX"            // merriman
   };
 
   public static final String[]      assetSymbols = new String[fundSymbols.length + 2];
@@ -143,15 +144,21 @@ public class ComparePortfolios
     Sequence returnsLazy4 = portfolios.run(predictor, timeSimStart, timeSimEnd);
     returns.add(returnsLazy4);
 
+    // From simba analysis.
+    predictor = portfolios.passive("Simba", new String[] { "VMVIX", "VISVX", "VGSIX", "VEIEX", "VHDYX" }, 0.3, 0.3, 0.2,
+        0.1, 0.1);
+    Sequence returnsSimba = portfolios.run(predictor, timeSimStart, timeSimEnd);
+    returns.add(returnsSimba);
+
     // 50/200 SMA cross.
     predictor = portfolios.simpleSMA(50, 200, stockSymbol, cashSymbol);
     Sequence returnsCross = portfolios.run(predictor, timeSimStart, timeSimEnd);
     returns.add(returnsCross);
 
     // Merriman Aggressive.
-    // predictor = portfolios.merrimanAggressive();
-    // Sequence returnsMerriman = portfolios.run(predictor, timeSimStart, timeSimEnd);
-    // returns.add(returnsMerriman);
+    predictor = portfolios.merrimanAggressive();
+    Sequence returnsMerriman = portfolios.run(predictor, timeSimStart, timeSimEnd);
+    returns.add(returnsMerriman);
 
     // Set up defenders for comparison analysis based on previous portfolios.
     List<ComparisonStats> compStats = new ArrayList<>();
@@ -176,11 +183,12 @@ public class ComparePortfolios
     compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
 
     // Dual Momentum
-    Predictor dualMomPred = portfolios.dualMomentum(1, cashSymbol, stockSymbol, intlSymbol);
-    Sequence returnsDualMom = portfolios.run(dualMomPred, timeSimStart, timeSimEnd);
-    returns.add(returnsDualMom);
-    compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
-    Chart.saveHoldings(new File(DataIO.outputPath, "holdings-dual-momentum.html"), sim.holdings, sim.store);
+    // TODO bug? triggering an assert.
+    // Predictor dualMomPred = portfolios.dualMomentum(1, cashSymbol, stockSymbol, intlSymbol);
+    // Sequence returnsDualMom = portfolios.run(dualMomPred, timeSimStart, timeSimEnd);
+    // returns.add(returnsDualMom);
+    // compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
+    // Chart.saveHoldings(new File(DataIO.outputPath, "holdings-dual-momentum.html"), sim.holdings, sim.store);
 
     // Multi-sector based on dual momentum
     // int nMaxKeep = 3;
@@ -223,8 +231,8 @@ public class ComparePortfolios
       title = String.format("Returns (%s, %d\u00A2 Spread)", TimeLib.formatDurationMonths(nMonths),
           Math.round(slippage.constSlip * 200));
       File file = new File(DataIO.outputPath, String.format("duration-returns-%d-months.html", nMonths));
-      ChartConfig chartConfig = Chart.saveLineChart(file, title, "100%", "640px", ChartScaling.LINEAR, ChartTiming.MONTHLY,
-          durationalReturns);
+      ChartConfig chartConfig = Chart.saveLineChart(file, title, "100%", "640px", ChartScaling.LINEAR,
+          ChartTiming.MONTHLY, durationalReturns);
       chartConfig.addPlotLineY(new PlotLine(0, 2, "black"));
       Chart.saveChart(chartConfig);
     }

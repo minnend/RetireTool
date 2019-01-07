@@ -46,7 +46,8 @@ public class StandardPortfolios
   public Predictor passive(String name, String[] assets, double... mix)
   {
     assert assets.length > 0 && assets.length == mix.length;
-    PredictorConfig config = new ConfigMixed(new DiscreteDistribution(assets, mix), ConfigConst.wrap(assets));
+    DiscreteDistribution distribution = new DiscreteDistribution(assets, mix);
+    PredictorConfig config = new ConfigMixed(distribution, ConfigConst.wrap(assets));
     Predictor predictor = config.build(sim.broker.accessObject, assets);
     predictor.name = name;
     return predictor;

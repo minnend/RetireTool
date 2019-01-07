@@ -1459,21 +1459,23 @@ public final class FinLib
   /**
    * Takes a sequence of returns (1.2 = 1.2% return) and returns sequence of cumulative returns.
    */
-  public static Sequence cumulativeFromReturns(Sequence returnSeq)
+  public static Sequence cumulativeFromReturns(Sequence returnSeq, double principle, double contributionPerStep)
   {
     Sequence seq = new Sequence("Cumulative " + returnSeq.getName());
     seq.copyMeta(returnSeq);
-    double balance = 1.0;
+    double balance = principle;
 
     // Infer time one step before `returnSeq` starts.
     long t0 = returnSeq.getStartMS();
     long t1 = returnSeq.getTimeMS(1);
     seq.addData(balance, t0 - (t1 - t0)); // TODO detect and force time to last day of month / year?
-    for (FeatureVec fv : returnSeq) {
+    for (int i = 0; i < returnSeq.length(); ++i) {
+      FeatureVec fv = returnSeq.get(i);
+      if (i > 0) balance += contributionPerStep; // no contribution at very beginning
       balance *= ret2mul(fv.get(0));
       seq.addData(new FeatureVec(1, balance), fv.getTime());
     }
-    return seq;
+    return seq._div(principle);
   }
 
   /** @return Sequence holding total returns for an investment that pays the current 3-month treasury rate */

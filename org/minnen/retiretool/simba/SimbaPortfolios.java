@@ -43,6 +43,8 @@ public class SimbaPortfolios
 {
   public static final int                  nLongYears              = 10;
   public static final boolean              bAdjustForInflation     = false;
+  public static final double               principle               = 1000;
+  public static final double               contribution            = 0;
 
   public static final boolean              bPrintStartYearInfo     = false;
   public static final boolean              bSaveChartAllPortfolios = false;
@@ -61,6 +63,7 @@ public class SimbaPortfolios
   public static final List<Set<String>>    requiredSets;                   // must use one symbol in each set
 
   // TODO per-symbol minimum
+  // TODO better labels on charts: inflation? start year?
 
   static {
     symbol2index = new HashMap<>();
@@ -80,6 +83,7 @@ public class SimbaPortfolios
         "VGSIX", // REITs
         "VGTSX", "EFV", // international: total, value
         "VTSMX", // total market (U.S.)
+        "VFINX", // large-cap
         "VIVAX", "VMVIX", "VISVX", // value: large, mid, small
         "VIGRX", "VMGIX", "VISGX", // growth: large, mid, small
         // "BRSIX", // micro-cap
@@ -103,7 +107,7 @@ public class SimbaPortfolios
 
     // Create sets of required symbols (at least one per set must be used).
     requiredSets = new ArrayList<>();
-    requiredSets.add(new HashSet<>(Arrays.asList("VIVAX", "VIGRX", "VHDYX", "VTSMX"))); // large cap
+    requiredSets.add(new HashSet<>(Arrays.asList("VIVAX", "VIGRX", "VHDYX", "VTSMX", "VFINX"))); // large cap
     requiredSets.add(new HashSet<>(Arrays.asList("VGTSX", "EFV", "VFSVX", "VEIEX"))); // international
     // requiredSets.add(new HashSet<>(Arrays.asList("VBMFX", "VCIT", "VUSXX"))); // cash-like
     // requiredSets.add(new HashSet<>(Arrays.asList("FSAGX", "GSG", "VGSIX"))); // stock/bond alternative
@@ -446,7 +450,7 @@ public class SimbaPortfolios
   {
     String name = dist.toStringWithNames(nSigDig);
     Sequence returnSeq = runPortfolio(dist);
-    Sequence cumulativeReturns = FinLib.cumulativeFromReturns(returnSeq);
+    Sequence cumulativeReturns = FinLib.cumulativeFromReturns(returnSeq, principle, contribution);
     Sequence longReturns = calcLongReturns(cumulativeReturns, nLongYears);
     ReturnStats rstatsLong = ReturnStats.calc(name, longReturns.extractDim(0));
     CumulativeStats cstats = CumulativeStats.calc(cumulativeReturns, false);
@@ -694,6 +698,28 @@ public class SimbaPortfolios
     return yearToSymbols;
   }
 
+  // private static String[] condense(String[] a, int nGood)
+  // {
+  // String[] b = new String[nGood];
+  // int j = 0;
+  // for (int i = 0; i < a.length; ++i) {
+  // if (a[i] != null) b[j++] = a[i];
+  // }
+  // assert j == nGood;
+  // return b;
+  // }
+  //
+  // private static Sequence[] condense(Sequence[] a, int nGood)
+  // {
+  // Sequence[] b = new Sequence[nGood];
+  // int j = 0;
+  // for (int i = 0; i < a.length; ++i) {
+  // if (a[i] != null) b[j++] = a[i];
+  // }
+  // assert j == nGood;
+  // return b;
+  // }
+
   /** Ensure that all sequences in the universe have the same start/end times. */
   private static void prepareUniverse()
   {
@@ -714,11 +740,23 @@ public class SimbaPortfolios
     System.out.printf("Start year: %d\n", lastStartYear);
 
     // Clear all sequences not in universe.
+    int nAssetsLeft = 0;
     for (int i = 0; i < returnSeqs.length; ++i) {
       if (!universeSet.contains(returnSeqs[i].getName())) {
         returnSeqs[i] = null;
+        symbols[i] = descriptions[i] = null;
+      } else {
+        ++nAssetsLeft;
       }
     }
+    assert nAssetsLeft == universe.length;
+
+    // Rebuild arrays with only the remaining assets.
+    // if (universe.length < symbols.length) {
+    // descriptions = condense(descriptions, universe.length);
+    // symbols = condense(symbols, universe.length);
+    // returnSeqs = condense(returnSeqs, universe.length);
+    // }
 
     // Adjust all sequence to have the same start year (i.e. truncate older sequences).
     long startTime = TimeLib.toMs(lastStartYear, Month.DECEMBER, 31);
