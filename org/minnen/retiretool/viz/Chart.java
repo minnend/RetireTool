@@ -263,19 +263,20 @@ public class Chart
         }
         writer.write("      ]},\n");
         writer.write("    marker: { radius: 2 },\n");
-        writer.write("    lineWidth: 1,\n");
+        writer.write("    lineWidth: 1\n");
         writer.write("    states: {\n");
         writer.write("      hover: { lineWidth: 1 }\n");
         writer.write("    },\n");
         // writer.write(" threshold: null\n");
         writer.write("   }\n");
       } else if (config.type == ChartConfig.Type.Line) {
-        writer.write("    line: { marker: { enabled: false } }\n");
+        writer.write("    line: { marker: { enabled: false },\n");
+        writer.write("            lineWidth: %d, },\n", config.lineWidth);
       }
       writer.write("  },\n");
 
       writer.write("  series: [\n");
-      for (int i = 0; i < seqs.length; ++i) {
+      for (int i = seqs.length - 1; i >= 0; --i) {
         Sequence seq = seqs[i];
         writer.write("  { name: '" + seq.getName() + "',\n");
         writer.write("    data: [");
@@ -284,11 +285,12 @@ public class Chart
           // x = FinLib.mul2ret(x); // TODO
           writer.write(String.format("%.6f%s", x, t == seqs[i].size() - 1 ? "" : ", "));
         }
-        writer.write("] }");
-        if (i < seqs.length - 1) {
-          writer.write(',');
+        writer.write("],");
+        int lineWidth = (Integer) seq.getMeta("lineWidth", 0);
+        if (lineWidth > 0) {
+          writer.write(" lineWidth: %d,\n", lineWidth);
         }
-        writer.write("\n");
+        writer.write(" },\n");
       }
       writer.write("  ]\n");
       writer.write(" });\n");

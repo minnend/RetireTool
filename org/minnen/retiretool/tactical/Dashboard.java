@@ -254,7 +254,7 @@ public class Dashboard
       String filename = genGraphFileName(entry.getKey());
       ChartConfig config = ChartConfig.buildLine(new File(DataIO.outputPath, filename), title, "100%", "900px",
           ChartScaling.LINEAR, ChartTiming.INDEX, seqs);
-      config.setPathToBase(miscToBase);
+      config.setPathToBase(miscToBase).setLineWidth(1);
       Chart.saveChart(config);
     }
 
@@ -311,12 +311,15 @@ public class Dashboard
       for (int index = 0; index < list.size(); ++index) {
         seqs.add(genGrowthSeq(index, list.get(index)));
       }
+      if (codePair.equals(currentPair)) {
+        seqs.get(0).setMeta("lineWidth", 3); // custom line width for current sequence
+      }
 
       String title = String.format("Code Pair: %d -> %d (n=%d)", codePair.first, codePair.second, list.size());
       String filename = genGraphFileName(codePair);
       ChartConfig config = ChartConfig.buildLine(new File(DataIO.outputPath, filename), title, "100%", "900px",
           ChartScaling.LINEAR, ChartTiming.INDEX, seqs);
-      config.setPathToBase(miscToBase);
+      config.setPathToBase(miscToBase).setLineWidth(1);
       Chart.saveChart(config);
     }
 
@@ -367,7 +370,7 @@ public class Dashboard
     return sw.toString();
   }
 
-  public static void runMulti3(Simulation sim) throws IOException
+  public static void runTactical(Simulation sim) throws IOException
   {
     // Buy-and-Hold 100% stock.
     PredictorConfig configRisky = new ConfigConst(TacticLib.riskyName);
@@ -560,7 +563,7 @@ public class Dashboard
     final int iStart = stock.getIndexAtOrAfter(stock.getStartMS() + 365 * TimeLib.MS_IN_DAY);
     Sequence guideSeq = stock.subseq(iStart);
     Simulation sim = new Simulation(store, guideSeq, slippage, maxDelay, priceModel, priceModel);
-    runMulti3(sim);
+    runTactical(sim);
 
     // Generate graphs.
     for (int i = 0; i < allParams.length; ++i) {

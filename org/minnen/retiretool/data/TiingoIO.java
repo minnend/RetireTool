@@ -342,7 +342,7 @@ public class TiingoIO
 
   public static boolean saveFundMetadata(TiingoFund fund) throws IOException
   {
-    return saveFundMetadata(fund, 30 * TimeLib.MS_IN_DAY);
+    return saveFundMetadata(fund, 10 * TimeLib.MS_IN_DAY);
   }
 
   public static boolean saveFundMetadata(TiingoFund fund, long replaceAgeMs) throws IOException

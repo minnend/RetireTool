@@ -2,6 +2,8 @@ package org.minnen.retiretool.data.tiingo;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
@@ -47,6 +49,7 @@ public class TiingoFund
     try {
       TiingoIO.loadTickers();
       TiingoFund fund = TiingoFund.get(symbol);
+      System.out.println("from supported-tickers: " + fund);
       if (loadData && !fund.loadData()) return null;
       return fund;
     } catch (IOException e) {
@@ -120,16 +123,26 @@ public class TiingoFund
         data = TiingoIO.loadEodData(ticker);
         dataStart = TimeLib.ms2date(data.getStartMS());
         dataEnd = TimeLib.ms2date(data.getEndMS());
-      }
-
-      if (end.isAfter(dataEnd)) {
-        long nDays = ChronoUnit.DAYS.between(dataEnd, end);
-        System.out.printf("New end time: %s  [%s] -> [%s]  (%d days)\n", ticker, dataEnd, end, nDays);
-        if (!TiingoIO.updateFundEodData(this)) {
-          System.err.printf("Failed to update EOD data (%s)\n", ticker);
-          return false;
+      } else {
+        LocalDateTime now = TimeLib.ms2time(TimeLib.getTime(), ZoneId.of("America/New_York"));
+        LocalDate lastTradingDay = now.toLocalDate();
+        if (!TimeLib.isBusinessDay(lastTradingDay)) { // no updates on weekends
+          lastTradingDay = TimeLib.toPreviousBusinessDay(lastTradingDay);
         }
-        data = TiingoIO.loadEodData(ticker); // Load newly acquired data
+        if (now.getHour() < 16) { // no updates before 4:00pm in NY
+          lastTradingDay = TimeLib.toPreviousBusinessDay(lastTradingDay);
+        }
+        if (end.isAfter(lastTradingDay)) lastTradingDay = end; // shouldn't ever trigger
+
+        if (dataEnd.isBefore(lastTradingDay)) {
+          long nDays = ChronoUnit.DAYS.between(dataEnd, lastTradingDay);
+          System.out.printf("New end time: %s  [%s] -> [%s]  (%d days)\n", ticker, dataEnd, lastTradingDay, nDays);
+          if (!TiingoIO.updateFundEodData(this)) {
+            System.err.printf("Failed to update EOD data (%s)\n", ticker);
+            return false;
+          }
+          data = TiingoIO.loadEodData(ticker); // Load newly acquired data
+        }
       }
 
       return true;

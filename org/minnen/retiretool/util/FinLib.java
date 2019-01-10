@@ -1346,7 +1346,7 @@ public final class FinLib
   }
 
   /** @return sharpe ratio for `returns` relative to `benchmark`, which can be null */
-  public static double sharpeDaily(Sequence returns, Sequence benchmark)
+  public static double sharpeAnnual(Sequence returns, Sequence benchmark)
   {
     if (returns == null || returns.isEmpty()) return 0.0;
     final int N = returns.length();
@@ -1369,8 +1369,13 @@ public final class FinLib
     double mean = Library.mean(excess);
     double sdev = Library.stdev(excess);
     if (Math.abs(sdev) < 1e-8) return 0.0;
+    return mean / sdev;
+  }
 
-    return Math.sqrt(252) * mean / sdev;
+  /** @return sharpe ratio for `returns` relative to `benchmark`, which can be null */
+  public static double sharpeDaily(Sequence returns, Sequence benchmark)
+  {
+    return Math.sqrt(252) * sharpeAnnual(returns, benchmark);
   }
 
   public static double[] minvar(double[][] corrMatrix)

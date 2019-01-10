@@ -41,29 +41,29 @@ import org.minnen.retiretool.viz.ChartConfig;
  */
 public class SimbaPortfolios
 {
-  public static final int                  nLongYears              = 10;
-  public static final boolean              bAdjustForInflation     = false;
-  public static final double               principle               = 1000;
-  public static final double               contribution            = 0;
+  public static final int                  nLongYears          = 10;
+  public static final boolean              bAdjustForInflation = false;
+  public static final double               principle           = 1000;
+  public static final double               contribution        = 0;
 
-  public static final boolean              bPrintStartYearInfo     = false;
-  public static final boolean              bSaveChartAllPortfolios = false;
-  public static final int                  nSigDig                 = 0;
+  public static final boolean              bPrintStartYearInfo = false;
+  public static final int                  nSigDig             = 0;
 
   public static final Map<String, Integer> stat2index;
   public static final String[]             statNames;
 
   public static final Map<String, Integer> symbol2index;
-  public static String[]                   symbols;                        // VTSMX, VIVAX, etc.
-  public static String[]                   descriptions;                   // TSM, LCV, etc.
-  public static Sequence[]                 returnSeqs;                     // one per symbol
+  public static String[]                   symbols;                    // VTSMX, VIVAX, etc.
+  public static String[]                   descriptions;               // TSM, LCV, etc.
+  public static Sequence[]                 returnSeqs;                 // one per symbol
 
-  public static final String[]             universe;                       // list of symbols to explore
-  public static final Map<String, Integer> symbolCap;                      // max percentage for each symbol
-  public static final List<Set<String>>    requiredSets;                   // must use one symbol in each set
+  public static final String[]             universe;                   // list of symbols to explore
+  public static final Map<String, Integer> symbolCap;                  // max percentage for each symbol
+  public static final List<Set<String>>    requiredSets;               // must use one symbol in each set
 
   // TODO per-symbol minimum
   // TODO better labels on charts: inflation? start year?
+  // TODO generate charts for more features pairs
 
   static {
     symbol2index = new HashMap<>();
@@ -471,6 +471,7 @@ public class SimbaPortfolios
     // TODO setup scan at top of class (create config object?)
     scanDistributions(3, 6, 10, 30, 10, avoid, portfolios);
     System.out.printf("Portfolios: %d\n", portfolios.size());
+    if (portfolios.isEmpty()) return;
 
     System.out.println("Calculate Returns...");
     long start = TimeLib.getTime();
@@ -482,27 +483,9 @@ public class SimbaPortfolios
     }
     System.out.printf("Time: %s  (%d)\n", TimeLib.formatDuration(TimeLib.getTime() - start), portfolios.size());
 
-    int[] indices = new int[] { 0, 3, 2, 5, 4, 1 };
     String sPeriodLength = String.format("%d-year Period", nLongYears);
     String[] descriptions = new String[] { "Worst " + sPeriodLength, "10th Percentile for " + sPeriodLength + "s",
         "Median for " + sPeriodLength + "s", "Long-term CAGR", "Std Dev (" + sPeriodLength + "s)", "Max Drawdown" };
-    String[] dimNames = new String[indices.length];
-    for (int i = 0; i < dimNames.length; ++i) {
-      dimNames[i] = descriptions[indices[i]];
-    }
-
-    if (bSaveChartAllPortfolios) {
-      Sequence scatter = new Sequence();
-      System.out.println("Save...");
-      for (FeatureVec v : portfolioStats) {
-        scatter.addData(v.subspace(indices));
-      }
-      ChartConfig chartConfig = new ChartConfig(new File(DataIO.outputPath, "simba-all.html"))
-          .setType(ChartConfig.Type.Scatter).setTitle(descriptions[indices[1]] + " vs. " + descriptions[indices[0]])
-          .setYAxisTitle(descriptions[indices[1]]).setXAxisTitle(descriptions[indices[0]]).setSize("100%", "100%")
-          .setRadius(1).setDimNames(dimNames).setData(scatter).showToolTips(true);
-      Chart.saveScatterPlot(chartConfig);
-    }
 
     // Filter results by removing portfolios that are "dominated" by another portfolio.
     double[] domdir = new double[] { 1, 1, 1, 0, -1, 1 };
@@ -543,16 +526,19 @@ public class SimbaPortfolios
     });
     System.out.printf("Filtered: %d\n", portfolioStats.size());
 
-    // Save chart with remaining portfolios.
-    Sequence scatter = new Sequence();
-    for (FeatureVec v : portfolioStats) {
-      scatter.addData(v.subspace(indices));
+    // { "Worst Period", "10th Percentile", "Median", "CAGR", "Std Dev", "Max Drawdown" }
+    final int[][] goodCharts = new int[][] { { 0, 3 }, { 1, 3 }, { 2, 3 }, {5, 2}, { 5, 3 }, { 0, 2 } };
+    for (int iChart = 0; iChart < goodCharts.length; ++iChart) {
+      int i = goodCharts[iChart][0];
+      int j = goodCharts[iChart][1];
+      String descX = descriptions[i];
+      String descY = descriptions[j];
+      String filename = String.format("simba-filtered-%d-%d.html", i, j);
+      ChartConfig chartConfig = new ChartConfig(new File(DataIO.outputPath, filename)).setType(ChartConfig.Type.Scatter)
+          .setTitle(descY + " vs. " + descX).setYAxisTitle(descY).setXAxisTitle(descX).setSize("100%", "100%")
+          .setRadius(3).setDimNames(descriptions).setData(portfolioStats).showToolTips(true).setIndexXY(i, j);
+      Chart.saveScatterPlot(chartConfig);
     }
-    ChartConfig chartConfig = new ChartConfig(new File(DataIO.outputPath, "simba-filtered.html"))
-        .setType(ChartConfig.Type.Scatter).setTitle(descriptions[indices[1]] + " vs. " + descriptions[indices[0]])
-        .setYAxisTitle(descriptions[indices[1]]).setXAxisTitle(descriptions[indices[0]]).setSize("100%", "100%")
-        .setRadius(3).setDimNames(dimNames).setData(scatter).showToolTips(true);
-    Chart.saveScatterPlot(chartConfig);
 
     // Sort portfolios and save description and metrics to a text file.
     portfolioStats.getData().sort(new Comparator<FeatureVec>()
@@ -560,8 +546,8 @@ public class SimbaPortfolios
       @Override
       public int compare(FeatureVec x, FeatureVec y)
       {
-        double a = x.get(indices[1]);
-        double b = y.get(indices[1]);
+        double a = x.get(1);
+        double b = y.get(1);
         if (a < b) return 1;
         if (a > b) return -1;
         return 0;

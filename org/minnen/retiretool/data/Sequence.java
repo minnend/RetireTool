@@ -137,9 +137,19 @@ public class Sequence implements Iterable<FeatureVec>
     return meta.get(key);
   }
 
+  public Object getMeta(Object key, Object defaultValue)
+  {
+    return meta.getOrDefault(key, defaultValue);
+  }
+
   public String getMetaString(Object key)
   {
     return (String) meta.get(key);
+  }
+
+  public String getMetaString(Object key, String defaultString)
+  {
+    return (String) meta.getOrDefault(key, defaultString);
   }
 
   public void setMeta(Object key, Object value)
@@ -158,10 +168,16 @@ public class Sequence implements Iterable<FeatureVec>
     return this;
   }
 
+  public String getDateRangeString()
+  {
+    return String.format("[%s] -> [%s]", TimeLib.formatDate(getStartMS()), TimeLib.formatDate(getEndMS()));
+  }
+
+  @Override
   public String toString()
   {
-    return String.format("[Seq: len=%d, %dD  [%s]->[%s]]", length(), getNumDims(), TimeLib.formatTime(getStartMS()),
-        TimeLib.formatTime(getEndMS()));
+    return String.format("[Seq: len=%d, %dD  [%s]->[%s]]", length(), getNumDims(), TimeLib.formatDate(getStartMS()),
+        TimeLib.formatDate(getEndMS()));
   }
 
   /**

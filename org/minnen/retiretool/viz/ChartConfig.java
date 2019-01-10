@@ -53,6 +53,7 @@ public class ChartConfig
   public List<PlotLine> xLines             = new ArrayList<PlotLine>();
   public List<PlotLine> yLines             = new ArrayList<PlotLine>();
   public String         pathToBase;
+  public int            lineWidth          = 2;
 
   // Specific to scatter plots.
   public double         radius             = 3;
@@ -331,6 +332,12 @@ public class ChartConfig
   public ChartConfig setContainerName(String name)
   {
     this.containerName = name;
+    return this;
+  }
+
+  public ChartConfig setLineWidth(int width)
+  {
+    lineWidth = width;
     return this;
   }
 
