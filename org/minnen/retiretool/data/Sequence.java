@@ -5,10 +5,8 @@ import java.time.Month;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Stack;
 
 import org.minnen.retiretool.data.FeatureVec;
@@ -20,7 +18,7 @@ import org.minnen.retiretool.util.TimeLib;
  * 
  * Each sequence has a specific frequency and the absolute time of every data point can be computed.
  */
-public class Sequence implements Iterable<FeatureVec>
+public class Sequence extends MetaStore implements Iterable<FeatureVec>
 {
   /** Stores information about a single lock position. */
   public static class Lock
@@ -57,21 +55,19 @@ public class Sequence implements Iterable<FeatureVec>
     }
   }
 
+  /** Used when adjusting dates, e.g. move to last day of month or last business day of month? */
   public enum LastDay {
     BUSINESS_DAY, ANY_DAY
   }
 
   /** Data stored in this data set. */
-  private final List<FeatureVec>    data  = new ArrayList<>();
+  private final List<FeatureVec> data  = new ArrayList<>();
 
   /** Name of this sequence. */
-  private String                    name;
+  private String                 name;
 
   /** Locks applied to this sequence. */
-  private final Stack<Lock>         locks = new Stack<>();
-
-  /** Holds metadata associated with this sequence. */
-  private final Map<Object, Object> meta  = new HashMap<>();
+  private final Stack<Lock>      locks = new Stack<>();
 
   /**
    * Defines behavior when searching for an index matching a given time.
@@ -130,36 +126,6 @@ public class Sequence implements Iterable<FeatureVec>
   public String getName()
   {
     return name;
-  }
-
-  public Object getMeta(Object key)
-  {
-    return meta.get(key);
-  }
-
-  public Object getMeta(Object key, Object defaultValue)
-  {
-    return meta.getOrDefault(key, defaultValue);
-  }
-
-  public String getMetaString(Object key)
-  {
-    return (String) meta.get(key);
-  }
-
-  public String getMetaString(Object key, String defaultString)
-  {
-    return (String) meta.getOrDefault(key, defaultString);
-  }
-
-  public void setMeta(Object key, Object value)
-  {
-    meta.put(key, value);
-  }
-
-  public void copyMeta(Sequence seq)
-  {
-    meta.putAll(seq.meta);
   }
 
   public Sequence setName(String name)

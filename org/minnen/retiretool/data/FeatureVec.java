@@ -6,7 +6,7 @@ import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.TimeLib;
 
 /** represents a vector in R^n */
-public class FeatureVec
+public class FeatureVec extends MetaStore
 {
   /** actual data */
   private double[] vec;
