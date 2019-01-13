@@ -1225,43 +1225,48 @@ public final class FinLib
     return Math.sqrt(v);
   }
 
-  /** @return sharpe ratio for `returns` relative to `benchmark`, which can be null */
-  public static double sharpe(Sequence cumulativeReturns, Sequence benchmark)
+  /** @return sharpe ratio for `returns` (1.2 = 1.2% growth) relative to `benchmark`, which can be null. */
+  public static double sharpe(Sequence returns, Sequence benchmark)
   {
-    if (cumulativeReturns == null || cumulativeReturns.isEmpty()) return 0.0;
-    final int N = cumulativeReturns.length();
+    if (returns == null || returns.isEmpty()) return 0.0;
+    final int N = returns.length();
     assert benchmark == null || benchmark.length() == N;
 
-    double[] excess = new double[N];
-    for (int i = 1; i < N; ++i) {
-      double a = cumulativeReturns.get(i - 1, 0);
-      double b = cumulativeReturns.get(i, 0);
-      double r = b / a;
-      excess[i] = (b - a) / a;
-    }
+    double[] excess = returns.extractDim(0);
     if (benchmark != null) {
-      for (int i = 1; i < N; ++i) {
-        double a = benchmark.get(i - 1, 0);
-        double b = benchmark.get(i, 0);
-        excess[i] -= (b - a) / a;
+      for (int i = 0; i < N; ++i) {
+        excess[i] -= benchmark.get(i, 0);
       }
     }
 
-    double mean = Library.mean(excess);
     double sdev = Library.stdev(excess);
-    double sharpe = Math.abs(sdev) < 1e-8 ? 0.0 : mean / sdev;
-    System.out.printf("%s: %f / %f = %f\n", cumulativeReturns.getName(), mean, sdev, sharpe);
-    return sharpe;
+    return Math.abs(sdev) < 1e-8 ? 0.0 : Library.mean(excess) / sdev;
   }
 
   /**
    * Calculates Sharpe ratio with an adjustment to annualize daily returns.
    * 
-   * @return sharpe ratio for `returns` relative to `benchmark`, which can be null
+   * This function uses a simple (and not very accurate) method for annualizing returns. More info here:
+   * https://augmentedtrader.com/2015/09/02/why-multiply-by-sqrt252-to-compute-the-sharpe-ratio/
+   * 
+   * @return sharpe ratio for `returns` relative to `benchmark`, which can be null.
    */
-  public static double sharpeDaily(Sequence returns, Sequence benchmark)
+  public static double sharpeDaily(Sequence dailyReturns, Sequence benchmark)
   {
-    return Math.sqrt(252) * sharpe(returns, benchmark);
+    return Math.sqrt(252) * sharpe(dailyReturns, benchmark);
+  }
+
+  /**
+   * Calculates Sharpe ratio with an adjustment to annualize monthly returns.
+   * 
+   * This function uses a simple (and not very accurate) method for annualizing returns. More info here:
+   * https://augmentedtrader.com/2015/09/02/why-multiply-by-sqrt252-to-compute-the-sharpe-ratio/
+   * 
+   * @return sharpe ratio for `returns` relative to `benchmark`, which can be null.
+   */
+  public static double sharpeMonthly(Sequence monthlyReturns, Sequence benchmark)
+  {
+    return Math.sqrt(12) * sharpe(monthlyReturns, benchmark);
   }
 
   public static double[] minvar(double[][] corrMatrix)
@@ -1350,7 +1355,7 @@ public final class FinLib
   /** Takes a sequence of returns (1.2 = 1.2% growth) and returns sequence of cumulative returns. */
   public static Sequence cumulativeFromReturns(Sequence returnSeq, double principle, double contributionPerStep)
   {
-    Sequence seq = new Sequence("Cumulative: " + returnSeq.getName());
+    Sequence seq = new Sequence("Cumulative " + returnSeq.getName());
     seq.copyMeta(returnSeq);
     double balance = principle;
 
@@ -1382,7 +1387,7 @@ public final class FinLib
   {
     if (cumulativeReturns == null || cumulativeReturns.length() < 2) return null;
 
-    Sequence seq = new Sequence("Returns: " + cumulativeReturns.getName());
+    Sequence seq = new Sequence("Returns " + cumulativeReturns.getName());
     seq.copyMeta(cumulativeReturns);
 
     for (int i = 1; i < cumulativeReturns.length(); ++i) {

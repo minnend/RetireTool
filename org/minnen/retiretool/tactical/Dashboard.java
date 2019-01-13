@@ -338,7 +338,7 @@ public class Dashboard
     try (Writer writer = new Writer(sw)) {
       writer.write("<table id=\"decadeComparisonTable\" cellspacing=\"0\"><thead>\n");
       writer.write("<thead>\n");
-      writer.write(genTableRow("th", "Strategy", "CAGR", "Annual<br/>Std Dev", "Worst<br/>DD", "Sharpe<br/>Ratio",
+      writer.write(genTableRow("th", "Strategy", "CAGR", "Annual<br/>Std Dev", "Worst<br/>DD", "Sharpe<br/>(daily)",
           "Median<br/>Return", String.format("Regret<br/>%s", TimeLib.formatDurationMonths(comparisons[0].duration)),
           String.format("Regret<br/>%s", TimeLib.formatDurationMonths(comparisons[1].duration)),
           String.format("Regret<br/>%s", TimeLib.formatDurationMonths(comparisons[2].duration))));
@@ -353,9 +353,10 @@ public class Dashboard
         writer.write(String.format("<td>%.2f</td>\n", stats.cagr));
         writer.write(String.format("<td>%.2f</td>\n", stats.devAnnualReturn));
         writer.write(String.format("<td>%.2f</td>\n", stats.drawdown));
-        double sharpe = FinLib.sharpeDaily(stats.dailyReturns, null);
-        double sharpeMonthly = FinLib.sharpe(stats.monthlyReturns, null);
-        writer.write(String.format("<td>%.2f, %.2f</td>\n", sharpe, sharpeMonthly));
+
+        Sequence dailyReturns = FinLib.cumulativeToReturns(stats.dailyReturns);
+        double sharpe = FinLib.sharpeDaily(dailyReturns, null);
+        writer.write(String.format("<td>%.2f</td>\n", sharpe));
         writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[2]));
         // Regret is other strategy's win percent.
         for (int i = 0; i < comparisons.length; ++i) {

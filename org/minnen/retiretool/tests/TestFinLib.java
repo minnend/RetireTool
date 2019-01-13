@@ -337,4 +337,24 @@ public class TestFinLib
       assertEquals(x, y, 1e-6);
     }
   }
+
+  @Test
+  public void testSharpe()
+  {
+    // Example 2 from https://en.wikipedia.org/wiki/Sharpe_ratio
+    Sequence portfolio = new Sequence("portfolio returns");
+    portfolio.addData(-0.5);
+    portfolio.addData(0.1);
+    portfolio.addData(0.5);
+
+    Sequence benchmark = new Sequence("benchmark returns");
+    benchmark.addData(-0.48419);
+    benchmark.addData(0.17234);
+    benchmark.addData(0.46110);
+
+    double sharpe = FinLib.sharpe(portfolio, benchmark);
+    double expected = -0.2951444;
+    System.out.printf("%f %f\n", expected, sharpe);
+    assertEquals(expected, sharpe, 1e-6);
+  }
 }
