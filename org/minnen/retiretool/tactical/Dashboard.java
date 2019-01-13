@@ -197,8 +197,7 @@ public class Dashboard
     for (FeatureVec x : seq) {
       x.set(0, FinLib.mul2ret(x.get(0))); // graph returns, not multipliers
     }
-    seq.setName(
-        String.format("[%s -> %s] (%d)", TimeLib.formatDate(info.timeStart), TimeLib.formatDate(info.timeEnd), index));
+    seq.setName(String.format("[%s] -> [%s]", TimeLib.formatDate(info.timeStart), TimeLib.formatDate(info.timeEnd)));
     return seq;
   }
 
@@ -244,14 +243,18 @@ public class Dashboard
     }
 
     for (Map.Entry<Integer, List<CodeInfo>> entry : returnsByCode.entrySet()) {
+      int code = entry.getKey();
       List<CodeInfo> list = entry.getValue();
       List<Sequence> seqs = new ArrayList<>();
       for (int index = 0; index < list.size(); ++index) {
         seqs.add(genGrowthSeq(index, list.get(index)));
       }
+      if (code == currentCode) {
+        seqs.get(0).setMeta("lineWidth", 3); // custom line width for current sequence
+      }
 
-      String title = String.format("Code: %d (n=%d)", entry.getKey(), list.size());
-      String filename = genGraphFileName(entry.getKey());
+      String title = String.format("Code: %d (n=%d)", code, list.size());
+      String filename = genGraphFileName(code);
       ChartConfig config = ChartConfig.buildLine(new File(DataIO.outputPath, filename), title, "100%", "900px",
           ChartScaling.LINEAR, ChartTiming.INDEX, seqs);
       config.setPathToBase(miscToBase).setLineWidth(1);
@@ -335,7 +338,7 @@ public class Dashboard
     try (Writer writer = new Writer(sw)) {
       writer.write("<table id=\"decadeComparisonTable\" cellspacing=\"0\"><thead>\n");
       writer.write("<thead>\n");
-      writer.write(genTableRow("th", "Strategy", "CAGR", "Std. Dev", "Worst<br/>DD", "Sharpe<br/>Ratio",
+      writer.write(genTableRow("th", "Strategy", "CAGR", "Annual<br/>Std Dev", "Worst<br/>DD", "Sharpe<br/>Ratio",
           "Median<br/>Return", String.format("Regret<br/>%s", TimeLib.formatDurationMonths(comparisons[0].duration)),
           String.format("Regret<br/>%s", TimeLib.formatDurationMonths(comparisons[1].duration)),
           String.format("Regret<br/>%s", TimeLib.formatDurationMonths(comparisons[2].duration))));

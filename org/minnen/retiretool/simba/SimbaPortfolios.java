@@ -527,7 +527,7 @@ public class SimbaPortfolios
     System.out.printf("Filtered: %d\n", portfolioStats.size());
 
     // { "Worst Period", "10th Percentile", "Median", "CAGR", "Std Dev", "Max Drawdown" }
-    final int[][] goodCharts = new int[][] { { 0, 3 }, { 1, 3 }, { 2, 3 }, {5, 2}, { 5, 3 }, { 0, 2 } };
+    final int[][] goodCharts = new int[][] { { 0, 3 }, { 1, 3 }, { 2, 3 }, { 5, 2 }, { 5, 3 }, { 0, 2 } };
     for (int iChart = 0; iChart < goodCharts.length; ++iChart) {
       int i = goodCharts[iChart][0];
       int j = goodCharts[iChart][1];

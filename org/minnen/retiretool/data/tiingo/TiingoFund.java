@@ -49,7 +49,6 @@ public class TiingoFund
     try {
       TiingoIO.loadTickers();
       TiingoFund fund = TiingoFund.get(symbol);
-      System.out.println("from supported-tickers: " + fund);
       if (loadData && !fund.loadData()) return null;
       return fund;
     } catch (IOException e) {
