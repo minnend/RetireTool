@@ -12,6 +12,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+import org.apache.commons.configuration2.Configuration;
+import org.apache.commons.configuration2.builder.fluent.Configurations;
+import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.FeatureVec;
@@ -562,6 +565,25 @@ public class Dashboard
 
   public static void main(String[] args) throws IOException
   {
+    // Optional configuration file.
+    if (args.length > 0) {
+      File configFile = new File(args[0]);
+      try {
+        Configurations configs = new Configurations();
+        Configuration config = configs.properties(configFile);
+
+        if (config.containsKey("path.finance")) {
+          DataIO.setFinancePath(new File(config.getString("path.finance")));
+        }
+        if (config.containsKey("path.output")) {
+          DataIO.setOutputPath(new File(config.getString("path.output")));
+        }
+      } catch (ConfigurationException e) {
+        System.err.println(e.getMessage());
+        System.exit(1);
+      }
+    }
+
     TacticLib.setupData(symbol, store);
 
     Sequence stock = store.get(TacticLib.riskyName);
