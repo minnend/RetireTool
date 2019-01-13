@@ -92,7 +92,7 @@ public class Predict10YearReturn
     equityAllocation.adjustDatesToEndOfQuarter();
 
     // Load S&P 500 data.
-    Sequence snp = Shiller.loadSNP(DataIO.shiller, FinLib.DividendMethod.MONTHLY);
+    Sequence snp = Shiller.loadSNP(Shiller.getPathCSV(), FinLib.DividendMethod.MONTHLY);
     snp.adjustDatesToEndOfMonth();
     System.out.printf("Shiller (%d): [%s] -> [%s]\n", snp.length(), TimeLib.formatDate(snp.getStartMS()),
         TimeLib.formatDate(snp.getEndMS()));

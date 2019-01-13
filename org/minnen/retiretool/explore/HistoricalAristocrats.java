@@ -87,7 +87,7 @@ public class HistoricalAristocrats
   public static void main(String[] args) throws IOException
   {
     TiingoIO.loadTickers();
-    File file = new File(DataIO.financePath, "historical-aristocrats.txt");
+    File file = new File(DataIO.getFinancePath(), "historical-aristocrats.txt");
     List<AnnualPortfolio> years = loadAnnualData(file);
     System.out.printf("Years (%d): %d -> %d\n", years.size(), years.get(0).year, years.get(years.size() - 1).year);
 
@@ -147,7 +147,7 @@ public class HistoricalAristocrats
         FinLib.dollarFormatter.format(cumulativeReturns.getLast(0)));
     FinLib.normalizeReturns(cumulativeReturns);
 
-    file = new File(DataIO.outputPath, "historical-aristocrats-returns.txt");
+    file = new File(DataIO.getOutputPath(), "historical-aristocrats-returns.txt");
     DataIO.saveDateValueCSV(file, cumulativeReturns, 0);
   }
 }

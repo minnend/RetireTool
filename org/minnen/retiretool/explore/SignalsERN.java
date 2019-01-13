@@ -106,7 +106,7 @@ public class SignalsERN
     }
 
     String[] dimNames = new String[] { seqX.getName(), seqY.getName() };
-    File file = new File(DataIO.outputPath, String.format("%s vs %s.html", seqX.getName(), seqY.getName()));
+    File file = new File(DataIO.getOutputPath(), String.format("%s vs %s.html", seqX.getName(), seqY.getName()));
     Chart.saveScatterPlot(file, seqX.getName() + " vs. " + seqY.getName(), "100%", "640px", 3, dimNames, scatter);
   }
 
@@ -218,7 +218,7 @@ public class SignalsERN
     Sequence stockReturns = stockFund.extractDims(FinLib.AdjClose);
     stockReturns._div(stockReturns.getFirst(0));
 
-    File file = new File(DataIO.outputPath, "ern-signals-vs-stock.html");
+    File file = new File(DataIO.getOutputPath(), "ern-signals-vs-stock.html");
     Chart.saveLineChart(file, "Signals vs. Stock", "100%", "640px", ChartScaling.LINEAR, ChartTiming.MONTHLY, pmi,
         treasurySpread, initialClaims.div(10000), stockReturns, returnsAfterMonths[6], returnsAfterMonths[3],
         returnsAfterMonths[12]);
@@ -236,7 +236,7 @@ public class SignalsERN
     //
     // // Report: line chart showing spread and stock market growth.
     // String title = String.format("Treasury Spread: %s", spread.getName());
-    // File file = new File(DataIO.outputPath, "treasury-spread.html");
+    // File file = new File(DataIO.getOutputPath(), "treasury-spread.html");
     // Chart.saveLineChart(file, title, 1200, 640, false, false, spread, durReturns, stock);
   }
 }

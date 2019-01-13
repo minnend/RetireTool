@@ -26,7 +26,7 @@ public class QuandlSeries
   {
     if (data != null) return true;
     try {
-      File file = QuandlIO.downloadData(QuandlIO.quandlPath, name, dataURL, TimeLib.MS_IN_HOUR * 8);
+      File file = QuandlIO.downloadData(QuandlIO.getPath(), name, dataURL, TimeLib.MS_IN_HOUR * 8);
       this.data = DataIO.loadDateValueCSV(file);
       this.data.setName(name);
       return true;

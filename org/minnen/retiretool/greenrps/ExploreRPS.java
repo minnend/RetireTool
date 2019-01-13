@@ -133,9 +133,9 @@ public class ExploreRPS
 
   public static void main(String[] args) throws IOException
   {
-    File dataDir = new File(DataIO.financePath, "quant_strategy_materials");
+    File dataDir = new File(DataIO.getFinancePath(), "quant_strategy_materials");
     assert dataDir.isDirectory();
-    File outputDir = DataIO.outputPath;
+    File outputDir = DataIO.getOutputPath();
     assert dataDir.isDirectory();
 
     ExploreRPS explore = new ExploreRPS();

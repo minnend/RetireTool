@@ -51,7 +51,7 @@ public class SmaTester
     trigger.setName(String.format("Trigger[%d]", config.nLookbackTriggerA));
     base.setName(String.format("Base[%d]", config.nLookbackBaseA));
 
-    File file = new File(DataIO.outputPath,
+    File file = new File(DataIO.getOutputPath(),
         String.format("sma-%d-%d.html", config.nLookbackTriggerA, config.nLookbackBaseA));
     String title = String.format("%s - SMA[%d,%d]", symbol, config.nLookbackTriggerA, config.nLookbackBaseA);
 

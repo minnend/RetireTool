@@ -126,7 +126,7 @@ public class VanguardReport
   {
     TiingoIO.updateData(fundSymbols);
     Tiingo.setupSimulation(fundSymbols, slippage, null, store);
-    File file = new File(DataIO.outputPath, "vanguard-report.html");
+    File file = new File(DataIO.getOutputPath(), "vanguard-report.html");
     genReport(file);
   }
 }

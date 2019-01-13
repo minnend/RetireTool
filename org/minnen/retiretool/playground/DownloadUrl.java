@@ -70,7 +70,7 @@ public class DownloadUrl
     // URL url = new URL("http://ichart.finance.yahoo.com/table.csv?s=^GSPC&ignore=.csv");
     URL url = new URL("https://ichart.finance.yahoo.com/table.csv?s=^GSPC");
     // URL url = new URL("http://finance.yahoo.com/d/quotes.csv?s=AAPL&f=snabopghydr1qd1veb4j4rs7s6");
-    File file = new File(DataIO.outputPath, "test.txt");
+    File file = new File(DataIO.getOutputPath(), "test.txt");
     long a = TimeLib.getTime();
     // long n = download(url, file);
     // long n = copyUrlToFile(url, file);

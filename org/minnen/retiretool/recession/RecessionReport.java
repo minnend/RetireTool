@@ -22,7 +22,7 @@ public class RecessionReport
 
     // Predict forward 10-year stock return.
     Predict10YearReturn.calculate();
-    file = new File(DataIO.outputPath, "10-year-return-prediction.html");
+    file = new File(DataIO.getOutputPath(), "10-year-return-prediction.html");
     config = Chart.saveLineChart(file, "10-Year Return Prediction", "100%", "600px", ChartScaling.LINEAR,
         ChartTiming.MONTHLY, Predict10YearReturn.equityAllocation, Predict10YearReturn.trueForwardReturns,
         Predict10YearReturn.predictedForwardReturns);
@@ -31,7 +31,7 @@ public class RecessionReport
 
     // 10-2 treasury yield spread.
     YieldSpread.calculate();
-    file = new File(DataIO.outputPath, "treasury-10x2-yield-spread.html");
+    file = new File(DataIO.getOutputPath(), "treasury-10x2-yield-spread.html");
     config = Chart.saveLineChart(file, "10-2 Treasury Yield Spread", "100%", "600px", ChartScaling.LINEAR,
         ChartTiming.MONTHLY, YieldSpread.spread);
     config.addPlotLineY(new PlotLine(0.0, 2.0, "black"));
@@ -39,12 +39,12 @@ public class RecessionReport
 
     // Unemployment rate.
     UnemploymentRate.calculate();
-    Chart.saveLineChart(new File(DataIO.outputPath, "unrate.html"), "Unemployment Rate", "100%", "640px",
+    Chart.saveLineChart(new File(DataIO.getOutputPath(), "unrate.html"), "Unemployment Rate", "100%", "640px",
         ChartScaling.LINEAR, ChartTiming.MONTHLY, UnemploymentRate.unrate, UnemploymentRate.unrateSMA);
 
     // Initial claims (unemployment).
     InitialClaims.calculate();
-    Chart.saveLineChart(new File(DataIO.outputPath, "initial-claims.html"), "Unemployment Initial Claims", "100%",
+    Chart.saveLineChart(new File(DataIO.getOutputPath(), "initial-claims.html"), "Unemployment Initial Claims", "100%",
         "640px", ChartScaling.LINEAR, ChartTiming.DAILY, InitialClaims.claims, InitialClaims.claimsSMA);
   }
 }

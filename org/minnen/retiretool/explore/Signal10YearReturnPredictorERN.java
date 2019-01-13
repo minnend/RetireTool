@@ -92,7 +92,7 @@ public class Signal10YearReturnPredictorERN
     indicator.adjustDatesToEndOfQuarter();
 
     // Load S&P 500 data.
-    Sequence snp = Shiller.loadSNP(new File(DataIO.financePath, "shiller.csv"), FinLib.DividendMethod.MONTHLY);
+    Sequence snp = Shiller.loadSNP(new File(DataIO.getFinancePath(), "shiller.csv"), FinLib.DividendMethod.MONTHLY);
     snp.adjustDatesToEndOfMonth();
     System.out.printf("Shiller: [%s] -> [%s]\n", TimeLib.formatDate(snp.getStartMS()),
         TimeLib.formatDate(snp.getEndMS()));
@@ -117,11 +117,11 @@ public class Signal10YearReturnPredictorERN
         forwardReturns.extractDim(0));
     System.out.printf("Corr=%f\n", corr);
 
-    File file = new File(DataIO.outputPath, "return-prediction.html");
+    File file = new File(DataIO.getOutputPath(), "return-prediction.html");
     Chart.saveLineChart(file, "10-Year Return Prediction", "100%", "600px", ChartScaling.LINEAR, ChartTiming.MONTHLY,
         indicator, forwardReturns, adjustedIndicator);
 
-    file = new File(DataIO.outputPath, "return-predictor-signals.html");
+    file = new File(DataIO.getOutputPath(), "return-predictor-signals.html");
     Chart.saveLineChart(file, "Return Predictor Signals", "100%", "600px", ChartScaling.LINEAR, ChartTiming.MONTHLY, signals);
   }
 }

@@ -78,7 +78,7 @@ public class GenMonthlyReturns
     }
 
     // Calculate monthly returns for each fund.
-    File file = new File(DataIO.financePath, "vanguard-monthly.csv");
+    File file = new File(DataIO.getFinancePath(), "vanguard-monthly.csv");
     try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
       // Write header.
       List<String> tokens = new ArrayList<>();

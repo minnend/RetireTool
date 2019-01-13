@@ -32,7 +32,7 @@ public class FredSeries
   {
     if (data != null) return true;
     try {
-      File file = FredIO.downloadData(FredIO.fredPath, seriesID, TimeLib.MS_IN_HOUR * 8);
+      File file = FredIO.downloadData(FredIO.getPath(), seriesID, TimeLib.MS_IN_HOUR * 8);
       this.data = DataIO.loadDateValueCSV(file);
       this.data.setName(name);
       if (frequency == Frequency.Monthly) {

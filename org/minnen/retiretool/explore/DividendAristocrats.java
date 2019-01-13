@@ -164,7 +164,7 @@ public class DividendAristocrats
     returns.add(returnsStock);
 
     // Dividend Aristocrats using historical data.
-    // File file = new File(DataIO.financePath, "historical-aristocrats-returns.txt");
+    // File file = new File(DataIO.getFinancePath(), "historical-aristocrats-returns.txt");
     // Sequence returnsHistoricalAristocrats = DataIO.loadDateValueCSV(file);
     // returnsHistoricalAristocrats = returnsHistoricalAristocrats.matchTimes(returnsStock, 1000);
     // FinLib.normalizeReturns(returnsHistoricalAristocrats);
@@ -221,7 +221,7 @@ public class DividendAristocrats
     Sequence returnsDualMom = portfolios.run(dualMomPred, timeSimStart, timeSimEnd);
     returns.add(returnsDualMom);
     compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, returnsStock));
-    Chart.saveHoldings(new File(DataIO.outputPath, "holdings-dual-momentum.html"), sim.holdings, sim.store);
+    Chart.saveHoldings(new File(DataIO.getOutputPath(), "holdings-dual-momentum.html"), sim.holdings, sim.store);
 
     // Gated Dividends.
     String[] assets = merge(kingdom, new String[] { "VFINX", safeAsset });
@@ -233,9 +233,9 @@ public class DividendAristocrats
     compStats.add(ComparisonStats.calc(returnsGated, 0.5, returnsStock));
 
     // Save reports: graph of returns + comparison summary.
-    Chart.saveLineChart(new File(DataIO.outputPath, "returns.html"), "Total Returns", "100%", "640px",
+    Chart.saveLineChart(new File(DataIO.getOutputPath(), "returns.html"), "Total Returns", "100%", "640px",
         ChartScaling.LOGARITHMIC, ChartTiming.MONTHLY, returns);
-    Chart.saveComparisonTable(new File(DataIO.outputPath, "comparison.html"), "100%", compStats);
+    Chart.saveComparisonTable(new File(DataIO.getOutputPath(), "comparison.html"), "100%", compStats);
 
     // Report: comparison of returns over next N months.
     for (int nMonths : new int[] { 12 * 5, 12 * 10 }) {
@@ -246,7 +246,7 @@ public class DividendAristocrats
         durationalReturns.add(seq);
       }
       String title = String.format("Total Returns (Next %s)", TimeLib.formatDurationMonths(nMonths));
-      File file = new File(DataIO.outputPath, String.format("duration-returns-%d-months.html", nMonths));
+      File file = new File(DataIO.getOutputPath(), String.format("duration-returns-%d-months.html", nMonths));
       Chart.saveLineChart(file, title, "100%", "640px", ChartScaling.LINEAR, ChartTiming.MONTHLY, durationalReturns);
     }
 

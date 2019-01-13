@@ -1,8 +1,6 @@
 package org.minnen.retiretool.viz;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.time.LocalDate;
@@ -38,6 +36,7 @@ import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 
 public class Chart
 {
+  public final static String  jquery        = "https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js";
   public final static boolean bVerticalLine = false;
 
   public static ChartConfig saveLineChart(File file, String title, String width, String height, ChartScaling scaling,
@@ -138,7 +137,7 @@ public class Chart
     // saveDataCSV(config, seqs);
     try (Writer writer = new Writer(config.file)) {
       writer.write("<html><head>\n");
-      writer.write("<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js\"></script>\n");
+      writer.write("<script src=\"%s\"></script>\n", jquery);
       writer.write("<script src=\"%s/js/highcharts.js\"></script>\n",
           config.pathToBase == null ? "." : config.pathToBase);
       writer.write("<script type=\"text/javascript\">\n");
@@ -329,7 +328,7 @@ public class Chart
     // Write HTML to generate the graph.
     try (Writer writer = new Writer(file)) {
       writer.write("<html><head>\n");
-      writer.write("<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js\"></script>\n");
+      writer.write("<script src=\"%s\"></script>\n", jquery);
       writer.write("<script src=\"js/highcharts.js\"></script>\n");
       writer.write("  <script type=\"text/javascript\">\n");
       writer.write("$(function () {\n");
@@ -441,7 +440,7 @@ public class Chart
     // Write HTML to generate the graph.
     try (Writer writer = new Writer(config.file)) {
       writer.write("<html><head>\n");
-      writer.write("<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js\"></script>\n");
+      writer.write("<script src=\"%s\"></script>\n", jquery);
       if (config.type == ChartConfig.Type.Scatter) {
         writer.write("<script src=\"js/highcharts.js\"></script>\n");
       } else {
@@ -553,7 +552,7 @@ public class Chart
     // Write HTML to generate the graph.
     try (Writer writer = new Writer(file)) {
       writer.write("<html><head>\n");
-      writer.write("<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js\"></script>\n");
+      writer.write("<script src=\"%s\"></script>\n", jquery);
       writer.write("<script src=\"js/highcharts.js\"></script>\n");
       writer.write("  <script type=\"text/javascript\">\n");
       writer.write("$(function () {\n");
@@ -625,7 +624,7 @@ public class Chart
   {
     try (Writer writer = new Writer(file)) {
       writer.write("<html><head>\n");
-      writer.write("<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js\"></script>\n");
+      writer.write("<script src=\"%s\"></script>\n", jquery);
       writer.write("<script src=\"js/highcharts.js\"></script>\n");
       writer.write("<script src=\"http://code.highcharts.com/highcharts-more.js\"></script>\n");
       writer.write("<script type=\"text/javascript\">\n");
@@ -711,10 +710,10 @@ public class Chart
       boolean includeQuartiles, CumulativeStats... strategyStats) throws IOException
   {
     String tableHtml = genStatsTable(reduced, includeRiskAdjusted, includeQuartiles, strategyStats);
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+    try (Writer writer = new Writer(file)) {
       writer.write("<html><head>\n");
       writer.write("<title>Strategy Report</title>\n");
-      writer.write("<script src=\"http://code.jquery.com/jquery.min.js\"></script>\n");
+      writer.write("<script src=\"%s\"></script>\n", jquery);
       writer.write("<script type=\"text/javascript\" src=\"js/jquery.tablesorter.min.js\"></script>\n");
       writer.write("<script type=\"text/javascript\">\n");
       writer.write(" $(document).ready(function() { $(\"#statsTable\").tablesorter( {widgets: ['zebra']} ); } );\n");
@@ -853,10 +852,10 @@ public class Chart
    */
   public static void saveComparisonTable(File file, int width, ComparisonStats stats) throws IOException
   {
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+    try (Writer writer = new Writer(file)) {
       writer.write("<html><head>\n");
       writer.write("<title>Comparison Statistics</title>\n");
-      writer.write("<script src=\"http://code.jquery.com/jquery.min.js\"></script>\n");
+      writer.write("<script src=\"%s\"></script>\n", jquery);
       writer.write("<script type=\"text/javascript\" src=\"js/jquery.tablesorter.min.js\"></script>\n");
       writer.write("<script type=\"text/javascript\">\n");
       writer.write(" $(document).ready(function() { $(\"#myTable\").tablesorter( {widgets: ['zebra']} ); } );\n");
@@ -921,7 +920,7 @@ public class Chart
     try (Writer writer = new Writer(file)) {
       writer.write("<html><head>\n");
       writer.write("<title>Comparison Statistics</title>\n");
-      writer.write("<script src=\"http://code.jquery.com/jquery.min.js\"></script>\n");
+      writer.write("<script src=\"%s\"></script>\n", jquery);
       writer.write("<script type=\"text/javascript\" src=\"js/jquery.tablesorter.min.js\"></script>\n");
       writer.write("<script type=\"text/javascript\">\n");
       writer.write(" $(document).ready(function() { $(\"#myTable\").tablesorter( {widgets: ['zebra']} ); } );\n");
@@ -987,10 +986,10 @@ public class Chart
 
   public static void saveBeatInflationTable(File file, String width, ComparisonStats... allStats) throws IOException
   {
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+    try (Writer writer = new Writer(file)) {
       writer.write("<html><head>\n");
       writer.write("<title>Comparison Statistics</title>\n");
-      writer.write("<script src=\"http://code.jquery.com/jquery.min.js\"></script>\n");
+      writer.write("<script src=\"%s\"></script>\n", jquery);
       writer.write("<script type=\"text/javascript\" src=\"js/jquery.tablesorter.min.js\"></script>\n");
       writer.write("<script type=\"text/javascript\">\n");
       writer.write(" $(document).ready(function() { $(\"#myTable\").tablesorter( {widgets: ['zebra']} ); } );\n");
@@ -1151,10 +1150,10 @@ public class Chart
   {
     final double diffMargin = 0.5;
 
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+    try (Writer writer = new Writer(file)) {
       writer.write("<html><head>\n");
       writer.write("<title>Annual Statistics</title>\n");
-      writer.write("<script src=\"http://code.jquery.com/jquery.min.js\"></script>\n");
+      writer.write("<script src=\"%s\"></script>\n", jquery);
       writer.write("<script type=\"text/javascript\" src=\"js/jquery.tablesorter.min.js\"></script>\n");
       writer.write("<script type=\"text/javascript\">\n");
       writer.write(" $(document).ready(function() { $(\"#statsTable\").tablesorter( {widgets: ['zebra']} ); } );\n");
@@ -1226,7 +1225,7 @@ public class Chart
     final String[] colors = Colors.getHex(names.size());
 
     // Generate HTML visualization.
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+    try (Writer writer = new Writer(file)) {
       writer.write("<html><head>\n");
       writer.write("<title>Holdings</title>\n");
       writer.write("<link rel=\"stylesheet\" href=\"holdings.css\">\n");
@@ -1332,9 +1331,9 @@ public class Chart
   public static void saveHighChartKDE(File file, String title, double xstart, double xstep, int width, int height,
       Sequence... seqs) throws IOException
   {
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+    try (Writer writer = new Writer(file)) {
       writer.write("<html><head>\n");
-      writer.write("<script src=\"http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js\"></script>\n");
+      writer.write("<script src=\"%s\"></script>\n", jquery);
       writer.write("<script src=\"js/highcharts.js\"></script>\n");
       writer.write("  <script type=\"text/javascript\">\n");
 

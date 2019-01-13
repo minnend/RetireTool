@@ -26,14 +26,41 @@ import org.minnen.retiretool.util.TimeLib;
 
 public class DataIO
 {
-  public static final File outputPath   = new File("e:/web");
-  public static final File financePath  = new File("e:/research/finance");
-  public static final File shiller      = new File(financePath, "shiller.csv");
-  public static final File shillerExcel = new File(financePath, "shiller.xls");
+  private static final File defaultOutputPath  = new File("e:/web");
+  private static final File defaultFinancePath = new File("e:/research/finance");
 
-  static {
-    // Create data and output directories if they doesn't exist.
+  private static File       outputPath;
+  private static File       financePath;
+
+  public static File getOutputPath()
+  {
+    if (outputPath == null) {
+      outputPath = defaultOutputPath;
+      if (!outputPath.exists()) outputPath.mkdirs();
+    }
+    return outputPath;
+  }
+
+  public static File getFinancePath()
+  {
+    if (financePath == null) {
+      financePath = defaultFinancePath;
+      if (!financePath.exists()) financePath.mkdirs();
+    }
+    return financePath;
+  }
+
+  public static void setOutputPath(File path)
+  {
+    if (path != null && path.equals(outputPath)) return;
+    outputPath = path;
     if (!outputPath.exists()) outputPath.mkdirs();
+  }
+
+  public static void setFinancePath(File path)
+  {
+    if (path != null && path.equals(financePath)) return;
+    financePath = path;
     if (!financePath.exists()) financePath.mkdirs();
   }
 

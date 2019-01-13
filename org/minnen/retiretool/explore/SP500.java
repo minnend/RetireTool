@@ -104,9 +104,9 @@ public class SP500
     compStats.add(ComparisonStats.calc(returnsSP500EW, 0.5, returnsStock));
 
     // Save reports: graph of returns + comparison summary.
-    Chart.saveLineChart(new File(DataIO.outputPath, "returns.html"), "Total Returns", "100%", "640px",
+    Chart.saveLineChart(new File(DataIO.getOutputPath(), "returns.html"), "Total Returns", "100%", "640px",
         ChartScaling.LOGARITHMIC, ChartTiming.MONTHLY, returns);
-    Chart.saveComparisonTable(new File(DataIO.outputPath, "comparison.html"), "100%", compStats);
+    Chart.saveComparisonTable(new File(DataIO.getOutputPath(), "comparison.html"), "100%", compStats);
 
     // Report: comparison of returns over next N months.
     for (int nMonths : new int[] { 12 * 5, 12 * 10 }) {
@@ -117,7 +117,7 @@ public class SP500
         durationalReturns.add(seq);
       }
       String title = String.format("Total Returns (Next %s)", TimeLib.formatDurationMonths(nMonths));
-      File file = new File(DataIO.outputPath, String.format("duration-returns-%d-months.html", nMonths));
+      File file = new File(DataIO.getOutputPath(), String.format("duration-returns-%d-months.html", nMonths));
       Chart.saveLineChart(file, title, "100%", "640px", ChartScaling.LINEAR, ChartTiming.MONTHLY, durationalReturns);
     }
 

@@ -722,8 +722,8 @@ public class AdaptiveAlloc
 
   public static void main(String[] args) throws IOException
   {
-    File outputDir = DataIO.outputPath;
-    File dataDir = DataIO.financePath;
+    File outputDir = DataIO.getOutputPath();
+    File dataDir = DataIO.getFinancePath();
     assert dataDir.isDirectory();
 
     Sequence tbillData = DataIO.loadDateValueCSV(new File(dataDir, "treasury-bills-3-month.csv"));

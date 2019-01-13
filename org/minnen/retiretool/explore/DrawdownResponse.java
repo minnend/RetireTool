@@ -102,10 +102,10 @@ public class DrawdownResponse
       System.out.printf("%d: %s %d\n", initialDD, stats, stats.count);
     }
 
-    Chart.saveChart(new File(DataIO.outputPath, "drawdown.html"), ChartConfig.Type.Area, "Drawdown", null, null, "100%",
+    Chart.saveChart(new File(DataIO.getOutputPath(), "drawdown.html"), ChartConfig.Type.Area, "Drawdown", null, null, "100%",
         "700px", Double.NaN, 0, 0, ChartScaling.LINEAR, ChartTiming.DAILY, 0, seqDrawdown);
 
-    Chart.saveScatterPlot(new File(DataIO.outputPath, "future-drawdown.html"), "Future Drawdown", "100%", "900px", 2,
+    Chart.saveScatterPlot(new File(DataIO.getOutputPath(), "future-drawdown.html"), "Future Drawdown", "100%", "900px", 2,
         new String[] { "Curren DD", "Extra DD" }, seqFutureDD);
   }
 }

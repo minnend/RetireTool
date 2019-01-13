@@ -868,7 +868,7 @@ public class RetireToolMonthly
     for (int i = 0; i < liks.length; ++i) {
       liks[i] = returnLiks.extractDims(i + 1);
       liks[i].setName(String.format("%d year%s", years[i], years[i] == 1 ? "" : "s"));
-      Chart.saveChart(new File(DataIO.outputPath, String.format("return-likelihoods-%d-years.html", years[i])),
+      Chart.saveChart(new File(DataIO.getOutputPath(), String.format("return-likelihoods-%d-years.html", years[i])),
           ChartConfig.Type.Area, "Return Likelihoods", Histogram.getLabelsFromHistogram(returnLiks), null, GRAPH_WIDTH,
           GRAPH_HEIGHT, 0.0, 1.0, Double.NaN, ChartScaling.LINEAR, ChartTiming.MONTHLY, 0, liks[i]);
     }
@@ -1854,8 +1854,8 @@ public class RetireToolMonthly
 
   public static void main(String[] args) throws IOException
   {
-    File dataDir = DataIO.financePath;
-    File dir = DataIO.outputPath;
+    File dataDir = DataIO.getFinancePath();
+    File dir = DataIO.getOutputPath();
     assert dataDir.isDirectory();
     assert dir.isDirectory();
 

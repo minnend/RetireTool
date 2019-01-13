@@ -534,7 +534,7 @@ public class SimbaPortfolios
       String descX = descriptions[i];
       String descY = descriptions[j];
       String filename = String.format("simba-filtered-%d-%d.html", i, j);
-      ChartConfig chartConfig = new ChartConfig(new File(DataIO.outputPath, filename)).setType(ChartConfig.Type.Scatter)
+      ChartConfig chartConfig = new ChartConfig(new File(DataIO.getOutputPath(), filename)).setType(ChartConfig.Type.Scatter)
           .setTitle(descY + " vs. " + descX).setYAxisTitle(descY).setXAxisTitle(descX).setSize("100%", "100%")
           .setRadius(3).setDimNames(descriptions).setData(portfolioStats).showToolTips(true).setIndexXY(i, j);
       Chart.saveScatterPlot(chartConfig);
@@ -553,7 +553,7 @@ public class SimbaPortfolios
         return 0;
       }
     });
-    savePortfolios(new File(DataIO.outputPath, "simba-filtered.txt"), portfolioStats);
+    savePortfolios(new File(DataIO.getOutputPath(), "simba-filtered.txt"), portfolioStats);
   }
 
   private static void filterPortfolios(File file) throws IOException
@@ -604,7 +604,7 @@ public class SimbaPortfolios
       String descX = name2desc.get(stats[i]);
       String descY = name2desc.get(stats[j]);
       String filename = String.format("simba-filtered-%d-%d.html", i, j);
-      ChartConfig chartConfig = new ChartConfig(new File(DataIO.outputPath, filename)).setType(ChartConfig.Type.Scatter)
+      ChartConfig chartConfig = new ChartConfig(new File(DataIO.getOutputPath(), filename)).setType(ChartConfig.Type.Scatter)
           .setTitle("<b>" + descY + "</b> vs. <b>" + descX + "</b>").setYAxisTitle(descY).setXAxisTitle(descX)
           .setSize(1200, 800).setRadius(2).setDimNames(dimNames).setData(scatter).showToolTips(true).setIndexXY(i, j);
       Chart.saveScatterPlot(chartConfig);
@@ -636,7 +636,7 @@ public class SimbaPortfolios
     int yIndex = name2index.get("Median");
     String descX = name2desc.get(stats[xIndex]);
     String descY = name2desc.get(stats[yIndex]);
-    ChartConfig chartConfig = new ChartConfig(new File(DataIO.outputPath, "simba-filtered.html"))
+    ChartConfig chartConfig = new ChartConfig(new File(DataIO.getOutputPath(), "simba-filtered.html"))
         .setType(ChartConfig.Type.Bubble).setTitle("<b>" + descY + "</b> vs. <b>" + descX + "</b>").setYAxisTitle(descY)
         .setXAxisTitle(descX).setSize(1200, 800).setRadius(3).setBubbleSizes("7", "20").setDimNames(dimNames)
         .setData(scatter).showToolTips(true).setIndexXY(xIndex, yIndex);
@@ -772,7 +772,7 @@ public class SimbaPortfolios
 
   public static void main(String[] args) throws IOException
   {
-    loadSimbaData(new File(DataIO.financePath, "simba-2018.csv"));
+    loadSimbaData(new File(DataIO.getFinancePath(), "simba-2018.csv"));
     int nMonths = (int) Math.round(TimeLib.monthsBetween(returnSeqs[0].getStartMS(), returnSeqs[0].getEndMS()));
     System.out.printf("Assets: %d  [%s] -> [%s]  (%d months)\n", returnSeqs.length,
         TimeLib.formatDate(returnSeqs[0].getStartMS()), TimeLib.formatDate(returnSeqs[0].getEndMS()), nMonths);

@@ -8,8 +8,12 @@ import java.time.Month;
 
 public class FredIO
 {
-  public static final String auth     = System.getenv("fred.auth");
-  public static final File   fredPath = new File(DataIO.financePath, "fred");
+  public static final String auth = System.getenv("fred.auth");
+
+  public static File getPath()
+  {
+    return new File(DataIO.getFinancePath(), "fred");
+  }
 
   /** @return URL for human-readable web page. */
   public static URL buildURLForWeb(String seriesID)

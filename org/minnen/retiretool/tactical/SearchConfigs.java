@@ -142,7 +142,7 @@ public class SearchConfigs
     int nSeedsFound = 0;
 
     System.out.printf("Save file: %s\n", saveFilename);
-    try (Writer writer = new Writer(new File(DataIO.outputPath, saveFilename))) {
+    try (Writer writer = new Writer(new File(DataIO.getOutputPath(), saveFilename))) {
       while (nSeedsFound < nMaxSeeds) {
         PredictorConfig config = generator.genRandom();
         if (set.contains(config)) continue;

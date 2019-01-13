@@ -27,17 +27,32 @@ import org.minnen.retiretool.util.TimeLib;
 
 public class TiingoIO
 {
-  public static final String                 auth                 = System.getenv("tiingo.auth");
+  public static final String                 auth                = System.getenv("tiingo.auth");
 
-  public static final File                   tiingoPath           = new File(DataIO.financePath, "tiingo");
-  public static final File                   metaPath             = new File(tiingoPath, "meta");
-  public static final File                   eodPath              = new File(tiingoPath, "eod");
+  public static final String                 supportedTickersUrl = "https://apimedia.tiingo.com/docs/tiingo/daily/supported_tickers.zip";
 
-  public static final String                 supportedTickersUrl  = "https://apimedia.tiingo.com/docs/tiingo/daily/supported_tickers.zip";
-  public static final File                   supportedTickersPath = new File(tiingoPath,
-      "tiingo_supported_tickers.csv");
+  private static Map<File, List<TiingoFund>> cacheFunds          = new HashMap<File, List<TiingoFund>>();
 
-  private static Map<File, List<TiingoFund>> cacheFunds           = new HashMap<File, List<TiingoFund>>();
+  /** @return path to base directory for storing Tiingo data. */
+  private static File getPath()
+  {
+    return new File(DataIO.getFinancePath(), "tiingo");
+  }
+
+  public static File getPathMeta()
+  {
+    return new File(getPath(), "meta");
+  }
+
+  public static File getPathEOD()
+  {
+    return new File(getPath(), "eod");
+  }
+
+  public static File getPathSupportedTickers()
+  {
+    return new File(getPath(), "tiingo_supported_tickers.csv");
+  }
 
   public static void clearMetadataCache()
   {
@@ -90,7 +105,7 @@ public class TiingoIO
    */
   public static List<TiingoFund> loadTickers() throws IOException
   {
-    return loadTickers(TiingoIO.supportedTickersPath);
+    return loadTickers(getPathSupportedTickers());
   }
 
   /**
@@ -130,12 +145,12 @@ public class TiingoIO
 
   public static File getMetadataFile(String symbol)
   {
-    return new File(TiingoIO.metaPath, symbol + "-meta.json");
+    return new File(getPathMeta(), symbol + "-meta.json");
   }
 
   public static File getEodFile(String symbol)
   {
-    return new File(TiingoIO.eodPath, symbol + "-eod.csv");
+    return new File(getPathEOD(), symbol + "-eod.csv");
   }
 
   public static TiingoMetadata loadMetadata(String symbol)
@@ -284,8 +299,9 @@ public class TiingoIO
 
   public static boolean saveFundEodData(TiingoFund fund, boolean replaceExisting) throws IOException
   {
-    if (!TiingoIO.eodPath.exists()) {
-      TiingoIO.eodPath.mkdirs();
+    File eodPath = getPathEOD();
+    if (!eodPath.exists()) {
+      eodPath.mkdirs();
     }
     URL url = TiingoIO.buildDataURL(fund.ticker);
     File file = getEodFile(fund.ticker);
@@ -347,8 +363,9 @@ public class TiingoIO
 
   public static boolean saveFundMetadata(TiingoFund fund, long replaceAgeMs) throws IOException
   {
-    if (!TiingoIO.metaPath.exists()) {
-      TiingoIO.metaPath.mkdirs();
+    File metaPath = getPathMeta();
+    if (!metaPath.exists()) {
+      metaPath.mkdirs();
     }
     URL url = TiingoIO.buildMetaURL(fund.ticker);
     File file = TiingoIO.getMetadataFile(fund.ticker);
@@ -362,7 +379,7 @@ public class TiingoIO
   public static boolean updateData(String[] symbols) throws IOException
   {
     // TODO Implement data update.
-    TiingoIO.loadTickers(TiingoIO.supportedTickersPath);
+    TiingoIO.loadTickers(getPathSupportedTickers());
     for (String symbol : symbols) {
       TiingoFund fund = TiingoFund.get(symbol);
       if (!TiingoIO.saveFundMetadata(fund)) return false;
@@ -373,7 +390,7 @@ public class TiingoIO
 
   public static boolean downloadLatestSupportedTickerCSV()
   {
-    File zip = new File(tiingoPath, "supported_tickers.zip");
+    File zip = new File(getPath(), "supported_tickers.zip");
     try {
       if (!DataIO.shouldDownloadUpdate(zip, 24 * TimeLib.MS_IN_HOUR)) return true;
     } catch (IOException e) {
@@ -397,12 +414,13 @@ public class TiingoIO
       return false;
     }
 
-    File file = new File(tiingoPath, "supported_tickers.csv");
+    File file = new File(getPath(), "supported_tickers.csv");
     if (!file.exists()) {
       System.err.println("Expected supported_tickers.csv file is missing!");
       return false;
     }
 
+    File supportedTickersPath = getPathSupportedTickers();
     if (supportedTickersPath.exists() && !supportedTickersPath.delete()) {
       System.err.println("Failed to delete old supported tickers CSV.");
       return false;

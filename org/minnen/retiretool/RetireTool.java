@@ -785,8 +785,8 @@ public class RetireTool
 
   public static void main(String[] args) throws IOException
   {
-    File dataDir = DataIO.financePath;
-    File dir = DataIO.outputPath;
+    File dataDir = DataIO.getFinancePath();
+    File dir = DataIO.getOutputPath();
     assert dataDir.isDirectory();
     assert dir.isDirectory();
 

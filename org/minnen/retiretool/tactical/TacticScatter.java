@@ -195,21 +195,21 @@ public class TacticScatter
     for (int i = 0; i < seqs.length; ++i) {
       seqs[i] = scatterData[i].extractDims(0, 1);
     }
-    Chart.saveScatterPlot(new File(DataIO.outputPath, "tactical-scatter-cagr-sdev.html"), "Tactical Scatter Plot",
+    Chart.saveScatterPlot(new File(DataIO.getOutputPath(), "tactical-scatter-cagr-sdev.html"), "Tactical Scatter Plot",
         "100%", "900px", radius, new String[] { "Deviation", "Average Return" }, seqs);
 
     // Regrest: 10 year. vs 20 year.
     for (int i = 0; i < seqs.length; ++i) {
       seqs[i] = scatterData[i].extractDims(2, 3);
     }
-    Chart.saveScatterPlot(new File(DataIO.outputPath, "tactical-scatter-regret-10-20.html"), "Tactical Scatter Plot",
+    Chart.saveScatterPlot(new File(DataIO.getOutputPath(), "tactical-scatter-regret-10-20.html"), "Tactical Scatter Plot",
         "100%", "900px", radius, new String[] { "10-year Regret", "20-year Regret" }, seqs);
 
     // CAGR vs. 20-year regret.
     for (int i = 0; i < seqs.length; ++i) {
       seqs[i] = scatterData[i].extractDims(3, 1);
     }
-    Chart.saveScatterPlot(new File(DataIO.outputPath, "tactical-scatter-cagr-regret-20.html"), "Tactical Scatter Plot",
+    Chart.saveScatterPlot(new File(DataIO.getOutputPath(), "tactical-scatter-cagr-regret-20.html"), "Tactical Scatter Plot",
         "100%", "900px", radius, new String[] { "20-year Regret", "Average Return" }, seqs);
   }
 }

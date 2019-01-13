@@ -52,7 +52,7 @@ public class TestMixablePredictor
   {
     assert assetSymbols[assetSymbols.length - 1].equals("cash");
 
-    File dataDir = DataIO.financePath;
+    File dataDir = DataIO.getFinancePath();
     assert dataDir.isDirectory();
 
     // Load data and trim to same time period.

@@ -53,7 +53,6 @@ public class Dashboard
   public static final String            green          = "1E2";
 
   public static final String            miscDirName    = "misc";
-  public static final File              miscPath       = new File(DataIO.outputPath, miscDirName);
   public static final String            miscToBase     = "..";
 
   // Years of history for SMA graphs.
@@ -111,9 +110,6 @@ public class Dashboard
   public static final PredictorConfig[] singleConfigs  = new PredictorConfig[allParams.length];
 
   static {
-    // Create misc directory if it doesn't exist.
-    if (!miscPath.exists()) miscPath.mkdirs();
-
     assert allParams.length == singleConfigs.length;
     for (int i = 0; i < allParams.length; ++i) {
       int[] p = allParams[i];
@@ -151,14 +147,21 @@ public class Dashboard
 
   }
 
+  private static File getMiscPath()
+  {
+    File miscPath = new File(DataIO.getOutputPath(), miscDirName);
+    if (!miscPath.exists()) miscPath.mkdirs();
+    return miscPath;
+  }
+
   private static String genGraphFileName(int code)
   {
-    return String.format("%s/graphs-code-%02d.html", miscDirName, code);
+    return String.format("graphs-code-%02d.html", code);
   }
 
   private static String genGraphFileName(IntPair codePair)
   {
-    return String.format("%s/graphs-pair-%02d-%02d.html", miscDirName, codePair.first, codePair.second);
+    return String.format("graphs-pair-%02d-%02d.html", codePair.first, codePair.second);
   }
 
   private static String genColoredCell(String data, boolean cond, String trueColor, String falseColor)
@@ -232,7 +235,7 @@ public class Dashboard
             " <tr class=\"%s\"><td>%d</td><td>%d</td><td>%.1f</td>%s<td>%.2f</td><td>%.2f</td>%s<td>%.2f</td><td>%s</td></tr>\n",
             className, entry.getKey(), returns.length, 100.0 - 100.0 * nLose / n, sTotal, Library.min(drawdowns),
             FinLib.mul2ret(returns[0]), sMean, FinLib.mul2ret(returns[n - 1]),
-            String.format("<a href=\"%s\">graph</a>", genGraphFileName(entry.getKey())));
+            String.format("<a href=\"%s\\%s\">graph</a>", miscDirName, genGraphFileName(entry.getKey())));
 
         ++iRow;
       }
@@ -252,7 +255,7 @@ public class Dashboard
 
       String title = String.format("Code: %d (n=%d)", code, list.size());
       String filename = genGraphFileName(code);
-      ChartConfig config = ChartConfig.buildLine(new File(DataIO.outputPath, filename), title, "100%", "900px",
+      ChartConfig config = ChartConfig.buildLine(new File(getMiscPath(), filename), title, "100%", "900px",
           ChartScaling.LINEAR, ChartTiming.INDEX, seqs);
       config.setPathToBase(miscToBase).setLineWidth(1);
       Chart.saveChart(config);
@@ -298,7 +301,7 @@ public class Dashboard
             " <tr class=\"%s\"><td>%d</td><td>%d</td><td>%d</td><td>%.1f</td>%s<td>%.2f</td><td>%.2f</td>%s<td>%.2f</td><td>%s</td></tr>\n",
             className, pair.first, pair.second, returns.length, 100.0 - 100.0 * nLose / n, sTotal,
             Library.min(drawdowns), FinLib.mul2ret(returns[0]), sMean, FinLib.mul2ret(returns[n - 1]),
-            String.format("<a href=\"%s\">graph</a>", genGraphFileName(entry.getKey())));
+            String.format("<a href=\"%s\\%s\">graph</a>", miscDirName, genGraphFileName(entry.getKey())));
         ++iRow;
       }
       writer.write("</tbody>\n</table><br/>\n");
@@ -317,7 +320,7 @@ public class Dashboard
 
       String title = String.format("Code Pair: %d -> %d (n=%d)", codePair.first, codePair.second, list.size());
       String filename = genGraphFileName(codePair);
-      ChartConfig config = ChartConfig.buildLine(new File(DataIO.outputPath, filename), title, "100%", "900px",
+      ChartConfig config = ChartConfig.buildLine(new File(getMiscPath(), filename), title, "100%", "900px",
           ChartScaling.LINEAR, ChartTiming.INDEX, seqs);
       config.setPathToBase(miscToBase).setLineWidth(1);
       Chart.saveChart(config);
@@ -408,10 +411,10 @@ public class Dashboard
 
     final String sRowGap = "<td class=\"hgap\">&nbsp;</td>";
 
-    try (Writer f = new Writer(new File(DataIO.outputPath, "dashboard-tactical.html"))) {
+    try (Writer f = new Writer(new File(DataIO.getOutputPath(), "dashboard-tactical.html"))) {
       f.write("<html><head>\n");
       f.write("<title>Dashboard</title>\n");
-      f.write("<script src=\"http://code.jquery.com/jquery.min.js\"></script>\n");
+      f.write("<script src=\"%s\"></script>\n", Chart.jquery);
       f.write("<link rel=\"stylesheet\" href=\"css/dashboard.css\">\n");
       f.write("</head><body>\n");
 
@@ -582,7 +585,7 @@ public class Dashboard
       base.setName(String.format("Base[%d]", params[2]));
       int code = 1 << (allParams.length - 1 - i);
 
-      File file = new File(miscPath, String.format("sma%d-code%d.html", i + 1, code));
+      File file = new File(getMiscPath(), String.format("sma%d-code%d.html", i + 1, code));
       String title = String.format("SMA %d (Code: %d)", i + 1, code);
       ChartConfig config = ChartConfig.buildLine(file, title, "100%", "600px", ChartScaling.LINEAR, ChartTiming.DAILY,
           trigger, baseLow, baseHigh, raw);

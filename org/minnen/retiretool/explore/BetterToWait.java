@@ -47,7 +47,7 @@ public class BetterToWait
     System.out.printf("Wait: %5d  %.1f%%\n", nWait, 100.0 * nWait / (nWait + nBuy));
     System.out.printf(" Buy: %5d  %.1f%%\n", nBuy, 100.0 * nBuy / (nWait + nBuy));
 
-    Chart.saveLineChart(new File(DataIO.outputPath, "snp.html"), "Price", "1800px", "800px", ChartScaling.LOGARITHMIC,
+    Chart.saveLineChart(new File(DataIO.getOutputPath(), "snp.html"), "Price", "1800px", "800px", ChartScaling.LOGARITHMIC,
         ChartTiming.DAILY, priceSeq);
   }
 }

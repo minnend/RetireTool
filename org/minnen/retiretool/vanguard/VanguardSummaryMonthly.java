@@ -39,7 +39,7 @@ public class VanguardSummaryMonthly
   public static List<FeatureVec> genPortfolios(List<Sequence> seqs) throws IOException
   {
     // Search over all portfolios.
-    File file = new File(DataIO.financePath, "vanguard-portfolios-monthly.txt");
+    File file = new File(DataIO.getFinancePath(), "vanguard-portfolios-monthly.txt");
 
     // scanDistributions(1, 10, 10, 100, 10, portfolios);
     // scanDistributions(1, 8, 10, 40, 10, portfolios);
@@ -53,7 +53,7 @@ public class VanguardSummaryMonthly
       // Save pruned stats.
       SummaryTools.prunePortfolios(stats);
       System.out.printf("Pruned Portfolios: %d\n", stats.size());
-      file = new File(DataIO.financePath, "vanguard-portfolios-monthly-pruned.txt");
+      file = new File(DataIO.getFinancePath(), "vanguard-portfolios-monthly-pruned.txt");
       try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
         for (FeatureVec v : stats) {
           writer.write(String.format("%-80s %s\n", v.getName(), v));
@@ -105,7 +105,7 @@ public class VanguardSummaryMonthly
   {
     // Load monthly return data.
     // Note: run GenMonthlyReturns to create a CSV file with monthly returns.
-    File file = new File(DataIO.financePath, "vanguard-monthly.csv");
+    File file = new File(DataIO.getFinancePath(), "vanguard-monthly.csv");
     List<Sequence> seqs = DataIO.loadSequenceCSV(file);
     System.out.printf("Funds: %d\n", seqs.size());
 
@@ -133,8 +133,8 @@ public class VanguardSummaryMonthly
 
     // Load portfolios from disk.
     // file = new File(outputDir, "vanguard-portfolios-monthly-8x10x40-mom6-pruned.txt");
-    // file = new File(DataIO.financePath, "vanguard-portfolios-monthly-1-6-10-pruned.txt");
-    // file = new File(DataIO.financePath, "vanguard-portfolios-monthly-1-6-10-momentum6-pruned.txt");
+    // file = new File(DataIO.getFinancePath(), "vanguard-portfolios-monthly-1-6-10-pruned.txt");
+    // file = new File(DataIO.getFinancePath(), "vanguard-portfolios-monthly-1-6-10-momentum6-pruned.txt");
     // List<FeatureVec> stats = SummaryTools.loadPortfolioStats(file, false);
     // System.out.printf("Portfolios: %d\n", stats.size());
 
@@ -162,6 +162,6 @@ public class VanguardSummaryMonthly
     // System.out.printf("%-80s %s\n", portfolio.toStringWithNames(0), stats);
     // }
 
-    genScatterPlots(stats, DataIO.outputPath);
+    genScatterPlots(stats, DataIO.getOutputPath());
   }
 }

@@ -188,7 +188,7 @@ public class ComparePortfolios
     // Sequence returnsDualMom = portfolios.run(dualMomPred, timeSimStart, timeSimEnd);
     // returns.add(returnsDualMom);
     // compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
-    // Chart.saveHoldings(new File(DataIO.outputPath, "holdings-dual-momentum.html"), sim.holdings, sim.store);
+    // Chart.saveHoldings(new File(DataIO.getOutputPath(), "holdings-dual-momentum.html"), sim.holdings, sim.store);
 
     // Multi-sector based on dual momentum
     // int nMaxKeep = 3;
@@ -204,21 +204,21 @@ public class ComparePortfolios
     // Sequence returnsMultiSectorMomPred = portfolios.run(multiSectoMom, timeSimStart, timeSimEnd);
     // returns.add(returnsMultiSectorMomPred);
     // compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
-    // Chart.saveHoldings(new File(DataIO.outputPath, "holdings-multi-sector-mom.html"), sim.holdings, sim.store);
+    // Chart.saveHoldings(new File(DataIO.getOutputPath(), "holdings-multi-sector-mom.html"), sim.holdings, sim.store);
 
     // Volatility-Responsive Asset Allocation.
     // Predictor volres = new VolResPredictor(60, stockSymbol, bondSymbol, sim.broker.accessObject, FinLib.Close);
     // Sequence returnsVolRes = portfolios.run(volres, timeSimStart, timeSimEnd);
     // returns.add(returnsVolRes);
     // compStats.add(ComparisonStats.calc(sim.returnsMonthly, 0.5, defenders));
-    // Chart.saveHoldings(new File(DataIO.outputPath, "holdings-volres.html"), sim.holdings, sim.store);
+    // Chart.saveHoldings(new File(DataIO.getOutputPath(), "holdings-volres.html"), sim.holdings, sim.store);
 
     // Save reports: graph of returns + comparison summary.
     String title = String.format("Returns (%d\u00A2 Spread)", Math.round(slippage.constSlip * 200));
-    Chart.saveLineChart(new File(DataIO.outputPath, "returns.html"), title, "100%", "640px", ChartScaling.LOGARITHMIC,
+    Chart.saveLineChart(new File(DataIO.getOutputPath(), "returns.html"), title, "100%", "640px", ChartScaling.LOGARITHMIC,
         ChartTiming.MONTHLY, returns);
 
-    Chart.saveComparisonTable(new File(DataIO.outputPath, "comparison.html"), "1000px", compStats);
+    Chart.saveComparisonTable(new File(DataIO.getOutputPath(), "comparison.html"), "1000px", compStats);
 
     // Report: comparison of returns over next N months.
     for (int nMonths : new int[] { 12 * 5, 12 * 10 }) {
@@ -230,7 +230,7 @@ public class ComparePortfolios
       }
       title = String.format("Returns (%s, %d\u00A2 Spread)", TimeLib.formatDurationMonths(nMonths),
           Math.round(slippage.constSlip * 200));
-      File file = new File(DataIO.outputPath, String.format("duration-returns-%d-months.html", nMonths));
+      File file = new File(DataIO.getOutputPath(), String.format("duration-returns-%d-months.html", nMonths));
       ChartConfig chartConfig = Chart.saveLineChart(file, title, "100%", "640px", ChartScaling.LINEAR,
           ChartTiming.MONTHLY, durationalReturns);
       chartConfig.addPlotLineY(new PlotLine(0, 2, "black"));

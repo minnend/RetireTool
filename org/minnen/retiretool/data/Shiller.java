@@ -39,6 +39,16 @@ public class Shiller
 
   private static final Map<File, Sequence> cache         = new HashMap<File, Sequence>();
 
+  public static File getPathCSV()
+  {
+    return new File(DataIO.getFinancePath(), "shiller.csv");
+  }
+
+  public static File getPathExcel()
+  {
+    return new File(DataIO.getFinancePath(), "shiller.xls");
+  }
+
   /**
    * Load data from CSV export of Shiller's SNP/CPI excel spreadsheet.
    * 
@@ -120,13 +130,14 @@ public class Shiller
   /** Download Shiller data in .xls format and convert to .csv. */
   public static boolean downloadData() throws IOException
   {
-    if (DataIO.shouldDownloadUpdate(DataIO.shillerExcel)) {
-      if (!DataIO.copyUrlToFile(dataUrlString, DataIO.shillerExcel)) {
+    File shillerExcel = getPathExcel();
+    if (DataIO.shouldDownloadUpdate(shillerExcel)) {
+      if (!DataIO.copyUrlToFile(dataUrlString, shillerExcel)) {
         throw new IOException("Failed to download Shiller Excel file.");
       }
     }
 
-    FileInputStream file = new FileInputStream(DataIO.shillerExcel);
+    FileInputStream file = new FileInputStream(shillerExcel);
     StringBuilder sb = new StringBuilder();
     try (Workbook workbook = new HSSFWorkbook(file)) {
       FormulaEvaluator evaluator = workbook.getCreationHelper().createFormulaEvaluator();
@@ -159,7 +170,7 @@ public class Shiller
       }
     }
 
-    try (FileWriter writer = new FileWriter(DataIO.shiller)) {
+    try (FileWriter writer = new FileWriter(getPathCSV())) {
       writer.write(sb.toString());
     }
 
@@ -170,8 +181,8 @@ public class Shiller
   {
     downloadData();
 
-    Sequence snpNoDivs = Shiller.loadSNP(DataIO.shiller, DividendMethod.NO_REINVEST_MONTHLY);
-    Sequence snpWithDivs = Shiller.loadSNP(DataIO.shiller, DividendMethod.MONTHLY);
+    Sequence snpNoDivs = Shiller.loadSNP(getPathCSV(), DividendMethod.NO_REINVEST_MONTHLY);
+    Sequence snpWithDivs = Shiller.loadSNP(getPathCSV(), DividendMethod.MONTHLY);
 
     System.out.printf("  No divs (%d): [%s] -> [%s]\n", snpNoDivs.length(), TimeLib.formatDate(snpNoDivs.getStartMS()),
         TimeLib.formatDate(snpNoDivs.getEndMS()));

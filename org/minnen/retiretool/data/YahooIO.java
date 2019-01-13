@@ -28,7 +28,10 @@ import org.minnen.retiretool.util.TimeLib;
  */
 public class YahooIO
 {
-  public static final File yahooDir = new File(DataIO.financePath, "yahoo");
+  public static File getPath()
+  {
+    return new File(DataIO.getFinancePath(), "yahoo");
+  }
 
   /**
    * Load data from a Yahoo CSV file.
@@ -295,6 +298,7 @@ public class YahooIO
 
   public static File getFile(String symbol)
   {
+    File yahooDir = getPath();
     if (!yahooDir.exists() && !yahooDir.mkdirs()) return null;
     return new File(yahooDir, symbol + ".csv");
   }

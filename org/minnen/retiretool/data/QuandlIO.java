@@ -4,8 +4,12 @@ import java.io.File;
 
 public class QuandlIO
 {
-  public static final String auth       = System.getenv("quandl.auth");
-  public static final File   quandlPath = new File(DataIO.financePath, "quandl");
+  public static final String auth = System.getenv("quandl.auth");
+
+  public static File getPath()
+  {
+    return new File(DataIO.getFinancePath(), "quandl");
+  }
 
   public static File downloadData(File path, String name, String baseURL, long replaceAgeMs)
   {

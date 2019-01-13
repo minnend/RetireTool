@@ -98,7 +98,7 @@ public class VanguardIRR
   public static void main(String[] args) throws IOException
   {
     // Load current holdings.
-    File file = new File(DataIO.financePath, "vanguard-holdings.csv");
+    File file = new File(DataIO.getFinancePath(), "vanguard-holdings.csv");
     List<Holding> holdings = loadHoldings(file);
     System.out.printf("Holdings: %d\n", holdings.size());
     double balance = 0.0;
@@ -110,7 +110,7 @@ public class VanguardIRR
     // System.out.println();
 
     // Load transaction data.
-    file = new File(DataIO.financePath, "vanguard-transactions-web-20131025-20180731.txt");
+    file = new File(DataIO.getFinancePath(), "vanguard-transactions-web-20131025-20180731.txt");
     List<Transaction> transactions = loadTransactions(file);
     Transaction lastTransaction = transactions.get(transactions.size() - 1);
     System.out.printf("Transactions: %d\n", transactions.size());
