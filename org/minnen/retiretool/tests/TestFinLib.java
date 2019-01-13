@@ -14,19 +14,6 @@ import org.minnen.retiretool.util.TimeLib;
 public class TestFinLib
 {
   @Test
-  public void testCalcLeveragedReturns()
-  {
-    final double leverage = 1.1;
-    Sequence base = new Sequence(new double[] { 1.0, 1.2, 1.44, 1.296 });
-    Sequence leveragedSeq = FinLib.calcLeveragedReturns(base, leverage);
-    assertEquals(base.size(), leveragedSeq.size());
-
-    double[] leveraged = leveragedSeq.extractDim(0);
-    double[] expected = new double[] { 1.0, 1.22, 1.4884, 1.324676 };
-    assertArrayEquals(expected, leveraged, 0.0001);
-  }
-
-  @Test
   public void testGetReturn()
   {
     Sequence cumulativeReturns = new Sequence(new double[] { 1.0, 1.2, 1.44, 1.296 });
@@ -296,5 +283,58 @@ public class TestFinLib
       date = date.plusMonths(1);
     }
     assertEquals(Month.JULY, date.getMonth()); // not enough days in last month
+  }
+
+  @Test
+  public void testCumulativeToReturns()
+  {
+    double[] returns = new double[] { 10.0, 5.0, -10.0, 0.0, 2.0, -3.0 };
+
+    Sequence cumulative = new Sequence("test");
+    cumulative.addData(1.0, LocalDate.of(2000, Month.JANUARY, 1));
+    for (int i = 0; i < returns.length; ++i) {
+      double x = cumulative.get(i, 0);
+      double r = FinLib.ret2mul(returns[i]);
+      cumulative.addData(x * r, LocalDate.of(2000, Month.JANUARY, i + 2));
+    }
+
+    Sequence seq = FinLib.cumulativeToReturns(cumulative);
+    assertEquals(returns.length, seq.length());
+    for (int i = 0; i < returns.length; ++i) {
+      assertEquals(returns[i], seq.get(i, 0), 1e-6);
+    }
+  }
+
+  @Test
+  public void testCumulativeFromReturns()
+  {
+    double[] returnArray = new double[] { 10.0, 5.0, -10.0, 0.0, 2.0, -3.0 };
+
+    Sequence cumulative = new Sequence("test-cumulative");
+    Sequence returns = new Sequence("test-returns");
+    cumulative.addData(1.0, LocalDate.of(2000, Month.JANUARY, 1));
+    for (int i = 0; i < returnArray.length; ++i) {
+      double x = cumulative.get(i, 0);
+      double r = FinLib.ret2mul(returnArray[i]);
+      cumulative.addData(x * r, LocalDate.of(2000, Month.JANUARY, i + 2));
+      returns.addData(returnArray[i], LocalDate.of(2000, Month.JANUARY, i + 1));
+    }
+
+    Sequence seq = FinLib.cumulativeFromReturns(returns, 1.0, 0.0);
+    assertTrue(seq.matches(cumulative));
+    for (int i = 0; i < seq.length(); ++i) {
+      double x = seq.get(i, 0);
+      double y = cumulative.get(i, 0);
+      assertEquals(x, y, 1e-6);
+    }
+
+    // Test round trip (back to `returns`).
+    seq = FinLib.cumulativeToReturns(seq);
+    assertTrue(seq.matches(returns));
+    for (int i = 0; i < seq.length(); ++i) {
+      double x = seq.get(i, 0);
+      double y = returns.get(i, 0);
+      assertEquals(x, y, 1e-6);
+    }
   }
 }

@@ -40,90 +40,27 @@ public final class FinLib
     Ignore, Include
   };
 
-  public static final int      MonthlyClose            = 0;
-  public static final int      MonthlyAverage          = 1;
-  public static final int      MonthlyLow              = 2;
-  public static final int      MonthlyHigh             = 3;
-  public static final int      MonthlyMisc             = 4;
+  public static final int     MonthlyClose      = 0;
+  public static final int     MonthlyAverage    = 1;
+  public static final int     MonthlyLow        = 2;
+  public static final int     MonthlyHigh       = 3;
+  public static final int     MonthlyMisc       = 4;
 
-  public static final int      Close                   = 0;
-  public static final int      Open                    = 1;
-  public static final int      Low                     = 2;
-  public static final int      High                    = 3;
-  public static final int      Volume                  = 4;
-  public static final int      AdjClose                = 5;
-  public static final int      AdjHigh                 = 6;
-  public static final int      AdjLow                  = 7;
-  public static final int      AdjOpen                 = 8;
-  public static final int      AdjVolume               = 9;
-  public static final int      DivCash                 = 10;
-  public static final int      SplitFactor             = 11;
+  public static final int     Close             = 0;
+  public static final int     Open              = 1;
+  public static final int     Low               = 2;
+  public static final int     High              = 3;
+  public static final int     Volume            = 4;
+  public static final int     AdjClose          = 5;
+  public static final int     AdjHigh           = 6;
+  public static final int     AdjLow            = 7;
+  public static final int     AdjOpen           = 8;
+  public static final int     AdjVolume         = 9;
+  public static final int     DivCash           = 10;
+  public static final int     SplitFactor       = 11;
 
-  public static DecimalFormat  currencyFormatter       = new DecimalFormat("#,##0.00");
-  public static DecimalFormat  dollarFormatter         = new DecimalFormat("#,##0");
-
-  // VFIAX = S&P 500
-  // VEXAX = Extended Market (completion fund)
-  // VTSAX = Total Stock Market
-  // VBTLX = Total Bond Market (US)
-  // VGSLX = REITs
-  // VTIAX = International Stock
-  // VWIAX = Wellesley Income
-  public static final String[] VANGUARD_ADMIRAL_FUNDS  = new String[] { "VFIAX", "VEXAX", "VTSAX", "VBTLX", "VGSLX",
-      "VTIAX", "VWIAX" };
-
-  // VTSMX = Total Stock Market (~3800 stocks)
-  // VBMFX = Total Bond Market (~7650 bonds)
-  // VGSIX = REITs
-  // VGTSX = International Stock
-  // VWINX = Wellesley Income
-  public static final String[] VANGUARD_INVESTOR_FUNDS = new String[] { "VTSMX", "VBMFX", "VGSIX", "VGTSX", "VWINX" };
-
-  public static final String[] STOCK_MARKET_FUNDS      = new String[] { "^GSPC" };
-
-  /**
-   * https://paulmerriman.com/vanguard/
-   * 
-   * http://paulmerriman.com/2014-new-site/mutual-funds/
-   */
-  // Admiral shares: VFIAX, VVIAX, VTMSX, VSIAX, VGSLX, VTMGX, VTRIX, VFSVX, VEMAX, VGRLX
-  public static final String[] MERRIMAN_AGGRESSIVE     = new String[] { "VFINX", "VIVAX", "VTMSX", "VISVX", "VGSIX",
-      "VDVIX", "VTRIX", "VFSVX", "VEIEX", "VGXRX" };
-
-  /** Symbols in the S&P 500 in 2018. */
-  public static final String[] SP500_FUNDS             = new String[] { "MMM", "ABT", "ABBV", "ACN", "ATVI", "AYI",
-      "ADBE", "AMD", "AAP", "AES", "AET", "AMG", "AFL", "A", "APD", "AKAM", "ALK", "ALB", "ARE", "ALXN", "ALGN", "ALLE",
-      "AGN", "ADS", "LNT", "ALL", "GOOGL", "GOOG", "MO", "AMZN", "AEE", "AAL", "AEP", "AXP", "AIG", "AMT", "AWK", "AMP",
-      "ABC", "AME", "AMGN", "APH", "APC", "ADI", "ANDV", "ANSS", "ANTM", "AON", "AOS", "APA", "AIV", "AAPL", "AMAT",
-      "APTV", "ADM", "ARNC", "AJG", "AIZ", "T", "ADSK", "ADP", "AZO", "AVB", "AVY", "BHGE", "BLL", "BAC", "BK", "BAX",
-      "BBT", "BDX", "BRK-B", "BBY", "BIIB", "BLK", "HRB", "BA", "BWA", "BXP", "BSX", "BHF", "BMY", "AVGO", "BF-B",
-      "CHRW", "CA", "COG", "CDNS", "CPB", "COF", "CAH", "CBOE", "KMX", "CCL", "CAT", "CBG", "CBS", "CELG", "CNC", "CNP",
-      "CTL", "CERN", "CF", "SCHW", "CHTR", "CHK", "CVX", "CMG", "CB", "CHD", "CI", "XEC", "CINF", "CTAS", "CSCO", "C",
-      "CFG", "CTXS", "CLX", "CME", "CMS", "KO", "CTSH", "CL", "CMCSA", "CMA", "CAG", "CXO", "COP", "ED", "STZ", "COO",
-      "GLW", "COST", "COTY", "CCI", "CSRA", "CSX", "CMI", "CVS", "DHI", "DHR", "DRI", "DVA", "DE", "DAL", "XRAY", "DVN",
-      "DLR", "DFS", "DISCA", "DISCK", "DISH", "DG", "DLTR", "D", "DOV", "DWDP", "DPS", "DTE", "DRE", "DUK", "DXC",
-      "ETFC", "EMN", "ETN", "EBAY", "ECL", "EIX", "EW", "EA", "EMR", "ETR", "EVHC", "EOG", "EQT", "EFX", "EQIX", "EQR",
-      "ESS", "EL", "ES", "RE", "EXC", "EXPE", "EXPD", "ESRX", "EXR", "XOM", "FFIV", "FB", "FAST", "FRT", "FDX", "FIS",
-      "FITB", "FE", "FISV", "FLIR", "FLS", "FLR", "FMC", "FL", "F", "FTV", "FBHS", "BEN", "FCX", "GPS", "GRMN", "IT",
-      "GD", "GE", "GGP", "GIS", "GM", "GPC", "GILD", "GPN", "GS", "GT", "GWW", "HAL", "HBI", "HOG", "HRS", "HIG", "HAS",
-      "HCA", "HCP", "HP", "HSIC", "HSY", "HES", "HPE", "HLT", "HOLX", "HD", "HON", "HRL", "HST", "HPQ", "HUM", "HBAN",
-      "HII", "IDXX", "INFO", "ITW", "ILMN", "IR", "INTC", "ICE", "IBM", "INCY", "IP", "IPG", "IFF", "INTU", "ISRG",
-      "IVZ", "IQV", "IRM", "JEC", "JBHT", "SJM", "JNJ", "JCI", "JPM", "JNPR", "KSU", "K", "KEY", "KMB", "KIM", "KMI",
-      "KLAC", "KSS", "KHC", "KR", "LB", "LLL", "LH", "LRCX", "LEG", "LEN", "LUK", "LLY", "LNC", "LKQ", "LMT", "L",
-      "LOW", "LYB", "MTB", "MAC", "M", "MRO", "MPC", "MAR", "MMC", "MLM", "MAS", "MA", "MAT", "MKC", "MCD", "MCK",
-      "MDT", "MRK", "MET", "MTD", "MGM", "KORS", "MCHP", "MU", "MSFT", "MAA", "MHK", "TAP", "MDLZ", "MON", "MNST",
-      "MCO", "MS", "MOS", "MSI", "MYL", "NDAQ", "NOV", "NAVI", "NTAP", "NFLX", "NWL", "NFX", "NEM", "NWSA", "NWS",
-      "NEE", "NLSN", "NKE", "NI", "NBL", "JWN", "NSC", "NTRS", "NOC", "NCLH", "NRG", "NUE", "NVDA", "ORLY", "OXY",
-      "OMC", "OKE", "ORCL", "PCAR", "PKG", "PH", "PDCO", "PAYX", "PYPL", "PNR", "PBCT", "PEP", "PKI", "PRGO", "PFE",
-      "PCG", "PM", "PSX", "PNW", "PXD", "PNC", "RL", "PPG", "PPL", "PX", "PCLN", "PFG", "PG", "PGR", "PLD", "PRU",
-      "PEG", "PSA", "PHM", "PVH", "QRVO", "PWR", "QCOM", "DGX", "RRC", "RJF", "RTN", "O", "RHT", "REG", "REGN", "RF",
-      "RSG", "RMD", "RHI", "ROK", "COL", "ROP", "ROST", "RCL", "CRM", "SBAC", "SCG", "SLB", "SNI", "STX", "SEE", "SRE",
-      "SHW", "SIG", "SPG", "SWKS", "SLG", "SNA", "SO", "LUV", "SPGI", "SWK", "SBUX", "STT", "SRCL", "SYK", "STI",
-      "SYMC", "SYF", "SNPS", "SYY", "TROW", "TPR", "TGT", "TEL", "FTI", "TXN", "TXT", "TMO", "TIF", "TWX", "TJX", "TMK",
-      "TSS", "TSCO", "TDG", "TRV", "TRIP", "FOXA", "FOX", "TSN", "UDR", "ULTA", "USB", "UAA", "UA", "UNP", "UAL", "UNH",
-      "UPS", "URI", "UTX", "UHS", "UNM", "VFC", "VLO", "VAR", "VTR", "VRSN", "VRSK", "VZ", "VRTX", "VIAB", "V", "VNO",
-      "VMC", "WMT", "WBA", "DIS", "WM", "WAT", "WEC", "WFC", "HCN", "WDC", "WU", "WRK", "WY", "WHR", "WMB", "WLTW",
-      "WYN", "WYNN", "XEL", "XRX", "XLNX", "XL", "XYL", "YUM", "ZBH", "ZION", "ZTS" };
+  public static DecimalFormat currencyFormatter = new DecimalFormat("#,##0.00");
+  public static DecimalFormat dollarFormatter   = new DecimalFormat("#,##0");
 
   /**
    * Compute compound annual growth rate (CAGR) based on total multiplier.
@@ -242,21 +179,6 @@ public final class FinLib
   public static double ret2mul(double ret)
   {
     return ret / 100.0 + 1.0;
-  }
-
-  /**
-   * Returns the "speedup factor" = number of extra years per year needed for rslow to catch rfast.
-   * 
-   * @param rslow slower return that needs more time to catch up
-   * @param rfast faster return that sets the pace
-   * @return time multiplier for rslow to catch up to rfast
-   */
-  public static double speedup(double rfast, double rslow)
-  {
-    assert rfast >= rslow;
-    double mfast = ret2mul(rfast);
-    double mslow = ret2mul(rslow);
-    return Math.log(mfast) / Math.log(mslow) - 1.0;
   }
 
   /**
@@ -928,48 +850,6 @@ public final class FinLib
     return r;
   }
 
-  public static Sequence calcLeveragedReturns(Sequence cumulativeReturns, double leverage)
-  {
-    if (leverage == 1.0) {
-      return cumulativeReturns;
-    }
-
-    Sequence leveraged = new Sequence(String.format("%s (L=%.3f)", cumulativeReturns.getName(), leverage));
-    leveraged.addData(new FeatureVec(1, cumulativeReturns.get(0, 0)), cumulativeReturns.getTimeMS(0));
-    for (int i = 1; i < cumulativeReturns.size(); ++i) {
-      double r = getTotalReturn(cumulativeReturns, i - 1, i);
-      double lr = leverage * (r - 1.0) + 1.0;
-      double v = Math.max(0.0, lr * leveraged.get(i - 1, 0));
-      leveraged.addData(new FeatureVec(1, v), cumulativeReturns.getTimeMS(i));
-    }
-    return leveraged;
-  }
-
-  public static double calcEqualizingLeverage(Sequence cumulativeReturns, double desiredCAGR)
-  {
-    CumulativeStats stats = CumulativeStats.calc(cumulativeReturns);
-    double ratio = desiredCAGR / stats.cagr;
-    double low = ratio / 2.0;
-    double high = ratio * 2.0;
-    double leverage = 1.0;
-
-    int iter = 1;
-    while (iter < 100 && Math.abs(stats.cagr - desiredCAGR) > 1e-5) {
-      leverage = (low + high) / 2.0;
-      Sequence levSeq = calcLeveragedReturns(cumulativeReturns, leverage);
-      stats = CumulativeStats.calc(levSeq);
-      // System.out.printf("%d: [%f, %f] -> %f (%f)\n", iter, low, high, stats.cagr, desiredCAGR);
-      if (stats.cagr < desiredCAGR) {
-        low = leverage;
-      } else {
-        high = leverage;
-      }
-      ++iter;
-    }
-
-    return leverage;
-  }
-
   /**
    * Returns the same name with a {@literal <br/>
    * } inserted before the last open paren.
@@ -1346,16 +1226,17 @@ public final class FinLib
   }
 
   /** @return sharpe ratio for `returns` relative to `benchmark`, which can be null */
-  public static double sharpeAnnual(Sequence returns, Sequence benchmark)
+  public static double sharpe(Sequence cumulativeReturns, Sequence benchmark)
   {
-    if (returns == null || returns.isEmpty()) return 0.0;
-    final int N = returns.length();
+    if (cumulativeReturns == null || cumulativeReturns.isEmpty()) return 0.0;
+    final int N = cumulativeReturns.length();
     assert benchmark == null || benchmark.length() == N;
 
     double[] excess = new double[N];
     for (int i = 1; i < N; ++i) {
-      double a = returns.get(i - 1, 0);
-      double b = returns.get(i, 0);
+      double a = cumulativeReturns.get(i - 1, 0);
+      double b = cumulativeReturns.get(i, 0);
+      double r = b / a;
       excess[i] = (b - a) / a;
     }
     if (benchmark != null) {
@@ -1368,14 +1249,19 @@ public final class FinLib
 
     double mean = Library.mean(excess);
     double sdev = Library.stdev(excess);
-    if (Math.abs(sdev) < 1e-8) return 0.0;
-    return mean / sdev;
+    double sharpe = Math.abs(sdev) < 1e-8 ? 0.0 : mean / sdev;
+    System.out.printf("%s: %f / %f = %f\n", cumulativeReturns.getName(), mean, sdev, sharpe);
+    return sharpe;
   }
 
-  /** @return sharpe ratio for `returns` relative to `benchmark`, which can be null */
+  /**
+   * Calculates Sharpe ratio with an adjustment to annualize daily returns.
+   * 
+   * @return sharpe ratio for `returns` relative to `benchmark`, which can be null
+   */
   public static double sharpeDaily(Sequence returns, Sequence benchmark)
   {
-    return Math.sqrt(252) * sharpeAnnual(returns, benchmark);
+    return Math.sqrt(252) * sharpe(returns, benchmark);
   }
 
   public static double[] minvar(double[][] corrMatrix)
@@ -1461,26 +1347,51 @@ public final class FinLib
     return seq._div(seq.getFirst(0));
   }
 
-  /**
-   * Takes a sequence of returns (1.2 = 1.2% return) and returns sequence of cumulative returns.
-   */
+  /** Takes a sequence of returns (1.2 = 1.2% growth) and returns sequence of cumulative returns. */
   public static Sequence cumulativeFromReturns(Sequence returnSeq, double principle, double contributionPerStep)
   {
-    Sequence seq = new Sequence("Cumulative " + returnSeq.getName());
+    Sequence seq = new Sequence("Cumulative: " + returnSeq.getName());
     seq.copyMeta(returnSeq);
     double balance = principle;
 
-    // Infer time one step before `returnSeq` starts.
-    long t0 = returnSeq.getStartMS();
-    long t1 = returnSeq.getTimeMS(1);
-    seq.addData(balance, t0 - (t1 - t0)); // TODO detect and force time to last day of month / year?
+    seq.addData(balance, returnSeq.getStartMS());
     for (int i = 0; i < returnSeq.length(); ++i) {
-      FeatureVec fv = returnSeq.get(i);
       if (i > 0) balance += contributionPerStep; // no contribution at very beginning
-      balance *= ret2mul(fv.get(0));
-      seq.addData(new FeatureVec(1, balance), fv.getTime());
+      balance *= ret2mul(returnSeq.get(i, 0));
+
+      long ms = TimeLib.TIME_ERROR;
+      if (i + 1 < returnSeq.length()) {
+        ms = returnSeq.getTimeMS(i + 1);
+      } else {
+        // TODO better handling for calculating time of last entry (past end of `returnSeq`).
+        if (returnSeq.length() == 1) {
+          ms = returnSeq.getEndMS() + TimeLib.MS_IN_DAY;
+        } else {
+          long a = returnSeq.getTimeMS(returnSeq.length() - 2);
+          long b = returnSeq.getEndMS();
+          ms = b + (b - a);
+        }
+      }
+      seq.addData(new FeatureVec(1, balance), ms);
     }
     return seq._div(principle);
+  }
+
+  /** Takes a sequence of cumulative returns and returns a sequence of discrete returns (1.2 = 1.2% growth). */
+  public static Sequence cumulativeToReturns(Sequence cumulativeReturns)
+  {
+    if (cumulativeReturns == null || cumulativeReturns.length() < 2) return null;
+
+    Sequence seq = new Sequence("Returns: " + cumulativeReturns.getName());
+    seq.copyMeta(cumulativeReturns);
+
+    for (int i = 1; i < cumulativeReturns.length(); ++i) {
+      FeatureVec a = cumulativeReturns.get(i - 1);
+      FeatureVec b = cumulativeReturns.get(i);
+      double r = mul2ret(b.get(0) / a.get(0));
+      seq.addData(new FeatureVec(1, r), a.getTime());
+    }
+    return seq;
   }
 
   /** @return Sequence holding total returns for an investment that pays the current 3-month treasury rate */

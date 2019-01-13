@@ -354,7 +354,8 @@ public class Dashboard
         writer.write(String.format("<td>%.2f</td>\n", stats.devAnnualReturn));
         writer.write(String.format("<td>%.2f</td>\n", stats.drawdown));
         double sharpe = FinLib.sharpeDaily(stats.dailyReturns, null);
-        writer.write(String.format("<td>%.2f</td>\n", sharpe));
+        double sharpeMonthly = FinLib.sharpe(stats.monthlyReturns, null);
+        writer.write(String.format("<td>%.2f, %.2f</td>\n", sharpe, sharpeMonthly));
         writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[2]));
         // Regret is other strategy's win percent.
         for (int i = 0; i < comparisons.length; ++i) {

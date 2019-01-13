@@ -60,6 +60,7 @@ public class CumulativeStats implements Comparable<CumulativeStats>
       stats.preferredReturns = dailyReturns;
       if (monthlyReturns == null) {
         monthlyReturns = FinLib.dailyToMonthly(dailyReturns);
+        stats.monthlyReturns = monthlyReturns;
       }
     } else if (monthlyReturns != null && !monthlyReturns.isEmpty()) {
       stats.preferredReturns = monthlyReturns;
