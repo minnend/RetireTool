@@ -29,7 +29,6 @@ import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.IntPair;
 import org.minnen.retiretool.util.Library;
-import org.minnen.retiretool.util.LinearFunc;
 import org.minnen.retiretool.util.PriceModel;
 import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;
@@ -46,8 +45,6 @@ public class Dashboard
   public static int                     iPrice         = FinLib.AdjClose;
 
   public static final Slippage          slippage       = Slippage.None;
-  public static final LinearFunc        PriceSDev      = LinearFunc.Zero;
-
   public static final int               maxDelay       = 0;
   public static final long              gap            = 2 * TimeLib.MS_IN_DAY;
   public static final PriceModel        priceModel     = PriceModel.adjCloseModel;
@@ -392,11 +389,11 @@ public class Dashboard
     contrary.add(0); // always be safe during code 0
 
     // TODO test stability with these contrary pairs.
-    for (int next_code : new int[] { 1 }) {
-      for (int prev_code = next_code + 1; prev_code <= 7; ++prev_code) {
-        contraryPairs.add(new IntPair(prev_code, next_code));
-      }
-    }
+    // for (int next_code : new int[] { 1 }) {
+    // for (int prev_code = next_code + 1; prev_code <= 7; ++prev_code) {
+    // contraryPairs.add(new IntPair(prev_code, next_code));
+    // }
+    // }
 
     PredictorConfig configStrategy = new ConfigMulti(true, contrary, contraryPairs, singleConfigs);
     MultiPredictor predStrategy = (MultiPredictor) configStrategy.build(sim.broker.accessObject, TacticLib.assetNames);
