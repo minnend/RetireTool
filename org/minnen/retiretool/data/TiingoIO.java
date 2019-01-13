@@ -27,11 +27,21 @@ import org.minnen.retiretool.util.TimeLib;
 
 public class TiingoIO
 {
-  public static final String                 auth                = System.getenv("tiingo.auth");
+  private static String                      auth                = System.getenv("tiingo.auth");
 
   public static final String                 supportedTickersUrl = "https://apimedia.tiingo.com/docs/tiingo/daily/supported_tickers.zip";
 
   private static Map<File, List<TiingoFund>> cacheFunds          = new HashMap<File, List<TiingoFund>>();
+
+  public static String getAuth()
+  {
+    return auth;
+  }
+
+  public static void setAuth(String newAuth)
+  {
+    auth = newAuth;
+  }
 
   /** @return path to base directory for storing Tiingo data. */
   private static File getPath()

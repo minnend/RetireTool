@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.minnen.retiretool.data.tiingo.TiingoFund;
@@ -31,6 +32,26 @@ public class DataIO
 
   private static File       outputPath;
   private static File       financePath;
+
+  /** Configure data path and authentication keys from the given `config`. */
+  public static void configure(Configuration config)
+  {
+    if (config.containsKey("path.finance")) {
+      DataIO.setFinancePath(new File(config.getString("path.finance")));
+    }
+    if (config.containsKey("path.output")) {
+      DataIO.setOutputPath(new File(config.getString("path.output")));
+    }
+    if (config.containsKey("tiingo.auth")) {
+      TiingoIO.setAuth(config.getString("tiingo.auth"));
+    }
+    if (config.containsKey("fred.auth")) {
+      FredIO.setAuth(config.getString("fred.auth"));
+    }
+    if (config.containsKey("quandl.auth")) {
+      QuandlIO.setAuth(config.getString("quandl.auth"));
+    }
+  }
 
   public static File getOutputPath()
   {

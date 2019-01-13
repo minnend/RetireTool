@@ -8,7 +8,17 @@ import java.time.Month;
 
 public class FredIO
 {
-  public static final String auth = System.getenv("fred.auth");
+  private static String auth = System.getenv("fred.auth");
+
+  public static String getAuth()
+  {
+    return auth;
+  }
+
+  public static void setAuth(String newAuth)
+  {
+    auth = newAuth;
+  }
 
   public static File getPath()
   {

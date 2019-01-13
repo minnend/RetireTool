@@ -4,7 +4,17 @@ import java.io.File;
 
 public class QuandlIO
 {
-  public static final String auth = System.getenv("quandl.auth");
+  private static String auth = System.getenv("quandl.auth");
+
+  public static String getAuth()
+  {
+    return auth;
+  }
+
+  public static void setAuth(String newAuth)
+  {
+    auth = newAuth;
+  }
 
   public static File getPath()
   {

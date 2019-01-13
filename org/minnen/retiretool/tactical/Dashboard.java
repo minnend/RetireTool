@@ -571,13 +571,7 @@ public class Dashboard
       try {
         Configurations configs = new Configurations();
         Configuration config = configs.properties(configFile);
-
-        if (config.containsKey("path.finance")) {
-          DataIO.setFinancePath(new File(config.getString("path.finance")));
-        }
-        if (config.containsKey("path.output")) {
-          DataIO.setOutputPath(new File(config.getString("path.output")));
-        }
+        DataIO.configure(config);
       } catch (ConfigurationException e) {
         System.err.println(e.getMessage());
         System.exit(1);
