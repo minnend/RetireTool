@@ -156,7 +156,7 @@ public class Chart
         writer.write("  },\n");
       }
       if (config.type != ChartConfig.Type.Line) {
-        writer.write(String.format("  chart: { type: '%s' },\n", ChartConfig.chart2name(config.type)));
+        writer.write("  chart: { type: '%s' },\n", ChartConfig.chart2name(config.type));
       }
       writer.write("  xAxis: {\n");
 
@@ -197,13 +197,13 @@ public class Chart
         writer.write("   type: 'logarithmic',\n");
       }
       if (!Double.isNaN(config.minorTickIntervalY)) {
-        writer.write(String.format("   minorTickInterval: %.3f,\n", config.minorTickIntervalY));
+        writer.write("   minorTickInterval: %.3f,\n", config.minorTickIntervalY);
       }
       if (!Double.isNaN(config.ymin)) {
-        writer.write(String.format("   min: %.3f,\n", config.ymin));
+        writer.write("   min: %.3f,\n", config.ymin);
       }
       if (!Double.isNaN(config.ymax)) {
-        writer.write(String.format("   max: %.3f,\n", config.ymax));
+        writer.write("   max: %.3f,\n", config.ymax);
       }
       writer.write("   title: { text: null },\n");
       addPlotBands(config.yBands, writer);
@@ -219,7 +219,7 @@ public class Chart
       if (config.colors != null) {
         writer.write("  colors: [");
         for (int i = 0; i < config.colors.length; ++i) {
-          writer.write(String.format("'%s'", config.colors[i]));
+          writer.write("'%s'", config.colors[i]);
           if (i < config.colors.length - 1) {
             writer.write(',');
           }
@@ -256,8 +256,8 @@ public class Chart
           double vzero = vmax.get(0) / (vmax.get(0) - vmin.get(0));
 
           writer.write("        [0, 'rgb(0,255,0)'],\n");
-          writer.write(String.format("        [%f, 'rgba(0,255,0,0.5)'],\n", vzero));
-          writer.write(String.format("        [%f, 'rgba(255,0,0,0.5)'],\n", vzero + 0.01));
+          writer.write("        [%f, 'rgba(0,255,0,0.5)'],\n", vzero);
+          writer.write("        [%f, 'rgba(255,0,0,0.5)'],\n", vzero + 0.01);
           writer.write("        [1, 'rgb(255,0,0)'],\n");
         }
         writer.write("      ]},\n");
@@ -282,7 +282,7 @@ public class Chart
         for (int t = 0; t < seqs[i].length(); ++t) {
           double x = seqs[i].get(t, config.iDim);
           // x = FinLib.mul2ret(x); // TODO
-          writer.write(String.format("%.6f%s", x, t == seqs[i].size() - 1 ? "" : ", "));
+          writer.write("%.6f%s", x, t == seqs[i].size() - 1 ? "" : ", ");
         }
         writer.write("],");
         int lineWidth = (Integer) seq.getMeta("lineWidth", 0);
@@ -367,7 +367,7 @@ public class Chart
       writer.write("  },\n");
       writer.write("  series: [{\n");
       writer.write("   type: 'line',\n");
-      writer.write(String.format("   data: [[%f, %f], [%f, %f]],\n", vmin, vmin, vmax, vmax));
+      writer.write("   data: [[%f, %f], [%f, %f]],\n", vmin, vmin, vmax, vmax);
       writer.write("   color: 'rgba(0,0,0,0.2)',\n");
       writer.write("   marker: { enabled: false },\n");
       writer.write("   states: { hover: { lineWidth: 0 } },\n");
@@ -379,7 +379,7 @@ public class Chart
       for (int i = 0; i < above.length(); ++i) {
         double x = above.get(i, 0);
         double y = above.get(i, 1);
-        writer.write(String.format("[%.3f,%.3f]", x, y));
+        writer.write("[%.3f,%.3f]", x, y);
         if (i < above.length() - 1) {
           writer.write(",");
         }
@@ -391,7 +391,7 @@ public class Chart
       for (int i = 0; i < below.length(); ++i) {
         double x = below.get(i, 0);
         double y = below.get(i, 1);
-        writer.write(String.format("[%.3f,%.3f]", x, y));
+        writer.write("[%.3f,%.3f]", x, y);
         if (i < below.length() - 1) {
           writer.write(",");
         }
@@ -476,7 +476,7 @@ public class Chart
       writer.write("  plotOptions: {\n");
       if (config.type == ChartConfig.Type.Scatter) {
         writer.write("   scatter: {\n");
-        writer.write(String.format("    marker: { radius: %.1f, symbol: 'circle' },\n", config.radius));
+        writer.write("    marker: { radius: %.1f, symbol: 'circle' },\n", config.radius);
         writer.write("    dataLabels: {\n");
         writer.write("     enabled: " + config.showDataLabels + "\n");
         writer.write("    },\n");
@@ -530,9 +530,9 @@ public class Chart
           }
           if (hasNames) {
             String name = FinLib.getBaseName(v.getName());
-            writer.write(String.format("{%s,name:'%s'},\n", dataString, FinLib.getBaseName(name)));
+            writer.write("{%s,name:'%s'},\n", dataString, FinLib.getBaseName(name));
           } else {
-            writer.write(String.format("{%s},\n", dataString));
+            writer.write("{%s},\n", dataString);
           }
         }
         writer.write("]},\n");
@@ -594,13 +594,13 @@ public class Chart
           double cagr = spline.get(i, 0);
           double stdev = spline.get(i, 1);
           String name = spline.get(i).getName();
-          writer.write(String.format("{x:%.3f, y:%.3f, name: '%s'}", stdev, cagr, name == null ? "" : name));
+          writer.write("{x:%.3f, y:%.3f, name: '%s'}", stdev, cagr, name == null ? "" : name);
           if (i < spline.length() - 1) {
             writer.write(",");
           }
         }
         writer.write("]\n");
-        writer.write(String.format("   }%s\n", iSpline == splines.length - 1 ? "" : ",{"));
+        writer.write("   }%s\n", iSpline == splines.length - 1 ? "" : ",{");
       }
       writer.write("  ]\n");
       writer.write(" });\n");
@@ -635,7 +635,7 @@ public class Chart
       writer.write("  chart: { type: 'boxplot' },\n");
       writer.write("  xAxis: { categories: [");
       for (int i = 0; i < returnStats.length; ++i) {
-        writer.write(String.format("'%s'", FinLib.getNameWithBreak(returnStats[i].cumulativeReturns.getName())));
+        writer.write("'%s'", FinLib.getNameWithBreak(returnStats[i].cumulativeReturns.getName()));
         if (i < returnStats.length - 1) {
           writer.write(",");
         }
@@ -644,7 +644,7 @@ public class Chart
       writer.write("  yAxis: {\n");
       writer.write("   title: { text: null },\n");
       if (!Double.isNaN(minorTickInterval)) {
-        writer.write(String.format("   minorTickInterval: %f,\n", minorTickInterval));
+        writer.write("   minorTickInterval: %f,\n", minorTickInterval);
       }
       writer.write("  },\n");
 
@@ -665,8 +665,8 @@ public class Chart
       writer.write("    data: [\n");
       for (int i = 0; i < returnStats.length; ++i) {
         DurationalStats stats = returnStats[i];
-        writer.write(String.format("     [%.2f,%.2f,%.2f,%.2f,%.2f]%s\n", stats.min, stats.percentile10, stats.median,
-            stats.percentile90, stats.max, i < returnStats.length - 1 ? "," : ""));
+        writer.write("     [%.2f,%.2f,%.2f,%.2f,%.2f]%s\n", stats.min, stats.percentile10, stats.median,
+            stats.percentile90, stats.max, i < returnStats.length - 1 ? "," : "");
       }
       writer.write("  ]}]\n");
       writer.write(" });\n");
@@ -720,7 +720,7 @@ public class Chart
       writer.write("</script>\n");
       writer.write(
           "<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
-      writer.write(String.format("</head><body style=\"width:%s\">\n", width));
+      writer.write("</head><body style=\"width:%s\">\n", width);
       writer.write("<h2>Statistics for Different Strategies / Assets</h2>\n");
 
       writer.write(tableHtml);
@@ -803,36 +803,36 @@ public class Chart
         if (m.matches()) {
           name = m.group(1);
         }
-        writer.write(String.format("<td><b>%s</b></td>\n", name));
-        writer.write(String.format("<td>%.2f</td>\n", stats.cagr));
-        writer.write(String.format("<td>%.2f</td>\n", stats.drawdown));
-        writer.write(String.format("<td>%.2f</td>\n", stats.devAnnualReturn));
+        writer.write("<td><b>%s</b></td>\n", name);
+        writer.write("<td>%.2f</td>\n", stats.cagr);
+        writer.write("<td>%.2f</td>\n", stats.drawdown);
+        writer.write("<td>%.2f</td>\n", stats.devAnnualReturn);
         if (!reduced && includeRiskAdjusted) {
           writer.write(
               String.format("<td>%.2f</td>\n", stats.cagr * strategyStats[0].devAnnualReturn / stats.devAnnualReturn));
         }
-        writer.write(String.format("<td>%.2f</td>\n", stats.percentDown10));
+        writer.write("<td>%.2f</td>\n", stats.percentDown10);
 
         if (!reduced) {
-          writer.write(String.format("<td>%.2f</td>\n", stats.percentNewHigh));
+          writer.write("<td>%.2f</td>\n", stats.percentNewHigh);
         }
-        writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[0]));
+        writer.write("<td>%.2f</td>\n", stats.annualPercentiles[0]);
         if (!reduced && includeQuartiles) {
-          writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[1]));
+          writer.write("<td>%.2f</td>\n", stats.annualPercentiles[1]);
         }
-        writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[2]));
+        writer.write("<td>%.2f</td>\n", stats.annualPercentiles[2]);
         if (!reduced && includeQuartiles) {
-          writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[3]));
+          writer.write("<td>%.2f</td>\n", stats.annualPercentiles[3]);
         }
-        writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[4]));
+        writer.write("<td>%.2f</td>\n", stats.annualPercentiles[4]);
         // if (!reduced) {
         // if (stats.cagr < baseReturn + 0.005) {
         // writer.write("<td>--</td>\n");
         // } else {
         // double speedup = FinLib.speedup(stats.cagr, baseReturn);
-        // writer.write(String.format("<td>%.1f%%</td>\n", speedup * 100.0));
+        // writer.write("<td>%.1f%%</td>\n", speedup * 100.0));
         // }
-        // writer.write(String.format("<td>%.2f</td>\n", stats.scoreComplex()));
+        // writer.write("<td>%.2f</td>\n", stats.scoreComplex()));
         // }
 
         writer.write("</tr>\n");
@@ -862,10 +862,10 @@ public class Chart
       writer.write("</script>\n");
       writer.write(
           "<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
-      writer.write(String.format("</head><body style=\"width:%dpx\">\n", width));
+      writer.write("</head><body style=\"width:%dpx\">\n", width);
       writer.write("<h2>Strategy Comparison</h2>\n");
-      writer.write(String.format("<h3>%s</h3>\n", FinLib.getBaseName(stats.returns1.getName())));
-      writer.write(String.format("<h3>%s</h3>\n", FinLib.getBaseName(stats.returns2.getName())));
+      writer.write("<h3>%s</h3>\n", FinLib.getBaseName(stats.returns1.getName()));
+      writer.write("<h3>%s</h3>\n", FinLib.getBaseName(stats.returns2.getName()));
       writer.write("<table id=\"comparisonTable\" class=\"tablesorter\">\n");
       writer.write("<thead><tr>\n");
       writer.write(" <th>Duration</th>\n");
@@ -886,23 +886,23 @@ public class Chart
         writer.write("<tr>\n");
 
         if (duration < 12) {
-          writer.write(String.format("<td>%d Month%s</td>\n", duration, duration > 1 ? "s" : ""));
+          writer.write("<td>%d Month%s</td>\n", duration, duration > 1 ? "s" : "");
         } else {
           int years = duration / 12;
-          writer.write(String.format("<td>%d Year%s</td>\n", years, years > 1 ? "s" : ""));
+          writer.write("<td>%d Year%s</td>\n", years, years > 1 ? "s" : "");
         }
 
         writer.write("<td style=\"color: #3B3\">\n");
         writer.write(genWinBar(results.winPercent1, results.winPercent2));
         writer.write("</td>\n");
 
-        writer.write(String.format("<td>%.1f</td>\n", 100.0 - results.winPercent2));
-        writer.write(String.format("<td>%.1f</td>\n", results.winPercent1));
-        writer.write(String.format("<td>%.1f</td>\n", results.winPercent2));
-        writer.write(String.format("<td>%.2f</td>\n", results.meanExcess));
-        writer.write(String.format("<td>%.2f</td>\n", results.worstExcess));
-        writer.write(String.format("<td>%.2f</td>\n", results.medianExcess));
-        writer.write(String.format("<td>%.2f</td>\n", results.bestExcess));
+        writer.write("<td>%.1f</td>\n", 100.0 - results.winPercent2);
+        writer.write("<td>%.1f</td>\n", results.winPercent1);
+        writer.write("<td>%.1f</td>\n", results.winPercent2);
+        writer.write("<td>%.2f</td>\n", results.meanExcess);
+        writer.write("<td>%.2f</td>\n", results.worstExcess);
+        writer.write("<td>%.2f</td>\n", results.medianExcess);
+        writer.write("<td>%.2f</td>\n", results.bestExcess);
         writer.write("</tr>\n");
       }
       writer.write("</tbody>\n</table>\n");
@@ -996,7 +996,7 @@ public class Chart
       writer.write("</script>\n");
       writer.write(
           "<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
-      writer.write(String.format("</head><body style=\"width:%s\">\n", width));
+      writer.write("</head><body style=\"width:%s\">\n", width);
       writer.write("<h2>Beat Inflation</h2>\n");
       writer.write("<table id=\"comparisonTable\" class=\"tablesorter\">\n");
       writer.write("<thead><tr>\n");
@@ -1005,7 +1005,7 @@ public class Chart
       String th = String.format("<th style=\"width: %.2f%%\">", widthPercent);
       writer.write(th + "Duration</th>\n");
       for (ComparisonStats stats : allStats) {
-        writer.write(String.format("%s%s</th>\n", th, FinLib.getBaseName(stats.returns1.getName())));
+        writer.write("%s%s</th>\n", th, FinLib.getBaseName(stats.returns1.getName()));
       }
       writer.write("</tr></thead>\n");
       writer.write("<tbody>\n");
@@ -1015,20 +1015,20 @@ public class Chart
         writer.write("<tr>\n");
 
         if (duration < 12) {
-          writer.write(String.format("<td>%d Month%s</td>\n", duration, duration > 1 ? "s" : ""));
+          writer.write("<td>%d Month%s</td>\n", duration, duration > 1 ? "s" : "");
         } else {
           int years = duration / 12;
-          writer.write(String.format("<td>%d Year%s</td>\n", years, years > 1 ? "s" : ""));
+          writer.write("<td>%d Year%s</td>\n", years, years > 1 ? "s" : "");
         }
 
         for (ComparisonStats stats : allStats) {
           Results results = stats.durationToResults.get(duration);
-          writer.write(String.format("<td title=\"%.1f | %.1f\" style=\"color: #3B3\">\n", results.winPercent1,
-              results.winPercent2));
-          // writer.write(String.format("%.1f\n", 100.0 - results.winPercent2));
+          writer.write("<td title=\"%.1f | %.1f\" style=\"color: #3B3\">\n", results.winPercent1,
+              results.winPercent2);
+          // writer.write("%.1f\n", 100.0 - results.winPercent2));
           writer.write(genWinBar(results.winPercent1, results.winPercent2));
           writer.write("</td>\n");
-          // writer.write(String.format("<td>%.1f (%.1f)</td>\n", results.winPercent1, results.winPercent2));
+          // writer.write("<td>%.1f (%.1f)</td>\n", results.winPercent1, results.winPercent2));
         }
         writer.write("</tr>\n");
       }
@@ -1068,10 +1068,10 @@ public class Chart
   public static String genDecadeTable(Sequence returns1, Sequence returns2)
   {
     assert returns1.length() == returns2.length();
-    int iStart = TimeLib.findStartofFirstDecade(returns1, false);
-    if (iStart < 0) {
-      return null;
-    }
+    int iStart = TimeLib.findStartofFirstDecade(returns1, false) - 1;
+    if (iStart < 0) return null;
+    System.out.printf("decade start: %s\n", TimeLib.formatDate(returns1.getTimeMS(iStart)));
+    System.out.printf("prev: %s\n", TimeLib.formatDate(returns1.getTimeMS(iStart - 1)));
 
     StringWriter sw = new StringWriter();
     try (Writer writer = new Writer(sw)) {
@@ -1086,10 +1086,12 @@ public class Chart
       int iRow = 0;
       for (int i = iStart; i + 12 * 6 < returns1.length(); i += 120) {
         assert returns1.getTimeMS(i) == returns2.getTimeMS(i);
-        LocalDate date = TimeLib.ms2date(returns1.getTimeMS(i));
+        LocalDate date = TimeLib.ms2date(returns1.getTimeMS(i + 1));
         final int n = Math.min(121, returns1.length() - i);
         Sequence decade1 = returns1.subseq(i, n);
         Sequence decade2 = returns2.subseq(i, n);
+        System.out.printf("Decade1: %s\n", decade1);
+        System.out.printf("Decade2: %s\n", decade2);
         CumulativeStats stats1 = CumulativeStats.calc(decade1);
         CumulativeStats stats2 = CumulativeStats.calc(decade2);
 
@@ -1139,13 +1141,13 @@ public class Chart
     return sw.toString();
   }
 
-  public static void saveAnnualStatsTable(File file, int width, boolean bCheckDate, int iPrice, List<Sequence> seqs)
+  public static void saveAnnualStatsTable(File file, boolean bCheckDate, int iPrice, List<Sequence> seqs)
       throws IOException
   {
-    saveAnnualStatsTable(file, width, bCheckDate, iPrice, seqs.toArray(new Sequence[seqs.size()]));
+    saveAnnualStatsTable(file, bCheckDate, iPrice, seqs.toArray(new Sequence[seqs.size()]));
   }
 
-  public static void saveAnnualStatsTable(File file, int width, boolean bCheckDate, int iPrice, Sequence... seqs)
+  public static void saveAnnualStatsTable(File file, boolean bCheckDate, int iPrice, Sequence... seqs)
       throws IOException
   {
     final double diffMargin = 0.5;
@@ -1160,7 +1162,7 @@ public class Chart
       writer.write("</script>\n");
       writer.write(
           "<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
-      writer.write(String.format("</head><body style=\"width:%dpx\">\n", width));
+      writer.write("</head><body style=\"width: 100%%\">\n");
       writer.write("<table id=\"statsTable\" class=\"tablesorter\">\n");
       writer.write("<thead><tr>\n");
 
@@ -1168,7 +1170,7 @@ public class Chart
       String th = String.format("<th style=\"width: %.2f%%\">", widthPercent);
       writer.write(th + "Year</th>\n");
       for (Sequence seq : seqs) {
-        writer.write(String.format("%s%s</th>\n", th, FinLib.getBaseName(seq.getName())));
+        writer.write("%s%s</th>\n", th, FinLib.getBaseName(seq.getName()));
       }
       writer.write("</tr></thead>\n");
       writer.write("<tbody>\n");
@@ -1182,7 +1184,7 @@ public class Chart
         int iNext = seqs[0].getIndexAtOrBefore(TimeLib.toMs(nextDate.minusDays(1)));
 
         writer.write("<tr>\n");
-        writer.write(String.format("<td><b>%d</b></td>", date.getYear()));
+        writer.write("<td><b>%d</b></td>", date.getYear());
 
         for (int i = 0; i < seqs.length; ++i) {
           Sequence seq = seqs[i];
@@ -1193,7 +1195,7 @@ public class Chart
         int iBest = Library.argmax(returns);
         for (int i = 0; i < seqs.length; ++i) {
           boolean bold = (returns[iBest] - returns[i] < diffMargin);
-          writer.write(String.format("<td>%s%.2f%s</td>", bold ? "<b>" : "", returns[i], bold ? "</b>" : ""));
+          writer.write("<td>%s%.2f%s</td>", bold ? "<b>" : "", returns[i], bold ? "</b>" : "");
         }
         writer.write("</tr>\n");
 
@@ -1229,7 +1231,7 @@ public class Chart
       writer.write("<html><head>\n");
       writer.write("<title>Holdings</title>\n");
       writer.write("<link rel=\"stylesheet\" href=\"holdings.css\">\n");
-      writer.write(String.format("</head><body style=\"width:%dpx\">\n", width));
+      writer.write("</head><body style=\"width:%dpx\">\n", width);
       writer.write("<table id=\"holdingsTable\"  cellspacing=\"0\" style=\"width:100%\">\n");
       writer.write("<tbody>\n");
 
@@ -1247,7 +1249,7 @@ public class Chart
         DiscreteDistribution dist = alignDist(entry.getValue(), prevDist, date);
         prevDist = dist;
         writer.write(bEvenRow ? "<tr class=\"evenRow\">" : "<tr>");
-        writer.write(String.format("<td class=\"date\">%s</td>\n", date));
+        writer.write("<td class=\"date\">%s</td>\n", date);
         double combinedReturn = 0.0;
         StringBuffer sb = new StringBuffer();
         for (int i = 0; i < dist.size(); ++i) {
@@ -1272,7 +1274,7 @@ public class Chart
               "<span style=\"float: left; width: %.4f%%; background: %s; white-space: nowrap;\">%s%s</span>\n",
               dist.weights[i] * 100 - 0.0001, symbol2color.get(symbol), symbol, returnString));
         }
-        writer.write(String.format("<td class=\"combined-return\">%.2f</td>\n", combinedReturn));
+        writer.write("<td class=\"combined-return\">%.2f</td>\n", combinedReturn);
         writer.write("<td class=\"viz\">\n");
         writer.write(sb.toString());
         writer.write("</td></tr>\n");
@@ -1340,11 +1342,11 @@ public class Chart
       writer.write("$(function () {\n");
       writer.write(" $('#chart').highcharts({\n");
       writer.write("  title: { text: '" + title + "' },\n");
-      writer.write(String.format("  chart: { type: 'area' },\n"));
+      writer.write("  chart: { type: 'area' },\n");
       writer.write("  plotOptions: {\n");
       writer.write("   area: {\n");
-      writer.write(String.format("    pointStart: %.4f,\n", xstart));
-      writer.write(String.format("    pointInterval: %.4f,\n", xstep));
+      writer.write("    pointStart: %.4f,\n", xstart);
+      writer.write("    pointInterval: %.4f,\n", xstep);
       writer.write("     marker: { enabled: false }\n");
       writer.write("   }\n");
       writer.write("  },\n");
@@ -1355,7 +1357,7 @@ public class Chart
         writer.write("  { name: '" + seq.getName() + "',\n");
         writer.write("    data: [");
         for (int i = 0; i < seqs[iSeq].length(); ++i) {
-          writer.write(String.format("%.4f%s", seqs[iSeq].get(i, 0), i == seqs[iSeq].size() - 1 ? "" : ", "));
+          writer.write("%.4f%s", seqs[iSeq].get(i, 0), i == seqs[iSeq].size() - 1 ? "" : ", ");
         }
         writer.write("] }");
         if (iSeq < seqs.length - 1) {
