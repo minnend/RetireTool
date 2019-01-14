@@ -748,11 +748,6 @@ public class Chart
         writer.write(" <li><b>75% AR</b> - Return of year at the 75th percentile</li>\n");
       }
       writer.write(" <li><b>Best AR</b> - Return of best year (biggest gain)</li>\n");
-      if (!reduced) {
-        writer.write(" <li><b>Speedup</b> - Percentage ahead of base returns per year</li>");
-        writer.write(
-            " <li><b>Score</b> - Semi-arbitrary combination of statistics used to rank strategies (higher is better)</li>\n");
-      }
       writer.write("</ul></div>");
       writer.write("</body></html>\n");
 
@@ -787,10 +782,6 @@ public class Chart
         writer.write(" <th>75% AR</th>\n");
       }
       writer.write(" <th>Best AR</th>\n");
-      // if (!reduced) {
-      // writer.write(" <th>Speedup</th>\n");
-      // writer.write(" <th>Score</th>\n");
-      // }
 
       writer.write("</tr></thead>\n");
       writer.write("<tbody>\n");
@@ -1029,28 +1020,6 @@ public class Chart
       writer.write("</tbody>\n</table>\n");
       writer.write("</body></html>\n");
     }
-  }
-
-  public static void printDecadeTable(Sequence cumulativeReturns)
-  {
-    int iStart = TimeLib.findStartofFirstDecade(cumulativeReturns, false);
-    if (iStart < 0) {
-      return;
-    }
-
-    System.out.printf("<table id=\"decadeTable\" class=\"tablesorter\"><thead>\n");
-    System.out.printf(
-        "<tr><th>Decade</th><th>CAGR</th><th>Dev</th><th>Drawdown</th><th>Down 10%%</th><th>Total<br/>Return</th></tr>\n");
-    System.out.printf("</thead><tbody>\n");
-
-    for (int i = iStart; i + 120 < cumulativeReturns.length(); i += 120) {
-      LocalDate date = TimeLib.ms2date(cumulativeReturns.getTimeMS(i));
-      Sequence decade = cumulativeReturns.subseq(i, 121);
-      CumulativeStats stats = CumulativeStats.calc(decade);
-      System.out.printf(" <tr><td>%ds</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2fx</td></tr>\n",
-          date.getYear(), stats.cagr, stats.devAnnualReturn, stats.drawdown, stats.percentDown10, stats.totalReturn);
-    }
-    System.out.printf("</tbody>\n</table>\n");
   }
 
   /**
