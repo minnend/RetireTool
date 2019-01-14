@@ -542,6 +542,17 @@ public final class Library
     return iMax;
   }
 
+  /** @return index of largest value if it is largest by `margin` or more, else return -1. */
+  public static int argmax(double[] a, double margin)
+  {
+    int iMax = argmax(a);
+    for (int i = 0; i < a.length; ++i) {
+      if (i == iMax) continue;
+      if (a[iMax] - a[i] < margin) return -1;
+    }
+    return iMax;
+  }
+
   public static String prefix(String s, String marker)
   {
     int n = s.indexOf(marker);

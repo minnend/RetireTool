@@ -363,11 +363,11 @@ public class Dashboard
         writer.write(String.format("<td>%.2f</td>\n", stats.annualPercentiles[2]));
         // Regret is other strategy's win percent.
         for (int i = 0; i < comparisons.length; ++i) {
-          writer.write(String.format("<td>%.1f%%</td>\n", comparisons[i].getWinPercent(1 - iRow)));
+          writer.write(String.format("<td>%.1f%%</td>\n", comparisons[i].getWinPercent(iRow)));
           if (iRow == 1) {
             System.out.printf(" Regret [%8s]: %5.2f%%  (win: %5.2f%%)\n",
-                TimeLib.formatDurationMonths(comparisons[i].duration), comparisons[i].getWinPercent(1 - iRow),
-                comparisons[i].getWinPercent(iRow));
+                TimeLib.formatDurationMonths(comparisons[i].duration), comparisons[i].getWinPercent(iRow),
+                comparisons[i].getWinPercent(1 - iRow));
           }
         }
         writer.write("</tr>\n");
@@ -410,11 +410,15 @@ public class Dashboard
     CumulativeStats statsTactical = CumulativeStats.calc(tacticalDailyReturns);
     System.out.println(statsTactical);
 
-    ComparisonStats comparison = ComparisonStats.calc(baselineMonthlyReturns, tacticalMonthlyReturns, 0.25);
+    ComparisonStats comparison = ComparisonStats.calc(tacticalMonthlyReturns, baselineMonthlyReturns, 0.25);
+
+    Chart.saveComparisonTable(new File(DataIO.getOutputPath(), "tactical-comparison.html"), comparison);
+    Chart.saveAnnualStatsTable(new File(DataIO.getOutputPath(), "tactical-annual-stats.html"), 360, true, 0,
+        tacticalDailyReturns, baselineDailyReturns);
 
     final String sRowGap = "<td class=\"hgap\">&nbsp;</td>";
 
-    try (Writer f = new Writer(new File(DataIO.getOutputPath(), "dashboard-tactical.html"))) {
+    try (Writer f = new Writer(new File(DataIO.getOutputPath(), "tactical-dashboard.html"))) {
       f.write("<html><head>\n");
       f.write("<title>Dashboard</title>\n");
       f.write("<script src=\"%s\"></script>\n", Chart.jquery);

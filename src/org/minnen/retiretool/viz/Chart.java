@@ -36,8 +36,9 @@ import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 
 public class Chart
 {
-  public final static String  jquery        = "https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js";
-  public final static boolean bVerticalLine = false;
+  public final static String  jquery         = "https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js";
+  public final static boolean bVerticalLine  = false;
+  public final static Pattern patternNegZero = Pattern.compile("-0?\\.?0*");
 
   public static ChartConfig saveLineChart(File file, String title, String width, String height, ChartScaling scaling,
       ChartTiming timing, Sequence... seqs) throws IOException
@@ -850,23 +851,17 @@ public class Chart
    * @param stats comparison statistics to put in chart
    * @throws IOException if there is a problem writing to the file
    */
-  public static void saveComparisonTable(File file, int width, ComparisonStats stats) throws IOException
+  public static void saveComparisonTable(File file, ComparisonStats stats) throws IOException
   {
     try (Writer writer = new Writer(file)) {
       writer.write("<html><head>\n");
       writer.write("<title>Comparison Statistics</title>\n");
-      writer.write("<script src=\"%s\"></script>\n", jquery);
-      writer.write("<script type=\"text/javascript\" src=\"js/jquery.tablesorter.min.js\"></script>\n");
-      writer.write("<script type=\"text/javascript\">\n");
-      writer.write(" $(document).ready(function() { $(\"#myTable\").tablesorter( {widgets: ['zebra']} ); } );\n");
-      writer.write("</script>\n");
-      writer.write(
-          "<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
-      writer.write("</head><body style=\"width:%dpx\">\n", width);
-      writer.write("<h2>Strategy Comparison</h2>\n");
-      writer.write("<h3>%s</h3>\n", FinLib.getBaseName(stats.returns1.getName()));
-      writer.write("<h3>%s</h3>\n", FinLib.getBaseName(stats.returns2.getName()));
-      writer.write("<table id=\"comparisonTable\" class=\"tablesorter\">\n");
+      writer.write("<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\"/>\n");
+      writer.write("</head><body>\n");
+      writer.write("<h1>%s vs. %s</h1>\n", FinLib.getBaseName(stats.returns1.getName()),
+          FinLib.getBaseName(stats.returns2.getName()));
+
+      writer.write("<table class=\"tablesorter\">\n");
       writer.write("<thead><tr>\n");
       writer.write(" <th>Duration</th>\n");
       writer.write(" <th>Win Visualization</th>\n");
@@ -1023,8 +1018,7 @@ public class Chart
 
         for (ComparisonStats stats : allStats) {
           Results results = stats.durationToResults.get(duration);
-          writer.write("<td title=\"%.1f | %.1f\" style=\"color: #3B3\">\n", results.winPercent1,
-              results.winPercent2);
+          writer.write("<td title=\"%.1f | %.1f\" style=\"color: #3B3\">\n", results.winPercent1, results.winPercent2);
           // writer.write("%.1f\n", 100.0 - results.winPercent2));
           writer.write(genWinBar(results.winPercent1, results.winPercent2));
           writer.write("</td>\n");
@@ -1141,16 +1135,17 @@ public class Chart
     return sw.toString();
   }
 
-  public static void saveAnnualStatsTable(File file, boolean bCheckDate, int iPrice, List<Sequence> seqs)
+  public static void saveAnnualStatsTable(File file, int width, boolean bCheckDate, int iPrice, List<Sequence> seqs)
       throws IOException
   {
-    saveAnnualStatsTable(file, bCheckDate, iPrice, seqs.toArray(new Sequence[seqs.size()]));
+    saveAnnualStatsTable(file, width, bCheckDate, iPrice, seqs.toArray(new Sequence[seqs.size()]));
   }
 
-  public static void saveAnnualStatsTable(File file, boolean bCheckDate, int iPrice, Sequence... seqs)
+  public static void saveAnnualStatsTable(File file, int width, boolean bCheckDate, int iPrice, Sequence... seqs)
       throws IOException
   {
     final double diffMargin = 0.5;
+    final boolean bIncludeDiff = (seqs.length == 2);
 
     try (Writer writer = new Writer(file)) {
       writer.write("<html><head>\n");
@@ -1162,16 +1157,17 @@ public class Chart
       writer.write("</script>\n");
       writer.write(
           "<link rel=\"stylesheet\" href=\"themes/blue/style.css\" type=\"text/css\" media=\"print, projection, screen\" />\n");
-      writer.write("</head><body style=\"width: 100%%\">\n");
-      writer.write("<table id=\"statsTable\" class=\"tablesorter\">\n");
+      writer.write("</head><body>\n");
+      writer.write("<table id=\"statsTable\" class=\"tablesorter\" style=\"width:%spx;\">\n", width);
       writer.write("<thead><tr>\n");
 
-      double widthPercent = 100.0 / (seqs.length + 1);
+      double widthPercent = 100.0 / (seqs.length + (bIncludeDiff ? 2 : 1));
       String th = String.format("<th style=\"width: %.2f%%\">", widthPercent);
       writer.write(th + "Year</th>\n");
       for (Sequence seq : seqs) {
         writer.write("%s%s</th>\n", th, FinLib.getBaseName(seq.getName()));
       }
+      if (bIncludeDiff) writer.write("%sDiff</th>\n", th);
       writer.write("</tr></thead>\n");
       writer.write("<tbody>\n");
 
@@ -1184,7 +1180,7 @@ public class Chart
         int iNext = seqs[0].getIndexAtOrBefore(TimeLib.toMs(nextDate.minusDays(1)));
 
         writer.write("<tr>\n");
-        writer.write("<td><b>%d</b></td>", date.getYear());
+        writer.write("<td class=\"center bold\">%d</td>", date.getYear());
 
         for (int i = 0; i < seqs.length; ++i) {
           Sequence seq = seqs[i];
@@ -1192,10 +1188,17 @@ public class Chart
           double ar = FinLib.getAnnualReturn(tr, 12);
           returns[i] = ar;
         }
-        int iBest = Library.argmax(returns);
+        int iMax = Library.argmax(returns, diffMargin); // index of strategy with largest return
         for (int i = 0; i < seqs.length; ++i) {
-          boolean bold = (returns[iBest] - returns[i] < diffMargin);
-          writer.write("<td>%s%.2f%s</td>", bold ? "<b>" : "", returns[i], bold ? "</b>" : "");
+          boolean bold = (i == iMax);
+          writer.write("<td%s>%s</td>", bold ? " class=\"bold\"" : "", prettyFloat("%.2f", returns[i]));
+        }
+        if (bIncludeDiff) {
+          double diff = returns[0] - returns[1];
+          String classString = "";
+          if (diff >= diffMargin) classString = " class=\"green\"";
+          else if (diff <= -diffMargin) classString = " class=\"red\"";
+          writer.write("<td%s>%s</td>", classString, prettyFloat("%.2f", diff));
         }
         writer.write("</tr>\n");
 
@@ -1373,5 +1376,12 @@ public class Chart
       writer.write("<div id=\"chart\" style=\"width:100%; height:" + height + "px;\" />\n");
       writer.write("</body></html>\n");
     }
+  }
+
+  public static String prettyFloat(String format, double x)
+  {
+    String s = String.format(format, x);
+    Matcher m = patternNegZero.matcher(s);
+    return m.matches() ? s.substring(1) : s;
   }
 }
