@@ -1071,7 +1071,8 @@ public class Sequence extends MetaStore implements Iterable<FeatureVec>
     return deriv;
   }
 
-  public void adjustDatesToEndOfMonth(LastDay lastDay)
+  /** In-place adjustment of date to end of month (either calendar or last business day). */
+  public Sequence adjustDatesToEndOfMonth(LastDay lastDay)
   {
     for (FeatureVec v : data) {
       LocalDate date = TimeLib.ms2date(v.getTime());
@@ -1083,6 +1084,7 @@ public class Sequence extends MetaStore implements Iterable<FeatureVec>
       }
       v.setTime(TimeLib.toMs(date));
     }
+    return this;
   }
 
   /** Change all timestamps to the last day of the month. */

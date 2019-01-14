@@ -1064,8 +1064,6 @@ public class Chart
     assert returns1.length() == returns2.length();
     int iStart = TimeLib.findStartofFirstDecade(returns1, false) - 1;
     if (iStart < 0) return null;
-    System.out.printf("decade start: %s\n", TimeLib.formatDate(returns1.getTimeMS(iStart)));
-    System.out.printf("prev: %s\n", TimeLib.formatDate(returns1.getTimeMS(iStart - 1)));
 
     StringWriter sw = new StringWriter();
     try (Writer writer = new Writer(sw)) {

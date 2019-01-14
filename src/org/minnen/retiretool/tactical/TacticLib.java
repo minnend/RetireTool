@@ -8,6 +8,7 @@ import java.util.Set;
 
 import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.DataIO;
+import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.predictor.config.PredictorConfig;
@@ -31,8 +32,17 @@ public class TacticLib
         TimeLib.formatDate(seq.getEndMS()));
     store.add(seq, riskyName);
 
-    Sequence tb3mo = FinLib.inferAssetFrom3MonthTreasuries();
-    store.add(tb3mo, safeName);
+    Sequence tbills = FinLib.inferAssetFrom3MonthTreasuries();
+
+    // Extend t-bills since data may not be as recent as other symbols.
+    FeatureVec lastTBill = tbills.getLast();
+    int i = seq.getClosestIndex(tbills.getEndMS());
+    assert seq.getTimeMS(i) == tbills.getEndMS();
+    for (int j = i + 1; j < seq.size(); ++j) {
+      tbills.addData(lastTBill.dup(), seq.getTimeMS(j));
+    }
+
+    store.add(tbills, safeName);
   }
 
   public static AllStats eval(PredictorConfig config, String name, Simulation sim)

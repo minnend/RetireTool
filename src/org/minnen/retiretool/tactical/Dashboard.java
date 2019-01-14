@@ -19,6 +19,7 @@ import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.data.Sequence.LastDay;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.predictor.config.ConfigConst;
 import org.minnen.retiretool.predictor.config.ConfigMulti;
@@ -415,6 +416,19 @@ public class Dashboard
     Chart.saveComparisonTable(new File(DataIO.getOutputPath(), "tactical-comparison.html"), comparison);
     Chart.saveAnnualStatsTable(new File(DataIO.getOutputPath(), "tactical-annual-stats.html"), 360, true, 0,
         tacticalDailyReturns, baselineDailyReturns);
+
+    // Create cumulative returns for safe asset that match monthly returns for tactical & baseline strategies.
+    Sequence safeDaily = store.get(TacticLib.safeName);
+    Sequence safeMonthly = FinLib.dailyToMonthly(safeDaily).adjustDatesToEndOfMonth(LastDay.BUSINESS_DAY);
+    safeMonthly = safeMonthly.matchTimes(baselineMonthlyReturns, TimeLib.MS_IN_HOUR);
+    if (safeMonthly.size() == baselineMonthlyReturns.size() - 1) { // may need to dup last entry due to partial month
+      safeMonthly.addData(safeMonthly.getLast().dup(), baselineMonthlyReturns.getEndMS());
+    }
+    assert safeMonthly.matches(baselineMonthlyReturns);
+    FinLib.normalizeReturns(safeMonthly);
+    Chart.saveLineChart(new File(DataIO.getOutputPath(), "tactical-growth-curves.html"),
+        String.format("%s vs. %s", tacticalDailyReturns.getName(), baselineDailyReturns.getName()), "100%", "600",
+        ChartScaling.LOGARITHMIC, ChartTiming.MONTHLY, tacticalMonthlyReturns, baselineMonthlyReturns, safeMonthly);
 
     final String sRowGap = "<td class=\"hgap\">&nbsp;</td>";
 
