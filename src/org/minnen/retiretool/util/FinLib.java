@@ -15,7 +15,6 @@ import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.Shiller;
 import org.minnen.retiretool.data.fred.FredSeries;
-import org.minnen.retiretool.stats.CumulativeStats;
 import org.minnen.retiretool.stats.RetirementStats;
 
 import com.joptimizer.functions.ConvexMultivariateRealFunction;

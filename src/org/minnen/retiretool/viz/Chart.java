@@ -1143,6 +1143,7 @@ public class Chart
       LocalDate date = TimeLib.ms2date(seqs[0].getTimeMS(iStart));
       double[] returns = new double[seqs.length];
       while (true) {
+        // TODO refactor code to generate annual returns into function in FinLib.
         LocalDate nextDate = date.with(TemporalAdjusters.firstDayOfNextYear());
         int iNext = seqs[0].getIndexAtOrBefore(TimeLib.toMs(nextDate.minusDays(1)));
 

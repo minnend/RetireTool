@@ -427,7 +427,7 @@ public class Dashboard
     ComparisonStats comparison = ComparisonStats.calc(tacticalMonthlyReturns, baselineMonthlyReturns, 0.25);
 
     Chart.saveComparisonTable(new File(DataIO.getOutputPath(), "tactical-comparison.html"), comparison);
-    Chart.saveAnnualStatsTable(new File(DataIO.getOutputPath(), "tactical-annual-stats.html"), 360, true, 0,
+    Chart.saveAnnualStatsTable(new File(DataIO.getOutputPath(), "tactical-stats-per-year.html"), 360, true, 0,
         tacticalDailyReturns, baselineDailyReturns);
 
     Sequence safeMonthly = getMatchingCumulativeSafe(baselineMonthlyReturns);
