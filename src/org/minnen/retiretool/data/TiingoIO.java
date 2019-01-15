@@ -287,7 +287,7 @@ public class TiingoIO
     }
 
     try (InputStream input = con.getInputStream()) {
-      return IOUtils.toString(input);
+      return IOUtils.toString(input, "UTF-8");
     }
   }
 

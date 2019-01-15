@@ -285,7 +285,7 @@ public class DataIO
   public static String copyUrlToString(URL url)
   {
     try {
-      return IOUtils.toString(url);
+      return IOUtils.toString(url, "UTF-8");
     } catch (IOException e) {
       e.printStackTrace();
       return null;

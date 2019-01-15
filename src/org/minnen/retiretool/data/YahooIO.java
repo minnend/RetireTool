@@ -262,12 +262,9 @@ public class YahooIO
       String cookie = cookieList.get(0);
       // System.out.println(cookie);
 
-      InputStream in = conn.getInputStream();
       String html = null;
-      try {
-        html = IOUtils.toString(in);
-      } finally {
-        IOUtils.closeQuietly(in);
+      try (InputStream in = conn.getInputStream()) {
+        html = IOUtils.toString(in, "UTF-8");
       }
       Pattern pattern = Pattern.compile("\"CrumbStore\":\\{\"crumb\":\"(.{6,18})\"\\}");
       Matcher m = pattern.matcher(html);
@@ -283,11 +280,8 @@ public class YahooIO
       url = new URL(address);
       conn = url.openConnection();
       conn.setRequestProperty("cookie", cookie);
-      in = conn.getInputStream();
-      try {
+      try (InputStream in = conn.getInputStream()) {
         Files.copy(in, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
-      } finally {
-        IOUtils.closeQuietly(in);
       }
       return file;
     } catch (IOException e) {
