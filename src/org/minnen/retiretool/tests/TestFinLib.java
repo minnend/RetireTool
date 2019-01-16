@@ -354,7 +354,6 @@ public class TestFinLib
 
     double sharpe = FinLib.sharpe(portfolio, benchmark);
     double expected = -0.2951444;
-    System.out.printf("%f %f\n", expected, sharpe);
     assertEquals(expected, sharpe, 1e-6);
   }
 }

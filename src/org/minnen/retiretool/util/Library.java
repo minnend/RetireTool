@@ -563,15 +563,16 @@ public final class Library
     }
   }
 
+  public static boolean almostEqual(double a, double b, double eps)
+  {
+    return (Math.abs(b - a) < eps);
+  }
+
   public static boolean almostEqual(double[] a, double[] b, double eps)
   {
-    if (a.length != b.length) {
-      return false;
-    }
+    if (a.length != b.length) return false;
     for (int i = 0; i < a.length; ++i) {
-      if (Math.abs(b[i] - a[i]) > eps) {
-        return false;
-      }
+      if (!almostEqual(a[i], b[i], eps)) return false;
     }
     return true;
   }
