@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 
 import org.minnen.retiretool.data.DataIO;
-import org.minnen.retiretool.data.QuandlIO;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.util.TimeLib;
 

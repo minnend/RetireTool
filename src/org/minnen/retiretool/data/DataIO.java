@@ -22,7 +22,10 @@ import java.util.zip.ZipInputStream;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
+import org.minnen.retiretool.data.fred.FredIO;
+import org.minnen.retiretool.data.quandl.QuandlIO;
 import org.minnen.retiretool.data.tiingo.TiingoFund;
+import org.minnen.retiretool.data.tiingo.TiingoIO;
 import org.minnen.retiretool.util.TimeLib;
 
 public class DataIO

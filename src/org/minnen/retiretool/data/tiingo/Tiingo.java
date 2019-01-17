@@ -8,7 +8,6 @@ import org.minnen.retiretool.broker.SimFactory;
 import org.minnen.retiretool.broker.Simulation;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
-import org.minnen.retiretool.data.TiingoIO;
 import org.minnen.retiretool.util.PriceModel;
 import org.minnen.retiretool.util.Slippage;
 import org.minnen.retiretool.util.TimeLib;

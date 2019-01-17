@@ -20,8 +20,8 @@ import org.minnen.retiretool.data.IndexRange;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.Sequence.EndpointBehavior;
 import org.minnen.retiretool.data.SequenceStore;
-import org.minnen.retiretool.data.TiingoIO;
 import org.minnen.retiretool.data.tiingo.TiingoFund;
+import org.minnen.retiretool.data.tiingo.TiingoIO;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
 

@@ -6,7 +6,6 @@ import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 
-import org.minnen.retiretool.data.TiingoIO;
 import org.minnen.retiretool.util.TimeLib;
 
 /**

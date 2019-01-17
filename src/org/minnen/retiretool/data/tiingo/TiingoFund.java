@@ -10,7 +10,6 @@ import java.util.HashMap;
 
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
-import org.minnen.retiretool.data.TiingoIO;
 import org.minnen.retiretool.util.TimeLib;
 
 public class TiingoFund

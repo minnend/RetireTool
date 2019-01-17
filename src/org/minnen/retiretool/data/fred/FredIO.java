@@ -1,10 +1,12 @@
-package org.minnen.retiretool.data;
+package org.minnen.retiretool.data.fred;
 
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.LocalDate;
 import java.time.Month;
+
+import org.minnen.retiretool.data.DataIO;
 
 public class FredIO
 {

@@ -1,6 +1,8 @@
-package org.minnen.retiretool.data;
+package org.minnen.retiretool.data.quandl;
 
 import java.io.File;
+
+import org.minnen.retiretool.data.DataIO;
 
 public class QuandlIO
 {

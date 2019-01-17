@@ -5,8 +5,8 @@ import java.io.IOException;
 
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
-import org.minnen.retiretool.data.TiingoIO;
 import org.minnen.retiretool.data.YahooIO;
+import org.minnen.retiretool.data.tiingo.TiingoIO;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
