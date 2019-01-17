@@ -747,7 +747,7 @@ public class AdaptiveAlloc
     // Load data and trim to same time period.
     List<Sequence> seqs = new ArrayList<>();
     for (String symbol : fundSymbols) {
-      File file = YahooIO.getFile(symbol);
+      File file = YahooIO.getFileEOD(symbol);
       Sequence seq = YahooIO.loadData(file);
       System.out.printf("%5s [%s] -> [%s]\n", symbol, TimeLib.formatDate2(seq.getStartMS()),
           TimeLib.formatDate2(seq.getEndMS()));

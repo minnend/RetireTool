@@ -173,7 +173,7 @@ public class TiingoIO
       return TiingoMetadata.fromString(json);
     } catch (IOException e) {
       System.err.printf("Failed to load Tiingo metadata: %s\n", symbol);
-      System.err.println(e);
+      e.printStackTrace();
       return null;
     }
   }

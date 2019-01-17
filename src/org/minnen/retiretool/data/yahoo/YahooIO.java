@@ -14,17 +14,24 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.Month;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringEscapeUtils;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
+import org.minnen.retiretool.util.Writer;
 
 /**
  * API for downloading and updating data from Yahoo! Finance.
@@ -169,7 +176,7 @@ public class YahooIO
    */
   public static boolean updateDailyData(String symbol, long replaceAgeMs)
   {
-    File file = YahooIO.getFile(symbol);
+    File file = YahooIO.getFileEOD(symbol);
     if (!file.exists()) {
       file = YahooIO.downloadDailyData(symbol, 0);
       return (file != null);
@@ -240,7 +247,7 @@ public class YahooIO
    */
   public static File downloadDailyData(String symbol, long replaceAgeMs)
   {
-    File file = getFile(symbol);
+    File file = getFileEOD(symbol);
     try {
       System.out.println(file.getCanonicalPath());
       if (!DataIO.shouldDownloadUpdate(file, replaceAgeMs)) return file;
@@ -293,11 +300,18 @@ public class YahooIO
     }
   }
 
-  public static File getFile(String symbol)
+  public static File getFileEOD(String symbol)
   {
-    File yahooDir = getPath();
-    if (!yahooDir.exists() && !yahooDir.mkdirs()) return null;
-    return new File(yahooDir, symbol + ".csv");
+    File path = new File(getPath(), "eod");
+    if (!path.exists() && !path.mkdirs()) return null;
+    return new File(path, symbol + ".csv");
+  }
+
+  public static File getFileFundamental(String symbol)
+  {
+    File path = new File(getPath(), "fundamental");
+    if (!path.exists() && !path.mkdirs()) return null;
+    return new File(path, symbol + ".txt");
   }
 
   private static String decodeUnicode(String s)
@@ -314,8 +328,99 @@ public class YahooIO
     return s;
   }
 
+  public static File downloadFundamentals(String symbol, long replaceAgeMs) throws IOException
+  {
+    File file = getFileFundamental(symbol);
+    try {
+      if (!DataIO.shouldDownloadUpdate(file, replaceAgeMs)) return file;
+    } catch (IOException e) {
+      System.err.println(e.getMessage());
+      return null;
+    }
+    System.out.printf("Download fundamentals: %s\n", symbol);
+
+    String url = String.format("https://finance.yahoo.com/quote/%s/key-statistics", symbol);
+    String html = DataIO.copyUrlToString(url);
+    Document doc = Jsoup.parse(html);
+    Element section = doc.selectFirst("section[data-test=qsp-statistics]");
+    Elements rows = section.getElementsByTag("tr");
+    Map<String, String> fundamentals = new HashMap<>();
+    fundamentals.put("Symbol", symbol);
+    fundamentals.put("URL", url);
+    for (Element row : rows) {
+      Elements cells = row.getElementsByTag("td");
+      if (cells.size() != 2) continue;
+      String key = cells.get(0).getElementsByTag("span").first().html().trim();
+
+      String value;
+      Element cell = cells.get(1);
+      Elements spans = cell.getElementsByTag("span");
+      if (spans.isEmpty()) {
+        value = cell.html().trim();
+      } else {
+        assert spans.size() == 1;
+        value = spans.html().trim();
+      }
+      key = StringEscapeUtils.unescapeHtml4(key);
+      value = StringEscapeUtils.unescapeHtml4(value);
+      if (key.isEmpty() || value.isEmpty()) continue;
+      fundamentals.put(key, value);
+    }
+    System.out.printf("Fundamentals: %d\n", fundamentals.size());
+    saveFundamentals(file, fundamentals);
+    return file;
+  }
+
+  public static Map<String, String> loadFundamentals(String symbol) throws IOException
+  {
+
+    File file = downloadFundamentals(symbol, 8 * TimeLib.MS_IN_HOUR);
+    if (!file.exists()) return null;
+
+    Map<String, String> fundamentals = new HashMap<>();
+    try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+      for (String line : IOUtils.readLines(reader)) {
+        String[] fields = line.split("\\|");
+        if (fields.length != 2) continue;
+        fundamentals.put(fields[0].trim(), fields[1].trim());
+      }
+      return fundamentals;
+    }
+  }
+
+  public static void saveFundamentals(File file, Map<String, String> fundamentals) throws IOException
+  {
+    try (Writer writer = new Writer(file)) {
+      for (Map.Entry<String, String> entry : fundamentals.entrySet()) {
+        writer.write("%s|%s\n", entry.getKey(), entry.getValue());
+      }
+    }
+  }
+
+  public static double parseDouble(String s)
+  {
+    if (s == null || s.toLowerCase().equals("n/a")) return Double.NaN;
+
+    double scale = 1.0;
+    if (s.endsWith("M")) {
+      scale = 1e6;
+      s = s.substring(0, s.length() - 1);
+    } else if (s.endsWith("B")) {
+      scale = 1e9;
+      s = s.substring(0, s.length() - 1);
+    } else if (s.endsWith("%")) {
+      s = s.substring(0, s.length() - 1);
+    }
+    return scale * Double.parseDouble(s);
+  }
+
   public static void main(String[] args) throws IOException
   {
-    downloadDailyData("^GSPC", 0);
+    // downloadDailyData("^GSPC", 0);
+    String symbol = "UBSI"; // "AAPL";
+    Map<String, String> fundamentals = loadFundamentals(symbol);
+    for (Map.Entry<String, String> entry : fundamentals.entrySet()) {
+      System.out.printf("%46s = %s\n", entry.getKey(), entry.getValue());
+    }
   }
 }

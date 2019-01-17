@@ -296,6 +296,18 @@ public class DataIO
     }
   }
 
+  /** @return string contents at the given URL. */
+  public static String copyUrlToString(String address)
+  {
+    try {
+      URL url = new URL(address);
+      return copyUrlToString(url);
+    } catch (MalformedURLException e) {
+      e.printStackTrace();
+      return null;
+    }
+  }
+
   /** Copy URL contents to the given file (overwrite if file exists). */
   public static boolean copyUrlToFile(String address, File file)
   {
@@ -335,6 +347,8 @@ public class DataIO
 
   public static boolean shouldDownloadUpdate(File file, long replaceAgeMs) throws IOException
   {
+    if (replaceAgeMs == TimeLib.TIME_END || replaceAgeMs == TimeLib.TIME_ERROR) return false;
+
     if (!file.exists()) return true;
     if (!file.isFile() || !file.canWrite()) {
       throw new IOException(String.format("File is not writeable (%s).\n", file.getAbsolutePath()));

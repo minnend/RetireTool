@@ -38,7 +38,7 @@ public class Oddmund
     // Make sure we have the latest data.
     String symbol = "SPY";
     YahooIO.updateDailyData(symbol, 8 * TimeLib.MS_IN_HOUR);
-    Sequence rawPrices = YahooIO.loadData(YahooIO.getFile(symbol));
+    Sequence rawPrices = YahooIO.loadData(YahooIO.getFileEOD(symbol));
 
     long commonStart = TimeLib.toMs(1995, Month.JANUARY, 1);
     long commonEnd = TimeLib.toMs(2015, Month.DECEMBER, 31);

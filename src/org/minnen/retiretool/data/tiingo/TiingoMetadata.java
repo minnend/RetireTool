@@ -29,15 +29,21 @@ public class TiingoMetadata
     fundMap.put(ticker, this);
   }
 
+  private static String getString(JSONObject obj, String key, String defaultValue)
+  {
+    return (obj.isNull(key) ? defaultValue : obj.getString(key));
+  }
+
   public static TiingoMetadata fromString(String json)
   {
     try {
       JSONObject obj = new JSONObject(json);
-      return new TiingoMetadata(obj.getString("name"), obj.getString("ticker"), obj.getString("description"),
+      String ticker = obj.getString("ticker");
+      return new TiingoMetadata(getString(obj, "name", ticker), ticker, obj.getString("description"),
           obj.getString("exchangeCode"), LocalDate.parse(obj.getString("startDate")),
           LocalDate.parse(obj.getString("endDate")));
     } catch (JSONException e) {
-      System.err.println(e);
+      e.printStackTrace();
       return null;
     }
   }
