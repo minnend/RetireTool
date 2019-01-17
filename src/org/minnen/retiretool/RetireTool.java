@@ -39,7 +39,7 @@ import org.minnen.retiretool.data.DiscreteDistribution;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.SequenceStore;
 import org.minnen.retiretool.data.Shiller;
-import org.minnen.retiretool.data.YahooIO;
+import org.minnen.retiretool.data.yahoo.YahooIO;
 
 public class RetireTool
 {

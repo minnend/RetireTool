@@ -26,6 +26,7 @@ import org.minnen.retiretool.data.fred.FredIO;
 import org.minnen.retiretool.data.quandl.QuandlIO;
 import org.minnen.retiretool.data.tiingo.TiingoFund;
 import org.minnen.retiretool.data.tiingo.TiingoIO;
+import org.minnen.retiretool.data.yahoo.YahooIO;
 import org.minnen.retiretool.util.TimeLib;
 
 public class DataIO

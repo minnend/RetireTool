@@ -1,4 +1,4 @@
-package org.minnen.retiretool.data;
+package org.minnen.retiretool.data.yahoo;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -20,6 +20,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
+import org.minnen.retiretool.data.DataIO;
+import org.minnen.retiretool.data.FeatureVec;
+import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
 
