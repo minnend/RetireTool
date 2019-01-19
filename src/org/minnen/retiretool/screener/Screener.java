@@ -10,6 +10,7 @@ import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.yahoo.YahooIO;
 import org.minnen.retiretool.util.FinLib;
+import org.minnen.retiretool.util.TimeLib;
 
 public class Screener
 {
@@ -30,7 +31,7 @@ public class Screener
     stocks = stocks.stream().filter(x -> x.marketCap >= minMarketCap).collect(Collectors.toList());
     System.out.printf("Market Cap > %.0fM: %d\n", minMarketCap, stocks.size());
 
-    double minYield = 2.0;
+    double minYield = 1.5;
     stocks = stocks.stream().filter(x -> x.dividendYield >= minYield).collect(Collectors.toList());
     System.out.printf("Yield > %.2f%%: %d\n", minYield, stocks.size());
 
@@ -51,7 +52,7 @@ public class Screener
 
     for (StockInfo stock : stocks) {
       Sequence prices = DataIO.loadSymbol(stock.symbol);
-      Map<String, String> fundamentals = YahooIO.loadFundamentals(stock.symbol);
+      Map<String, String> fundamentals = YahooIO.loadFundamentals(stock.symbol, 5 * TimeLib.MS_IN_DAY);
       String sFCF = fundamentals.get("Levered Free Cash Flow");
       double fcf = YahooIO.parseDouble(sFCF);
       if (fcf <= 0 || Double.isNaN(fcf)) {
@@ -80,8 +81,8 @@ public class Screener
       double yield = div / price * 100;
 
       System.out.printf(
-          "%-5s %4.2f  Years=%2d  %6.2f  Div=%4.2f  EPS=%-5s  PR(EPS)=%-5.1f  PR(FCF)=%-5.1f (%5.1f)  %s\n",
-          stock.symbol, yield, stock.nYearsDivIncrease, price, div, sEPS, prEPS * 100, prFCF * 100, payoutRatio,
+          "%-5s %5.2f  Years=%2d  %6.2f  Div=%5.2f  EPS=%5.2f  PR(EPS)=%-5.1f  PR(FCF)=%-5.1f (%5.1f)  %s\n",
+          stock.symbol, yield, stock.nYearsDivIncrease, price, div, eps, prEPS * 100, prFCF * 100, payoutRatio,
           stock.name);
     }
   }

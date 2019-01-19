@@ -361,7 +361,7 @@ public final class FinLib
   }
 
   /**
-   * Calculate total return for the given segment.
+   * Calculate total return for the given segment (1.10 = 10% return).
    * 
    * @param cumulativeReturns sequence of cumulative returns for the investment strategy
    * @param iFrom index of starting point for calculation
@@ -998,7 +998,7 @@ public final class FinLib
   /** @return Sequence of monthly values inferred from daily data. */
   public static Sequence dailyToMonthly(Sequence daily)
   {
-    return dailyToMonthly(daily, 0, 0, 12);
+    return dailyToMonthly(daily, 0, 0);
   }
 
   /** @return Sequence of monthly values inferred from daily data. */
@@ -1098,6 +1098,44 @@ public final class FinLib
     }
 
     return monthly;
+  }
+
+  /**
+   * Converts a Sequence of daily or monthly cumulative returns to return per year (not cumulative).
+   * 
+   * @param returns Sequence of daily or monthly cumulative returns
+   * @param dim dimension in `returns` to extract
+   * @return Sequence holding return per year
+   */
+  public static Sequence toReturnPerYear(Sequence returns, int dim)
+  {
+    Sequence annual = new Sequence(returns.getName());
+
+    int startYear = TimeLib.ms2date(returns.getStartMS()).getYear();
+    int endYear = TimeLib.ms2date(returns.getEndMS()).getYear();
+    int prevEnd = -1;
+    for (int year = startYear; year <= endYear; ++year) {
+      long jan1 = TimeLib.toMs(year, Month.JANUARY, 1);
+      long dec31 = TimeLib.toMs(year, Month.DECEMBER, 31);
+      int a = prevEnd; // ensure we don't skip any data
+      if (a < 0) a = returns.getClosestIndex(jan1);
+      int b = returns.getClosestIndex(dec31);
+      prevEnd = b;
+      double nMonths = TimeLib.monthsBetween(Math.max(returns.getTimeMS(a), jan1),
+          Math.min(returns.getTimeMS(b), dec31));
+      if (nMonths < 11.5) {
+        // System.out.printf("Too short (%d): %.2f [%s] -> [%s]\n", year, nMonths,
+        // TimeLib.formatDate(returns.getTimeMS(a)), TimeLib.formatDate(returns.getTimeMS(b)));
+        continue;
+      }
+
+      // System.out.printf("[%s] -> [%s]\n", TimeLib.formatDate(returns.getTimeMS(a)),
+      // TimeLib.formatDate(returns.getTimeMS(b)));
+      double mul = FinLib.getTotalReturn(returns, a, b, dim);
+      annual.addData(mul2ret(mul), jan1);
+    }
+
+    return annual;
   }
 
   public static Sequence pad(Sequence seq, Sequence ref, double value)

@@ -66,6 +66,22 @@ public class Chart
     return config;
   }
 
+  /** @return string representation of `ms` according to `timing`. */
+  private static String formatTime(int index, long ms, ChartTiming timing)
+  {
+    if (timing == ChartTiming.DAILY) {
+      return TimeLib.formatDate(ms);
+    } else if (timing == ChartTiming.MONTHLY) {
+      return TimeLib.formatMonth(ms);
+    } else if (timing == ChartTiming.ANNUAL) {
+      return String.format("%d", TimeLib.ms2date(ms).getYear());
+    } else if (timing == ChartTiming.INDEX) {
+      return String.format("%d", index);
+    } else {
+      throw new NotImplementedException("Unknown chart timing: " + timing);
+    }
+  }
+
   public static void saveDataCSV(ChartConfig config, Sequence... seqs) throws IOException
   {
     File file = new File(config.file.getParentFile(), config.file.getName() + ".csv");
@@ -76,16 +92,7 @@ public class Chart
         writer.write("%s\n", String.join(",", config.labels));
       } else {
         for (int i = 0; i < seqs[0].size(); ++i) {
-          if (config.timing == ChartTiming.MONTHLY) {
-            writer.write(TimeLib.formatMonth(seqs[0].getTimeMS(i)));
-          } else if (config.timing == ChartTiming.DAILY) {
-            writer.write(TimeLib.formatDate(seqs[0].getTimeMS(i)));
-          } else if (config.timing == ChartTiming.INDEX) {
-            writer.write("%d", i);
-          } else {
-            throw new NotImplementedException("Unknown chart timing: " + config.timing);
-          }
-
+          writer.write(formatTime(i, seqs[0].getTimeMS(i), config.timing));
           if (i < seqs[0].size() - 1) {
             writer.write(",");
           }
@@ -173,14 +180,7 @@ public class Chart
           }
         } else {
           for (int i = 0; i < seqs[0].size(); ++i) {
-            if (config.timing == ChartTiming.MONTHLY) {
-              writer.write("'" + TimeLib.formatMonth(seqs[0].getTimeMS(i)) + "'");
-            } else if (config.timing == ChartTiming.DAILY) {
-              writer.write("'" + TimeLib.formatDate(seqs[0].getTimeMS(i)) + "'");
-            } else {
-              throw new NotImplementedException("Unknown chart timing: " + config.timing);
-            }
-
+            writer.write("'%s'", formatTime(i, seqs[0].getTimeMS(i), config.timing));
             if (i < seqs[0].size() - 1) {
               writer.write(",");
             }
@@ -1051,8 +1051,6 @@ public class Chart
         final int n = Math.min(121, returns1.length() - i);
         Sequence decade1 = returns1.subseq(i, n);
         Sequence decade2 = returns2.subseq(i, n);
-        System.out.printf("Decade1: %s\n", decade1);
-        System.out.printf("Decade2: %s\n", decade2);
         CumulativeStats stats1 = CumulativeStats.calc(decade1);
         CumulativeStats stats2 = CumulativeStats.calc(decade2);
 

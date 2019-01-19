@@ -403,9 +403,14 @@ public class DataIO
 
   public static Sequence loadSymbol(String symbol) throws IOException
   {
+    return loadSymbol(symbol, 8 * TimeLib.MS_IN_HOUR);
+  }
+
+  public static Sequence loadSymbol(String symbol, long replaceTimeMs) throws IOException
+  {
     Sequence seq = null;
     if (symbol == "^GSPC") {
-      File file = YahooIO.downloadDailyData(symbol, 8 * TimeLib.MS_IN_HOUR);
+      File file = YahooIO.downloadDailyData(symbol, replaceTimeMs);
       seq = YahooIO.loadData(file);
     } else if (symbol == "GOOG") {
       // Create a single sequence that adjusts for the goog/googl split.

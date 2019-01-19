@@ -19,7 +19,7 @@ public class ChartConfig
   };
 
   public enum ChartTiming {
-    DAILY, MONTHLY, INDEX
+    DAILY, MONTHLY, ANNUAL, INDEX
   };
 
   public File           file;

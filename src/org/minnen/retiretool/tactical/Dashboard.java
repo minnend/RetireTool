@@ -41,6 +41,7 @@ import org.minnen.retiretool.viz.Chart;
 import org.minnen.retiretool.viz.ChartConfig;
 import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
 import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
+import org.minnen.retiretool.viz.ChartConfig.Type;
 
 public class Dashboard
 {
@@ -430,10 +431,20 @@ public class Dashboard
     Chart.saveAnnualStatsTable(new File(DataIO.getOutputPath(), "tactical-stats-per-year.html"), 360, true, 0,
         tacticalDailyReturns, baselineDailyReturns);
 
-    Sequence safeMonthly = getMatchingCumulativeSafe(baselineMonthlyReturns);
+    Sequence cashMonthlyReturns = getMatchingCumulativeSafe(baselineMonthlyReturns);
     Chart.saveLineChart(new File(DataIO.getOutputPath(), "tactical-growth-curves.html"),
         String.format("%s vs. %s", tacticalDailyReturns.getName(), baselineDailyReturns.getName()), "100%", "600",
-        ChartScaling.LOGARITHMIC, ChartTiming.MONTHLY, tacticalMonthlyReturns, baselineMonthlyReturns, safeMonthly);
+        ChartScaling.LOGARITHMIC, ChartTiming.MONTHLY, tacticalMonthlyReturns, baselineMonthlyReturns,
+        cashMonthlyReturns);
+
+    Sequence baselineAnnual = FinLib.toReturnPerYear(baselineDailyReturns, 0);
+    Sequence tacticalAnnual = FinLib.toReturnPerYear(tacticalDailyReturns, 0);
+    assert baselineAnnual.matches(tacticalAnnual);
+    Sequence excess = tacticalAnnual.sub(baselineAnnual).setName("Excess Returns");
+    ChartConfig config = ChartConfig.build(new File(DataIO.getOutputPath(), "tactical-annual-returns.html"), Type.Bar,
+        "Annual Returns", null, null, "100%", "600px", Double.NaN, Double.NaN, 0.25, ChartScaling.LINEAR,
+        ChartTiming.ANNUAL, 0, baselineAnnual, tacticalAnnual, excess);
+    Chart.saveChart(config);
 
     final String sRowGap = "<td class=\"hgap\">&nbsp;</td>";
     try (Writer f = new Writer(new File(DataIO.getOutputPath(), "tactical-dashboard.html"))) {

@@ -371,10 +371,9 @@ public class YahooIO
     return file;
   }
 
-  public static Map<String, String> loadFundamentals(String symbol) throws IOException
+  public static Map<String, String> loadFundamentals(String symbol, long replaceAgeMs) throws IOException
   {
-
-    File file = downloadFundamentals(symbol, 8 * TimeLib.MS_IN_HOUR);
+    File file = downloadFundamentals(symbol, replaceAgeMs);
     if (!file.exists()) return null;
 
     Map<String, String> fundamentals = new HashMap<>();
@@ -411,6 +410,7 @@ public class YahooIO
     } else if (s.endsWith("%")) {
       s = s.substring(0, s.length() - 1);
     }
+    s = s.replaceAll(",", "");
     return scale * Double.parseDouble(s);
   }
 
@@ -418,7 +418,7 @@ public class YahooIO
   {
     // downloadDailyData("^GSPC", 0);
     String symbol = "UBSI"; // "AAPL";
-    Map<String, String> fundamentals = loadFundamentals(symbol);
+    Map<String, String> fundamentals = loadFundamentals(symbol, 8 * TimeLib.MS_IN_HOUR);
     for (Map.Entry<String, String> entry : fundamentals.entrySet()) {
       System.out.printf("%46s = %s\n", entry.getKey(), entry.getValue());
     }
