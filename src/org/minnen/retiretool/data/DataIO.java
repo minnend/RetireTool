@@ -27,6 +27,7 @@ import org.minnen.retiretool.data.quandl.QuandlIO;
 import org.minnen.retiretool.data.tiingo.TiingoFund;
 import org.minnen.retiretool.data.tiingo.TiingoIO;
 import org.minnen.retiretool.data.yahoo.YahooIO;
+import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.TimeLib;
 
 public class DataIO
@@ -100,7 +101,7 @@ public class DataIO
     if (!file.canRead()) {
       throw new IOException(String.format("Can't read CSV file (%s)", file.getPath()));
     }
-    System.out.printf("Loading CSV data file: [%s]\n", file.getPath());
+    // System.out.printf("Loading CSV data file: [%s]\n", file.getPath());
 
     BufferedReader in = new BufferedReader(new FileReader(file));
 
@@ -159,7 +160,8 @@ public class DataIO
    * Load data from a CSV file.
    * 
    * @param file file to load
-   * @param dims dimensions (columns) to load, not counting the data in column 0 (zero-based indices)
+   * @param dims data dimensions (columns) to load; column 0 is assumed to hold the date so a zero in `dims` will load
+   *          the first data element (column 1). If null, all data dimensions will be read.
    * @return Sequence with data loaded from the given file.
    */
   public static Sequence loadCSV(File file, int[] dims) throws IOException
@@ -167,42 +169,59 @@ public class DataIO
     if (!file.canRead()) {
       throw new IOException(String.format("Can't read CSV file (%s)", file.getPath()));
     }
-    System.out.printf("Loading CSV file: [%s]\n", file.getPath());
+    // System.out.printf("Loading CSV file: [%s]\n", file.getPath());
 
-    BufferedReader in = new BufferedReader(new FileReader(file));
-    String name = file.getName().replaceFirst("[\\.][^\\\\/\\.]+$", "");
-    Sequence data = new Sequence(name);
-    String line;
-    while ((line = in.readLine()) != null) {
-      line = line.trim();
-      if (line.isEmpty()) {
-        continue;
-      }
-      String[] toks = line.trim().split(",");
-      for (int i = 0; i < toks.length; ++i) {
-        toks[i] = toks[i].trim();
-      }
-      if (toks[0].toLowerCase().startsWith("date")) {
-        continue;
-      }
+    try (BufferedReader in = new BufferedReader(new FileReader(file))) {
+      String name = file.getName().replaceFirst("[\\.][^\\\\/\\.]+$", "");
+      Sequence data = new Sequence(name);
+      String line;
+      int nLinesRead = 0;
+      while ((line = in.readLine()) != null) {
+        line = line.trim();
+        if (line.isEmpty() || line.startsWith("#")) continue;
+        ++nLinesRead;
 
-      try {
-        long time = TimeLib.parseDate(toks[0]);
-        FeatureVec v = new FeatureVec(dims.length);
-        for (int d = 0; d < dims.length; ++d) {
-          v.set(d, Double.parseDouble(toks[dims[d]]));
+        String[] fields = line.trim().split(",");
+        for (int i = 0; i < fields.length; ++i) {
+          // TODO better handling of quotes in CSV.
+          fields[i] = fields[i].trim().replaceAll("(^\"|\"$)", "");
         }
-        data.addData(v, time);
-      } catch (NumberFormatException e) {
-        System.err.printf("Error parsing CSV data: [%s]\n", line);
-        continue;
+
+        // Parse header if this is the first line.
+        if (nLinesRead == 1) {
+          List<String> dimNames = new ArrayList<>();
+          for (int i = 1; i < fields.length; ++i) {
+            dimNames.add(fields[i]);
+          }
+          data.setDimNames(dimNames);
+
+          if (dims == null) {
+            dims = Library.genIdentityArray(fields.length - 1); // load all fields (other than date)
+          }
+        } else {
+          long time = TimeLib.parseDate(fields[0]);
+          FeatureVec v = new FeatureVec(dims.length);
+          for (int d = 0; d < dims.length; ++d) {
+            try {
+              String s = fields[dims[d] + 1].toLowerCase();
+              double value = Double.NaN;
+              if (!s.equals("none") && !s.equals("n/a")) {
+                value = Double.parseDouble(s);
+              }
+              v.set(d, value);
+            } catch (NumberFormatException e) {
+              System.err.printf("Error parsing CSV data: d=%d  dim=%d  field=%s\n", d, dims[d], fields[dims[d] + 1]);
+              return null;
+            }
+          }
+          data.addData(v, time);
+        }
       }
+      if (data.getStartMS() > data.getEndMS()) {
+        data.reverse();
+      }
+      return data;
     }
-    in.close();
-    if (data.getStartMS() > data.getEndMS()) {
-      data.reverse();
-    }
-    return data;
   }
 
   /**
@@ -265,20 +284,25 @@ public class DataIO
   private static void printUrlInfo(URL url)
   {
     try {
-      System.out.printf("URL: %s\n", url);
       HttpURLConnection con = (HttpURLConnection) url.openConnection();
-      System.out.printf("Connect Timeout: %d\n", con.getConnectTimeout());
-      System.out.printf("Read Timeout: %d\n", con.getReadTimeout());
-      // con.setConnectTimeout(1000);
-      // con.setReadTimeout(1000);
-      System.out.printf("Request Method: %s\n", con.getRequestMethod());
-      System.out.printf("Response Message: %s\n", con.getResponseMessage());
-      System.out.printf("Response Code: %d\n", con.getResponseCode());
+      if ("Not Found".equals(con.getResponseMessage())) {
+        System.out.printf("URL: %s (Not Found)\n", url);
+      } else {
+        System.out.printf("URL: %s\n", url);
 
-      for (int i = 0;; ++i) {
-        String s = con.getHeaderField(i);
-        if (s == null) break;
-        System.out.printf("Header %d: %s\n", i, s);
+        System.out.printf("Connect Timeout: %d\n", con.getConnectTimeout());
+        System.out.printf("Read Timeout: %d\n", con.getReadTimeout());
+        // con.setConnectTimeout(1000);
+        // con.setReadTimeout(1000);
+        System.out.printf("Request Method: %s\n", con.getRequestMethod());
+        System.out.printf("Response Message: %s\n", con.getResponseMessage());
+        System.out.printf("Response Code: %d\n", con.getResponseCode());
+
+        for (int i = 0;; ++i) {
+          String s = con.getHeaderField(i);
+          if (s == null) break;
+          System.out.printf("Header %d: %s\n", i, s);
+        }
       }
     } catch (IOException e) {
       System.err.println(e.getMessage());
@@ -291,7 +315,8 @@ public class DataIO
     try {
       return IOUtils.toString(url, "UTF-8");
     } catch (IOException e) {
-      e.printStackTrace();
+      // e.printStackTrace();
+      printUrlInfo(url);
       return null;
     }
   }
@@ -331,6 +356,7 @@ public class DataIO
     }
   }
 
+  /** @return true if `file` is older than `ms` milliseconds according to the last-modified timestamp. */
   public static boolean isFileOlder(File file, long ms)
   {
     if (ms > 0L) {
@@ -427,5 +453,23 @@ public class DataIO
     }
     seq.setName(symbol);
     return seq;
+  }
+
+  public static double parseDouble(String s)
+  {
+    if (s == null || s.toLowerCase().equals("n/a")) return Double.NaN;
+
+    double scale = 1.0;
+    if (s.endsWith("M")) {
+      scale = 1e6;
+      s = s.substring(0, s.length() - 1);
+    } else if (s.endsWith("B")) {
+      scale = 1e9;
+      s = s.substring(0, s.length() - 1);
+    } else if (s.endsWith("%")) {
+      s = s.substring(0, s.length() - 1);
+    }
+    s = s.replaceAll(",", "");
+    return scale * Double.parseDouble(s);
   }
 }

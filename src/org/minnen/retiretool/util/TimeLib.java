@@ -604,7 +604,7 @@ public class TimeLib
   /** @return ms for data in YYYY-MM or YYYY-MM-DD format. */
   public static long parseDate(String date) throws NumberFormatException
   {
-    String[] dateFields = date.split("-");
+    String[] dateFields = date.split("[-/]");
 
     // TODO use java.time parser.
     int year = Integer.parseInt(dateFields[0]);

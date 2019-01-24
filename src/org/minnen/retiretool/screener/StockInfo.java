@@ -1,27 +1,43 @@
 package org.minnen.retiretool.screener;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import org.minnen.retiretool.data.DataIO;
+import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.StringSerializable;
 
 public class StockInfo implements StringSerializable
 {
-  public String name;
-  public String symbol;
+  // Fields come from CCC spreadsheet.
+  public String              name;
+  public String              symbol;
+  public String              sector;
+  public String              industry;
+  public int                 nYearsDivIncrease;
+  public int                 nDivPaymentsPerYear;
+  public double              dividend;
+  public double              annualDividend;
+  public double              dividendYield;
+  public double              epsPayout;
+  public double              marketCap;
 
-  public String sector;
-  public String industry;
-  public int    nYearsDivIncrease;
-  public int    nDivPaymentsPerYear;
-  public double dividend;
-  public double annualDividend;
-  public double dividendYield;
-  public double epsPayout;
-  public double marketCap;
+  public Sequence            prices;             // data from tiingo
+  public Sequence            sharesOut;          // data from sharesoutstandinghistory.com
+  public Map<String, String> fundamentals;       // data from yahoo
+  public Map<String, Double> metrics;            // derived data
 
   public StockInfo(String name, String symbol)
   {
     this.name = name;
     this.symbol = symbol;
+    this.metrics = new HashMap<>();
+  }
+
+  public double getFundamental(String key)
+  {
+    return DataIO.parseDouble(fundamentals.get(key));
   }
 
   @Override
@@ -105,5 +121,4 @@ public class StockInfo implements StringSerializable
     if (!Library.almostEqual(marketCap, other.marketCap, eps)) return false;
     return true;
   }
-
 }

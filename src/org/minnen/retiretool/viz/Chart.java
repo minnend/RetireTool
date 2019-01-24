@@ -750,7 +750,6 @@ public class Chart
       writer.write(" <li><b>Best AR</b> - Return of best year (biggest gain)</li>\n");
       writer.write("</ul></div>");
       writer.write("</body></html>\n");
-
     }
   }
 

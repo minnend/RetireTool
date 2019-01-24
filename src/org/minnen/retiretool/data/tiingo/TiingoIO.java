@@ -138,7 +138,7 @@ public class TiingoIO
     if (!file.canRead()) {
       throw new IOException(String.format("Can't read tiingo file (%s)", file.getPath()));
     }
-    System.out.printf("Loading tiingo file: [%s]\n", file.getPath());
+    // System.out.printf("Loading tiingo file: [%s]\n", file.getPath());
     List<TiingoFund> funds = new ArrayList<TiingoFund>();
     try (BufferedReader in = new BufferedReader(new FileReader(file))) {
       String line;

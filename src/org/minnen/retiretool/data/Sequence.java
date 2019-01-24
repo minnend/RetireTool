@@ -5,8 +5,10 @@ import java.time.Month;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Stack;
 
 import org.minnen.retiretool.data.FeatureVec;
@@ -68,6 +70,9 @@ public class Sequence extends MetaStore implements Iterable<FeatureVec>
 
   /** Locks applied to this sequence. */
   private final Stack<Lock>      locks = new Stack<>();
+
+  public List<String>            dimNames;
+  public Map<String, Integer>    name2dim;
 
   /**
    * Defines behavior when searching for an index matching a given time.
@@ -154,6 +159,41 @@ public class Sequence extends MetaStore implements Iterable<FeatureVec>
   {
     if (data.isEmpty()) return 0;
     return get(0).getNumDims();
+  }
+
+  /** Set the dimension names for this sequence (note: no error checking & existing values are replaced). */
+  public Sequence setDimNames(List<String> names)
+  {
+    dimNames = names;
+    if (names == null) {
+      name2dim = null;
+      return this;
+    }
+
+    if (name2dim == null) name2dim = new HashMap<String, Integer>();
+    else name2dim.clear();
+    for (int i = 0; i < names.size(); ++i) {
+      name2dim.put(names.get(i), i);
+    }
+    return this;
+  }
+
+  /** @return list of dimension names. */
+  public List<String> getDimNames()
+  {
+    return dimNames;
+  }
+
+  /** Index of the dimension with the given `name`. */
+  public int getDim(String name)
+  {
+    return name2dim.getOrDefault(name, -1);
+  }
+
+  /** @return name of the i'th dimension. */
+  public String getDimName(int dim)
+  {
+    return dimNames.get(dim);
   }
 
   /**

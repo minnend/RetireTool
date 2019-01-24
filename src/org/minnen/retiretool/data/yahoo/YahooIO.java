@@ -396,24 +396,6 @@ public class YahooIO
     }
   }
 
-  public static double parseDouble(String s)
-  {
-    if (s == null || s.toLowerCase().equals("n/a")) return Double.NaN;
-
-    double scale = 1.0;
-    if (s.endsWith("M")) {
-      scale = 1e6;
-      s = s.substring(0, s.length() - 1);
-    } else if (s.endsWith("B")) {
-      scale = 1e9;
-      s = s.substring(0, s.length() - 1);
-    } else if (s.endsWith("%")) {
-      s = s.substring(0, s.length() - 1);
-    }
-    s = s.replaceAll(",", "");
-    return scale * Double.parseDouble(s);
-  }
-
   public static void main(String[] args) throws IOException
   {
     // downloadDailyData("^GSPC", 0);
