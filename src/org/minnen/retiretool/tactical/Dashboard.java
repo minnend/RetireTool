@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -45,26 +46,28 @@ import org.minnen.retiretool.viz.ChartConfig.Type;
 
 public class Dashboard
 {
-  public final static SequenceStore     store          = new SequenceStore();
+  public static final SequenceStore     store             = new SequenceStore();
 
-  public static int                     iPrice         = FinLib.AdjClose;
+  public static final int               iPrice            = FinLib.AdjClose;
 
-  public static final Slippage          slippage       = Slippage.None;
-  public static final int               maxDelay       = 0;
-  public static final long              gap            = 2 * TimeLib.MS_IN_DAY;
-  public static final PriceModel        priceModel     = PriceModel.adjCloseModel;
+  public static final Slippage          slippage          = Slippage.None;
+  public static final int               maxDelay          = 0;
+  public static final long              gap               = 2 * TimeLib.MS_IN_DAY;
+  public static final PriceModel        priceModel        = PriceModel.adjCloseModel;
 
-  public static final String            red            = "D12";
-  public static final String            green          = "1E2";
+  public static final String            red               = "D12";
+  public static final String            green             = "1E2";
 
-  public static final String            miscDirName    = "misc";
-  public static final String            miscToBase     = "..";
+  public static final String            miscDirName       = "misc";
+  public static final String            miscToBase        = "..";
 
   // Years of history for SMA graphs.
-  public static final int               yearsOfHistory = 3;
+  public static final int               yearsOfHistory    = 3;
 
   // public static final String symbol = "^GSPC";
-  public static final String            symbol         = "VFINX";
+  public static final String            symbol            = "VFINX";
+
+  public static String                  dashboardFilename = "tactical-dashboard.html";
 
   // public static final PredictorConfig[] singleConfigs = new PredictorConfig[] {
   // new ConfigSMA(20, 0, 240, 150, 0.25, FinLib.Close, gap), new ConfigSMA(50, 0, 180, 30, 1.0, FinLib.Close, gap),
@@ -109,10 +112,10 @@ public class Dashboard
 
   // [23,0] / [188,143] m=154 | [66,0] / [34,20] m=8 | [52,0] / [103,23] m=272
   // regret[5,10,20] = 13.2, 1.6, 0
-  public static final int[][]           allParams      = new int[][] { { 23, 0, 188, 143, 154 }, { 66, 0, 34, 20, 8 },
-      { 52, 0, 103, 23, 272 } };
+  public static final int[][]           allParams         = new int[][] { { 23, 0, 188, 143, 154 },
+      { 66, 0, 34, 20, 8 }, { 52, 0, 103, 23, 272 } };
 
-  public static final PredictorConfig[] singleConfigs  = new PredictorConfig[allParams.length];
+  public static final PredictorConfig[] singleConfigs     = new PredictorConfig[allParams.length];
 
   static {
     assert allParams.length == singleConfigs.length;
@@ -150,6 +153,13 @@ public class Dashboard
       return r;
     }
 
+  }
+
+  public static void configure(Configuration config)
+  {
+    if (config.containsKey("dashboard.filename")) {
+      dashboardFilename = config.getString("dashboard.filename");
+    }
   }
 
   private static File getMiscPath()
@@ -447,7 +457,7 @@ public class Dashboard
     Chart.saveChart(config);
 
     final String sRowGap = "<td class=\"hgap\">&nbsp;</td>";
-    try (Writer f = new Writer(new File(DataIO.getOutputPath(), "tactical-dashboard.html"))) {
+    try (Writer f = new Writer(new File(DataIO.getOutputPath(), dashboardFilename))) {
       f.write("<html><head>\n");
       f.write("<title>Dashboard</title>\n");
       f.write("<script src=\"%s\"></script>\n", Chart.jquery);
@@ -557,28 +567,26 @@ public class Dashboard
       f.write("<div class=\"column\">\n");
       f.write("<b>Dates Covered:</b> [%s] &rarr; [%s]<br/><br/>\n", TimeLib.formatDate(sim.getStartMS()),
           TimeLib.formatDate(sim.getEndMS()));
-      f.write("<b>Last Updated:</b> %s<br/><br/>\n", TimeLib.formatTime(TimeLib.getTime(), ZoneId.systemDefault()));
-      f.write("<b>Column Legend</b><br/>\n");
-      f.write("<ol style=\"margin-top: 4px\">\n");
-      f.write("<li>Date of event\n");
-      f.write("<li>Prediction Code\n");
-      f.write("<li>Vote for each of the three SMA predictors\n");
-      f.write("<li>Trade decision (combined vote: <font color=\"#%s\">"
-          + "Green</font>=Risky, <font color=\"#%s\">Red</font>=Safe)\n", green, red);
-      f.write("<li>Price change between events\n");
-      f.write("<li>Price change between trades\n");
-      f.write("</ol>\n");
-      f.write("<div><b>Graphs for SMA Predictors:</b>\n");
+      DateTimeFormatter dtf = DateTimeFormatter.ofPattern("MMM d, yyyy @ h:mm:ss a");
+      f.write("<b>Last Updated:</b> %s<br/><br/>\n",
+          TimeLib.formatTime(TimeLib.getTime(), dtf, ZoneId.of("US/Pacific")));
+      f.write("<div><b>Additional Analysis</b><ul style=\"margin-top: 4px\">\n");
+      f.write("<li>SMA Predictors: ");
       for (int i = 0; i < allParams.length; ++i) {
         int code = 1 << (allParams.length - 1 - i);
         String filename = String.format("sma%d-code%d.html", i + 1, code);
         f.write("<a href=\"%s/%s\">SMA (%d)</a>", miscDirName, filename, code);
         if (i + 1 < allParams.length) {
-          f.write("&nbsp;|&nbsp;");
+          f.write("&nbsp;|");
         }
         f.write("\n");
       }
-      f.write("</div><br/>\n");
+      f.write("</li>\n");
+      f.write("<li>Annual Returns: <a href=\"tactical-annual-returns.html\">Bar Chart</a>&nbsp;|&nbsp;");
+      f.write("<a href=\"tactical-stats-per-year.html\">Table</a></li>\n");
+      f.write("<li><a href=\"tactical-growth-curves.html\">Growth Curves</a></li>\n");
+      f.write("<li><a href=\"tactical-comparison.html\">Comparison over Rolling Windows</a></li>\n");
+      f.write("</ul></div>\n");
 
       f.write(genStatsTableHtml(comparison, statsBaseline, statsTactical) + "<br/>");
 
@@ -590,6 +598,18 @@ public class Dashboard
         System.out.printf("Final codes: %d -> %d\n", prev, code);
       }
       f.write(Chart.genDecadeTable(tacticalMonthlyReturns, baselineMonthlyReturns) + "<br/>");
+
+      f.write("<b>Column Legend</b><br/>\n");
+      f.write("<ol style=\"margin-top: 4px\">\n");
+      f.write("<li>Date of event\n");
+      f.write("<li>Prediction Code\n");
+      f.write("<li>Vote for each of the three SMA predictors\n");
+      f.write("<li>Trade decision (combined vote: <font color=\"#%s\">"
+          + "Green</font>=Risky, <font color=\"#%s\">Red</font>=Safe)\n", green, red);
+      f.write("<li>Price change between events\n");
+      f.write("<li>Price change between trades\n");
+      f.write("</ol>\n");
+
       f.write("</div>\n"); // end column 2
 
       f.write("</body></html>\n");
@@ -605,6 +625,7 @@ public class Dashboard
         Configurations configs = new Configurations();
         Configuration config = configs.properties(configFile);
         DataIO.configure(config);
+        configure(config);
       } catch (ConfigurationException e) {
         System.err.println(e.getMessage());
         System.exit(1);

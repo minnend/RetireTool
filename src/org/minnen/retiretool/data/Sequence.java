@@ -128,6 +128,11 @@ public class Sequence extends MetaStore implements Iterable<FeatureVec>
     this(null, data);
   }
 
+  public Sequence(List<FeatureVec> data)
+  {
+    this.data.addAll(data);
+  }
+
   public String getName()
   {
     return name;

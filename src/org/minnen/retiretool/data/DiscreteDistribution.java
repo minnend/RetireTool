@@ -42,7 +42,7 @@ public class DiscreteDistribution
     weights[0] = 1.0;
   }
 
-  public DiscreteDistribution(String[] names, double ... weights)
+  public DiscreteDistribution(String[] names, double... weights)
   {
     this(names.length);
     assert names.length == weights.length;
@@ -103,8 +103,9 @@ public class DiscreteDistribution
 
   public int find(String name)
   {
+    if (name == null) return -1;
     for (int i = 0; i < names.length; ++i) {
-      if (names[i].equals(name)) return i;
+      if (names[i] != null && names[i].equals(name)) return i;
     }
     return -1;
   }
@@ -323,5 +324,21 @@ public class DiscreteDistribution
     }
     assert iNonZero == numNonZero;
     return new DiscreteDistribution(nonZeroNames, nonZeroWeights);
+  }
+
+  public DiscreteDistribution blend(DiscreteDistribution other)
+  {
+    // Find union of all names.
+    Set<String> nameSet = new HashSet<>(Arrays.asList(this.names));
+    nameSet.addAll(Arrays.asList(other.names));
+    nameSet.remove(null);
+    String[] names = nameSet.toArray(new String[nameSet.size()]);
+
+    // Find average weight of all names.
+    double[] weights = new double[names.length];
+    for (int i = 0; i < names.length; ++i) {
+      weights[i] = (this.weight(names[i]) + other.weight(names[i])) / 2.0;
+    }
+    return new DiscreteDistribution(names, weights);
   }
 }

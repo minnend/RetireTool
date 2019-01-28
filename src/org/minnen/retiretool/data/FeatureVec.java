@@ -892,6 +892,20 @@ public class FeatureVec extends MetaStore
     return sb.toString();
   }
 
+  public static FeatureVec fromString(String line)
+  {
+    if (line == null) return null;
+    line = line.trim();
+    if (!line.startsWith("[") || !line.endsWith("]")) return null;
+    line = line.substring(1, line.length() - 1);
+    String[] fields = line.split(",");
+    double[] values = new double[fields.length];
+    for (int i = 0; i < fields.length; ++i) {
+      values[i] = Double.parseDouble(fields[i]);
+    }
+    return new FeatureVec(values);
+  }
+
   /** Convert the first dimension of the given list into an array */
   public static double[] toArray1D(List<? extends FeatureVec> data)
   {
