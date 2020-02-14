@@ -43,9 +43,12 @@ public class CumulativeStats implements Comparable<CumulativeStats>
 
   public static CumulativeStats calc(Sequence cumulativeReturns, boolean calcDurationalStats)
   {
-    if (TimeLib.isMonthly(cumulativeReturns)) {
+    long timestep = cumulativeReturns.getMeanTimeStep();
+    if (timestep > 25 * TimeLib.MS_IN_DAY) {
+      // TODO also distinguish between monthly and annual data.
       return calc(null, cumulativeReturns, calcDurationalStats);
     } else {
+      assert timestep < 3 * TimeLib.MS_IN_DAY;
       return calc(cumulativeReturns, null, calcDurationalStats);
     }
   }

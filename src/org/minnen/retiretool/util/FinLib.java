@@ -8,7 +8,6 @@ import java.time.Period;
 import java.time.Year;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.minnen.retiretool.data.FeatureVec;
@@ -16,14 +15,6 @@ import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.Shiller;
 import org.minnen.retiretool.data.fred.FredSeries;
 import org.minnen.retiretool.stats.RetirementStats;
-
-import com.joptimizer.functions.ConvexMultivariateRealFunction;
-import com.joptimizer.functions.LinearMultivariateRealFunction;
-import com.joptimizer.functions.PDQuadraticMultivariateRealFunction;
-import com.joptimizer.optimizers.JOptimizer;
-import com.joptimizer.optimizers.OptimizationRequest;
-
-import smile.math.Math;
 
 public final class FinLib
 {
@@ -1105,7 +1096,7 @@ public final class FinLib
    * 
    * @param returns Sequence of daily or monthly cumulative returns
    * @param dim dimension in `returns` to extract
-   * @return Sequence holding return per year
+   * @return Sequence holding return per year (1.4 = 1.4%)
    */
   public static Sequence toReturnPerYear(Sequence returns, int dim)
   {
@@ -1304,68 +1295,6 @@ public final class FinLib
   public static double sharpeMonthly(Sequence monthlyReturns, Sequence benchmark)
   {
     return Math.sqrt(12) * sharpe(monthlyReturns, benchmark);
-  }
-
-  public static double[] minvar(double[][] corrMatrix)
-  {
-    return minvar(corrMatrix, 0.0, 1.0);
-  }
-
-  public static double[] minvar(double[][] corrMatrix, double minWeight, double maxWeight)
-  {
-    final int n = corrMatrix.length;
-    final boolean bConstrainedMaxWeight = (maxWeight > 0.0 && maxWeight < 1.0);
-
-    // Initial guess is equal weights.
-    double[] guess = new double[n];
-    Arrays.fill(guess, 1.0 / n);
-
-    // Enforce sum(weights)=1.0 via Ax=b (where x == weights).
-    double[][] A = new double[1][n];
-    Arrays.fill(A[0], 1.0);
-    double[] b = new double[] { 1.0 };
-
-    // Objective function.
-    double[][] P = corrMatrix;
-    PDQuadraticMultivariateRealFunction objective = new PDQuadraticMultivariateRealFunction(P, null, 0);
-
-    // We want to be long-only so weights must be constrained to be >= 0.0.
-    final int nInequalities = (bConstrainedMaxWeight ? 2 * n : n);
-    ConvexMultivariateRealFunction[] inequalities = new ConvexMultivariateRealFunction[nInequalities];
-    for (int i = 0; i < n; ++i) {
-      double[] a = new double[n];
-      a[i] = -1.0;
-      inequalities[i] = new LinearMultivariateRealFunction(a, minWeight);
-
-      if (bConstrainedMaxWeight) {
-        a = new double[n];
-        a[i] = 1.0;
-        inequalities[i + n] = new LinearMultivariateRealFunction(a, -maxWeight - 1e-11);
-      }
-    }
-
-    // Setup optimization problem.
-    OptimizationRequest or = new OptimizationRequest();
-    or.setF0(objective);
-    or.setA(A);
-    or.setB(b);
-    or.setFi(inequalities);
-    or.setToleranceFeas(1.0e-6);
-    or.setTolerance(1.0e-6);
-    or.setInitialPoint(guess);
-
-    // Find the solution.
-    JOptimizer opt = new JOptimizer();
-    opt.setOptimizationRequest(or);
-    try {
-      opt.optimize();
-      double[] w = opt.getOptimizationResponse().getSolution();
-      assert Math.abs(Library.sum(w) - 1.0) < 1e-6;
-      return w;
-    } catch (Exception e) {
-      e.printStackTrace();
-      return null;
-    }
   }
 
   /** @return Sequence with average(t-ta, t-tb) values. */

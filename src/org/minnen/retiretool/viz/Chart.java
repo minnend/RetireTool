@@ -1349,4 +1349,28 @@ public class Chart
     Matcher m = patternNegZero.matcher(s);
     return m.matches() ? s.substring(1) : s;
   }
+
+  /** @return String holding HTML TD text with custom colors. */
+  public static String genColoredCell(String data, boolean cond, String trueColor, String falseColor)
+  {
+    final String color = cond ? trueColor : falseColor;
+    if (color == null || color.isEmpty()) {
+      return String.format("<td>%s</td>", data);
+    } else {
+      return String.format("<td style=\"color: #%s;\">%s</td>", color, data);
+    }
+  }
+
+  /** @return String holding HTML TR text with the given fields. */
+  public static String genTableRow(String tag, String... fields)
+  {
+    StringBuffer sb = new StringBuffer();
+    sb.append("<tr>");
+    for (String field : fields) {
+      field = field.replaceAll("\\n", "<br/>");
+      sb.append(String.format("<%s>%s</%s>", tag, field, tag));
+    }
+    sb.append("</tr>\n");
+    return sb.toString();
+  }
 }

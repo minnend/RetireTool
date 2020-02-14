@@ -14,6 +14,7 @@ import org.minnen.retiretool.predictor.config.ConfigAdaptive.Weighting;
 import org.minnen.retiretool.predictor.features.Momentum;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Library;
+import org.minnen.retiretool.util.PortfolioOpt;
 
 public class AdaptiveMomentumPredictor extends Predictor
 {
@@ -121,7 +122,7 @@ public class AdaptiveMomentumPredictor extends Predictor
     // }
     // System.out.println();
 
-    double[] mvw = FinLib.minvar(cov, minWeight, maxWeight);
+    double[] mvw = PortfolioOpt.minvar(cov, minWeight, maxWeight);
     // System.out.print("MVW: ");
     // for (int i = 0; i < n; ++i) {
     // System.out.printf("%5.3f ", mvw[i]);

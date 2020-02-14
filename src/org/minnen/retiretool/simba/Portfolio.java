@@ -16,8 +16,9 @@ import org.minnen.retiretool.util.Writer;
 
 public class Portfolio implements Comparable<Portfolio>
 {
+  public final String               name;
   public final DiscreteDistribution allocation;
-  public final FeatureVec           stats;
+  public FeatureVec                 stats;
 
   private static Pattern            pattern = Pattern.compile("^(\\[.*\\])\\s*(\\[.*\\])$");
 
@@ -27,6 +28,12 @@ public class Portfolio implements Comparable<Portfolio>
 
   public Portfolio(DiscreteDistribution allocation, FeatureVec stats)
   {
+    this(allocation.toStringWithNames(0), allocation, stats);
+  }
+
+  public Portfolio(String name, DiscreteDistribution allocation, FeatureVec stats)
+  {
+    this.name = name;
     this.allocation = allocation;
     this.stats = stats;
   }
@@ -131,6 +138,26 @@ public class Portfolio implements Comparable<Portfolio>
       if (nLoss > 0 && nWin == 0 && nTiePlus < nTieMinus) return -1;
     }
     return 0;
+  }
+
+  /** Remove duplicate portfolios. */
+  public static List<Portfolio> removeDuplicates(List<Portfolio> portfolios)
+  {
+    int n = portfolios.size();
+    for (int i = 0; i < n; ++i) {
+      Portfolio p1 = portfolios.get(i);
+      if (p1 == null) continue;
+      for (int j = i + 1; j < n; ++j) {
+        Portfolio p2 = portfolios.get(j);
+        if (p2 == null) continue;
+        if (p1.allocation.isSimilar(p2.allocation, 1e-4)) {
+          portfolios.set(j, null);
+        }
+      }
+    }
+    // Remove all null entries.
+    portfolios = portfolios.stream().filter(x -> x != null).collect(Collectors.toList());
+    return portfolios;
   }
 
   /** Remove portfolios that are "dominated" by another portfolio. */

@@ -18,9 +18,12 @@ public class DurationalStats extends ReturnStats
   /** @return stats for the given returns (converts to monthly as needed). */
   public static DurationalStats calc(Sequence cumulativeReturns, int nMonthsPerPeriod)
   {
-    if (TimeLib.isMonthly(cumulativeReturns)) {
+    long timestep = cumulativeReturns.getMeanTimeStep();
+    if (timestep > 25 * TimeLib.MS_IN_DAY) {
+      // TODO also distinguish between monthly and annual data.
       return calcMonthly(cumulativeReturns, nMonthsPerPeriod);
     } else {
+      assert timestep < 3 * TimeLib.MS_IN_DAY;
       return calcDaily(cumulativeReturns, nMonthsPerPeriod);
     }
   }
@@ -82,10 +85,10 @@ public class DurationalStats extends ReturnStats
     this.nMonthsPerPeriod = nMonthsPerPeriod;
   }
 
-  private void printDurationTableRow(String label)
+  private String getDurationTableRow(String label)
   {
-    System.out.printf(" <tr><td>%s</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td>"
-        + "<td>%.2f</td><td>%.2f</td></tr>\n", label, mean, sdev, min, percentile25, median, percentile75, max);
+    return String.format("<tr><td>%s</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td><td>%.2f</td>"
+        + "<td>%.2f</td><td>%.2f</td></tr>", label, mean, sdev, min, percentile25, median, percentile75, max);
   }
 
   public static void printDurationTable(Sequence cumulativeReturns)
@@ -96,8 +99,9 @@ public class DurationalStats extends ReturnStats
     System.out.printf("</thead><tbody>\n");
     int[] dur = new int[] { 1, 2, 5, 10, 20, 30, 40 };
     for (int d = 0; d < dur.length; ++d) {
-      DurationalStats rstats = DurationalStats.calcMonthly(cumulativeReturns, 12 * dur[d]);
-      rstats.printDurationTableRow(String.format("%d", dur[d]));
+      DurationalStats stats = DurationalStats.calcMonthly(cumulativeReturns, 12 * dur[d]);
+      String row = stats.getDurationTableRow(String.format("%d", dur[d]));
+      System.out.printf(" %s\n", row);
     }
     System.out.printf("</tbody></table>\n");
   }

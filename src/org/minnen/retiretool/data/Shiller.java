@@ -101,7 +101,7 @@ public class Shiller
 
           // System.out.printf("%d/%d: $%.2f $%.2f $%.2f\n", year, month, price, div, cpi);
         } catch (NumberFormatException nfe) {
-          System.err.println("Bad Line: " + line);
+          // System.err.println("Bad Line: " + line);
           if (seq.isEmpty()) continue;
           else break;
         }
@@ -142,12 +142,16 @@ public class Shiller
     try (Workbook workbook = new HSSFWorkbook(file)) {
       FormulaEvaluator evaluator = workbook.getCreationHelper().createFormulaEvaluator();
       Sheet sheet = workbook.getSheet("Data");
-      String[] values = new String[11];
+      String[] values = null;
       for (Row row : sheet) {
-        int cellIndex = 0;
+        int nColumns = row.getLastCellNum();
+        if (values == null || values.length != nColumns) {
+          values = new String[nColumns];
+        }
         int n = 0;
         for (Cell cell : row) {
           cell = evaluator.evaluateInCell(cell);
+          int cellIndex = cell.getColumnIndex();
           switch (cell.getCellTypeEnum()) {
           case NUMERIC:
             values[cellIndex] = String.format("%.2f", cell.getNumericCellValue());
@@ -160,7 +164,6 @@ public class Shiller
             values[cellIndex] = "";
             break;
           }
-          ++cellIndex;
         }
         if (n > 2) {
           String line = String.join(",", values);

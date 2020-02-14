@@ -443,9 +443,7 @@ public class Sequence extends MetaStore implements Iterable<FeatureVec>
     return v;
   }
 
-  /**
-   * @return start time (time of first sample in ms) of this sequence
-   */
+  /** @return start time (time of first sample in ms) of this sequence */
   public long getStartMS()
   {
     if (isEmpty()) {
@@ -455,9 +453,7 @@ public class Sequence extends MetaStore implements Iterable<FeatureVec>
     }
   }
 
-  /**
-   * @return end time (time of last sample in ms) of this sequence
-   */
+  /** @return end time (time of last sample in ms) of this sequence */
   public long getEndMS()
   {
     if (isEmpty()) {
@@ -467,20 +463,22 @@ public class Sequence extends MetaStore implements Iterable<FeatureVec>
     }
   }
 
-  /**
-   * @return length of this sequence in milliseconds
-   */
+  /** @return length of this sequence in milliseconds */
   public long getLengthMS()
   {
     return getEndMS() - getStartMS();
   }
 
-  /**
-   * @return length of this sequence in fractional months
-   */
+  /** @return length of this sequence in fractional months */
   public double getLengthMonths()
   {
     return TimeLib.monthsBetween(getStartMS(), getEndMS());
+  }
+
+  /** @return average time between data points (in ms) */
+  public long getMeanTimeStep()
+  {
+    return getLengthMS() / length();
   }
 
   /** @return time in ms of the given data frame */
@@ -1089,6 +1087,7 @@ public class Sequence extends MetaStore implements Iterable<FeatureVec>
     return true;
   }
 
+  /** @return Sequence holding difference between neighboring elements of this sequences. */
   public Sequence derivative()
   {
     Sequence deriv = new Sequence(getName() + "- Derivative");

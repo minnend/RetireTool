@@ -22,7 +22,6 @@ public class PlotLine
 
   public PlotLine(double value, double width, String color, String dashStyle)
   {
-    super();
     this.value = value;
     this.width = width;
     this.color = color;

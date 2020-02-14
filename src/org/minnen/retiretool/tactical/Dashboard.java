@@ -179,28 +179,6 @@ public class Dashboard
     return String.format("graphs-pair-%02d-%02d.html", codePair.first, codePair.second);
   }
 
-  private static String genColoredCell(String data, boolean cond, String trueColor, String falseColor)
-  {
-    final String color = cond ? trueColor : falseColor;
-    if (color == null || color.isEmpty()) {
-      return String.format("<td>%s</td>", data);
-    } else {
-      return String.format("<td style=\"color: #%s;\">%s</td>", color, data);
-    }
-  }
-
-  private static String genTableRow(String tag, String... fields)
-  {
-    StringBuffer sb = new StringBuffer();
-    sb.append("<tr>");
-    for (String field : fields) {
-      field = field.replaceAll("\\n", "<br/>");
-      sb.append(String.format("<%s>%s</%s>", tag, field, tag));
-    }
-    sb.append("</tr>\n");
-    return sb.toString();
-  }
-
   private static Sequence genGrowthSeq(int index, CodeInfo info)
   {
     final Sequence returns = store.get(TacticLib.riskyName);
@@ -221,7 +199,7 @@ public class Dashboard
     StringWriter sw = new StringWriter();
     try (Writer writer = new Writer(sw)) {
       writer.write("<table id=\"decadeComparisonTable\" cellspacing=\"0\"><thead>\n");
-      writer.write(genTableRow("th", "Code", "Count", "Win\nPercent", "Total\nReturn", "Worst\nDD", "Min\nReturn",
+      writer.write(Chart.genTableRow("th", "Code", "Count", "Win\nPercent", "Total\nReturn", "Worst\nDD", "Min\nReturn",
           "Mean\nReturn", "Max\nReturn", ""));
       writer.write("</thead><tbody>\n");
 
@@ -242,10 +220,10 @@ public class Dashboard
           className += "Bold";
         }
         double mean = FinLib.mul2ret(Library.mean(returns));
-        String sMean = genColoredCell(String.format("%.2f", mean), mean >= 0, null, red);
+        String sMean = Chart.genColoredCell(String.format("%.2f", mean), mean >= 0, null, red);
 
         double totalReturn = FinLib.mul2ret(total);
-        String sTotal = genColoredCell(String.format("%.2f", totalReturn), totalReturn >= 0, null, red);
+        String sTotal = Chart.genColoredCell(String.format("%.2f", totalReturn), totalReturn >= 0, null, red);
         writer.write(
             " <tr class=\"%s\"><td>%d</td><td>%d</td><td>%.1f</td>%s<td>%.2f</td><td>%.2f</td>%s<td>%.2f</td><td>%s</td></tr>\n",
             className, entry.getKey(), returns.length, 100.0 - 100.0 * nLose / n, sTotal, Library.min(drawdowns),
@@ -285,7 +263,7 @@ public class Dashboard
     StringWriter sw = new StringWriter();
     try (Writer writer = new Writer(sw)) {
       writer.write("<table id=\"decadeComparisonTable\" cellspacing=\"0\"><thead>\n");
-      writer.write(genTableRow("th", "Previous\nCode", "Current\nCode", "Count", "Win\nPercent", "Total\nReturn",
+      writer.write(Chart.genTableRow("th", "Previous\nCode", "Current\nCode", "Count", "Win\nPercent", "Total\nReturn",
           "Worst\nDD", "Min\nReturn", "Mean\nReturn", "Max\nReturn", ""));
       writer.write("</thead><tbody>\n");
 
@@ -309,9 +287,9 @@ public class Dashboard
           className += "Bold";
         }
         double mean = FinLib.mul2ret(Library.mean(returns));
-        String sMean = genColoredCell(String.format("%.2f", mean), mean >= 0, null, red);
+        String sMean = Chart.genColoredCell(String.format("%.2f", mean), mean >= 0, null, red);
         double totalReturn = FinLib.mul2ret(total);
-        String sTotal = genColoredCell(String.format("%.2f", totalReturn), totalReturn >= 0, null, red);
+        String sTotal = Chart.genColoredCell(String.format("%.2f", totalReturn), totalReturn >= 0, null, red);
         writer.write(
             " <tr class=\"%s\"><td>%d</td><td>%d</td><td>%d</td><td>%.1f</td>%s<td>%.2f</td><td>%.2f</td>%s<td>%.2f</td><td>%s</td></tr>\n",
             className, pair.first, pair.second, returns.length, 100.0 - 100.0 * nLose / n, sTotal,
@@ -353,8 +331,9 @@ public class Dashboard
     try (Writer writer = new Writer(sw)) {
       writer.write("<table id=\"decadeComparisonTable\" cellspacing=\"0\"><thead>\n");
       writer.write("<thead>\n");
-      writer.write(genTableRow("th", "Strategy", "CAGR", "Annual<br/>Std Dev", "Worst<br/>DD", "Sharpe<br/>(daily)",
-          "Median<br/>Return", String.format("Regret<br/>%s", TimeLib.formatDurationMonths(comparisons[0].duration)),
+      writer.write(Chart.genTableRow("th", "Strategy", "CAGR", "Annual<br/>Std Dev", "Worst<br/>DD",
+          "Sharpe<br/>(daily)", "Median<br/>Return",
+          String.format("Regret<br/>%s", TimeLib.formatDurationMonths(comparisons[0].duration)),
           String.format("Regret<br/>%s", TimeLib.formatDurationMonths(comparisons[1].duration)),
           String.format("Regret<br/>%s", TimeLib.formatDurationMonths(comparisons[2].duration))));
       writer.write("</thead>\n");

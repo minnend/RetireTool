@@ -326,6 +326,7 @@ public class DiscreteDistribution
     return new DiscreteDistribution(nonZeroNames, nonZeroWeights);
   }
 
+  /** @return distribution formed by averaging this with `other`. */
   public DiscreteDistribution blend(DiscreteDistribution other)
   {
     // Find union of all names.
