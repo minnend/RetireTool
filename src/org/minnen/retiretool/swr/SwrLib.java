@@ -67,6 +67,8 @@ public class SwrLib
   public static MonthlyInfo runPeriod(int iStart, double withdrawalRate, int years, int percentStock,
       List<MonthlyInfo> salaries)
   {
+    assert withdrawalRate > 0.0 && withdrawalRate < 100.0;
+
     double balance = 1000.0; // starting balance is mostly arbitrary since all results are relative
     double annualWithdrawal = balance * withdrawalRate / 100.0;
     double monthlyWithdrawal = annualWithdrawal / 12;
@@ -88,7 +90,6 @@ public class SwrLib
       // Adjust monthly salary for inflation.
       monthlyWithdrawal *= cpiMul.get(i, 0);
     }
-
     return info;
   }
 

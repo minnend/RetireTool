@@ -39,6 +39,12 @@ public class MonthlyInfo
     return salary >= balance;
   }
 
+  /** @return true if this month succeeded, i.e. the balance was larger than the salary. */
+  public boolean ok()
+  {
+    return !failed();
+  }
+
   @Override
   public String toString()
   {

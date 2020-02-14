@@ -34,7 +34,7 @@ public class BengenMethod
    * @param percentStock the percent of stock (vs. bond) in the brokerage account
    * @return the largest Bengen SWR as an annualized percent (325 = 3.25%)
    */
-  public static int findBengenSWR(int years, int percentStock)
+  public static int findSWR(int years, int percentStock)
   {
     int prevSWR = 0;
     final int lastIndex = SwrLib.lastIndex(years);
@@ -60,14 +60,14 @@ public class BengenMethod
    * @param years length of retirement
    * @return the best SWR and the corresponding stock percent
    */
-  public static IntPair findBengenSWR(int years)
+  public static IntPair findSWR(int years)
   {
     int bestSWR = 0;
     int bestPercentStock = 0;
 
     // Search over different stock/bond allocations assuming stock >= 50%.
     for (int percentStock = 50; percentStock <= 100; percentStock += 10) {
-      int swr = findBengenSWR(years, percentStock);
+      int swr = findSWR(years, percentStock);
       if (swr > bestSWR) { // TODO best way to handle ties?
         bestSWR = swr;
         bestPercentStock = percentStock;
@@ -78,10 +78,10 @@ public class BengenMethod
   }
 
   /** Print information about the best Bengen SWR for different retirement durations. */
-  public static void findBengenSWR()
+  public static void printSWRs(int minYears, int maxYears)
   {
-    for (int years = 30; years <= 40; years++) {
-      IntPair x = findBengenSWR(years);
+    for (int years = minYears; years <= maxYears; years++) {
+      IntPair x = findSWR(years);
       final int swr = x.first;
       final int percentStock = x.second;
       System.out.printf("%d: %d  (%d%% stock)\n", years, swr, percentStock);
@@ -91,6 +91,6 @@ public class BengenMethod
   public static void main(String[] args) throws IOException
   {
     SwrLib.setup();
-    findBengenSWR();
+    printSWRs(30, 40);
   }
 }
