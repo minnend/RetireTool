@@ -25,7 +25,9 @@ public class MarwoodMethod
   {
     final int bengenSWR = BengenMethod.lookUpSWR(years);
     final int lookbackMonths = lookbackYears * 12;
-    final int lastIndex = SwrLib.lastIndex(years);
+    final int iLastWithFullRetirement = SwrLib.lastIndex(years);
+    final int iFirstWithHistory = lookbackMonths;
+    final int iStartSim = iFirstWithHistory;
     final int percentStock = BengenMethod.lookUpPercentStock(years);
 
     int maxSWR = 0; // what was the best SWR of all time?
@@ -33,14 +35,21 @@ public class MarwoodMethod
     int nWin = 0, nFail = 0; // win = better than Bengen SWR
     Sequence seqMarwoodSWR = new Sequence("Marwood SWR");
     Sequence seqRealBalance = new Sequence("Final Balance (real)");
+    Sequence seqYearsBack = new Sequence("Virtual Retirement Years");
+    Sequence seqBengenSalary = new Sequence("Bengen Salary");
+    Sequence seqMarwoodSalary = new Sequence("Marwood Salary");
 
-    for (int iStart = lookbackMonths; iStart <= lastIndex; ++iStart) {
+    // Set initial nest egg so that final nest egg is $1M. Last data point is `-2` since we need one more month of data
+    // to simulate a one month retirement.
+    double nestEgg = 1e6 * SwrLib.growth(-2, iStartSim, percentStock);
+
+    for (int iRetire = iStartSim; iRetire < SwrLib.length(); ++iRetire) {
       // Find best "virtual" retirement year within the lookback period.
       int bestSWR = 0;
       int bestIndex = -1;
       MonthlyInfo bestInfo = null;
       for (int iLookback = 0; iLookback <= lookbackMonths; ++iLookback) {
-        final int iVirtualStart = iStart - iLookback; // index of start of virtual retirement
+        final int iVirtualStart = iRetire - iLookback; // index of start of virtual retirement
 
         final int virtualYears = years + (int) Math.ceil(iLookback / 12.0);
         final int virtualPercentStock = BengenMethod.lookUpPercentStock(virtualYears);
@@ -53,7 +62,7 @@ public class MarwoodMethod
         assert info.ok();
 
         MonthlyInfo virtualNow = virtualSalaries.get(iLookback);
-        assert virtualNow.index == iStart;
+        assert virtualNow.index == iRetire;
 
         final int impliedSWR = (int) Math.floor(virtualNow.percent() * 100);
         assert iLookback > 0 || impliedSWR == bengenSWR; // iLookback == 0 must match Bengen
@@ -70,35 +79,51 @@ public class MarwoodMethod
 
       if (bestSWR > maxSWR) {
         maxSWR = bestSWR;
-        maxIndex = iStart;
+        maxIndex = iRetire;
       }
 
-      MonthlyInfo info = SwrLib.runPeriod(iStart, bestSWR / 100.0, years, percentStock, null);
+      MonthlyInfo info = SwrLib.runPeriod(iRetire, bestSWR / 100.0, years, percentStock, null);
       assert info.ok(); // safe by construction, but still verify
+      assert iRetire > iLastWithFullRetirement || info.retirementMonth == years * 12;
 
-      seqMarwoodSWR.addData(bestSWR / 100.0, SwrLib.time(iStart));
-      final double realBalance = info.balance * SwrLib.inflation(info.index, iStart);
-      seqRealBalance.addData(realBalance, SwrLib.time(iStart));
+      final long now = SwrLib.time(iRetire);
+      seqMarwoodSWR.addData(bestSWR / 100.0, now);
+      final double realBalance = info.balance * SwrLib.inflation(info.index, iRetire);
+      seqRealBalance.addData(realBalance, now);
+      seqYearsBack.addData((iRetire - bestIndex) / 12.0, now);
 
-      if (bestIndex != iStart) { // only print info if we found something better than Bengen
-        final double swrGain = FinLib.mul2ret((double) bestSWR / bengenSWR);
-        System.out.printf("%d [%s] -> %d [%s] swr: %d +%.3f%% |$%.2f ($%.2f)| inflation: %f  %s\n", iStart,
-            TimeLib.formatMonth(SwrLib.time(iStart)), bestIndex, TimeLib.formatMonth(SwrLib.time(bestIndex)), bestSWR,
-            swrGain, realBalance, info.balance, SwrLib.inflation(iStart, bestIndex), bestInfo);
-      }
+      final double realNestEgg = nestEgg * SwrLib.inflation(iRetire, -2);
+      final double bengenSalary = realNestEgg * bengenSWR / 10000.0;
+      final double marwoodSalary = realNestEgg * bestSWR / 10000.0;
+      seqMarwoodSalary.addData(marwoodSalary, now);
+      seqBengenSalary.addData(bengenSalary, now);
+
+      // if (bestIndex != iRetire) { // only print info if we found something better than Bengen
+      final double swrGain = FinLib.mul2ret((double) bestSWR / bengenSWR);
+      System.out.printf("%d -> %d  [%s] -> [%s] swr: %d +%.3f%% | $%.2f ($%.2f) %s  ($%.2f, $%.2f)\n", iRetire,
+          bestIndex, TimeLib.formatMonth(SwrLib.time(iRetire)), TimeLib.formatMonth(SwrLib.time(bestIndex)), bestSWR,
+          swrGain, realBalance, info.balance, bestInfo, marwoodSalary, bengenSalary);
+      // }
 
       if (bestSWR > bengenSWR) {
         ++nWin;
       } else {
         ++nFail;
       }
+
+      // Simulate nest egg value so that we can report retirement salary in dollars.
+      // TODO make monthly contributions over time?
+      nestEgg *= SwrLib.growth(iRetire, percentStock); // growth due to market
     }
 
     System.out.printf("Max SWR: %d [%s]: %d\n", maxIndex, TimeLib.formatMonth(SwrLib.time(maxIndex)), maxSWR);
     System.out.printf("win=%d (%.2f%%), fail=%d / %d\n", nWin, 100.0 * nWin / (nWin + nFail), nFail, nWin + nFail);
 
     Chart.saveLineChart(new File(DataIO.getOutputPath(), "marwood-swr.html"), "Marwood-Minnen SWR", "100%", "800px",
-        ChartScaling.LINEAR, ChartTiming.MONTHLY, seqMarwoodSWR);
+        ChartScaling.LINEAR, ChartTiming.MONTHLY, seqMarwoodSWR, seqYearsBack);
+    Chart.saveLineChart(new File(DataIO.getOutputPath(), "marwood-salary.html"),
+        "Marwood-Minnen Salary (on $1M in today\'s dollars)", "100%", "800px", ChartScaling.LOGARITHMIC,
+        ChartTiming.MONTHLY, seqMarwoodSalary, seqBengenSalary);
   }
 
   public static void main(String[] args) throws IOException

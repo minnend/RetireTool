@@ -478,7 +478,8 @@ public class Sequence extends MetaStore implements Iterable<FeatureVec>
   /** @return average time between data points (in ms) */
   public long getMeanTimeStep()
   {
-    return getLengthMS() / length();
+    if (length() == 0) return 0;
+    return getLengthMS() / (length() - 1);
   }
 
   /** @return time in ms of the given data frame */

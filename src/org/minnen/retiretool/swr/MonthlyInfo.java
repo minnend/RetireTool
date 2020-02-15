@@ -13,16 +13,20 @@ public class MonthlyInfo
   /** Time (in ms) corresponding to this month. */
   public final long   time;
 
+  /** Number of months of retirement so far. */
+  public final int    retirementMonth;
+
   /** Monthly "salary", i.e. the withdrawal amount for this month. */
   public final double salary;
 
   /** Account balance for this month. */
   public final double balance;
 
-  public MonthlyInfo(int index, long time, double salary, double balance)
+  public MonthlyInfo(int index, long time, int retirementMonth, double salary, double balance)
   {
     this.index = index;
     this.time = time;
+    this.retirementMonth = retirementMonth;
     this.salary = salary;
     this.balance = balance;
   }

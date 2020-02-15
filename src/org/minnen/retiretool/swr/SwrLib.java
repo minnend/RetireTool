@@ -2,7 +2,9 @@ package org.minnen.retiretool.swr;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.minnen.retiretool.Bond;
 import org.minnen.retiretool.BondFactory;
@@ -18,26 +20,49 @@ import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 public class SwrLib
 {
   /** Stock, bonds, 70/30 mixed values aling with CPI (inflation data) normalized so that the first value is 1.0. */
-  public static Sequence  stock, bonds, mixed, cpi, stockReal, bondsReal, mixedReal;
+  public static Sequence                stock, bonds, cpi, stockReal, bondsReal;
 
   /** Each "Mul" sequence holds the multiplier representing growth for each month (1.01 = 1% growth). */
-  private static Sequence stockMul, bondsMul, cpiMul;
+  private static Sequence               stockMul, bondsMul, cpiMul;
 
+  /** Mixed stock/bond cumulative returns keyed by stock percent (70 = 70% stocks / 30% bonds). */
+  private static Map<Integer, Sequence> mixedMap, mixedMapReal;
+
+  /** @return timestamp (in ms) for the i'th data point. */
   public static long time(int i)
   {
     return stockMul.getTimeMS(i);
   }
 
+  /** @return number of elements in the underlying data. */
+  public static int length()
+  {
+    return stockMul.length();
+  }
+
   /** @return index of the last month for which we can simulate a `years` retirement. */
   public static int lastIndex(int years)
   {
-    return stockMul.length() - years * 12;
+    return length() - years * 12;
   }
 
-  /** @return inflation over [from..to] as a multiplier. */
+  /** @return inflation over [from..to] as a multiplier (1.01 = 1%). */
   public static double inflation(int from, int to)
   {
     return cpi.get(to, 0) / cpi.get(from, 0);
+  }
+
+  /** @return inflation multiplier for the i'th month (1.01 = 1%). */
+  public static double inflation(int i)
+  {
+    return cpiMul.get(i, 0);
+  }
+
+  /** @return total growth for a stock/bond portfolio over [fom..to]. */
+  public static double growth(int from, int to, int percentStock)
+  {
+    Sequence mixed = mixedMap.get(percentStock);
+    return mixed.get(to, 0) / mixed.get(from, 0);
   }
 
   /**
@@ -67,6 +92,7 @@ public class SwrLib
   public static MonthlyInfo runPeriod(int iStart, double withdrawalRate, int years, int percentStock,
       List<MonthlyInfo> salaries)
   {
+    assert iStart >= 0 && iStart < length();
     assert withdrawalRate > 0.0 && withdrawalRate < 100.0;
 
     double balance = 1000.0; // starting balance is mostly arbitrary since all results are relative
@@ -74,9 +100,9 @@ public class SwrLib
     double monthlyWithdrawal = annualWithdrawal / 12;
 
     MonthlyInfo info = null;
-    final int iEnd = iStart + 12 * years;
+    final int iEnd = Math.min(iStart + 12 * years, length());
     for (int i = iStart; i < iEnd; ++i) {
-      info = new MonthlyInfo(i, SwrLib.time(i), monthlyWithdrawal, balance);
+      info = new MonthlyInfo(i, SwrLib.time(i), i - iStart + 1, monthlyWithdrawal, balance);
       if (salaries != null) salaries.add(info);
       if (info.failed()) return info;
 
@@ -109,9 +135,6 @@ public class SwrLib
     stockReal = stock.div(cpi).setName("Stock (real)");
     bondsReal = bonds.div(cpi).setName("Bonds (real)");
 
-    mixed = stock.dup()._mul(0.7).add(bonds.dup()._mul(0.3)).setName("70/30");
-    mixedReal = mixed.div(cpi).setName("70/30 (real)");
-
     stockMul = stock.derivativeMul();
     bondsMul = bonds.derivativeMul();
     cpiMul = cpi.derivativeMul();
@@ -119,18 +142,41 @@ public class SwrLib
     System.out.println(stockMul);
     assert bondsMul.matches(stockMul);
     assert cpiMul.matches(stockMul);
+
+    mixedMap = new HashMap<>();
+    mixedMapReal = new HashMap<>();
+    for (int percentStock = 0; percentStock <= 100; percentStock += 5) {
+      // Note that stock*alpha + bonds*(1-alpha) models an initial split *without* rebalancing. We want to include
+      // rebalancing (monthly, for simplicity) so the cumulative returns must be calculated month-by-month.
+      Sequence nominal = new Sequence(String.format("Mixed (%d / %d)", percentStock, 100 - percentStock));
+      double x = 1.0;
+      for (int i = 0;; ++i) {
+        nominal.addData(x, stock.getTimeMS(i));
+        if (i >= length()) break; // can't compute growth because there's no more data
+        x *= growth(i, percentStock);
+      }
+      Sequence real = nominal.div(cpi)
+          .setName(String.format("Mixed (%d / %d, real)", percentStock, 100 - percentStock));
+      mixedMap.put(percentStock, nominal);
+      mixedMapReal.put(percentStock, real);
+
+      assert nominal.matches(stock);
+      assert real.matches(stock);
+    }
   }
 
   /** Save an interactive chart with stock and bond data as a local HTML file. */
   public static void saveGraph() throws IOException
   {
     Chart.saveLineChart(new File(DataIO.getOutputPath(), "shiller.html"), "Shiller Data", "100%", "800px",
-        ChartScaling.LOGARITHMIC, ChartTiming.MONTHLY, stock, stockReal, bonds, bondsReal, mixed, mixedReal, cpi);
+        ChartScaling.LOGARITHMIC, ChartTiming.MONTHLY, stock, stockReal, bonds, bondsReal, mixedMap.get(70),
+        mixedMapReal.get(70), cpi);
   }
 
   public static void main(String[] args) throws IOException
   {
     setup();
+    saveGraph();
 
     // Calculate and print the success rate for different WRs and stock/bond mixes.
     final int nYears = 30;
