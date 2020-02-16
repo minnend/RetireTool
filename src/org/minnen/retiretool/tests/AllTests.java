@@ -13,7 +13,7 @@ import org.minnen.retiretool.util.TimeLib;
 @SuiteClasses({ TestBond.class, TestCumulativeStats.class, TestFinLib.class, TestFixedPoint.class,
     TestInvestmentStats.class, TestKDE.class, TestLibrary.class, TestMixablePredictor.class, TestRankers.class,
     TestRegression.class, TestSequence.class, TestSequenceStore.class, TestSequenceStoreV1.class, TestSlippage.class,
-    TestStockInfo.class, TestStump.class, TestTimeLib.class })
+    TestStockInfo.class, TestStump.class, TestSwrLib.class, TestTimeLib.class })
 public class AllTests
 {
   public static Sequence buildMonthlySequence(double[] data)

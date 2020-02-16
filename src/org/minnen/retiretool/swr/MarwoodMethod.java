@@ -10,8 +10,10 @@ import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
+import org.minnen.retiretool.viz.ChartConfig;
 import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
 import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
+import org.minnen.retiretool.viz.PlotLine;
 
 public class MarwoodMethod
 {
@@ -119,10 +121,13 @@ public class MarwoodMethod
     System.out.printf("Max SWR: %d [%s]: %d\n", maxIndex, TimeLib.formatMonth(SwrLib.time(maxIndex)), maxSWR);
     System.out.printf("win=%d (%.2f%%), fail=%d / %d\n", nWin, 100.0 * nWin / (nWin + nFail), nFail, nWin + nFail);
 
-    Chart.saveLineChart(new File(DataIO.getOutputPath(), "marwood-swr.html"), "Marwood-Minnen SWR", "100%", "800px",
-        ChartScaling.LINEAR, ChartTiming.MONTHLY, seqMarwoodSWR, seqYearsBack);
+    ChartConfig config = Chart.saveLineChart(new File(DataIO.getOutputPath(), "marwood-swr.html"), "Marwood-Minnen SWR",
+        "100%", "800px", ChartScaling.LINEAR, ChartTiming.MONTHLY, seqMarwoodSWR, seqYearsBack);
+    config.addPlotLineY(new PlotLine(bengenSWR / 100.0, 2.0, "#777", "dash"));
+    Chart.saveChart(config);
+
     Chart.saveLineChart(new File(DataIO.getOutputPath(), "marwood-salary.html"),
-        "Marwood-Minnen Salary (on $1M in today\'s dollars)", "100%", "800px", ChartScaling.LOGARITHMIC,
+        "Retirement Salary ($1M nest egg in today\\'s dollars)", "100%", "800px", ChartScaling.LOGARITHMIC,
         ChartTiming.MONTHLY, seqMarwoodSalary, seqBengenSalary);
   }
 
