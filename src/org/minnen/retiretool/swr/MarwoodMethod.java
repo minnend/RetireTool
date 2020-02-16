@@ -17,6 +17,12 @@ import org.minnen.retiretool.viz.PlotLine;
 
 public class MarwoodMethod
 {
+  // TODO Allow re-retiring using Bengen SWR for shorter time period
+  // TODO How visualize the effect of re-retiring?
+  // TODO Generate histogram over Marwood-Minnen SWRs and visualize
+  // TODO Graph max SWR for each year (if we had a crystal ball).
+  // TODO Walk-forward optimization for Bengen SWR -- how well does it generalize?
+
   /**
    * Run a Marwood-Minnen SWR simulation and print results.
    * 
@@ -50,7 +56,6 @@ public class MarwoodMethod
       // Find best "virtual" retirement year within the lookback period.
       int bestSWR = 0;
       int bestIndex = -1;
-      MonthlyInfo bestInfo = null;
       for (int iLookback = 0; iLookback <= lookbackMonths; ++iLookback) {
         final int iVirtualStart = iRetire - iLookback; // index of start of virtual retirement
 
@@ -72,7 +77,6 @@ public class MarwoodMethod
         if (impliedSWR > bestSWR) {
           bestSWR = impliedSWR;
           bestIndex = iVirtualStart;
-          bestInfo = virtualNow;
         }
 
         // System.out.printf(" %d [%s] vy=%d [%d] r: %7.4f [%d, %d] balance: $%.2f\n", iVirtualStart,
