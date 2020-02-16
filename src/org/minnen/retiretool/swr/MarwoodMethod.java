@@ -34,6 +34,7 @@ public class MarwoodMethod
 
     int maxSWR = 0; // what was the best SWR of all time?
     int maxIndex = -1; // index when best SWR was found
+    int sumSWR = 0;
     int nWin = 0, nFail = 0; // win = better than Bengen SWR
     Sequence seqMarwoodSWR = new Sequence("Marwood SWR");
     Sequence seqRealBalance = new Sequence("Final Balance (real)");
@@ -83,6 +84,7 @@ public class MarwoodMethod
         maxSWR = bestSWR;
         maxIndex = iRetire;
       }
+      sumSWR += bestSWR;
 
       MonthlyInfo info = SwrLib.runPeriod(iRetire, bestSWR / 100.0, years, percentStock, null);
       assert info.ok(); // safe by construction, but still verify
@@ -102,9 +104,9 @@ public class MarwoodMethod
 
       // if (bestIndex != iRetire) { // only print info if we found something better than Bengen
       final double swrGain = FinLib.mul2ret((double) bestSWR / bengenSWR);
-      System.out.printf("%d -> %d  [%s] -> [%s] swr: %d +%.3f%% | $%.2f ($%.2f) %s  ($%.2f, $%.2f)\n", iRetire,
-          bestIndex, TimeLib.formatMonth(SwrLib.time(iRetire)), TimeLib.formatMonth(SwrLib.time(bestIndex)), bestSWR,
-          swrGain, realBalance, info.balance, bestInfo, marwoodSalary, bengenSalary);
+      System.out.printf("%d <- %d  [%s] <- [%s] swr: %d +%.3f%% | $%.2f ($%.2f)\n", iRetire, bestIndex,
+          TimeLib.formatMonth(SwrLib.time(iRetire)), TimeLib.formatMonth(SwrLib.time(bestIndex)), bestSWR, swrGain,
+          realBalance, info.balance);
       // }
 
       if (bestSWR > bengenSWR) {
@@ -114,11 +116,12 @@ public class MarwoodMethod
       }
 
       // Simulate nest egg value so that we can report retirement salary in dollars.
-      // TODO make monthly contributions over time?
+      // TODO simulate monthly contributions over time?
       nestEgg *= SwrLib.growth(iRetire, percentStock); // growth due to market
     }
 
-    System.out.printf("Max SWR: %d [%s]: %d\n", maxIndex, TimeLib.formatMonth(SwrLib.time(maxIndex)), maxSWR);
+    System.out.printf("Mean SWR: %d\n", sumSWR / (SwrLib.length() - iStartSim));
+    System.out.printf("Max SWR: %d @ [%s] (index: %d)\n", maxSWR, TimeLib.formatMonth(SwrLib.time(maxIndex)), maxIndex);
     System.out.printf("win=%d (%.2f%%), fail=%d / %d\n", nWin, 100.0 * nWin / (nWin + nFail), nFail, nWin + nFail);
 
     ChartConfig config = Chart.saveLineChart(new File(DataIO.getOutputPath(), "marwood-swr.html"), "Marwood-Minnen SWR",

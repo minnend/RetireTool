@@ -93,7 +93,7 @@ public class SwrLib
       List<MonthlyInfo> salaries)
   {
     assert iStart >= 0 && iStart < length();
-    assert withdrawalRate > 0.0 && withdrawalRate < 100.0;
+    assert withdrawalRate > 0.0 && withdrawalRate <= 100.0 : withdrawalRate;
 
     double balance = 1000.0; // starting balance is mostly arbitrary since all results are relative
     double annualWithdrawal = balance * withdrawalRate / 100.0;
