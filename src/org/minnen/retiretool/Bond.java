@@ -5,6 +5,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.util.FinLib;
 
 public class Bond
 {
@@ -13,6 +14,10 @@ public class Bond
   public final double    coupon;
   public final double    annualFreq;
   public final int       startIndex, endIndex;
+
+  public enum DivOrPow {
+    DivideBy12, TwelfthRoot
+  }
 
   public Bond(Sequence bondData, double par, double coupon, double annualFreq, int startIndex, int endIndex)
   {
@@ -120,7 +125,7 @@ public class Bond
     int n = (int) Math.ceil((double) (endIndex - index) / monthsBetweenPayments);
     double years = annualFreq <= 0.0 ? numMonthsToPayment / 12.0 : n / annualFreq;
 
-    // System.out.printf("| index=%d  interest=%.3f  nextPayment=%d  monthsBetween=%d  n=%d  years=%f\n", index,
+    // System.out.printf("| index=%d interest=%.3f nextPayment=%d monthsBetween=%d n=%d years=%f\n", index,
     // interestRate, nextPaymentIndex, monthsBetweenPayments, n, years);
 
     // Calculations for fractional interest.
@@ -131,7 +136,7 @@ public class Bond
     }
 
     double price = calcPrice(coupon, interestRate, par, years, annualFreq, fractionalInterest);
-    // System.out.printf("| monthsToPayment=%d  fractionalInterest=%f  price=%.2f\n", numMonthsToPayment,
+    // System.out.printf("| monthsToPayment=%d fractionalInterest=%f price=%.2f\n", numMonthsToPayment,
     // fractionalInterest, price);
     assert !Double.isNaN(price);
     return price;
@@ -168,7 +173,7 @@ public class Bond
           + couponPayment;
       double priceRatio = futurePrice / curPrice;
       accruedInterest = curPrice * (Math.pow(priceRatio, fractionalInterest) - 1.0);
-      // System.out.printf("Current Price: %.2f  Future Price: %.2f  ratio=%f\n", curPrice, futurePrice, priceRatio);
+      // System.out.printf("Current Price: %.2f Future Price: %.2f ratio=%f\n", curPrice, futurePrice, priceRatio);
     }
 
     // System.out.printf("[%.2f + %.2f + %.2f]\n", couponPrice, maturityPrice, accruedInterest);
@@ -213,7 +218,7 @@ public class Bond
 
       // Sell bond at end of the month (we use start of next month).
       cash += bond.price(i + 1);
-      // System.out.printf("  Sell %d: price=%f\n", i + 1, cash);
+      // System.out.printf(" Sell %d: price=%f\n", i + 1, cash);
 
       // Add sequence data point for new month.
       seq.addData(cash, bondData.getTimeMS(i + 1));
@@ -277,6 +282,54 @@ public class Bond
       }
       seq.addData(value, bondData.getTimeMS(i + 1));
     }
+    return seq._div(principal);
+  }
+
+  /**
+   * Calculates bond ROI for the given range assuming the interest is paid directly.
+   * 
+   * Each month, we assume we earn interestRate / 12 percent. Note that this approach is NOT correct.
+   * 
+   * @param factory buys a particular kind of bond
+   * @param bondData interest rates for bonds
+   * @param iStart start simulation at this index in the data sequence (negative => count back from end of sequence)
+   * @param iEnd end simulation at this index in the data sequence (negative => count back from end of sequence)
+   * @param divOrPow calculate monthly rate by dividing annual rate by 12 or taking twelfth root.
+   * @return sequence of ROIs
+   */
+  public static Sequence calcReturnsNaiveInterest(BondFactory factory, Sequence bondData, int iStart, int iEnd,
+      DivOrPow divOrPow)
+  {
+    if (iStart < 0) {
+      iStart += bondData.length();
+    }
+    if (iEnd < 0) {
+      iEnd += bondData.length();
+    }
+    if (iStart < 0 || iEnd < iStart || iEnd >= bondData.size()) {
+      throw new IllegalArgumentException(String.format("iStart=%d, iEnd=%d, size=%d", iStart, iEnd, bondData.size()));
+    }
+
+    final double principal = 10000.0;
+    double balance = principal;
+    String name = String.format("%s (Naive Interest - %s)", factory.name(),
+        divOrPow == DivOrPow.DivideBy12 ? "Div12" : "Pow12");
+    Sequence seq = new Sequence(name);
+    seq.addData(balance, bondData.getTimeMS(iStart));
+
+    for (int i = iStart; i < iEnd; ++i) {
+      double growth;
+      if (divOrPow == DivOrPow.DivideBy12) {
+        growth = bondData.get(i, 0) / 12.0;
+      } else {
+        double r = FinLib.ret2mul(bondData.get(i, 0));
+        r = Math.pow(r, 1.0 / 12.0); // r^(1/12) is more accurate to hit annual rate
+        growth = FinLib.mul2ret(r);
+      }
+      balance *= FinLib.ret2mul(growth);
+      seq.addData(balance, bondData.getTimeMS(i + 1));
+    }
+
     return seq._div(principal);
   }
 }

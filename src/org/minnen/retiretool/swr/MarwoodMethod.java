@@ -17,6 +17,7 @@ import org.minnen.retiretool.viz.PlotLine;
 
 public class MarwoodMethod
 {
+  // TODO Figure out gap between our calculation for Bengen's SWR and reported value.
   // TODO Allow re-retiring using Bengen SWR for shorter time period
   // TODO How visualize the effect of re-retiring?
   // TODO Generate histogram over Marwood-Minnen SWRs and visualize

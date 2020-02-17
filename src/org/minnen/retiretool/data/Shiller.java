@@ -22,8 +22,9 @@ import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.TimeLib;
 
 /**
- * Data provided by Robert Shiller: http://www.econ.yale.edu/~shiller/data.htm Unofficial info on interpreting the data:
- * https://www.bogleheads.org/forum/viewtopic.php?t=137706
+ * Data provided by Robert Shiller: http://www.econ.yale.edu/~shiller/data.htm
+ * 
+ * Unofficial info on interpreting the data: https://www.bogleheads.org/forum/viewtopic.php?t=137706
  * 
  * The APIs in the class work with a CSV file, which must be saved from the excel spreadsheet that Shiller provides.
  */

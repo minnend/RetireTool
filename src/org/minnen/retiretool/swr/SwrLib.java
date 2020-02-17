@@ -104,6 +104,17 @@ public class SwrLib
     return info;
   }
 
+  public static boolean isSafe(double withdrawalRate, int years, int percentStock)
+  {
+    final int lastIndex = SwrLib.lastIndex(years);
+    for (int i = 0; i <= lastIndex; ++i) {
+      MonthlyInfo info = SwrLib.runPeriod(i, withdrawalRate, years, percentStock, null);
+      if (info.failed()) return false;
+      assert info.balance > 0 && info.salary > 0;
+    }
+    return true;
+  }
+
   /** Verify that we're matching the "Real Total Return Price" from Shiller's spreadsheet. */
   private static Sequence calcSnpReturns(Sequence snp)
   {
