@@ -767,24 +767,6 @@ public class Sequence extends MetaStore implements Iterable<FeatureVec>
     return this;
   }
 
-  /**
-   * Returns a new dataset comprised of all time steps in this dataset but with different dimensions. The new dataset
-   * will have one dimension corresponding to each (zero-based) element in dims.
-   * 
-   * Thus, to select the first and third dimensions from a 3D dataset: Sequence data2D = data3D.selectDims(new
-   * int[]{0,2});
-   */
-  public Sequence extractDims(int... dims)
-  {
-    Sequence ret = new Sequence(getName());
-
-    // loop through remaining time steps
-    int n = length();
-    for (int i = 0; i < n; i++)
-      ret.addData(get(i).selectDims(dims));
-    return ret;
-  }
-
   @Override
   public Iterator<FeatureVec> iterator()
   {
@@ -828,6 +810,38 @@ public class Sequence extends MetaStore implements Iterable<FeatureVec>
   public double[] extractDim(int iDim)
   {
     return extractDim(iDim, 0, length());
+  }
+
+  /**
+   * Returns a new dataset comprised of all time steps in this dataset but with different dimensions. The new dataset
+   * will have one dimension corresponding to each (zero-based) element in dims.
+   * 
+   * Thus, to select the first and third dimensions from a 3D dataset: Sequence data2D = data3D.selectDims(new
+   * int[]{0,2});
+   */
+  public Sequence extractDimAsSeq(int dim)
+  {
+    Sequence ret = new Sequence(getName());
+    final int n = length();
+    for (int i = 0; i < n; i++)
+      ret.addData(get(i, dim), getTimeMS(i));
+    return ret;
+  }
+
+  /**
+   * Returns a new dataset comprised of all time steps in this dataset but with different dimensions. The new dataset
+   * will have one dimension corresponding to each (zero-based) element in dims.
+   * 
+   * Thus, to select the first and third dimensions from a 3D dataset: Sequence data2D = data3D.selectDims(new
+   * int[]{0,2});
+   */
+  public Sequence extractDims(int... dims)
+  {
+    Sequence ret = new Sequence(getName());
+    final int n = length();
+    for (int i = 0; i < n; i++)
+      ret.addData(get(i).selectDims(dims));
+    return ret;
   }
 
   /** @return closest index in data sequence for the given year and month (January == 1). */

@@ -43,7 +43,7 @@ public class MarwoodMethod
     int sumSWR = 0;
     int nWin = 0, nFail = 0; // win = better than Bengen SWR
     Sequence seqMarwoodSWR = new Sequence("Marwood SWR");
-    Sequence seqRealBalance = new Sequence("Final Balance (real)");
+    Sequence seqBalance = new Sequence("Final Balance");
     Sequence seqYearsBack = new Sequence("Virtual Retirement Years");
     Sequence seqBengenSalary = new Sequence("Bengen Salary");
     Sequence seqMarwoodSalary = new Sequence("Marwood Salary");
@@ -66,6 +66,7 @@ public class MarwoodMethod
         // Run simulation for virtual retirement period.
         List<MonthlyInfo> virtualSalaries = new ArrayList<MonthlyInfo>();
         final int simYears = (int) Math.floor(iLookback / 12.0) + 1; // run long enough to include current month
+        // TODO update API to run to a specific index.
         MonthlyInfo info = SwrLib.runPeriod(iVirtualStart, swr / 100.0, simYears, virtualPercentStock, virtualSalaries);
         assert info.ok();
 
@@ -96,22 +97,18 @@ public class MarwoodMethod
 
       final long now = SwrLib.time(iRetire);
       seqMarwoodSWR.addData(bestSWR / 100.0, now);
-      final double realBalance = info.balance * SwrLib.inflation(info.index, iRetire);
-      seqRealBalance.addData(realBalance, now);
+      seqBalance.addData(info.balance, now);
       seqYearsBack.addData((iRetire - bestIndex) / 12.0, now);
 
-      final double realNestEgg = nestEgg * SwrLib.inflation(iRetire, -2);
-      final double bengenSalary = realNestEgg * bengenSWR / 10000.0;
-      final double marwoodSalary = realNestEgg * bestSWR / 10000.0;
+      final double bengenSalary = nestEgg * bengenSWR / 10000.0;
+      final double marwoodSalary = nestEgg * bestSWR / 10000.0;
       seqMarwoodSalary.addData(marwoodSalary, now);
       seqBengenSalary.addData(bengenSalary, now);
 
-      // if (bestIndex != iRetire) { // only print info if we found something better than Bengen
       final double swrGain = FinLib.mul2ret((double) bestSWR / bengenSWR);
-      System.out.printf("%d <- %d  [%s] <- [%s] swr: %d +%.3f%% | $%.2f ($%.2f)\n", iRetire, bestIndex,
+      System.out.printf("%d <- %d  [%s] <- [%s] swr: %d +%.3f%% | $%.2f\n", iRetire, bestIndex,
           TimeLib.formatMonth(SwrLib.time(iRetire)), TimeLib.formatMonth(SwrLib.time(bestIndex)), bestSWR, swrGain,
-          realBalance, info.balance);
-      // }
+          info.balance);
 
       if (bestSWR > bengenSWR) {
         ++nWin;

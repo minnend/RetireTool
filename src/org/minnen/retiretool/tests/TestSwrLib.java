@@ -14,26 +14,6 @@ public class TestSwrLib extends TestCase
   }
 
   @Test
-  public void testInflationInverse()
-  {
-    double a = SwrLib.inflation(0, -1);
-    double b = SwrLib.inflation(-1, 0);
-    double x = a * b;
-    assertEquals(1.0, x, 1e-6);
-  }
-
-  @Test
-  public void testInflationCumulative()
-  {
-    double a = SwrLib.inflation(0, -1);
-    double x = 1.0;
-    for (int i = 0; i < SwrLib.length(); ++i) {
-      x *= SwrLib.inflation(i);
-    }
-    assertEquals(a, x, 1e-6);
-  }
-
-  @Test
   public void testGrowthInverse()
   {
     for (int percentStock = 0; percentStock <= 100; percentStock += 5) {

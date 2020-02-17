@@ -33,7 +33,8 @@ public class Shiller
   public static int                        DIV           = 1;
   public static int                        CPI           = 2;
   public static int                        GS10          = 3;
-  public static int                        CAPE          = 4;
+  public static int                        RTRP          = 4;
+  public static int                        CAPE          = 5;
 
   public static final String               dataUrlString = "http://www.econ.yale.edu/~shiller/data/ie_data.xls";
 
@@ -57,6 +58,20 @@ public class Shiller
    * @throws IOException if there is a problem reading the file.
    */
   public static Sequence loadAll(File file) throws IOException
+  {
+    return loadAll(file, false);
+  }
+
+  /**
+   * Load data from CSV export of Shiller's SNP/CPI excel spreadsheet.
+   * 
+   * @param file file to load
+   * @param allowMissingData if True, missing dividend data will be set to NaN, else the last data point will correspond
+   *          to the last month with complete data.
+   * @return Sequence holding Shiller data
+   * @throws IOException if there is a problem reading the file.
+   */
+  public static Sequence loadAll(File file, boolean allowMissingData) throws IOException
   {
     Sequence seq = cache.get(file);
     if (seq != null) return seq;
@@ -85,7 +100,8 @@ public class Shiller
 
           // snp dividend -- data is annual dollar value, we want monthly
           // note: dividend data is quarterly and linearly interpolated to get monthly data
-          double div = Double.parseDouble(toks[2]) / 12.0;
+          double div = Library.tryParse(toks[2], Double.NaN) / 12.0;
+          if (!allowMissingData && Double.isNaN((div))) break;
 
           // cpi
           double cpi = Double.parseDouble(toks[4]);
@@ -93,11 +109,14 @@ public class Shiller
           // GS10 rate
           double gs10 = Double.parseDouble(toks[6]);
 
+          // real total return price
+          double rtrp = Double.parseDouble(toks[9]);
+
           // CAPE
-          double cape = Library.tryParse(toks[10], 0.0);
+          double cape = Library.tryParse(toks[12], 0.0);
 
           long timeMS = TimeLib.toMs(year, month, 1);
-          seq.addData(new FeatureVec(5, price, div, cpi, gs10, cape), timeMS);
+          seq.addData(new FeatureVec(6, price, div, cpi, gs10, rtrp, cape), timeMS);
 
           // System.out.printf("%d/%d: $%.2f $%.2f $%.2f\n", year, month, price, div, cpi);
         } catch (NumberFormatException nfe) {
@@ -105,7 +124,6 @@ public class Shiller
           if (seq.isEmpty()) continue;
           else break;
         }
-
       }
 
       cache.put(file, seq);
@@ -154,7 +172,17 @@ public class Shiller
           int cellIndex = cell.getColumnIndex();
           switch (cell.getCellTypeEnum()) {
           case NUMERIC:
-            values[cellIndex] = String.format("%.2f", cell.getNumericCellValue());
+            String s = String.format("%.8f", cell.getNumericCellValue());
+            // Remove trailing zeros up to the hundredths digit.
+            final int iDot = s.lastIndexOf('.');
+            if (iDot > 0) {
+              int iLastNonZero = s.length() - 1;
+              while (s.charAt(iLastNonZero) == '0' && iLastNonZero > iDot + 2) {
+                --iLastNonZero;
+              }
+              s = s.substring(0, iLastNonZero + 1);
+            }
+            values[cellIndex] = s;
             ++n;
             break;
           case STRING:

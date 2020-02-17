@@ -11,22 +11,22 @@ import org.minnen.retiretool.BondFactory;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.Shiller;
-import org.minnen.retiretool.util.FinLib;
-import org.minnen.retiretool.util.FinLib.DividendMethod;
+import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
 import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
 import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 
 public class SwrLib
 {
-  /** Stock, bonds, 70/30 mixed values aling with CPI (inflation data) normalized so that the first value is 1.0. */
-  public static Sequence                stock, bonds, cpi, stockReal, bondsReal;
+  /** Stock, bonds, and CPI (inflation data). */
+  public static Sequence                stock, bonds;
+  private static Sequence               cpi;
 
   /** Each "Mul" sequence holds the multiplier representing growth for each month (1.01 = 1% growth). */
   private static Sequence               stockMul, bondsMul, cpiMul;
 
   /** Mixed stock/bond cumulative returns keyed by stock percent (70 = 70% stocks / 30% bonds). */
-  private static Map<Integer, Sequence> mixedMap, mixedMapReal;
+  private static Map<Integer, Sequence> mixedMap;
 
   /** @return timestamp (in ms) for the i'th data point. */
   public static long time(int i)
@@ -44,18 +44,6 @@ public class SwrLib
   public static int lastIndex(int years)
   {
     return length() - years * 12;
-  }
-
-  /** @return inflation over [from..to] as a multiplier (1.01 = 1%). */
-  public static double inflation(int from, int to)
-  {
-    return cpi.get(to, 0) / cpi.get(from, 0);
-  }
-
-  /** @return inflation multiplier for the i'th month (1.01 = 1%). */
-  public static double inflation(int i)
-  {
-    return cpiMul.get(i, 0);
   }
 
   /** @return total growth for a stock/bond portfolio over [fom..to]. */
@@ -112,11 +100,44 @@ public class SwrLib
 
       // Remaining balance grows during the rest of month.
       balance *= growth(i, percentStock);
-
-      // Adjust monthly salary for inflation.
-      monthlyWithdrawal *= cpiMul.get(i, 0);
     }
     return info;
+  }
+
+  /** Verify that we're matching the "Real Total Return Price" from Shiller's spreadsheet. */
+  private static Sequence calcSnpReturns(Sequence snp)
+  {
+    double finalCPI = snp.get(-1, Shiller.CPI);;
+    Sequence seq = new Sequence("Stock");
+    double shares = 1.0; // track number of shares to calculate total dividend payment
+    for (int i = 0; i < snp.size(); ++i) {
+      final double cpi = snp.get(i, Shiller.CPI);
+      final double inflation = finalCPI / cpi;
+      final double price = snp.get(i, Shiller.PRICE);
+      final double realPrice = price * inflation;
+      final double dividend = shares * snp.get(i, Shiller.DIV);
+      if (i > 0) { // why? Shiller does it
+        shares += dividend / price;
+      }
+      final double balance = shares * price * inflation;
+      System.out.printf("%d [%s] $%.2f -> $%.2f (cpi=%.2f) $%.2f %.3f shares\n", i,
+          TimeLib.formatMonth(snp.getTimeMS(i)), price, realPrice, cpi, balance, shares);
+      seq.addData(balance, snp.getTimeMS(i));
+    }
+    return seq;
+  }
+
+  public static Sequence adjustForInflation(Sequence seq, Sequence cpi)
+  {
+    assert seq.matches(cpi);
+    final double finalCPI = cpi.getLast(0);
+    Sequence seqAdjusted = new Sequence(seq.getName() + "(real)");
+    for (int i = 0; i < seq.size(); ++i) {
+      final double inflation = finalCPI / cpi.get(i, 0);
+      seqAdjusted.addData(seq.get(i).mul(inflation));
+    }
+    assert seqAdjusted.matches(seq);
+    return seqAdjusted;
   }
 
   /** Load data and initialize / calculate static data sequences. */
@@ -124,44 +145,41 @@ public class SwrLib
   {
     Shiller.downloadData();
 
-    Sequence shillerData = Shiller.loadAll(Shiller.getPathCSV());
-    Sequence bondData = shillerData.extractDims(new int[] { Shiller.GS10 }).setName("GS10");
+    Sequence shillerData = Shiller.loadAll(Shiller.getPathCSV(), true);
+    Sequence bondData = shillerData.extractDimAsSeq(Shiller.GS10).setName("GS10");
 
-    cpi = shillerData.extractDims(new int[] { Shiller.CPI }).setName("CPI");
-    cpi._div(cpi.getFirst(0));
-    stock = FinLib.calcSnpReturns(shillerData, 0, -1, DividendMethod.QUARTERLY).setName("Stock");
+    cpi = shillerData.extractDimAsSeq(Shiller.CPI).setName("CPI");
+    stock = shillerData.extractDimAsSeq(Shiller.RTRP).setName("Stock (real)");
     bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, -1).setName("Bonds");
+    bonds = adjustForInflation(bonds, cpi).setName("Bonds (real)");
 
-    stockReal = stock.div(cpi).setName("Stock (real)");
-    bondsReal = bonds.div(cpi).setName("Bonds (real)");
+    System.out.println(stock);
+    assert bonds.matches(stock);
+    assert cpi.matches(stock);
+
+    cpi._div(cpi.getFirst(0));
+    stock._div(stock.getFirst(0));
+    bonds._div(bonds.getFirst(0));
 
     stockMul = stock.derivativeMul();
     bondsMul = bonds.derivativeMul();
     cpiMul = cpi.derivativeMul();
-
-    System.out.println(stockMul);
     assert bondsMul.matches(stockMul);
     assert cpiMul.matches(stockMul);
 
     mixedMap = new HashMap<>();
-    mixedMapReal = new HashMap<>();
     for (int percentStock = 0; percentStock <= 100; percentStock += 5) {
       // Note that stock*alpha + bonds*(1-alpha) models an initial split *without* rebalancing. We want to include
       // rebalancing (monthly, for simplicity) so the cumulative returns must be calculated month-by-month.
-      Sequence nominal = new Sequence(String.format("Mixed (%d / %d)", percentStock, 100 - percentStock));
+      Sequence mixed = new Sequence(String.format("Mixed (%d / %d)", percentStock, 100 - percentStock));
       double x = 1.0;
       for (int i = 0;; ++i) {
-        nominal.addData(x, stock.getTimeMS(i));
+        mixed.addData(x, stock.getTimeMS(i));
         if (i >= length()) break; // can't compute growth because there's no more data
         x *= growth(i, percentStock);
       }
-      Sequence real = nominal.div(cpi)
-          .setName(String.format("Mixed (%d / %d, real)", percentStock, 100 - percentStock));
-      mixedMap.put(percentStock, nominal);
-      mixedMapReal.put(percentStock, real);
-
-      assert nominal.matches(stock);
-      assert real.matches(stock);
+      mixedMap.put(percentStock, mixed);
+      assert mixed.matches(stock);
     }
   }
 
@@ -169,8 +187,7 @@ public class SwrLib
   public static void saveGraph() throws IOException
   {
     Chart.saveLineChart(new File(DataIO.getOutputPath(), "shiller.html"), "Shiller Data", "100%", "800px",
-        ChartScaling.LOGARITHMIC, ChartTiming.MONTHLY, stock, stockReal, bonds, bondsReal, mixedMap.get(70),
-        mixedMapReal.get(70), cpi);
+        ChartScaling.LOGARITHMIC, ChartTiming.MONTHLY, stock, bonds, mixedMap.get(70), cpi);
   }
 
   public static void main(String[] args) throws IOException
