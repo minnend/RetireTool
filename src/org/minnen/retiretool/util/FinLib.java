@@ -27,7 +27,7 @@ public final class FinLib
   };
 
   public enum Inflation {
-    Ignore, Include
+    Real, Nominal
   };
 
   public static final int     MonthlyClose      = 0;
@@ -97,7 +97,7 @@ public final class FinLib
     if (iTo < 0) {
       iTo += cpi.length();
     }
-    if (inflationAccounting == Inflation.Include) {
+    if (inflationAccounting == Inflation.Real) {
       value *= cpi.get(iTo, 0) / cpi.get(iFrom, 0);
     }
     return value;
@@ -146,7 +146,7 @@ public final class FinLib
    */
   public static double adjustForInflation(Sequence cpi, double value, int iFrom, int iTo)
   {
-    return adjustValue(cpi, value, iFrom, iTo, Inflation.Include);
+    return adjustValue(cpi, value, iFrom, iTo, Inflation.Real);
   }
 
   /**

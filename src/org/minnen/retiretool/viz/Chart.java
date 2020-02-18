@@ -276,14 +276,23 @@ public class Chart
       writer.write("  },\n");
 
       writer.write("  series: [\n");
-      for (int i = seqs.length - 1; i >= 0; --i) {
+      for (int i = 0; i < seqs.length; ++i) {
         Sequence seq = seqs[i];
         writer.write("  { name: '" + seq.getName() + "',\n");
         writer.write("    data: [");
-        for (int t = 0; t < seqs[i].length(); ++t) {
-          double x = seqs[i].get(t, config.iDim);
-          // x = FinLib.mul2ret(x); // TODO
-          writer.write("%.6f%s", x, t == seqs[i].size() - 1 ? "" : ", ");
+        if (seq.length() == seqs[0].length() || config.labels != null) {
+          // Only write `y` values.
+          for (int t = 0; t < seq.length(); ++t) {
+            double y = seq.get(t, config.iDim);
+            writer.write("%.6f%s", y, t == seq.size() - 1 ? "" : ", ");
+          }
+        } else {
+          // Write `(x, y)` values.
+          for (int t = 0; t < seq.length(); ++t) {
+            int index = seqs[0].getClosestIndex(seq.getTimeMS(t));
+            double y = seq.get(t, config.iDim);
+            writer.write("[%d, %.6f]%s", index, y, t == seq.size() - 1 ? "" : ", ");
+          }
         }
         writer.write("],");
         int lineWidth = (Integer) seq.getMeta("lineWidth", 0);

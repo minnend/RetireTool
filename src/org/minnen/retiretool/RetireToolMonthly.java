@@ -801,7 +801,7 @@ public class RetireToolMonthly
 
     final int duration = 10 * 12;
 
-    store.recalcDurationalStats(duration, FinLib.Inflation.Ignore);
+    store.recalcDurationalStats(duration, FinLib.Inflation.Nominal);
     List<Sequence> all = store.getReturns(names);
 
     List<CumulativeStats> cstats = store.getCumulativeStats(names);
@@ -925,7 +925,7 @@ public class RetireToolMonthly
 
     final double diffMargin = 0.25;
     int duration = 10 * 12;
-    store.recalcDurationalStats(duration, FinLib.Inflation.Ignore);
+    store.recalcDurationalStats(duration, FinLib.Inflation.Nominal);
 
     String name1 = "sma[1,2,9].cautious/sma[1,3,10].moderate-50/50";
     // String name1 = "SMA[1,2,9].Moderate/SMA[1,3,10].Aggressive-60/40";
@@ -1110,7 +1110,7 @@ public class RetireToolMonthly
   public static void genSMASweepChart(File dir) throws IOException
   {
     final int duration = 10 * 12;
-    store.recalcDurationalStats(duration, FinLib.Inflation.Ignore);
+    store.recalcDurationalStats(duration, FinLib.Inflation.Nominal);
 
     // Build list of names of assets/strategies that we care about for scatter plot.
     List<String> nameList = new ArrayList<>();
@@ -1129,7 +1129,7 @@ public class RetireToolMonthly
     long startMS = TimeLib.getTime();
 
     // Filter candidates to find "dominating" strategies.
-    store.recalcDurationalStats(10 * 12, FinLib.Inflation.Ignore);
+    store.recalcDurationalStats(10 * 12, FinLib.Inflation.Nominal);
     // FinLib.filterStrategies(candidates, store);
     Collections.sort(candidates);
 
@@ -1155,7 +1155,7 @@ public class RetireToolMonthly
   {
     final int[] momentumMonths = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
     final int duration = 10 * 12;
-    store.recalcDurationalStats(duration, FinLib.Inflation.Ignore);
+    store.recalcDurationalStats(duration, FinLib.Inflation.Nominal);
 
     // Build list of names of assets/strategies that we care about for scatter plot.
     List<String> nameList = new ArrayList<>();
@@ -1176,7 +1176,7 @@ public class RetireToolMonthly
   public static void genNewHighSweepChart(File dir) throws IOException
   {
     final int duration = 10 * 12;
-    store.recalcDurationalStats(duration, FinLib.Inflation.Ignore);
+    store.recalcDurationalStats(duration, FinLib.Inflation.Nominal);
 
     // Build list of names of assets/strategies that we care about for scatter plot.
     List<String> nameList = new ArrayList<>();

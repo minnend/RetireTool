@@ -408,7 +408,7 @@ public class SequenceStoreV1 extends SequenceStore
   {
     lastStatsDuration = nMonths;
     for (int i = 0; i < nominalReturns.size(); ++i) {
-      Sequence returns = (inflation == FinLib.Inflation.Ignore ? nominalReturns.get(i) : realReturns.get(i));
+      Sequence returns = (inflation == FinLib.Inflation.Nominal ? nominalReturns.get(i) : realReturns.get(i));
       DurationalStats stats = DurationalStats.calcMonthly(returns, nMonths);
       if (i < durationalStats.size()) {
         durationalStats.set(i, stats);

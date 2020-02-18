@@ -12,10 +12,20 @@ import java.util.TreeMap;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.util.FinLib;
+import org.minnen.retiretool.util.FinLib.Inflation;
 import org.minnen.retiretool.util.TimeLib;
 
 public class SimbaIO
 {
+  public static final File latestFileNominal = new File(DataIO.getFinancePath(), "simba-2019b-nominal.csv");
+  public static final File latestFileReal    = new File(DataIO.getFinancePath(), "simba-2019b-real.csv");
+
+  public static Map<String, SimbaFund> loadSimbaData(Inflation inflation) throws IOException
+  {
+    File file = (inflation == Inflation.Real ? latestFileReal : latestFileNominal);
+    return loadSimbaData(file);
+  }
+
   public static Map<String, SimbaFund> loadSimbaData(File file) throws IOException
   {
     String[] symbols = null; // VTSMX, VIVAX, etc.
@@ -71,7 +81,7 @@ public class SimbaIO
               if (toks[i].isEmpty()) continue;
               double r = Double.parseDouble(toks[i]);
               double m = FinLib.ret2mul(r); // easier to work with multipliers (1.4 = 40% growth)
-              long ms = TimeLib.toMs(year, Month.DECEMBER, 31);
+              long ms = TimeLib.toMs(year, Month.JANUARY, 1);
               if (!returnSeqs[i - 1].isEmpty()) {
                 long prevMs = returnSeqs[i - 1].getEndMS();
                 LocalDate prevDate = TimeLib.ms2date(prevMs);
@@ -97,10 +107,12 @@ public class SimbaIO
 
   public static void main(String[] args) throws IOException
   {
-    Map<String, SimbaFund> data = loadSimbaData(new File(DataIO.getFinancePath(), "simba-2019b-real.csv"));
+    Map<String, SimbaFund> data = loadSimbaData(Inflation.Real);
     System.out.printf("Asset Classes: %d\n", data.size());
     for (SimbaFund fund : data.values()) {
-      if (fund.startYear <= 1871) System.out.println(fund);
+      if (fund.startYear <= 1871) {
+        System.out.printf("%16s  %5s  [%d -> %s]\n", fund.name, fund.symbol, fund.startYear, fund.endYear);
+      }
     }
   }
 }

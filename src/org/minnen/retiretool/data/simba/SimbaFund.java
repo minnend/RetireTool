@@ -23,6 +23,6 @@ public class SimbaFund
   @Override
   public String toString()
   {
-    return String.format("%16s  %5s  [%d -> %s]", name, symbol, startYear, endYear);
+    return String.format("%s %s [%d -> %s]", name, symbol, startYear, endYear);
   }
 }
