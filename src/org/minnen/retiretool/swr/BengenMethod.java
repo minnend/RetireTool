@@ -1,10 +1,18 @@
 package org.minnen.retiretool.swr;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import org.minnen.retiretool.data.DataIO;
+import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.util.IntPair;
+import org.minnen.retiretool.viz.Chart;
+import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
+import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 
 public class BengenMethod
 {
@@ -57,11 +65,24 @@ public class BengenMethod
    */
   public static int findSWR(int years, int percentStock)
   {
+    return findSWR(years, percentStock, 5);
+  }
+
+  /**
+   * Determine the Bengen SWR for a retirement of `years` with a `percentStock` held in stock.
+   * 
+   * @param years length of retirement, i.e. the account balance must be >= 0 for this many years
+   * @param percentStock the percent of stock (vs. bond) in the brokerage account
+   * @param quantum require the SWR to have a multiple of this number of basis points
+   * @return the largest Bengen SWR as an annualized percent (325 = 3.25%)
+   */
+  public static int findSWR(int years, int percentStock, int quantum)
+  {
     int lowSWR = 10; // 0.1% will always works
     int highSWR = 10000; // never go over 100%
-    while (highSWR - lowSWR > 5) {
-      final int swr = (lowSWR + highSWR) / 10 * 5;
-      assert swr >= lowSWR && swr <= highSWR && swr % 5 == 0 : swr;
+    while (highSWR - lowSWR > quantum) {
+      final int swr = (lowSWR + highSWR) / (2 * quantum) * quantum;
+      assert swr >= lowSWR && swr <= highSWR && swr % quantum == 0 : swr;
       if (SwrLib.isSafe(swr / 100.0, years, percentStock)) {
         lowSWR = swr;
       } else {
@@ -84,7 +105,7 @@ public class BengenMethod
 
     // Search over different stock/bond allocations assuming stock >= 50%.
     for (int percentStock = 0; percentStock <= 100; percentStock += 10) {
-      int swr = findSWR(years, percentStock);
+      int swr = findSWR(years, percentStock, 5);
       if (swr > bestSWR) { // TODO best way to handle ties?
         bestSWR = swr;
         bestPercentStock = percentStock;
@@ -95,15 +116,17 @@ public class BengenMethod
   }
 
   /** Print information about the best Bengen SWR for different retirement durations. */
-  public static void printSWRs(int minYears, int maxYears)
+  public static String printSWRs(int minYears, int maxYears)
   {
+    List<String> results = new ArrayList<>();
     for (int years = minYears; years <= maxYears; years++) {
       IntPair x = findSWR(years);
       final int swr = x.first;
       final int percentStock = x.second;
-      // System.out.printf("%d: %d (%d%% stock)\n", years, swr, percentStock);
-      System.out.printf("%d,%d,%d\n", years, swr, percentStock);
+      System.out.printf("%d: %d (%d%% stock)\n", years, swr, percentStock);
+      results.add(String.format("%d,%d,%d", years, swr, percentStock));
     }
+    return String.join("|", results);
   }
 
   private static void verifyPrecomputedSWRs()
@@ -116,10 +139,35 @@ public class BengenMethod
     }
   }
 
+  public static Sequence findSwrForEachYear(int years, int percentStock)
+  {
+    Sequence seq = new Sequence(String.format("%d year SWR (%d/%d)", years, percentStock, 100 - percentStock));
+    final int lastIndex = SwrLib.lastIndex(years);
+    for (int i = 0; i <= lastIndex; ++i) {
+      int swr = SwrLib.findSwrForYear(i, years, percentStock, 1);
+      seq.addData(swr / 100.0, SwrLib.time(i));
+    }
+    return seq;
+  }
+
+  public static void saveMaxSwr(int percentStock) throws IOException
+  {
+    List<Sequence> seqs = new ArrayList<>();
+    for (int years = 20; years <= 50; years += 10) {
+      seqs.add(findSwrForEachYear(years, percentStock));
+    }
+
+    Chart.saveLineChart(new File(DataIO.getOutputPath(), "max-swr.html"), "Max SWR", "100%", "800px",
+        ChartScaling.LINEAR, ChartTiming.MONTHLY, seqs);
+  }
+
   public static void main(String[] args) throws IOException
   {
     SwrLib.setup();
-    // printSWRs(1, 40);
-    verifyPrecomputedSWRs();
+    // String s = printSWRs(30, 40);
+    // System.out.println(s);
+
+    // verifyPrecomputedSWRs();
+    saveMaxSwr(70);
   }
 }

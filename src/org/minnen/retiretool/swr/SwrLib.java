@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.minnen.retiretool.Bond;
+import org.minnen.retiretool.Bond.DivOrPow;
 import org.minnen.retiretool.BondFactory;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
@@ -104,6 +105,32 @@ public class SwrLib
     return info;
   }
 
+  /**
+   * Find the SWR for a given retirement date.
+   * 
+   * @param index index of retirement date
+   * @param years number of years of retirement
+   * @param percentStock percent stock (vs bonds) in asset allocation (70 = 70%)
+   * @param quantum withdrawalRate % quantum == 0
+   * @return safe withdrawal rate for the given retirement index and parameters
+   */
+  public static int findSwrForYear(int index, int years, int percentStock, int quantum)
+  {
+    int lowSWR = 0;
+    int highSWR = 10001;
+    while (highSWR - lowSWR > quantum) {
+      final int swr = (lowSWR + highSWR) / (2 * quantum) * quantum;
+      assert swr >= lowSWR && swr <= highSWR && swr % quantum == 0 : swr;
+      MonthlyInfo info = SwrLib.runPeriod(index, swr / 100.0, years, percentStock, null);
+      if (info.ok()) {
+        lowSWR = swr;
+      } else {
+        highSWR = swr;
+      }
+    }
+    return lowSWR;
+  }
+
   public static boolean isSafe(double withdrawalRate, int years, int percentStock)
   {
     final int lastIndex = SwrLib.lastIndex(years);
@@ -161,7 +188,9 @@ public class SwrLib
 
     cpi = shillerData.extractDimAsSeq(Shiller.CPI).setName("CPI");
     stock = shillerData.extractDimAsSeq(Shiller.RTRP).setName("Stock (real)");
-    bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, -1).setName("Bonds");
+    bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, -1);
+    // bonds = Bond.calcReturnsNaiveInterest(BondFactory.note10Year, bondData, 0, -1, DivOrPow.DivideBy12);
+    bonds.setName("Bonds");
     bonds = adjustForInflation(bonds, cpi).setName("Bonds (real)");
 
     System.out.println(stock);

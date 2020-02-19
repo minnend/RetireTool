@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.minnen.retiretool.data.DataIO;
+import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
@@ -17,11 +18,9 @@ import org.minnen.retiretool.viz.PlotLine;
 
 public class MarwoodMethod
 {
-  // TODO Figure out gap between our calculation for Bengen's SWR and reported value.
   // TODO Allow re-retiring using Bengen SWR for shorter time period
   // TODO How visualize the effect of re-retiring?
   // TODO Generate histogram over Marwood-Minnen SWRs and visualize
-  // TODO Graph max SWR for each year (if we had a crystal ball).
   // TODO Walk-forward optimization for Bengen SWR -- how well does it generalize?
 
   /**
@@ -126,8 +125,12 @@ public class MarwoodMethod
     System.out.printf("Max SWR: %d @ [%s] (index: %d)\n", maxSWR, TimeLib.formatMonth(SwrLib.time(maxIndex)), maxIndex);
     System.out.printf("win=%d (%.2f%%), fail=%d / %d\n", nWin, 100.0 * nWin / (nWin + nFail), nFail, nWin + nFail);
 
+    Sequence seqMaxSWR = BengenMethod.findSwrForEachYear(years, 70);
+    int index = seqMaxSWR.getIndexAtOrAfter(seqMarwoodSWR.getStartMS());
+    seqMaxSWR = seqMaxSWR.subseq(index);
+
     ChartConfig config = Chart.saveLineChart(new File(DataIO.getOutputPath(), "marwood-swr.html"), "Marwood-Minnen SWR",
-        "100%", "800px", ChartScaling.LINEAR, ChartTiming.MONTHLY, seqMarwoodSWR, seqYearsBack);
+        "100%", "800px", ChartScaling.LINEAR, ChartTiming.MONTHLY, seqMarwoodSWR, seqYearsBack, seqMaxSWR);
     config.addPlotLineY(new PlotLine(bengenSWR / 100.0, 2.0, "#777", "dash"));
     Chart.saveChart(config);
 
@@ -139,6 +142,12 @@ public class MarwoodMethod
   public static void main(String[] args) throws IOException
   {
     SwrLib.setup();
+
+    // Sequence seqMaxSWR = BengenMethod.findSwrForEachYear(30, 70);
+    // for (FeatureVec v : seqMaxSWR) {
+    // System.out.printf("[%s] %f\n", TimeLib.formatDate(v.getTime()), v.get(0));
+    // }
+
     findMarwoodSWR(30, 10); // TODO support more than the [30..40] range
   }
 }
