@@ -172,9 +172,10 @@ public class FeatureVec extends MetaStore
   }
 
   /** set the value of the d^{th} dimension to v */
-  public void set(int d, double v)
+  public FeatureVec set(int d, double v)
   {
     vec[d] = v;
+    return this;
   }
 
   /** Copy features from FV starting at dimension d. */
@@ -193,9 +194,10 @@ public class FeatureVec extends MetaStore
   }
 
   /** set the value of all dimensions to x */
-  public void fill(double x)
+  public FeatureVec fill(double x)
   {
     Arrays.fill(vec, x);
+    return this;
   }
 
   /**
@@ -279,7 +281,7 @@ public class FeatureVec extends MetaStore
    */
   public static FeatureVec zeros(int n)
   {
-    return new FeatureVec(n, 0);
+    return new FeatureVec(n).fill(0.0);
   }
 
   /** set all dimensions to zero */
@@ -297,7 +299,7 @@ public class FeatureVec extends MetaStore
    */
   public static FeatureVec ones(int n)
   {
-    return new FeatureVec(n, 1);
+    return new FeatureVec(n).fill(1.0);
   }
 
   /**

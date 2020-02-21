@@ -603,6 +603,19 @@ public class Sequence extends MetaStore implements Iterable<FeatureVec>
   }
 
   /**
+   * Multiply each element of each frame by the given vector.
+   * 
+   * @param v vector to multiply with (dimensions must match)
+   * @return this data set
+   */
+  public Sequence _mul(FeatureVec v)
+  {
+    for (FeatureVec fv : data)
+      fv._mul(v);
+    return this;
+  }
+
+  /**
    * Divide each element of each frame by the given value.
    * 
    * @param x value to divide by

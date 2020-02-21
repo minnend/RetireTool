@@ -35,6 +35,12 @@ public class SwrLib
     return stockMul.getTimeMS(i);
   }
 
+  /** @return closest index for the given time */
+  public static int indexForTime(long ms)
+  {
+    return stockMul.getClosestIndex(ms);
+  }
+
   /** @return number of elements in the underlying data. */
   public static int length()
   {
@@ -131,12 +137,16 @@ public class SwrLib
     return lowSWR;
   }
 
+  /** @return true if the withdrawal rate works for all retirement starting times. */
   public static boolean isSafe(double withdrawalRate, int years, int percentStock)
   {
     final int lastIndex = SwrLib.lastIndex(years);
     for (int i = 0; i <= lastIndex; ++i) {
       MonthlyInfo info = SwrLib.runPeriod(i, withdrawalRate, years, percentStock, null);
-      if (info.failed()) return false;
+      if (info.failed()) {
+        SwrLib.runPeriod(i, withdrawalRate, years, percentStock, null);
+        return false;
+      }
       assert info.balance > 0 && info.salary > 0;
     }
     return true;
@@ -145,7 +155,7 @@ public class SwrLib
   /** Verify that we're matching the "Real Total Return Price" from Shiller's spreadsheet. */
   private static Sequence calcSnpReturns(Sequence snp)
   {
-    double finalCPI = snp.get(-1, Shiller.CPI);;
+    double finalCPI = snp.get(-1, Shiller.CPI);
     Sequence seq = new Sequence("Stock");
     double shares = 1.0; // track number of shares to calculate total dividend payment
     for (int i = 0; i < snp.size(); ++i) {

@@ -289,7 +289,10 @@ public class Chart
         } else {
           // Write `(x, y)` values.
           for (int t = 0; t < seq.length(); ++t) {
-            int index = seqs[0].getClosestIndex(seq.getTimeMS(t));
+            int index = t;
+            if (config.timing != ChartTiming.INDEX) {
+              index = seqs[0].getClosestIndex(seq.getTimeMS(t));
+            }
             double y = seq.get(t, config.iDim);
             writer.write("[%d, %.6f]%s", index, y, t == seq.size() - 1 ? "" : ", ");
           }

@@ -112,7 +112,8 @@ public class ChartConfig
   {
     ChartConfig config = new ChartConfig(file).setType(chartType).setTitle(title).setLabels(labels).setColors(colors)
         .setSize(width, height).setMinMaxY(ymin, ymax).setMinorTickIntervalY(minorTickIntervalY)
-        .setLogarthimicYAxis(scaling == ChartScaling.LOGARITHMIC).setTiming(timing).setIndexY(dim).setData(seqs);
+        .setLogarthimicYAxis(scaling == ChartScaling.LOGARITHMIC).setTiming(timing).setDimension(dim).setIndexY(dim)
+        .setData(seqs);
     return config;
   }
 

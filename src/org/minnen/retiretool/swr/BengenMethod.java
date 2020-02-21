@@ -17,20 +17,29 @@ import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 public class BengenMethod
 {
   /** Pre-computed annual Bengen SWR for different retirement durations (325 = 3.25%). */
-  private final static Map<Integer, Integer> yearsToSWR            = new HashMap<>();
+  private final static Map<Integer, Integer> yearsToSWR                     = new HashMap<>();
 
   /** Pre-computed best stock percent for different retirement durations (70 = 70%). */
-  private final static Map<Integer, Integer> yearsToPercentStock   = new HashMap<>();
+  private final static Map<Integer, Integer> yearsToPercentStock            = new HashMap<>();
 
-  private final static String                precomputedBengenData = "1,8855,10|2,4230,10|3,2685,0|4,1870,0|5,1455,0|"
+  private final static String                precomputedBengenOptAllocation = "1,8855,10|2,4230,10|3,2685,0|4,1870,0|5,1455,0|"
       + "6,1210,0|7,1050,0|8,935,0|9,850,20|10,775,10|11,715,10|12,655,10|13,615,10|14,585,20|15,560,20|"
       + "16,530,30|17,500,30|18,480,40|19,465,50|20,450,60|21,440,70|22,430,70|23,420,70|24,410,70|25,400,70|"
       + "26,395,70|27,390,70|28,385,70|29,375,60|30,375,70|31,370,70|32,365,70|33,365,70|34,360,70|35,360,70|"
-      + "36,355,70|37,355,70|38,350,70|39,350,70|40,350,70";
+      + "36,355,70|37,355,70|38,350,70|39,350,70|40,350,70|41,345,70|42,345,70|43,340,70|44,340,70|45,340,70|"
+      + "46,335,70|47,335,70|48,335,70|49,330,70|50,330,70";
+
+  private final static String                precomputedBengenStock70       = "1,7400,70|2,3645,70|3,2265,70|4,1685,70|5,1375,70|"
+      + "6,1180,70|7,1035,70|8,925,70|9,820,70|10,730,70|11,680,70|12,630,70|13,595,70|14,570,70|15,545,70|"
+      + "16,515,70|17,495,70|18,475,70|19,465,70|20,450,70|21,440,70|22,430,70|23,420,70|24,410,70|25,400,70|"
+      + "26,395,70|27,390,70|28,385,70|29,375,70|30,375,70|31,370,70|32,365,70|33,365,70|34,360,70|35,360,70|"
+      + "36,355,70|37,355,70|38,350,70|39,350,70|40,350,70|41,345,70|42,345,70|43,340,70|44,340,70|45,340,70|"
+      + "46,335,70|47,335,70|48,335,70|49,330,70|50,330,70";
 
   static {
     // Parse bengen data and populate SWR and percent stock maps.
-    String[] entries = precomputedBengenData.split("\\|");
+    // String[] entries = precomputedBengenOptAllocation.split("\\|");
+    String[] entries = precomputedBengenStock70.split("\\|");
     for (String entry : entries) {
       String[] fields = entry.trim().split(",");
       assert fields.length == 3 : entry;
@@ -41,7 +50,7 @@ public class BengenMethod
       yearsToPercentStock.put(years, percentStock);
     }
     assert yearsToSWR.size() == yearsToPercentStock.size();
-    assert yearsToSWR.size() == 40;
+    assert yearsToSWR.size() == 50;
   }
 
   /** @return highest Bengen SWR as an annual percentage for a retirement of `years` years (325 = 3.25%). */
@@ -78,6 +87,8 @@ public class BengenMethod
    */
   public static int findSWR(int years, int percentStock, int quantum)
   {
+    assert years > 0 && percentStock >= 0 && percentStock <= 100 && quantum >= 1;
+
     int lowSWR = 10; // 0.1% will always works
     int highSWR = 10000; // never go over 100%
     while (highSWR - lowSWR > quantum) {
@@ -98,13 +109,15 @@ public class BengenMethod
    * @param years length of retirement
    * @return the best SWR and the corresponding stock percent
    */
-  public static IntPair findSWR(int years)
+  public static IntPair findSWR(int years, int minPercentStock, int maxPercentStock, int step)
   {
+    assert years > 0 && maxPercentStock >= minPercentStock && step > 0;
+
     int bestSWR = 0;
     int bestPercentStock = 0;
 
     // Search over different stock/bond allocations assuming stock >= 50%.
-    for (int percentStock = 0; percentStock <= 100; percentStock += 10) {
+    for (int percentStock = minPercentStock; percentStock <= maxPercentStock; percentStock += step) {
       int swr = findSWR(years, percentStock, 5);
       if (swr > bestSWR) { // TODO best way to handle ties?
         bestSWR = swr;
@@ -116,26 +129,31 @@ public class BengenMethod
   }
 
   /** Print information about the best Bengen SWR for different retirement durations. */
-  public static String printSWRs(int minYears, int maxYears)
+  public static String printSWRs(int minYears, int maxYears, int minPercentStock, int maxPercentStock, int step)
   {
+    assert maxYears >= minYears && maxPercentStock >= minPercentStock && step > 0;
+
     List<String> results = new ArrayList<>();
     for (int years = minYears; years <= maxYears; years++) {
-      IntPair x = findSWR(years);
+      IntPair x = findSWR(years, minPercentStock, maxPercentStock, step);
       final int swr = x.first;
       final int percentStock = x.second;
       System.out.printf("%d: %d (%d%% stock)\n", years, swr, percentStock);
       results.add(String.format("%d,%d,%d", years, swr, percentStock));
     }
-    return String.join("|", results);
+    String s = String.join("|", results);
+    System.out.println(s);
+    return s;
   }
 
   private static void verifyPrecomputedSWRs()
   {
-    for (int years = 1; years <= 40; ++years) {
+    for (int years = 1; years <= 50; ++years) {
       final int swr = lookUpSWR(years);
       final int percentStock = lookUpPercentStock(years);
       assert SwrLib.isSafe(swr / 100.0, years, percentStock); // safe value should be safe
       assert !SwrLib.isSafe((swr + 5) / 100.0, years, percentStock); // 5 bps above safe value should NOT be safe
+      System.out.printf("%-2d: %3d, %2d%% stock | OK\n", years, swr, percentStock);
     }
   }
 
@@ -164,10 +182,10 @@ public class BengenMethod
   public static void main(String[] args) throws IOException
   {
     SwrLib.setup();
-    // String s = printSWRs(30, 40);
-    // System.out.println(s);
 
-    // verifyPrecomputedSWRs();
-    saveMaxSwr(70);
+    // printSWRs(1, 50, 70, 70, 10);
+
+    verifyPrecomputedSWRs();
+    // saveMaxSwr(70);
   }
 }
