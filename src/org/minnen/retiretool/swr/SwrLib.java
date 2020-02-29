@@ -12,6 +12,8 @@ import org.minnen.retiretool.BondFactory;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.Shiller;
+import org.minnen.retiretool.swr.data.BengenInfo;
+import org.minnen.retiretool.swr.data.MonthlyInfo;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
 import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
@@ -72,6 +74,17 @@ public class SwrLib
     final double alpha = percentStock / 100.0;
     final double beta = 1.0 - alpha;
     return stockMul.get(i, 0) * alpha + bondsMul.get(i, 0) * beta;
+  }
+
+  public static MonthlyInfo runPeriod(BengenInfo bengen)
+  {
+    return runPeriod(bengen, null);
+  }
+
+  public static MonthlyInfo runPeriod(BengenInfo bengen, List<MonthlyInfo> salaries)
+  {
+    final int index = indexForTime(bengen.time);
+    return runPeriod(index, bengen.swr / 100.0, bengen.retirementYears, bengen.percentStock, salaries);
   }
 
   /**

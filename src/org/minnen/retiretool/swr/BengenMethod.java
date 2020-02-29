@@ -157,12 +157,13 @@ public class BengenMethod
     }
   }
 
-  public static Sequence findSwrForEachYear(int years, int percentStock)
+  /** @return Sequence holding the SWR for each starting month. */
+  public static Sequence findSwrSequence(int nRetireYears, int percentStock)
   {
-    Sequence seq = new Sequence(String.format("%d year SWR (%d/%d)", years, percentStock, 100 - percentStock));
-    final int lastIndex = SwrLib.lastIndex(years);
+    Sequence seq = new Sequence(String.format("%d year SWR (%d/%d)", nRetireYears, percentStock, 100 - percentStock));
+    final int lastIndex = SwrLib.lastIndex(nRetireYears);
     for (int i = 0; i <= lastIndex; ++i) {
-      int swr = SwrLib.findSwrForYear(i, years, percentStock, 1);
+      int swr = SwrLib.findSwrForYear(i, nRetireYears, percentStock, 1);
       seq.addData(swr / 100.0, SwrLib.time(i));
     }
     return seq;
@@ -172,7 +173,7 @@ public class BengenMethod
   {
     List<Sequence> seqs = new ArrayList<>();
     for (int years = 20; years <= 50; years += 10) {
-      seqs.add(findSwrForEachYear(years, percentStock));
+      seqs.add(findSwrSequence(years, percentStock));
     }
 
     Chart.saveLineChart(new File(DataIO.getOutputPath(), "max-swr.html"), "Max SWR", "100%", "800px",

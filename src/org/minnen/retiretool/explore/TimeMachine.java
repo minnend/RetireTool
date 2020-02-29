@@ -14,6 +14,8 @@ import org.minnen.retiretool.util.TimeLib;
  */
 public class TimeMachine
 {
+  private final static int iPriceDim = FinLib.AdjClose;
+
   private static void fromToday(Sequence data)
   {
     fromIndex(-1, data);
@@ -28,15 +30,16 @@ public class TimeMachine
   private static void fromIndex(int index, Sequence data)
   {
     if (index < 0) index += data.length();
-    double price = data.get(index, FinLib.AdjClose);
+    double price = data.get(index, iPriceDim);
     int bestIndex = forPrice(price, data);
-    double bestPrice = data.get(bestIndex, FinLib.AdjClose);
+    double bestPrice = data.get(bestIndex, iPriceDim);
 
     System.out.printf("[%s] @ $%.2f\n", TimeLib.formatDate(data.getTimeMS(index)), price);
-    
+
     long duration = data.getTimeMS(index) - data.getTimeMS(bestIndex);
-    if (duration > 0) { 
-      System.out.printf("[%s] @ $%.2f\n", TimeLib.formatDate(data.getTimeMS(bestIndex)), bestPrice);
+    if (duration > 0) {
+      System.out.printf("[%s] @ $%.2f  ($%.2f)\n", TimeLib.formatDate(data.getTimeMS(bestIndex)), bestPrice,
+          data.get(bestIndex + 1, iPriceDim));
       System.out.printf("%s\n", TimeLib.formatDuration(duration));
     } else {
       System.out.println("All time high!");
@@ -45,14 +48,14 @@ public class TimeMachine
 
   private static int forPrice(double priceToday, Sequence data)
   {
-    Sequence priceSeq = data.extractDims(FinLib.AdjClose);
+    Sequence priceSeq = data.extractDims(iPriceDim);
     double[] prices = priceSeq.extractDim(0);
     double margin = Math.max(0.01, priceToday * 0.002); // within 0.2%
     int bestIndex = 0;
     for (int i = 1; i < prices.length; ++i) {
       // System.out.printf("%d [%s] %.2f\n", i, TimeLib.formatDate(priceSeq.getTimeMS(i)), prices[i]);
       if (prices[i] - priceToday > -margin) {
-        bestIndex = i;
+        bestIndex = i - 1;
         break;
       }
     }
@@ -68,12 +71,12 @@ public class TimeMachine
     fromToday(data);
 
     for (int percentDown : new int[] { 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90 }) {
-      double price = data.getLast(FinLib.AdjClose) * (1.0 - percentDown / 100.0);
+      double price = data.getLast(iPriceDim) * (1.0 - percentDown / 100.0);
       int x = forPrice(price, data);
       long ms = data.getTimeMS(x);
       String[] split = TimeLib.formatDuration(data.getEndMS() - ms).split(" ");
-      System.out.printf("%2d%%: $%6.2f   %4s %-6s [%s]\n", percentDown, price,
-          split[0], split[1], TimeLib.formatDate2(ms));
+      System.out.printf("%2d%%: $%6.2f %4s %-6s [%s]\n", percentDown, price, split[0], split[1],
+          TimeLib.formatDate2(ms));
     }
   }
 }

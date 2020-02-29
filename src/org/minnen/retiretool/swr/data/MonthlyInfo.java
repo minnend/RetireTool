@@ -1,4 +1,4 @@
-package org.minnen.retiretool.swr;
+package org.minnen.retiretool.swr.data;
 
 import org.minnen.retiretool.util.TimeLib;
 

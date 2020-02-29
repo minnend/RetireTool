@@ -10,6 +10,8 @@ import java.util.List;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.swr.data.MonthlyInfo;
+import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.Histogram;
 import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.TimeLib;
@@ -27,28 +29,28 @@ public class MarwoodMethod
   /**
    * Run a Marwood-Minnen SWR simulation and print results.
    * 
-   * @param years duration of retirement
-   * @param lookbackYears number of previous years to check for a better "virtual retirement" time
+   * @param nRetireYears duration of retirement
+   * @param nLookbackYears number of previous years to check for a better "virtual retirement" time
    * @return Sequence holding Marwood-Minnen SWR for each retirement date
    */
-  public static Sequence findMarwoodSWR(int years, int lookbackYears) throws IOException
+  public static Sequence findMarwoodSWR(int nRetireYears, int nLookbackYears) throws IOException
   {
-    final int bengenSWR = BengenMethod.lookUpSWR(years);
-    final int lookbackMonths = lookbackYears * 12;
-    final int iLastWithFullRetirement = SwrLib.lastIndex(years);
+    final int bengenSWR = BengenMethod.lookUpSWR(nRetireYears);
+    final int lookbackMonths = nLookbackYears * 12;
+    final int iLastWithFullRetirement = SwrLib.lastIndex(nRetireYears);
     final int iFirstWithHistory = lookbackMonths;
     final int iStartSim = iFirstWithHistory;
-    final int percentStock = BengenMethod.lookUpPercentStock(years);
+    final int percentStock = BengenMethod.lookUpPercentStock(nRetireYears);
 
     int maxSWR = 0; // what was the best SWR of all time?
     int maxIndex = -1; // index when best SWR was found
     int sumSWR = 0;
     int nWin = 0, nFail = 0; // win = better than Bengen SWR
-    Sequence seqMarwoodSWR = new Sequence(String.format("DMSWR (%d, %d)", years, lookbackYears));
+    Sequence seqMarwoodSWR = new Sequence(String.format("DMSWR (%d, %d)", nRetireYears, nLookbackYears));
     Sequence seqBalance = new Sequence("Final Balance");
     Sequence seqYearsBack = new Sequence("Virtual Retirement Years");
     Sequence seqBengenSalary = new Sequence("Bengen Salary");
-    Sequence seqMarwoodSalary = new Sequence(String.format("Marwood Salary (%d, %d)", years, lookbackYears));
+    Sequence seqMarwoodSalary = new Sequence(String.format("Marwood Salary (%d, %d)", nRetireYears, nLookbackYears));
 
     // Set initial nest egg so that final nest egg is $1M. Last data point is `-2` since we need one more month of data
     // to simulate a one month retirement.
@@ -61,7 +63,7 @@ public class MarwoodMethod
       for (int iLookback = 0; iLookback <= lookbackMonths; ++iLookback) {
         final int iVirtualStart = iRetire - iLookback; // index of start of virtual retirement
 
-        final int virtualYears = years + (int) Math.ceil(iLookback / 12.0);
+        final int virtualYears = nRetireYears + (int) Math.ceil(iLookback / 12.0);
         final int virtualPercentStock = BengenMethod.lookUpPercentStock(virtualYears);
         final int swr = BengenMethod.lookUpSWR(virtualYears);
 
@@ -75,16 +77,13 @@ public class MarwoodMethod
         MonthlyInfo virtualNow = virtualSalaries.get(iLookback);
         assert virtualNow.index == iRetire;
 
-        final int impliedSWR = (int) Math.floor(virtualNow.percent() * 100);
+        final double floatSWR = virtualNow.percent() * 100;
+        final int impliedSWR = (int) Math.floor(floatSWR);
         assert iLookback > 0 || impliedSWR == bengenSWR; // iLookback == 0 must match Bengen
         if (impliedSWR > bestSWR) {
           bestSWR = impliedSWR;
           bestIndex = iVirtualStart;
         }
-
-        // System.out.printf(" %d [%s] vy=%d [%d] r: %7.4f [%d, %d] balance: $%.2f\n", iVirtualStart,
-        // TimeLib.formatMonth(SwrLib.time(iVirtualStart)), virtualYears, swr, FinLib.mul2ret(r), impliedSWR, bestSWR,
-        // currentBalance);
       }
 
       if (bestSWR > maxSWR) {
@@ -93,9 +92,9 @@ public class MarwoodMethod
       }
       sumSWR += bestSWR;
 
-      MonthlyInfo info = SwrLib.runPeriod(iRetire, bestSWR / 100.0, years, percentStock, null);
+      MonthlyInfo info = SwrLib.runPeriod(iRetire, bestSWR / 100.0, nRetireYears, percentStock, null);
       assert info.ok(); // safe by construction, but still verify
-      assert iRetire > iLastWithFullRetirement || info.retirementMonth == years * 12;
+      assert iRetire > iLastWithFullRetirement || info.retirementMonth == nRetireYears * 12;
 
       final long now = SwrLib.time(iRetire);
       seqMarwoodSWR.addData(bestSWR / 100.0, now);
@@ -107,10 +106,10 @@ public class MarwoodMethod
       seqMarwoodSalary.addData(marwoodSalary, now);
       seqBengenSalary.addData(bengenSalary, now);
 
-      // final double swrGain = FinLib.mul2ret((double) bestSWR / bengenSWR);
-      // System.out.printf("%d <- %d [%s] <- [%s] swr: %d +%.3f%% | $%.2f\n", iRetire, bestIndex,
-      // TimeLib.formatMonth(SwrLib.time(iRetire)), TimeLib.formatMonth(SwrLib.time(bestIndex)), bestSWR, swrGain,
-      // info.balance);
+      final double swrGain = FinLib.mul2ret((double) bestSWR / bengenSWR);
+      System.out.printf("%d <- %d [%s] <- [%s] swr: %d +%.3f%% | $%.2f\n", iRetire, bestIndex,
+          TimeLib.formatMonth(SwrLib.time(iRetire)), TimeLib.formatMonth(SwrLib.time(bestIndex)), bestSWR, swrGain,
+          info.balance);
 
       if (bestSWR > bengenSWR) {
         ++nWin;
@@ -126,7 +125,7 @@ public class MarwoodMethod
     System.out.printf("Max SWR: %d @ [%s] (index: %d)\n", maxSWR, TimeLib.formatMonth(SwrLib.time(maxIndex)), maxIndex);
     System.out.printf("win=%d (%.2f%%), fail=%d / %d\n", nWin, 100.0 * nWin / (nWin + nFail), nFail, nWin + nFail);
 
-    Sequence seqMaxSWR = BengenMethod.findSwrForEachYear(years, 70);
+    Sequence seqMaxSWR = BengenMethod.findSwrSequence(nRetireYears, 70);
     int index = seqMaxSWR.getIndexAtOrAfter(seqMarwoodSWR.getStartMS());
     seqMaxSWR = seqMaxSWR.subseq(index);
 
@@ -136,7 +135,7 @@ public class MarwoodMethod
     Chart.saveChart(config);
 
     Chart.saveLineChart(
-        new File(DataIO.getOutputPath(), String.format("marwood-salary-%d-%d.html", years, lookbackYears)),
+        new File(DataIO.getOutputPath(), String.format("marwood-salary-%d-%d.html", nRetireYears, nLookbackYears)),
         "Retirement Salary ($1M nest egg in today\\'s dollars)", "100%", "800px", ChartScaling.LOGARITHMIC,
         ChartTiming.MONTHLY, seqMarwoodSalary, seqBengenSalary);
 
@@ -234,7 +233,7 @@ public class MarwoodMethod
     SwrLib.setup();
 
     final int years = 30;
-    final int lookbackYears = 20;
+    final int lookbackYears = 10;
     Sequence seqMarwoodSWR = findMarwoodSWR(years, lookbackYears);
     System.out.println(seqMarwoodSWR);
 
