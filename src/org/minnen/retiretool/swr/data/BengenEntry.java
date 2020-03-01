@@ -5,19 +5,26 @@ import org.minnen.retiretool.util.TimeLib;
 /**
  * Represents a single Bengen SWR data point.
  */
-public final class BengenInfo
+public final class BengenEntry
 {
   public final long time;
   public final int  retirementYears;
   public final int  percentStock;
   public final int  swr;
 
-  public BengenInfo(long time, int retirementYears, int percentStock)
+  /** Build a sequence query (no time or SWR). */
+  public BengenEntry(int retirementYears, int percentStock)
+  {
+    this(TimeLib.TIME_ERROR, retirementYears, percentStock);
+  }
+
+  /** Build a point query (no SWR). */
+  public BengenEntry(long time, int retirementYears, int percentStock)
   {
     this(time, retirementYears, percentStock, -1);
   }
 
-  public BengenInfo(long time, int retirementYears, int percentStock, int swr)
+  public BengenEntry(long time, int retirementYears, int percentStock, int swr)
   {
     this.time = time;
     this.retirementYears = retirementYears;
@@ -25,7 +32,7 @@ public final class BengenInfo
     this.swr = swr;
   }
 
-  public static BengenInfo fromCSV(String line)
+  public static BengenEntry fromCSV(String line)
   {
     String[] fields = line.split(",");
     assert fields.length == 4;
@@ -37,11 +44,12 @@ public final class BengenInfo
     assert percentStock >= 0 && percentStock <= 100;
 
     final long time = TimeLib.parseDate(fields[2]);
+    assert time != TimeLib.TIME_ERROR;
 
     final int swr = Integer.parseInt(fields[3]);
     assert swr > 0 && swr <= 100000;
 
-    return new BengenInfo(time, retirementYears, percentStock, swr);
+    return new BengenEntry(time, retirementYears, percentStock, swr);
   }
 
   public String toCSV()
@@ -55,8 +63,10 @@ public final class BengenInfo
   {
     if (swr > 0) {
       return String.format("[%s (%d,%d) %d]", TimeLib.formatYM(time), retirementYears, percentStock, swr);
-    } else {
+    } else if (time != TimeLib.TIME_ERROR) {
       return String.format("[%s, %d, %d]", TimeLib.formatYM(time), retirementYears, percentStock);
+    } else {
+      return String.format("[%d, %d]", retirementYears, percentStock);
     }
   }
 
@@ -77,7 +87,7 @@ public final class BengenInfo
     if (this == obj) return true;
     if (obj == null) return false;
     if (getClass() != obj.getClass()) return false;
-    BengenInfo other = (BengenInfo) obj;
+    BengenEntry other = (BengenEntry) obj;
     if (percentStock != other.percentStock) return false;
     if (retirementYears != other.retirementYears) return false;
     if (time != other.time) return false;
