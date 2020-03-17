@@ -7,6 +7,7 @@ import java.util.List;
 
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.swr.data.BengenTable;
 import org.minnen.retiretool.util.IntPair;
 import org.minnen.retiretool.viz.Chart;
 import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
@@ -86,7 +87,7 @@ public class BengenMethod
     Sequence seq = new Sequence(String.format("%d year SWR (%d/%d)", nRetireYears, percentStock, 100 - percentStock));
     final int lastIndex = SwrLib.lastIndex(nRetireYears);
     for (int i = 0; i <= lastIndex; ++i) {
-      int swr = SwrLib.findSwrForYear(i, nRetireYears, percentStock, 1);
+      final int swr = SwrLib.findSwrForYear(i, nRetireYears, percentStock, 1);
       seq.addData(swr / 100.0, SwrLib.time(i));
     }
     return seq;
@@ -123,9 +124,9 @@ public class BengenMethod
 
   public static void main(String[] args) throws IOException
   {
-    SwrLib.setup();
+    SwrLib.setupWithDefaultFiles();
 
     // printSWRs(1, 50, 70, 70, 10);
-    // saveMaxSwr(70);
+    saveMaxSwr(75);
   }
 }

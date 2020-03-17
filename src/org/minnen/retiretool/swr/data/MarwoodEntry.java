@@ -36,7 +36,7 @@ public final class MarwoodEntry
     this.retirementYears = retirementYears;
     this.lookbackYears = lookbackYears;
     this.percentStock = percentStock;
-    this.swr = (int) Math.round(v.get(0) * 100.0);
+    this.swr = (int) Math.round(v.get(0) * 100.0); // store withdrawal rate as basis points
     this.virtualRetirementMonths = (int) Math.round(v.get(1));
     this.finalBalance = v.get(2);
     this.bengenSalary = v.get(3);

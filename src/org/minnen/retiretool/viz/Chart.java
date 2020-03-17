@@ -475,7 +475,12 @@ public class Chart
       writer.write("    style: {\n");
       writer.write("     fontSize: '" + config.axisTitleFontSize + "px'\n");
       writer.write("    }\n");
-      writer.write("   }\n");
+      writer.write("   },\n");
+      writer.write("   labels: {\n");
+      writer.write("    style: {\n");
+      writer.write("     fontSize: '" + config.axisLabelFontSize + "px'\n");
+      writer.write("    }\n");
+      writer.write("   },\n");
       writer.write("  },\n");
       writer.write("  yAxis: {\n");
       writer.write("   title: {\n");
@@ -483,7 +488,12 @@ public class Chart
       writer.write("    style: {\n");
       writer.write("     fontSize: '" + config.axisTitleFontSize + "px'\n");
       writer.write("    }\n");
-      writer.write("   }\n");
+      writer.write("   },\n");
+      writer.write("   labels: {\n");
+      writer.write("    style: {\n");
+      writer.write("     fontSize: '" + config.axisLabelFontSize + "px'\n");
+      writer.write("    }\n");
+      writer.write("   },\n");
       writer.write("  },\n");
       writer.write("  legend: { enabled: " + config.showLegend + " },\n");
       writer.write("  plotOptions: {\n");

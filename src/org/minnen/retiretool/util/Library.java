@@ -1,6 +1,5 @@
 package org.minnen.retiretool.util;
 
-import java.text.*;
 import java.util.*;
 import java.util.function.Predicate;
 
@@ -27,16 +26,11 @@ public final class Library
   public final static double        SQRT_2       = Math.sqrt(2.0);
   public static final double        ONE_TWELFTH  = 1.0 / 12.0;
 
-  public final static DecimalFormat df           = new DecimalFormat();
   public final static long          AppStartTime = TimeLib.getTime();
   public static final String        os           = System.getProperty("os.name");
   public static final boolean       bWindows     = os.startsWith("Win");
 
   public static final Random        rng          = new Random();
-
-  static {
-    df.setMaximumFractionDigits(4);
-  }
 
   public static void copy(double from[], double[] to)
   {

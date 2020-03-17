@@ -29,19 +29,19 @@ public class MarwoodTable
   public static MarwoodEntry get(int retirementYears, int lookbackYears, int percentStock, long time)
   {
     MarwoodEntry key = new MarwoodEntry(time, retirementYears, lookbackYears, percentStock);
-    return marwoodMap.get(key);
+    return marwoodMap.getOrDefault(key, null);
   }
 
   public static Sequence getSeq(int retirementYears, int lookbackYears, int percentStock)
   {
     MarwoodEntry key = new MarwoodEntry(retirementYears, lookbackYears, percentStock);
-    return marwoodSequences.get(key);
+    return marwoodSequences.getOrDefault(key, null);
   }
 
   public static int getSWR(int retirementYears, int lookbackYears, int percentStock)
   {
     MarwoodEntry key = new MarwoodEntry(retirementYears, lookbackYears, percentStock);
-    return marwoodSWRs.get(key);
+    return marwoodSWRs.getOrDefault(key, null);
   }
 
   public static void clear()
@@ -51,23 +51,19 @@ public class MarwoodTable
     marwoodSWRs.clear();
   }
 
-  private static void generateTable(File file) throws IOException
+  private static void generateTable(File file, int percentStock, int lookbackYears) throws IOException
   {
-    // TODO generate table for more stock percentages.
-    final int[] percentStockList = new int[] { 70 }; // 0, 10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 100 };
-    final int[] lookbackYearsList = new int[] { 5, 10, 15, 20 };
-
+    clear();
     try (Writer writer = new Writer(file)) {
-      for (int retirementYears = 1; retirementYears <= 30; ++retirementYears) {
-        for (int lookbackYears : lookbackYearsList) {
-          for (int percentStock : percentStockList) {
-            Sequence seq = MarwoodMethod.findMarwoodSWR(retirementYears, lookbackYears, percentStock);
-            System.out.printf("%d, %d, %d %s\n", retirementYears, lookbackYears, percentStock, seq);
-            for (FeatureVec v : seq) {
-              MarwoodEntry info = new MarwoodEntry(retirementYears, lookbackYears, percentStock, v);
-              writer.writeln(info.toCSV());
-            }
-          }
+      for (int retirementYears = 1; retirementYears <= 40; ++retirementYears) {
+        final long a = TimeLib.getTime();
+        Sequence seq = MarwoodMethod.findMarwoodSWR(retirementYears, lookbackYears, percentStock);
+        final long b = TimeLib.getTime();
+        System.out.printf("%d %s (%d ms)\n", retirementYears, seq, b - a);
+        for (FeatureVec v : seq) {
+          MarwoodEntry info = new MarwoodEntry(retirementYears, lookbackYears, percentStock, v);
+          marwoodMap.put(info, info);
+          writer.writeln(info.toCSV());
         }
       }
     }
@@ -134,13 +130,22 @@ public class MarwoodTable
 
   public static void main(String[] args) throws IOException
   {
-    SwrLib.setup();
-    System.out.printf("DM-SWR entries: %d\n", marwoodMap.size());
-    System.out.printf("DM-SWR sequences: %d\n", marwoodSequences.size());
+    final String mode = "generate";
 
-    // File file = new File(DataIO.getFinancePath(), "dmswr-table.csv");
-    // generateTable(file);
+    final int percentStock = 75;
+    final int lookbackYears = 20;
 
-    verifyTable();
+    final String filename = String.format("dmswr-stock%d-lookback%d.csv", percentStock, lookbackYears);
+    final File file = new File(DataIO.getFinancePath(), filename);
+
+    if (mode.equals("generate")) {
+      SwrLib.setup(SwrLib.getDefaultBengenFile(), null); // only load bengen table
+      generateTable(file, percentStock, lookbackYears);
+    } else {
+      SwrLib.setup(SwrLib.getDefaultBengenFile(), file);
+      System.out.printf("DM-SWR entries: %d\n", marwoodMap.size());
+      System.out.printf("DM-SWR sequences: %d\n", marwoodSequences.size());
+      verifyTable();
+    }
   }
 }

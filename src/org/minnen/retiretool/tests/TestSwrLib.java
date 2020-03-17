@@ -10,7 +10,7 @@ public class TestSwrLib extends TestCase
   @Override
   protected void setUp() throws Exception
   {
-    SwrLib.setup();
+    SwrLib.setupWithDefaultFiles();
   }
 
   @Test

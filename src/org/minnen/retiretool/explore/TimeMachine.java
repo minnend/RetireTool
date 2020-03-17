@@ -31,6 +31,7 @@ public class TimeMachine
   {
     if (index < 0) index += data.length();
     double price = data.get(index, iPriceDim);
+
     int bestIndex = forPrice(price, data);
     double bestPrice = data.get(bestIndex, iPriceDim);
 
@@ -38,9 +39,14 @@ public class TimeMachine
 
     long duration = data.getTimeMS(index) - data.getTimeMS(bestIndex);
     if (duration > 0) {
-      System.out.printf("[%s] @ $%.2f  ($%.2f)\n", TimeLib.formatDate(data.getTimeMS(bestIndex)), bestPrice,
-          data.get(bestIndex + 1, iPriceDim));
-      System.out.printf("%s\n", TimeLib.formatDuration(duration));
+      System.out.printf("[%s] @ $%.2f  ($%.2f) => %s\n", TimeLib.formatDate(data.getTimeMS(bestIndex)), bestPrice,
+          data.get(bestIndex + 1, iPriceDim), TimeLib.formatDuration(duration));
+
+      // Print info about the all time high and percent down.
+      int iMax = data.argmax(iPriceDim);
+      double maxPrice = data.get(iMax, iPriceDim);
+      double percent = FinLib.mul2ret(price / maxPrice);
+      System.out.printf("[%s] @ $%.2f = %.2f%%\n", TimeLib.formatDate(data.getTimeMS(iMax)), maxPrice, percent);
     } else {
       System.out.println("All time high!");
     }
@@ -50,11 +56,14 @@ public class TimeMachine
   {
     Sequence priceSeq = data.extractDims(iPriceDim);
     double[] prices = priceSeq.extractDim(0);
-    double margin = Math.max(0.01, priceToday * 0.002); // within 0.2%
+    double margin = Math.max(0.01, priceToday * 0.001); // within 0.1%
     int bestIndex = 0;
     for (int i = 1; i < prices.length; ++i) {
       // System.out.printf("%d [%s] %.2f\n", i, TimeLib.formatDate(priceSeq.getTimeMS(i)), prices[i]);
       if (prices[i] - priceToday > -margin) {
+        while (prices[i] < priceToday && i < priceSeq.size()) {
+          ++i;
+        }
         bestIndex = i - 1;
         break;
       }
@@ -64,7 +73,7 @@ public class TimeMachine
 
   public static void main(String[] args) throws IOException
   {
-    TiingoFund fund = TiingoFund.fromSymbol("SPY", true);
+    TiingoFund fund = TiingoFund.fromSymbol("VFINX", true);
     Sequence data = fund.data;
     System.out.printf("[%s] -> [%s]\n", TimeLib.formatDate(data.getStartMS()), TimeLib.formatDate(data.getEndMS()));
 

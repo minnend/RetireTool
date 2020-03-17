@@ -429,6 +429,24 @@ public class Sequence extends MetaStore implements Iterable<FeatureVec>
     return v;
   }
 
+  /** @return index of the max value for the given dimension. */
+  public int argmax(int iDim)
+  {
+    if (isEmpty()) return -1;
+
+    int iMax = 0;
+    double vmax = get(0, iDim);
+
+    for (int i = 1; i < length(); ++i) {
+      double v = get(i, iDim);
+      if (v > vmax) {
+        vmax = v;
+        iMax = i;
+      }
+    }
+    return iMax;
+  }
+
   /** @return FeatureVec with maximum value for each dimension. */
   public FeatureVec getMax()
   {

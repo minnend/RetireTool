@@ -5,15 +5,14 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.swr.BengenMethod;
 import org.minnen.retiretool.swr.SwrLib;
+import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.util.Writer;
 
 public class BengenTable
@@ -22,27 +21,27 @@ public class BengenTable
   public static Map<BengenEntry, BengenEntry> bengenMap       = new HashMap<>();
 
   /** Values hold sequences with all Bengen SWRs for a given retirement duration and stock percentage. */
-  public static Map<BengenEntry, Sequence>   bengenSequences = new HashMap<>();
+  public static Map<BengenEntry, Sequence>    bengenSequences = new HashMap<>();
 
   /** Values are SWR for the given retirement duration and stock percentage. */
-  public static Map<BengenEntry, Integer>    bengenSWRs      = new HashMap<>();
+  public static Map<BengenEntry, Integer>     bengenSWRs      = new HashMap<>();
 
   public static BengenEntry get(int retirementYears, int percentStock, long time)
   {
     BengenEntry key = new BengenEntry(time, retirementYears, percentStock);
-    return bengenMap.get(key);
+    return bengenMap.getOrDefault(key, null);
   }
 
   public static Sequence getSeq(int retirementYears, int percentStock)
   {
     BengenEntry key = new BengenEntry(retirementYears, percentStock);
-    return bengenSequences.get(key);
+    return bengenSequences.getOrDefault(key, null);
   }
 
   public static int getSWR(int retirementYears, int percentStock)
   {
     BengenEntry key = new BengenEntry(retirementYears, percentStock);
-    return bengenSWRs.get(key);
+    return bengenSWRs.getOrDefault(key, null);
   }
 
   public static void clear()
@@ -64,19 +63,33 @@ public class BengenTable
    */
   private static void generateTable(File file) throws IOException
   {
+    clear();
     final int[] percentStockList = new int[] { 0, 10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 100 };
 
     try (Writer writer = new Writer(file)) {
-      for (int nRetireYears = 1; nRetireYears <= 50; ++nRetireYears) {
+      writer.writeln("# Bengen safe withdrawal rates (SWR).");
+      writer.writeln("# Withdrawal rates are annual, and it is assumed that the monthly withdrawal rate is SWR/12.0.");
+      writer.writeln("# Fields:");
+      writer.writeln("# 1) retirement duration in years");
+      writer.writeln("# 2) percent stock");
+      writer.writeln("# 3) retirement month");
+      writer.writeln("# 4) safe withdrawal rate in basis points (500=5.0%)");
+
+      for (int nRetireYears = 1; nRetireYears <= 60; ++nRetireYears) {
+        final long a = TimeLib.getTime();
         for (int percentStock : percentStockList) {
           Sequence seq = BengenMethod.findSwrSequence(nRetireYears, percentStock);
-          System.out.printf("%d, %d %s\n", nRetireYears, percentStock, seq);
+          int swr = (int) Math.round(seq.getMin().get(0) * 100);
+          System.out.printf("%d, %3d [%s] -> %d\n", nRetireYears, percentStock, TimeLib.formatYM(seq.getEndMS()), swr);
           for (FeatureVec v : seq) {
-            final int swr = (int) Math.round(v.get(0) * 100.0);
+            swr = (int) Math.round(v.get(0) * 100.0);
             BengenEntry bengen = new BengenEntry(v.getTime(), nRetireYears, percentStock, swr);
+            bengenMap.put(bengen, bengen);
             writer.writeln(bengen.toCSV());
           }
         }
+        final long b = TimeLib.getTime();
+        System.out.printf("%d years -> %d ms\n", nRetireYears, b - a);
       }
     }
   }
@@ -134,21 +147,24 @@ public class BengenTable
   {
     for (BengenEntry bengen : bengenMap.values()) {
       MonthlyInfo info = SwrLib.runPeriod(bengen);
-      assert info.ok();
+      assert info.ok() : bengen;
     }
     System.out.printf("Verified entries: %d\n", bengenMap.size());
   }
 
   public static void main(String[] args) throws IOException
   {
-    SwrLib.setup();
+    final String mode = "verify";
 
-    // File file = new File(DataIO.getFinancePath(), "bengen-table.csv");
-    // generateTable(file);
-
-    System.out.printf("Bengen entries: %d\n", bengenMap.size());
-    System.out.printf("Bengen sequences: %d\n", bengenSequences.size());
-
-    // verifyTable();
+    if (mode.equals("generate")) {
+      SwrLib.setup(null, null); // don't load bengen or dmswr table
+      File file = new File(DataIO.getFinancePath(), "bengen-table.csv");
+      generateTable(file);
+    } else {
+      SwrLib.setup(SwrLib.getDefaultBengenFile(), null); // only load bengen table
+      System.out.printf("Bengen entries: %d\n", bengenMap.size());
+      System.out.printf("Bengen sequences: %d\n", bengenSequences.size());
+      verifyTable();
+    }
   }
 }

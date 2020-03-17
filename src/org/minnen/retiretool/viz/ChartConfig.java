@@ -41,6 +41,7 @@ public class ChartConfig
   public String         width              = "100%";
   public String         height             = "600px";
   public int            axisTitleFontSize  = 16;
+  public int            axisLabelFontSize  = 12;
   public boolean        showLegend         = false;
   public boolean        showDataLabels     = false;
   public boolean        showToolTips       = true;
@@ -259,6 +260,18 @@ public class ChartConfig
   public ChartConfig setRadius(double radius)
   {
     this.radius = radius;
+    return this;
+  }
+
+  public ChartConfig setAxisTitleFontSize(int fontSize)
+  {
+    this.axisTitleFontSize = fontSize;
+    return this;
+  }
+
+  public ChartConfig setAxisLabelFontSize(int fontSize)
+  {
+    this.axisLabelFontSize = fontSize;
     return this;
   }
 

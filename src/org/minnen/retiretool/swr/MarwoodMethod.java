@@ -2,6 +2,7 @@ package org.minnen.retiretool.swr;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.ArrayList;
@@ -28,7 +29,7 @@ public class MarwoodMethod
 {
   // TODO Calculate DMSWR for all retirement lengths for each month.
   // TODO Walk-forward optimization for Bengen SWR -- how well does it generalize?
-  // TODO allow for changing asset allocation over time?
+  // TODO allow for changing asset allocation over time? need to model taxes in this case?
 
   /**
    * Run a Marwood-Minnen SWR simulation and print results.
@@ -87,7 +88,6 @@ public class MarwoodMethod
       assert info.ok(); // safe by construction, but still verify
       assert iRetire > iLastWithFullRetirement || info.retirementMonth == retirementYears * 12;
 
-      final long now = SwrLib.time(iRetire);
       final double bengenSalary = nestEgg * bengenSWR / 10000.0;
       final double marwoodSalary = nestEgg * bestSWR / 10000.0;
 
@@ -97,7 +97,7 @@ public class MarwoodMethod
           info.balance, // final balance
           bengenSalary, // salary if using Bengen SWR
           marwoodSalary), // salary if using DMSWR
-          now);
+          SwrLib.time(iRetire));
 
       // Simulate nest egg value so that we can report retirement salary in dollars.
       nestEgg *= SwrLib.growth(iRetire, percentStock); // growth due to market
@@ -112,10 +112,8 @@ public class MarwoodMethod
    * @param retirementYears duration of retirement in years
    * @param nLookbackYears number of previous years to check for a better "virtual retirement" time
    * @pparam percentStock percent stock (vs. bonds) to hold (70 = 70%)
-   * @return Sequence holding Marwood-Minnen SWR for each retirement date
    */
-  public static Sequence findMarwoodSWRVerbose(int retirementYears, int nLookbackYears, int percentStock)
-      throws IOException
+  public static void createCharts(int retirementYears, int nLookbackYears, int percentStock) throws IOException
   {
     final int bengenSWR = BengenTable.getSWR(retirementYears, percentStock);
     final int lookbackMonths = nLookbackYears * 12;
@@ -130,7 +128,7 @@ public class MarwoodMethod
     Sequence seqBalance = new Sequence("Final Balance");
     Sequence seqYearsBack = new Sequence("Virtual Retirement Years");
     Sequence seqBengenSalary = new Sequence("Bengen Salary");
-    Sequence seqMarwoodSalary = new Sequence(String.format("Marwood Salary (%d, %d)", retirementYears, nLookbackYears));
+    Sequence seqMarwoodSalary = new Sequence(String.format("DMSWR Salary (%d, %d)", retirementYears, nLookbackYears));
 
     for (int iRetire = iStartSim; iRetire < SwrLib.length(); ++iRetire) {
       // Find best "virtual" retirement year within the lookback period.
@@ -168,33 +166,41 @@ public class MarwoodMethod
     System.out.printf("Max SWR: %d @ [%s] (index: %d)\n", maxSWR, TimeLib.formatMonth(SwrLib.time(maxIndex)), maxIndex);
     System.out.printf("win=%d (%.2f%%), fail=%d / %d\n", nWin, 100.0 * nWin / (nWin + nFail), nFail, nWin + nFail);
 
-    Sequence seqMaxSWR = BengenMethod.findSwrSequence(retirementYears, 70);
+    Sequence seqMaxSWR = BengenMethod.findSwrSequence(retirementYears, percentStock);
+    seqMaxSWR.setName("Crystal Ball");
     int index = seqMaxSWR.getIndexAtOrAfter(seqMarwoodSWR.getStartMS());
     seqMaxSWR = seqMaxSWR.subseq(index);
 
-    ChartConfig config = Chart.saveLineChart(new File(DataIO.getOutputPath(), "marwood-swr.html"), "Marwood-Minnen SWR",
-        "100%", "800px", ChartScaling.LINEAR, ChartTiming.MONTHLY, seqMarwoodSWR, seqYearsBack, seqMaxSWR);
+    String title = String.format("Safe Withdrawal Rates (%d%% equities / %d%% bonds)", percentStock,
+        100 - percentStock);
+    ChartConfig config = Chart.saveLineChart(new File(DataIO.getOutputPath(), "marwood-swr.html"), title, "100%",
+        "800px", ChartScaling.LINEAR, ChartTiming.MONTHLY, seqMarwoodSWR, seqMaxSWR);
     config.addPlotLineY(new PlotLine(bengenSWR / 100.0, 2.0, "#777", "dash"));
+    config.setColors(new String[] { "#434348", "#7cb5ec" });
+    config.setLineWidth(3);
     Chart.saveChart(config);
 
-    Chart.saveLineChart(
+    config = Chart.saveLineChart(
         new File(DataIO.getOutputPath(), String.format("marwood-salary-%d-%d.html", retirementYears, nLookbackYears)),
         "Retirement Salary ($1M nest egg in today\\'s dollars)", "100%", "800px", ChartScaling.LOGARITHMIC,
         ChartTiming.MONTHLY, seqMarwoodSalary, seqBengenSalary);
-
-    return seqMarwoodSWR;
+    config.setColors(new String[] { "#434348", "#7cb5ec" });
+    config.setLineWidth(3);
+    Chart.saveChart(config);
   }
 
   /** Simulate re-retiring to boost withdrawals after the original retirement date. */
-  public static void reretire(Sequence seqMarwoodSWR, int years, int lookbackYears, int percentStock) throws IOException
+  public static void reretire(int retirementYears, int lookbackYears, int percentStock) throws IOException
   {
-    Sequence allEffectiveSWRs = new Sequence(String.format("Re-Retire Effective SWRs (%d, %d)", years, lookbackYears));
+    Sequence allEffectiveSWRs = new Sequence(
+        String.format("Re-Retire Effective SWRs (%d, %d)", retirementYears, lookbackYears));
     List<Sequence> swrTrajectories = new ArrayList<>();
 
     final double nestEgg = 1e6; // retire with one million dollars
-    final int nRetirementMonths = years * 12;
-    // TODO if we adjust asset allocation, do we need to model taxes?
-    // we already rebalance monthly without worrying about capital gains.
+    final int nRetirementMonths = retirementYears * 12;
+
+    Sequence seqMarwoodSWR = MarwoodTable.getSeq(retirementYears, lookbackYears, percentStock);
+    seqMarwoodSWR = seqMarwoodSWR.extractDimAsSeq(0)._div(100.0); // convert basis points to percentage
 
     for (int iMarwood = 0; iMarwood < seqMarwoodSWR.size(); ++iMarwood) {
       final long timeRetire = seqMarwoodSWR.getTimeMS(iMarwood);
@@ -204,32 +210,32 @@ public class MarwoodMethod
       double balance = nestEgg;
       double salary = 0;
 
-      Sequence swrTrajectory = new Sequence(String.format("[%s]", TimeLib.formatMonth(timeRetire)));
+      Sequence swrTrajectory = new Sequence(String.format("%d", TimeLib.ms2date(timeRetire).getYear()));
       for (int i = iRetire; i < iRetire + nRetirementMonths && i < SwrLib.length(); ++i) {
         final long now = SwrLib.time(i);
         assert (i == iRetire && now == timeRetire) || (i > iRetire && now > timeRetire);
 
         final int nMonthsRetired = i - iRetire;
         final int yearsLeft = (int) Math.ceil((nRetirementMonths - nMonthsRetired) / 12.0);
-        assert yearsLeft > 0 && yearsLeft <= years;
+        assert yearsLeft > 0 && yearsLeft <= retirementYears;
 
-        // TODO need dmswr for reduced retirement length => calculate DMSWR for all durations for each month.
-        final double bengenSWR = BengenTable.getSWR(yearsLeft, percentStock) / 100.0;
-        final double swr = Math.max(seqMarwoodSWR.get(iMarwood + nMonthsRetired, 0), bengenSWR);
-        double reSalary = balance * swr / 1200.0;
+        final double swr = MarwoodTable.getSWR(yearsLeft, lookbackYears, percentStock) / 100.0;
+        final double dmswr = Math.max(seqMarwoodSWR.get(iMarwood + nMonthsRetired, 0), swr);
+
+        double reSalary = balance * dmswr / 1200.0;
         if (reSalary > salary) {
-          if (i > iRetire) System.out.printf("Raise! $%.2f -> $%.2f\n", salary, reSalary);
+          // if (i > iRetire) System.out.printf("Raise! $%.2f -> $%.2f\n", salary, reSalary);
           salary = reSalary;
         }
 
         // Calculate effective SWR at retire date by backing out market growth.
         final double effectiveSWR = salary / nestEgg * 1200.0;
-        swrTrajectory.addData(effectiveSWR, now);
+        swrTrajectory.addData(Math.min(effectiveSWR, 20.0), now); // cap SWR at 20%.
         allEffectiveSWRs.addData(effectiveSWR, now);
 
-        System.out.printf("%d.%d (%d)  (%.1f, %d)  [%s] -> [%s]: swr=%.2f%% (%.2f)  salary=$%.2f  balance=$%.2f\n",
-            iMarwood, nMonthsRetired, i, nMonthsRetired / 12.0, yearsLeft, TimeLib.formatMonth(timeRetire),
-            TimeLib.formatMonth(now), swr, effectiveSWR, salary, balance);
+        // System.out.printf("%d.%d (%d) (%.1f, %d) [%s] -> [%s]: swr=%.2f%% (%.2f) salary=$%.2f balance=$%.2f\n",
+        // iMarwood, nMonthsRetired, i, nMonthsRetired / 12.0, yearsLeft, TimeLib.formatMonth(timeRetire),
+        // TimeLib.formatMonth(now), dmswr, effectiveSWR, salary, balance);
 
         balance -= salary; // withdrawal at beginning of month
         assert balance > 0; // true by construction
@@ -247,7 +253,7 @@ public class MarwoodMethod
     Sequence histWithReRetire = Histogram.computeHistogram(allEffectiveSWRs, 0.05, 4.0, 0);
     assert Math.abs(Library.sum(histBasic.extractDim(2)) - 1.0) < 1e-6;
     assert Math.abs(Library.sum(histWithReRetire.extractDim(2)) - 1.0) < 1e-6;
-    assert allEffectiveSWRs.getMin().get(0) >= seqMarwoodSWR.getMin().get(0);
+    assert allEffectiveSWRs.getMin().get(0) > seqMarwoodSWR.getMin().get(0) - 1e-6;
     assert Math.abs(allEffectiveSWRs.get(0, 0) - seqMarwoodSWR.get(0, 0)) <= 1e-6;
 
     histWithReRetire = histWithReRetire.subseq(0, histBasic.size());
@@ -261,24 +267,34 @@ public class MarwoodMethod
     histBasic._mul(mul);
     histWithReRetire._mul(mul);
 
-    Chart.saveChart(new File(DataIO.getOutputPath(), "dmswr-histogram.html"), ChartConfig.Type.Bar,
-        "Marwood-Minnen SWR Histogram", labels, null, "100%", "800px", 0.0, Double.NaN, 0.05, ChartScaling.LINEAR,
-        ChartTiming.INDEX, 2, histBasic, histWithReRetire);
+    Chart.saveChart(new File(DataIO.getOutputPath(), "dmswr-histogram.html"), ChartConfig.Type.Bar, "DMSWR Histogram",
+        labels, null, "100%", "800px", 0.0, Double.NaN, 0.05, ChartScaling.LINEAR, ChartTiming.INDEX, 2, histBasic,
+        histWithReRetire);
 
-    Chart.saveLineChart(new File(DataIO.getOutputPath(), "reretire.html"), "SWR Trajectories (With Re-Retiring)",
-        "100%", "800px", ChartScaling.LINEAR, ChartTiming.INDEX, swrTrajectories);
+    ChartConfig config = Chart.saveLineChart(new File(DataIO.getOutputPath(), "reretire.html"),
+        "SWR Trajectories (With Re-Retiring)", "100%", "800px", ChartScaling.LINEAR, ChartTiming.INDEX,
+        swrTrajectories);
+    final double bengenSWR = BengenTable.getSWR(retirementYears, percentStock) / 100.0;
+    config.addPlotLineY(new PlotLine(bengenSWR, 2.0, "#777", "dash"));
+    labels = new String[swrTrajectories.get(0).size()];
+    DecimalFormat df = new DecimalFormat();
+    for (int i = 0; i < labels.length; ++i) {
+      labels[i] = df.format(i / 12.0);
+    }
+    config.setLabels(labels);
+    // config.setLineWidth(3);
+    Chart.saveChart(config);
   }
 
   public static void main(String[] args) throws IOException
   {
-    SwrLib.setup();
+    SwrLib.setupWithDefaultFiles();
 
     final int years = 30;
-    final int lookbackYears = 10;
-    final int percentStock = 70;
-    Sequence seqMarwoodSWR = findMarwoodSWRVerbose(years, lookbackYears, percentStock);
-    System.out.println(seqMarwoodSWR);
+    final int lookbackYears = 20;
+    final int percentStock = 75;
 
-    // reretire(seqMarwoodSWR, years, lookbackYears);
+    createCharts(years, lookbackYears, percentStock);
+    reretire(years, lookbackYears, percentStock);
   }
 }

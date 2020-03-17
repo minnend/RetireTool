@@ -58,7 +58,7 @@ public class SwrLib
     return length() - years * 12;
   }
 
-  /** @return total growth for a stock/bond portfolio over [fom..to]. */
+  /** @return total growth for a stock/bond portfolio over [from..to]. */
   public static double growth(int from, int to, int percentStock)
   {
     Sequence mixed = mixedMap.get(percentStock);
@@ -77,6 +77,12 @@ public class SwrLib
     final double alpha = percentStock / 100.0;
     final double beta = 1.0 - alpha;
     return stockMul.get(i, 0) * alpha + bondsMul.get(i, 0) * beta;
+  }
+
+  /** @return inflation (as a multiplier) over [from..to]. */
+  public static double inflation(int from, int to)
+  {
+    return cpi.get(to, 0) / cpi.get(from, 0);
   }
 
   public static MonthlyInfo runPeriod(BengenEntry info)
@@ -168,6 +174,12 @@ public class SwrLib
   {
     int lowSWR = 0;
     int highSWR = 10001;
+
+    BengenEntry entry = BengenTable.get(years - 1, percentStock, SwrLib.time(index));
+    if (entry != null) {
+      highSWR = entry.swr; // SWR for N years can't be larger than SWR for (N-1) years
+    }
+
     while (highSWR - lowSWR > quantum) {
       final int swr = (lowSWR + highSWR) / (2 * quantum) * quantum;
       assert swr >= lowSWR && swr <= highSWR && swr % quantum == 0 : swr;
@@ -188,10 +200,7 @@ public class SwrLib
     final double floatWR = withdrawalRate / 100.0;
     for (int i = 0; i <= lastIndex; ++i) {
       MonthlyInfo info = SwrLib.runPeriod(i, floatWR, years, percentStock, null);
-      if (info.failed()) {
-        SwrLib.runPeriod(i, floatWR, years, percentStock, null);
-        return false;
-      }
+      if (info.failed()) return false;
       assert info.balance > 0 && info.salary > 0;
     }
     return true;
@@ -233,8 +242,24 @@ public class SwrLib
     return seqAdjusted;
   }
 
+  public static File getDefaultBengenFile()
+  {
+    return new File(DataIO.getFinancePath(), "bengen-table.csv");
+  }
+
+  public static File getDefaultDmswrFile()
+  {
+    return new File(DataIO.getFinancePath(), "dmswr-table-75.csv");
+  }
+
   /** Load data and initialize / calculate static data sequences. */
-  public static void setup() throws IOException
+  public static void setupWithDefaultFiles() throws IOException
+  {
+    setup(getDefaultBengenFile(), getDefaultDmswrFile());
+  }
+
+  /** Load data and initialize / calculate static data sequences. */
+  public static void setup(File bengenFile, File dmswrFile) throws IOException
   {
     Shiller.downloadData();
 
@@ -278,14 +303,16 @@ public class SwrLib
     }
 
     // Load pre-computed bengen results.
-    File bengenFile = new File(DataIO.getFinancePath(), "bengen-table.csv");
-    System.out.printf("Load Bengen Data: [%s]\n", bengenFile);
-    BengenTable.loadTable(bengenFile);
+    if (bengenFile != null) {
+      System.out.printf("Load Bengen Data: [%s]\n", bengenFile);
+      BengenTable.loadTable(bengenFile);
+    }
 
     // Load pre-computed dm-swr results.
-    File dmswrFile = new File(DataIO.getFinancePath(), "dmswr-table.csv");
-    System.out.printf("Load DM-SWR Data: [%s]\n", dmswrFile);
-    MarwoodTable.loadTable(dmswrFile);
+    if (dmswrFile != null) {
+      System.out.printf("Load DM-SWR Data: [%s]\n", dmswrFile);
+      MarwoodTable.loadTable(dmswrFile);
+    }
   }
 
   /** Save an interactive chart with stock and bond data as a local HTML file. */
@@ -297,7 +324,7 @@ public class SwrLib
 
   public static void main(String[] args) throws IOException
   {
-    setup();
+    setupWithDefaultFiles();
     saveGraph();
 
     // Calculate and print the success rate for different WRs and stock/bond mixes.
