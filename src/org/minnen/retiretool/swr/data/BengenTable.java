@@ -68,7 +68,7 @@ public class BengenTable
 
     try (Writer writer = new Writer(file)) {
       writer.writeln("# Bengen safe withdrawal rates (SWR).");
-      writer.writeln("# Withdrawal rates are annual, and it is assumed that the monthly withdrawal rate is SWR/12.0.");
+      writer.writeln("# Withdrawal rates are annual, implying that the monthly withdrawal rate is SWR/12.0.");
       writer.writeln("# Fields:");
       writer.writeln("# 1) retirement duration in years");
       writer.writeln("# 2) percent stock");

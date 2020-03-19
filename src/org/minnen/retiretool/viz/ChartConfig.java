@@ -42,6 +42,10 @@ public class ChartConfig
   public String         height             = "600px";
   public int            axisTitleFontSize  = 16;
   public int            axisLabelFontSize  = 12;
+  public int            xTickInterval      = -1;
+  public int            yTickInterval      = -1;
+  public String         xTickFormatter     = null;
+  public String         yTickFormatter     = null;
   public boolean        showLegend         = false;
   public boolean        showDataLabels     = false;
   public boolean        showToolTips       = true;
@@ -269,9 +273,26 @@ public class ChartConfig
     return this;
   }
 
+  /** Set the font size for axis tick labels. */
   public ChartConfig setAxisLabelFontSize(int fontSize)
   {
     this.axisLabelFontSize = fontSize;
+    return this;
+  }
+
+  /** Set the tick interval (-1 for default behavior). */
+  public ChartConfig setTickInterval(int xTickInterval, int yTickInterval)
+  {
+    this.xTickInterval = xTickInterval;
+    this.yTickInterval = yTickInterval;
+    return this;
+  }
+
+  /** Set formatter code for x/y tick labels (null for default). */
+  public ChartConfig setTickFormatter(String xTickFormatter, String yTickFormatter)
+  {
+    this.xTickFormatter = xTickFormatter;
+    this.yTickFormatter = yTickFormatter;
     return this;
   }
 

@@ -12,6 +12,7 @@ import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.swr.MarwoodMethod;
 import org.minnen.retiretool.swr.SwrLib;
+import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.util.Writer;
 
@@ -20,7 +21,7 @@ public class MarwoodTable
   /** Values have valid SWR fields, queries ignore SWR field. */
   public static Map<MarwoodEntry, MarwoodEntry> marwoodMap       = new HashMap<>();
 
-  /** Values hold sequences with all DM-SWRs for a given retirement duration, lookback window, and stock percentage. */
+  /** Values hold sequences with all DMSWRs for a given retirement duration, lookback window, and stock percentage. */
   public static Map<MarwoodEntry, Sequence>     marwoodSequences = new HashMap<>();
 
   /** Values are SWR for the given retirement duration, lookback window, and stock percentage. */
@@ -54,16 +55,60 @@ public class MarwoodTable
   private static void generateTable(File file, int percentStock, int lookbackYears) throws IOException
   {
     clear();
+
     try (Writer writer = new Writer(file)) {
+      writer.writeln("# DMSWR (safe withdrawal rates).");
+      writer.writeln("# Withdrawal rates are annual, implying that the monthly withdrawal rate is SWR/12.0.");
+      writer.writeln("# Fields:");
+      writer.writeln("# 1) retirement duration in years");
+      writer.writeln("# 2) lookback window in years");
+      writer.writeln("# 3) percent stock");
+      writer.writeln("# 4) retirement month");
+      writer.writeln("# 5) current month");
+      writer.writeln("# 6) DMSWR in basis points (500=5.0%)");
+      writer.writeln("# 7) virtual retirement months - length of \"virtual retirement\" for best SWR");
+      writer.writeln("# 8) final balance - balance at the end of retirement");
+      writer.writeln("# 9) Bengen salary - salary using the Bengen SWR");
+      writer.writeln("# 10) DMSWR salary - salary using the DMSWR method");
+      writer.writeln("# 11) crystal ball salary - salary if we withdrew the maximum safe rate");
       for (int retirementYears = 1; retirementYears <= 40; ++retirementYears) {
         final long a = TimeLib.getTime();
         Sequence seq = MarwoodMethod.findMarwoodSWR(retirementYears, lookbackYears, percentStock);
         final long b = TimeLib.getTime();
         System.out.printf("%d %s (%d ms)\n", retirementYears, seq, b - a);
+
+        // First add all results to the table since they're needed for re-retiring.
         for (FeatureVec v : seq) {
           MarwoodEntry info = new MarwoodEntry(retirementYears, lookbackYears, percentStock, v);
+          assert info.isRetirementStart();
           marwoodMap.put(info, info);
           writer.writeln(info.toCSV());
+        }
+
+        // Now generate data for re-retiring.
+        for (FeatureVec vStart : seq) {
+          Sequence trajectory = MarwoodMethod.reretire(vStart.getTime(), retirementYears, lookbackYears, percentStock);
+
+          MarwoodEntry newEntry = new MarwoodEntry(retirementYears, lookbackYears, percentStock, trajectory.get(0));
+          MarwoodEntry oldEntry = MarwoodTable.marwoodMap.get(newEntry);
+          assert newEntry.equals(oldEntry); // only tests that the key fields match
+          assert newEntry.isRetirementStart();
+          assert newEntry.swr == oldEntry.swr;
+          assert Library.almostEqual(newEntry.bengenSalary, oldEntry.bengenSalary, 1e-5);
+          assert Library.almostEqual(newEntry.crystalSalary, oldEntry.crystalSalary, 1e-5);
+          assert Library.almostEqual(newEntry.marwoodSalary, oldEntry.marwoodSalary, 1e-5);
+
+          for (FeatureVec vTrajectory : trajectory) {
+            MarwoodEntry info = new MarwoodEntry(retirementYears, lookbackYears, percentStock, vTrajectory);
+            if (marwoodMap.containsKey(info)) {
+              assert info.isRetirementStart(); // data for retirement start dates are already in the table
+            } else {
+              // This entry is for a re-retire trajectory so add it to the table.
+              assert info.currentTime > info.retireTime;
+              marwoodMap.put(info, info);
+              writer.writeln(info.toCSV());
+            }
+          }
         }
       }
     }
@@ -89,7 +134,7 @@ public class MarwoodTable
         if (line.isEmpty()) continue;
 
         MarwoodEntry info = MarwoodEntry.fromCSV(line);
-        assert SwrLib.time(SwrLib.indexForTime(info.time)) == info.time;
+        assert SwrLib.time(SwrLib.indexForTime(info.retireTime)) == info.retireTime;
 
         marwoodMap.put(info, info);
 
@@ -108,8 +153,8 @@ public class MarwoodTable
         }
 
         // Add new month to sequence.
-        assert seq.isEmpty() || info.time > seq.getEndMS();
-        seq.addData(info.swr, info.time);
+        assert seq.isEmpty() || info.retireTime > seq.getEndMS();
+        seq.addData(info.swr, info.retireTime);
       }
       if (seq != null) { // store last sequence and final SWR
         marwoodSequences.put(marwoodKey, seq);
@@ -143,8 +188,8 @@ public class MarwoodTable
       generateTable(file, percentStock, lookbackYears);
     } else {
       SwrLib.setup(SwrLib.getDefaultBengenFile(), file);
-      System.out.printf("DM-SWR entries: %d\n", marwoodMap.size());
-      System.out.printf("DM-SWR sequences: %d\n", marwoodSequences.size());
+      System.out.printf("DMSWR entries: %d\n", marwoodMap.size());
+      System.out.printf("DMSWR sequences: %d\n", marwoodSequences.size());
       verifyTable();
     }
   }

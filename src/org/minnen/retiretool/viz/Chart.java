@@ -152,7 +152,7 @@ public class Chart
 
       writer.write("$(function () {\n");
       writer.write(" $('#%s').highcharts({\n", config.containerName);
-      writer.write("  title: { text: '%s' },\n", config.title == null ? "" : config.title);
+      writer.write("  title: { text: '%s', margin: 0, },\n", config.title == null ? "" : config.title);
       if (bVerticalLine) {
         writer.write("  tooltip: {\n");
         writer.write("    crosshairs: {\n");
@@ -167,6 +167,21 @@ public class Chart
         writer.write("  chart: { type: '%s' },\n", ChartConfig.chart2name(config.type));
       }
       writer.write("  xAxis: {\n");
+
+      if (config.xTickInterval >= 0) {
+        writer.write("  tickInterval: %d,\n", config.xTickInterval);
+      }
+
+      writer.write("  labels: {\n");
+      writer.write("    style: {\n");
+      writer.write("      fontSize: %d\n", config.axisLabelFontSize);
+      writer.write("    },\n");
+      if (config.xTickFormatter != null) {
+        writer.write("    formatter: function () {\n");
+        writer.write("      %s\n", config.xTickFormatter);
+        writer.write("    },\n");
+      }
+      writer.write("  },\n");
 
       if (config.labels != null || config.timing != ChartTiming.INDEX) {
         writer.write("  categories: [");
@@ -194,6 +209,22 @@ public class Chart
       writer.write("  },\n"); // xAxis
 
       writer.write("  yAxis: {\n");
+
+      if (config.yTickInterval >= 0) {
+        writer.write("  tickInterval: %d,\n", config.yTickInterval);
+      }
+
+      writer.write("  labels: {\n");
+      writer.write("    style: {\n");
+      writer.write("      fontSize: %d\n", config.axisLabelFontSize);
+      writer.write("    },\n");
+      if (config.yTickFormatter != null) {
+        writer.write("    formatter: function () {\n");
+        writer.write("      %s\n", config.yTickFormatter);
+        writer.write("    },\n");
+      }
+      writer.write("  },\n");
+
       if (config.logarthimicYAxis) {
         writer.write("   type: 'logarithmic',\n");
       }
@@ -355,7 +386,7 @@ public class Chart
       writer.write("   title: {\n");
       writer.write("    text: '" + returns1.getName() + "',\n");
       writer.write("    style: {\n");
-      writer.write("     fontSize: '18px'\n");
+      writer.write("     fontSize: '18px',\n");
       writer.write("    }\n");
       writer.write("   }\n");
       writer.write("  },\n");
@@ -363,7 +394,7 @@ public class Chart
       writer.write("   title: {\n");
       writer.write("    text: '" + returns2.getName() + "',\n");
       writer.write("    style: {\n");
-      writer.write("     fontSize: '18px'\n");
+      writer.write("     fontSize: '18px',\n");
       writer.write("    }\n");
       writer.write("   }\n");
       writer.write("  },\n");
@@ -473,12 +504,12 @@ public class Chart
       writer.write("   title: {\n");
       writer.write("    text: " + ChartConfig.getQuotedString(config.xAxisTitle) + ",\n");
       writer.write("    style: {\n");
-      writer.write("     fontSize: '" + config.axisTitleFontSize + "px'\n");
+      writer.write("     fontSize: '" + config.axisTitleFontSize + "px',\n");
       writer.write("    }\n");
       writer.write("   },\n");
       writer.write("   labels: {\n");
       writer.write("    style: {\n");
-      writer.write("     fontSize: '" + config.axisLabelFontSize + "px'\n");
+      writer.write("     fontSize: '" + config.axisLabelFontSize + "px',\n");
       writer.write("    }\n");
       writer.write("   },\n");
       writer.write("  },\n");
@@ -486,12 +517,12 @@ public class Chart
       writer.write("   title: {\n");
       writer.write("    text: " + ChartConfig.getQuotedString(config.yAxisTitle) + ",\n");
       writer.write("    style: {\n");
-      writer.write("     fontSize: '" + config.axisTitleFontSize + "px'\n");
+      writer.write("     fontSize: '" + config.axisTitleFontSize + "px',\n");
       writer.write("    }\n");
       writer.write("   },\n");
       writer.write("   labels: {\n");
       writer.write("    style: {\n");
-      writer.write("     fontSize: '" + config.axisLabelFontSize + "px'\n");
+      writer.write("     fontSize: '" + config.axisLabelFontSize + "px',\n");
       writer.write("    }\n");
       writer.write("   },\n");
       writer.write("  },\n");

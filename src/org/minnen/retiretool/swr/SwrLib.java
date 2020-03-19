@@ -58,9 +58,16 @@ public class SwrLib
     return length() - years * 12;
   }
 
+  /** @return percent as basis points, e.g. 3.2% -> 320. */
+  public static int percentToBasisPoints(double percent)
+  {
+    return (int) Math.floor(percent * 100 + 1e-5);
+  }
+
   /** @return total growth for a stock/bond portfolio over [from..to]. */
   public static double growth(int from, int to, int percentStock)
   {
+    if (from == to) return 1.0;
     Sequence mixed = mixedMap.get(percentStock);
     return mixed.get(to, 0) / mixed.get(from, 0);
   }
@@ -82,7 +89,17 @@ public class SwrLib
   /** @return inflation (as a multiplier) over [from..to]. */
   public static double inflation(int from, int to)
   {
+    if (from == to) return 1.0;
     return cpi.get(to, 0) / cpi.get(from, 0);
+  }
+
+  public static double getNestEgg(int i, int lookbackYears, int percentStock)
+  {
+    final int lookbackMonths = lookbackYears * 12;
+    assert i >= lookbackMonths;
+
+    double nestEgg = 1e6 * SwrLib.inflation(-1, lookbackMonths); // $1M adjusted for inflation to start of sim
+    return nestEgg * SwrLib.growth(lookbackMonths, i, percentStock); // update forward based on market growth
   }
 
   public static MonthlyInfo runPeriod(BengenEntry info)
@@ -103,7 +120,7 @@ public class SwrLib
 
   public static MonthlyInfo runPeriod(MarwoodEntry info, List<MonthlyInfo> salaries)
   {
-    final int index = indexForTime(info.time);
+    final int index = indexForTime(info.retireTime);
     return runPeriod(index, info.swr / 100.0, info.retirementYears, info.percentStock, salaries);
   }
 
@@ -153,7 +170,7 @@ public class SwrLib
 
       // Make withdrawal at the beginning of the month.
       balance -= monthlyWithdrawal;
-      assert balance >= 0; // TODO avoid floating point issues
+      assert balance > -1e-5; // TODO avoid floating point issues
 
       // Remaining balance grows during the rest of month.
       balance *= growth(i, percentStock);
@@ -249,7 +266,7 @@ public class SwrLib
 
   public static File getDefaultDmswrFile()
   {
-    return new File(DataIO.getFinancePath(), "dmswr-table-75.csv");
+    return new File(DataIO.getFinancePath(), "dmswr-stock75-lookback20.csv");
   }
 
   /** Load data and initialize / calculate static data sequences. */
@@ -308,9 +325,9 @@ public class SwrLib
       BengenTable.loadTable(bengenFile);
     }
 
-    // Load pre-computed dm-swr results.
+    // Load pre-computed DMSWR results.
     if (dmswrFile != null) {
-      System.out.printf("Load DM-SWR Data: [%s]\n", dmswrFile);
+      System.out.printf("Load DMSWR Data: [%s]\n", dmswrFile);
       MarwoodTable.loadTable(dmswrFile);
     }
   }
