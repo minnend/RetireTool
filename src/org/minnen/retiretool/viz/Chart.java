@@ -153,6 +153,9 @@ public class Chart
       writer.write("$(function () {\n");
       writer.write(" $('#%s').highcharts({\n", config.containerName);
       writer.write("  title: { text: '%s', margin: 0, },\n", config.title == null ? "" : config.title);
+      if (config.legendConfig != null && !config.legendConfig.isEmpty()) {
+        writer.write("  legend: { " + config.legendConfig + " },\n");
+      }
       if (bVerticalLine) {
         writer.write("  tooltip: {\n");
         writer.write("    crosshairs: {\n");
@@ -457,7 +460,7 @@ public class Chart
       String[] dimNames, Sequence... scatter) throws IOException
   {
     ChartConfig config = ChartConfig.buildScatter(file, title, width, height, radius, dimNames, scatter);
-    config.showLegend(scatter.length > 1);
+    config.setLegendConfig(String.format("enabled: %s,", scatter.length > 1));
     saveScatterPlot(config);
     return config;
   }
@@ -526,7 +529,9 @@ public class Chart
       writer.write("    }\n");
       writer.write("   },\n");
       writer.write("  },\n");
-      writer.write("  legend: { enabled: " + config.showLegend + " },\n");
+      if (config.legendConfig != null && !config.legendConfig.isEmpty()) {
+        writer.write("  legend: { " + config.legendConfig + " },\n");
+      }
       writer.write("  plotOptions: {\n");
       if (config.type == ChartConfig.Type.Scatter) {
         writer.write("   scatter: {\n");

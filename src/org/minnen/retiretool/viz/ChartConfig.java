@@ -46,7 +46,7 @@ public class ChartConfig
   public int            yTickInterval      = -1;
   public String         xTickFormatter     = null;
   public String         yTickFormatter     = null;
-  public boolean        showLegend         = false;
+  public String         legendConfig       = null;
   public boolean        showDataLabels     = false;
   public boolean        showToolTips       = true;
   public String[]       dimNames;
@@ -308,9 +308,9 @@ public class ChartConfig
     return this;
   }
 
-  public ChartConfig showLegend(boolean show)
+  public ChartConfig setLegendConfig(String config)
   {
-    this.showLegend = show;
+    this.legendConfig = config;
     return this;
   }
 

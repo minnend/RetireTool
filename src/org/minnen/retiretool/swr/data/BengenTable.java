@@ -14,6 +14,7 @@ import org.minnen.retiretool.swr.BengenMethod;
 import org.minnen.retiretool.swr.SwrLib;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.util.Writer;
+import org.minnen.retiretool.util.FinLib.Inflation;
 
 public class BengenTable
 {
@@ -157,11 +158,11 @@ public class BengenTable
     final String mode = "verify";
 
     if (mode.equals("generate")) {
-      SwrLib.setup(null, null); // don't load bengen or dmswr table
+      SwrLib.setup(null, null, Inflation.Real); // don't load bengen or dmswr table
       File file = new File(DataIO.getFinancePath(), "bengen-table.csv");
       generateTable(file);
     } else {
-      SwrLib.setup(SwrLib.getDefaultBengenFile(), null); // only load bengen table
+      SwrLib.setup(SwrLib.getDefaultBengenFile(), null, Inflation.Real); // only load bengen table
       System.out.printf("Bengen entries: %d\n", bengenMap.size());
       System.out.printf("Bengen sequences: %d\n", bengenSequences.size());
       verifyTable();

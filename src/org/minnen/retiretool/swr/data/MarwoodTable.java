@@ -15,24 +15,29 @@ import org.minnen.retiretool.swr.SwrLib;
 import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.util.Writer;
+import org.minnen.retiretool.util.FinLib.Inflation;
 
 public class MarwoodTable
 {
   /** Values have valid SWR fields, queries ignore SWR field. */
-  public static Map<MarwoodEntry, MarwoodEntry> marwoodMap       = new HashMap<>();
+  public static Map<MarwoodEntry, MarwoodEntry> marwoodMap          = new HashMap<>();
 
-  /** Values hold sequences with all DMSWRs for a given retirement duration, lookback window, and stock percentage. */
-  public static Map<MarwoodEntry, Sequence>     marwoodSequences = new HashMap<>();
+  /** Sequences with all DMSWRs for a given retirement duration, lookback window, and stock percentage. */
+  public static Map<MarwoodEntry, Sequence>     marwoodSequences    = new HashMap<>();
 
-  /** Values are SWR for the given retirement duration, lookback window, and stock percentage. */
-  public static Map<MarwoodEntry, Integer>      marwoodSWRs      = new HashMap<>();
+  /** Retirement trajectories for a given retirement date, duration, lookback window, and stock percentage. */
+  public static Map<MarwoodEntry, Sequence>     marwoodTrajectories = new HashMap<>();
 
-  public static MarwoodEntry get(int retirementYears, int lookbackYears, int percentStock, long time)
+  /** SWR for the given retirement duration, lookback window, and stock percentage. */
+  public static Map<MarwoodEntry, Integer>      marwoodSWRs         = new HashMap<>();
+
+  public static MarwoodEntry get(long retireTime, int retirementYears, int lookbackYears, int percentStock)
   {
-    MarwoodEntry key = new MarwoodEntry(time, retirementYears, lookbackYears, percentStock);
+    MarwoodEntry key = new MarwoodEntry(retireTime, retirementYears, lookbackYears, percentStock);
     return marwoodMap.getOrDefault(key, null);
   }
 
+  /** @return Sequence of DMSWR info vectors for initial retirement months. */
   public static Sequence getSeq(int retirementYears, int lookbackYears, int percentStock)
   {
     MarwoodEntry key = new MarwoodEntry(retirementYears, lookbackYears, percentStock);
@@ -45,11 +50,19 @@ public class MarwoodTable
     return marwoodSWRs.getOrDefault(key, null);
   }
 
+  /** @return Sequence of DMSWR info vectors for initial retirement months. */
+  public static Sequence getTrajectory(long retireTime, int retirementYears, int lookbackYears, int percentStock)
+  {
+    MarwoodEntry key = new MarwoodEntry(retireTime, retirementYears, lookbackYears, percentStock);
+    return marwoodTrajectories.getOrDefault(key, null);
+  }
+
   public static void clear()
   {
     marwoodMap.clear();
     marwoodSequences.clear();
     marwoodSWRs.clear();
+    marwoodTrajectories.clear();
   }
 
   private static void generateTable(File file, int percentStock, int lookbackYears) throws IOException
@@ -138,23 +151,25 @@ public class MarwoodTable
 
         marwoodMap.put(info, info);
 
-        // Create new sequence when retirement scenario changes.
-        if (marwoodKey == null || info.retirementYears != marwoodKey.retirementYears
-            || info.lookbackYears != marwoodKey.lookbackYears || info.percentStock != marwoodKey.percentStock) {
-          if (seq != null) { // store previous sequence and SWR
-            marwoodSequences.put(marwoodKey, seq);
-            final int swr = (int) Math.round(seq.getMin().get(0));
-            marwoodSWRs.put(marwoodKey, swr);
+        if (info.isRetirementStart()) {
+          // Create new sequence when retirement scenario changes.
+          if (marwoodKey == null || info.retirementYears != marwoodKey.retirementYears
+              || info.lookbackYears != marwoodKey.lookbackYears || info.percentStock != marwoodKey.percentStock) {
+            if (seq != null) { // store previous sequence and SWR
+              marwoodSequences.put(marwoodKey, seq);
+              final int swr = (int) Math.round(seq.getMin().get(0));
+              marwoodSWRs.put(marwoodKey, swr);
+            }
+
+            marwoodKey = new MarwoodEntry(info.retirementYears, info.lookbackYears, info.percentStock);
+            seq = new Sequence(
+                String.format("Marwood (%d, %d, %d)", info.retirementYears, info.lookbackYears, info.percentStock));
           }
 
-          marwoodKey = new MarwoodEntry(info.retirementYears, info.lookbackYears, info.percentStock);
-          seq = new Sequence(
-              String.format("Marwood (%d, %d, %d)", info.retirementYears, info.lookbackYears, info.percentStock));
+          // Add new month to sequence.
+          assert seq.isEmpty() || info.retireTime > seq.getEndMS();
+          seq.addData(info.swr, info.retireTime);
         }
-
-        // Add new month to sequence.
-        assert seq.isEmpty() || info.retireTime > seq.getEndMS();
-        seq.addData(info.swr, info.retireTime);
       }
       if (seq != null) { // store last sequence and final SWR
         marwoodSequences.put(marwoodKey, seq);
@@ -164,18 +179,33 @@ public class MarwoodTable
     }
   }
 
+  /** Simulate re-retiring to boost withdrawals after the original retirement date. */
+  public static void genReRetireTable(int retirementYears, int lookbackYears, int percentStock) throws IOException
+  {
+    final int lookbackMonths = lookbackYears * 12;
+    for (int i = lookbackMonths; i < SwrLib.lastIndex(retirementYears); ++i) {
+      final long retireTime = SwrLib.time(i);
+      Sequence trajectory = MarwoodMethod.reretire(retireTime, retirementYears, lookbackYears, percentStock);
+
+      MarwoodEntry key = new MarwoodEntry(retireTime, retirementYears, lookbackYears, percentStock);
+      MarwoodTable.marwoodTrajectories.put(key, trajectory);
+    }
+  }
+
   private static void verifyTable() throws IOException
   {
     for (MarwoodEntry marwood : marwoodMap.values()) {
-      MonthlyInfo info = SwrLib.runPeriod(marwood);
-      assert info.ok();
+      if (marwood.isRetirementStart()) {
+        MonthlyInfo info = SwrLib.runPeriod(marwood);
+        assert info.ok();
+      }
     }
     System.out.printf("Verified entries: %d\n", marwoodMap.size());
   }
 
   public static void main(String[] args) throws IOException
   {
-    final String mode = "generate";
+    final String mode = "verify";
 
     final int percentStock = 75;
     final int lookbackYears = 20;
@@ -184,10 +214,10 @@ public class MarwoodTable
     final File file = new File(DataIO.getFinancePath(), filename);
 
     if (mode.equals("generate")) {
-      SwrLib.setup(SwrLib.getDefaultBengenFile(), null); // only load bengen table
+      SwrLib.setup(SwrLib.getDefaultBengenFile(), null, Inflation.Real); // only load bengen table
       generateTable(file, percentStock, lookbackYears);
     } else {
-      SwrLib.setup(SwrLib.getDefaultBengenFile(), file);
+      SwrLib.setup(SwrLib.getDefaultBengenFile(), file, Inflation.Real);
       System.out.printf("DMSWR entries: %d\n", marwoodMap.size());
       System.out.printf("DMSWR sequences: %d\n", marwoodSequences.size());
       verifyTable();

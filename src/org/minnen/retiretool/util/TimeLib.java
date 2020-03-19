@@ -35,6 +35,7 @@ public class TimeLib
   public final static DateTimeFormatter dtfMonth   = DateTimeFormatter.ofPattern("MMM yyyy");
   public final static DateTimeFormatter dtfYMD     = DateTimeFormatter.ofPattern("yyyy-MM-dd");
   public final static DateTimeFormatter dtfYM      = DateTimeFormatter.ofPattern("yyyy-MM");
+  public final static DateTimeFormatter dtfY       = DateTimeFormatter.ofPattern("yyyy");
 
   /**
    * Return the current time in milliseconds. This function just forwards the request to System.currentTimeMillis();
@@ -336,7 +337,8 @@ public class TimeLib
 
     String sNum = String.format("%%.%df", nSigDig);
     String sRet;
-    if (ms > 18 * month) sRet = String.format(sNum + " years", ms / year);
+    if (Math.abs(ms - year) < day) sRet = "1 year";
+    else if (ms >= 12 * month) sRet = String.format(sNum + " years", ms / year);
     else if (ms > 6 * week) sRet = String.format(sNum + " months", ms / month);
     else if (ms > 10 * day) sRet = String.format(sNum + " weeks", ms / week);
     else if (ms > day) sRet = String.format(sNum + " days", ms / day);
