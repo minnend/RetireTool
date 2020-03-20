@@ -181,12 +181,11 @@ public class SwrLib
     shiller = Shiller.loadAll(Shiller.getPathCSV(), true);
 
     Sequence bondData = shiller.extractDimAsSeq(Shiller.GS10).setName("GS10");
-
-    cpi = shiller.extractDimAsSeq(Shiller.CPI).setName("CPI");
-
     bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, -1);
     // bonds = Bond.calcReturnsNaiveInterest(BondFactory.note10Year, bondData, 0, -1, DivOrPow.DivideBy12);
+    // bonds = Bond.calcReturnsHold(BondFactory.note10Year, bondData, 0, -1);
 
+    cpi = shiller.extractDimAsSeq(Shiller.CPI).setName("CPI");
     if (inflation == Inflation.Real) {
       stock = shiller.extractDimAsSeq(Shiller.RTRP).setName("Stock (real)");
       bonds = adjustForInflation(bonds, cpi).setName("Bonds (real)");

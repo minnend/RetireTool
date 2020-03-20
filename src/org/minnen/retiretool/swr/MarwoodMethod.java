@@ -149,7 +149,7 @@ public class MarwoodMethod
 
       // Jump to higher salary if re-retiring helps.
       final MarwoodEntry entry = MarwoodTable.get(now, yearsLeft, lookbackYears, percentStock);
-      double reSalary = balance * entry.dmswr / 10000.0; // TODO cap reSalary to 20% of current portfolio?
+      final double reSalary = Math.min(balance * entry.dmswr / 10000.0, balance * 0.2); // cap salary at 20% of balance
       if (reSalary > salary) {
         salary = reSalary;
         virtualRetirementMonths = entry.virtualRetirementMonths;
@@ -158,10 +158,9 @@ public class MarwoodMethod
       }
       final double monthlyIncome = salary / 12.0;
 
-      // Calculate effective SWR at retire date by backing out market growth.
+      // Calculate effective SWR at retire date by backing out inflation.
       final double adjustedSalary = (inflation == Inflation.Real ? salary : salary * SwrLib.inflation(i, iRetire));
-      final double effectiveSWR = Math.min(adjustedSalary / nestEgg * 100.0, 20.0); // max 20%
-      // TODO max 20% effective SWR is *not* enforced on income. Should we cap max monthly withdrawal at (20% / 12)?
+      final double effectiveSWR = adjustedSalary / nestEgg * 100.0;
 
       final double startBalance = balance;
       balance -= monthlyIncome; // withdrawal at beginning of month
@@ -277,7 +276,7 @@ public class MarwoodMethod
     config.setTickFormatter("return this.value.split(' ')[1];", "return this.value + '%';");
     config.setLegendConfig(
         "align: 'left', verticalAlign: 'top', x: 90, y: 40, layout: 'vertical', floating: true, itemStyle: {"
-            + "fontSize: 20, }, backgroundColor: '#fff', borderWidth: 1, padding: 16, shadow: true, symbolWidth: 32,\n");
+            + "fontSize: 20, }, backgroundColor: '#fff', borderWidth: 1, padding: 16, shadow: true, symbolWidth: 32,");
     Chart.saveChart(config);
 
     config = Chart.saveLineChart(
@@ -291,7 +290,7 @@ public class MarwoodMethod
     config.setTickFormatter("return this.value.split(' ')[1];", "return '$' + this.value;");
     config.setLegendConfig(
         "align: 'left', verticalAlign: 'top', x: 120, y: 40, layout: 'vertical', floating: true, itemStyle: {"
-            + "fontSize: 20, }, backgroundColor: '#fff', borderWidth: 1, padding: 16, shadow: true, symbolWidth: 32,\n");
+            + "fontSize: 20, }, backgroundColor: '#fff', borderWidth: 1, padding: 16, shadow: true, symbolWidth: 32,");
     Chart.saveChart(config);
   }
 
@@ -335,8 +334,9 @@ public class MarwoodMethod
     }
     config.setLabels(labels);
     config.setAxisLabelFontSize(20);
+    config.setLineWidth(3);
     config.setTickInterval(12, -1);
-    config.setMinMaxY(3.0, 20.0);
+    config.setMinMaxY(3.0, 15.0);
     config.setTickFormatter(null, "return this.value + '%';");
     config.setMinorTickIntervalY(1.0);
     Chart.saveChart(config);
@@ -353,7 +353,7 @@ public class MarwoodMethod
 
     final double nestEgg = 1e6;
     final int retirementYears = 35;
-    final int finalYear = years[0] + retirementYears;
+    final int finalYear = years[0] + retirementYears - 1;
     final long timeStart = TimeLib.toMs(years[0], Month.JANUARY, 1);
     final long timeEnd = TimeLib.toMs(years[0] + retirementYears - 1, Month.DECEMBER, 1);
     final int iStart = SwrLib.indexForTime(timeStart);
@@ -369,25 +369,22 @@ public class MarwoodMethod
     assert dmTrajectory.size() == (iEnd - iStart + 1);
 
     for (MonthlyInfo bengenInfo : bengenTrajectory) {
-      LocalDate date = TimeLib.ms2date(bengenInfo.currentTime);
+      final int index = bengenInfo.index;
+      final LocalDate date = TimeLib.ms2date(bengenInfo.currentTime);
 
-      final boolean isLastMonth = (date.getMonth() == Month.DECEMBER && date.getYear() == finalYear - 1);
       final boolean isNewYear = (date.getMonth() == Month.JANUARY && yearsToPrint.contains(date.getYear()));
+      final boolean isLastMonth = (date.getMonth() == Month.DECEMBER && date.getYear() == finalYear);
       if (!isNewYear && !isLastMonth) continue;
-      final int year = date.getYear() == finalYear - 1 ? finalYear + 1 : date.getYear();
+      final int year = (isLastMonth ? finalYear + 1 : date.getYear());
 
-      MonthlyInfo dmInfo = dmTrajectory.get(bengenInfo.index - iStart);
+      MonthlyInfo dmInfo = dmTrajectory.get(index - iStart);
       assert (dmInfo.retireTime == bengenInfo.retireTime) && (dmInfo.currentTime == bengenInfo.currentTime);
-      assert dmInfo.index == bengenInfo.index;
+      assert dmInfo.index == index;
       assert Library.almostEqual(bengenInfo.bengenSalary, dmInfo.bengenSalary, 1e-6);
 
-      final double growth = FinLib.mul2ret(SwrLib.growth(bengenInfo.index, bengenInfo.index + 12, 100));
+      double growth = SwrLib.growth(index, index + 12, 100); // market returns for the year
+      growth *= SwrLib.inflation(index + 12, index); // adjust market returns for inflation
       final int yearsLeft = Math.max(0, retirementYears - (year - years[0]));
-
-      final double dmswr = dmInfo.dmswr / 100.0;
-
-      final MarwoodEntry entry = MarwoodTable.get(dmInfo.currentTime, retirementYears, lookbackYears, percentStock);
-      final long lookbackDate = SwrLib.time(dmInfo.index - entry.virtualRetirementMonths);
 
       final double inflation = SwrLib.inflation(dmInfo.index, iStart); // inflation multiplier back to retirement date
       final double dmSalaryReal = dmInfo.monthlyIncome * 12 * inflation;
@@ -396,12 +393,16 @@ public class MarwoodMethod
       final double bengenBalance = (isLastMonth ? bengenInfo.endBalance : bengenInfo.startBalance) * inflation;
       final double dmBalance = (isLastMonth ? dmInfo.endBalance : dmInfo.startBalance) * inflation;
 
+      final long lookbackDate = SwrLib.time(dmInfo.index - dmInfo.virtualRetirementMonths);
+      final double dmswr = dmInfo.dmswr / 100.0;
+
       final String sBengenBalance = String.format("\\$%s", FinLib.dollarFormatter.format(bengenBalance));
       final String sDmswrBalance = String.format("\\$%s", FinLib.dollarFormatter.format(dmBalance));
       final String sBengenSalaryReal = String.format("\\$%s", FinLib.dollarFormatter.format(bengenSalaryReal));
       final String sDmswrSalaryReal = String.format("\\$%s", FinLib.dollarFormatter.format(dmSalaryReal));
+
       System.out.printf("%d  & %2d  & %5.1f\\%%  & %12s  & %12s  & %12s  & %12s  & %5.2f\\%%  &  %9s  \\\\\n", year,
-          yearsLeft, growth, sBengenSalaryReal, sDmswrSalaryReal, sBengenBalance, sDmswrBalance, dmswr,
+          yearsLeft, FinLib.mul2ret(growth), sBengenSalaryReal, sDmswrSalaryReal, sBengenBalance, sDmswrBalance, dmswr,
           TimeLib.formatMonth(lookbackDate));
     }
   }
