@@ -1,6 +1,5 @@
 package org.minnen.retiretool.swr.data;
 
-import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.swr.SwrLib;
 import org.minnen.retiretool.util.TimeLib;
 
@@ -9,24 +8,19 @@ import org.minnen.retiretool.util.TimeLib;
  */
 public final class MarwoodEntry
 {
-  public final long       retireTime;
-  public final long       currentTime;
-  public final int        retirementYears;
-  public final int        lookbackYears;
-  public final int        percentStock;
-  public final int        swr;
-  public final int        virtualRetirementMonths;
-  public final double     finalBalance;
-  public final double     bengenSalary;
-  public final double     marwoodSalary;
-  public final double     crystalSalary;
+  // TODO verify that `finalBalance` is for the end of the final month, not the beginning.
 
-  public static final int iSWR                     = 0;
-  public static final int iVirtualRetirementMonths = 1;
-  public static final int iFinalBalance            = 2;
-  public static final int iBengenSalary            = 3;
-  public static final int iMarwoodSalary           = 4;
-  public static final int iCrystalSalary           = 5;
+  public final long   retireTime;
+  public final long   currentTime;
+  public final int    retirementYears;
+  public final int    lookbackYears;
+  public final int    percentStock;
+  public final int    dmswr;
+  public final int    virtualRetirementMonths;
+  public final double finalBalance;
+  public final double bengenSalary;
+  public final double marwoodSalary;
+  public final double crystalSalary;
 
   /** Build a query for a sequence of starting DMSWR values. */
   public MarwoodEntry(int retirementYears, int lookbackYears, int percentStock)
@@ -47,21 +41,19 @@ public final class MarwoodEntry
         Double.NaN, Double.NaN);
   }
 
-  public MarwoodEntry(int retirementYears, int lookbackYears, int percentStock, FeatureVec v)
+  public MarwoodEntry(int retirementYears, int lookbackYears, int percentStock, MonthlyInfo info)
   {
-    assert v.getNumDims() == 6;
-
-    this.retireTime = (long) v.getMeta("retireTime");
-    this.currentTime = v.getTime();
+    this.retireTime = info.retireTime;
+    this.currentTime = info.currentTime;
     this.retirementYears = retirementYears;
     this.lookbackYears = lookbackYears;
     this.percentStock = percentStock;
-    this.swr = SwrLib.percentToBasisPoints(v.get(iSWR));
-    this.virtualRetirementMonths = (int) Math.round(v.get(1));
-    this.finalBalance = v.get(iFinalBalance);
-    this.bengenSalary = v.get(iBengenSalary);
-    this.marwoodSalary = v.get(iMarwoodSalary);
-    this.crystalSalary = v.get(iCrystalSalary);
+    this.dmswr = SwrLib.percentToBasisPoints(info.dmswr);
+    this.virtualRetirementMonths = info.virtualRetirementMonths;
+    this.finalBalance = info.finalBalance;
+    this.bengenSalary = info.bengenSalary;
+    this.marwoodSalary = info.marwoodSalary;
+    this.crystalSalary = info.crystalSalary;
   }
 
   public MarwoodEntry(long retireTime, long currentTime, int retirementYears, int lookbackYears, int percentStock,
@@ -73,7 +65,7 @@ public final class MarwoodEntry
     this.retirementYears = retirementYears;
     this.lookbackYears = lookbackYears;
     this.percentStock = percentStock;
-    this.swr = swr;
+    this.dmswr = swr;
     this.virtualRetirementMonths = virtualRetirementMonths;
     this.finalBalance = finalBalance;
     this.bengenSalary = bengenSalary;
@@ -119,18 +111,18 @@ public final class MarwoodEntry
 
   public String toCSV()
   {
-    assert swr > 0;
+    assert dmswr > 0;
     return String.format("%d,%d,%d,%s,%s,%d,%d,%.2f,%.2f,%.2f,%.2f", retirementYears, lookbackYears, percentStock,
-        TimeLib.formatYM(retireTime), TimeLib.formatYM(currentTime), swr, virtualRetirementMonths, finalBalance,
+        TimeLib.formatYM(retireTime), TimeLib.formatYM(currentTime), dmswr, virtualRetirementMonths, finalBalance,
         bengenSalary, marwoodSalary, crystalSalary);
   }
 
   @Override
   public String toString()
   {
-    if (swr > 0) {
+    if (dmswr > 0) {
       return String.format("[%s (%d,%d,%d) %d]", TimeLib.formatYM(retireTime), retirementYears, lookbackYears,
-          percentStock, swr);
+          percentStock, dmswr);
     } else if (retireTime != TimeLib.TIME_ERROR) {
       return String.format("[%s, %d, %d, %d]", TimeLib.formatYM(retireTime), retirementYears, lookbackYears,
           percentStock);
@@ -143,26 +135,6 @@ public final class MarwoodEntry
   public boolean isRetirementStart()
   {
     return currentTime == retireTime;
-  }
-
-  public FeatureVec toVector()
-  {
-    return buildVector(retireTime, currentTime, swr, virtualRetirementMonths, finalBalance, bengenSalary, marwoodSalary,
-        crystalSalary);
-  }
-
-  public static FeatureVec buildVector(long retireTime, long currentTime, int swr, int virtualRetirementMonths,
-      double finalBalance, double bengenSalary, double marwoodSalary, double crystalSalary)
-  {
-    FeatureVec v = new FeatureVec(6, // six dimensions
-        swr / 100.0, // dmswr
-        virtualRetirementMonths, // number of virtual retirement months
-        finalBalance, // final balance
-        bengenSalary, // salary if using Bengen SWR
-        marwoodSalary, // salary if using DMSWR
-        crystalSalary); // salary if we had a crystal ball and took best possible WR for this date
-    v.setMeta("retireTime", retireTime); // save time as metadata to avoid long -> double conversion
-    return v;
   }
 
   @Override

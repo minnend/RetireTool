@@ -5,11 +5,13 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.swr.BengenMethod;
 import org.minnen.retiretool.swr.MarwoodMethod;
 import org.minnen.retiretool.swr.SwrLib;
 import org.minnen.retiretool.util.Library;
@@ -20,16 +22,16 @@ import org.minnen.retiretool.util.FinLib.Inflation;
 public class MarwoodTable
 {
   /** Values have valid SWR fields, queries ignore SWR field. */
-  public static Map<MarwoodEntry, MarwoodEntry> marwoodMap          = new HashMap<>();
+  public static Map<MarwoodEntry, MarwoodEntry>      marwoodMap          = new HashMap<>();
 
   /** Sequences with all DMSWRs for a given retirement duration, lookback window, and stock percentage. */
-  public static Map<MarwoodEntry, Sequence>     marwoodSequences    = new HashMap<>();
+  public static Map<MarwoodEntry, Sequence>          marwoodSequences    = new HashMap<>();
 
   /** Retirement trajectories for a given retirement date, duration, lookback window, and stock percentage. */
-  public static Map<MarwoodEntry, Sequence>     marwoodTrajectories = new HashMap<>();
+  public static Map<MarwoodEntry, List<MonthlyInfo>> marwoodTrajectories = new HashMap<>();
 
   /** SWR for the given retirement duration, lookback window, and stock percentage. */
-  public static Map<MarwoodEntry, Integer>      marwoodSWRs         = new HashMap<>();
+  public static Map<MarwoodEntry, Integer>           marwoodSWRs         = new HashMap<>();
 
   public static MarwoodEntry get(long retireTime, int retirementYears, int lookbackYears, int percentStock)
   {
@@ -51,7 +53,8 @@ public class MarwoodTable
   }
 
   /** @return Sequence of DMSWR info vectors for initial retirement months. */
-  public static Sequence getTrajectory(long retireTime, int retirementYears, int lookbackYears, int percentStock)
+  public static List<MonthlyInfo> getTrajectory(long retireTime, int retirementYears, int lookbackYears,
+      int percentStock)
   {
     MarwoodEntry key = new MarwoodEntry(retireTime, retirementYears, lookbackYears, percentStock);
     return marwoodTrajectories.getOrDefault(key, null);
@@ -86,40 +89,42 @@ public class MarwoodTable
       writer.writeln("# 11) crystal ball salary - salary if we withdrew the maximum safe rate");
       for (int retirementYears = 1; retirementYears <= 40; ++retirementYears) {
         final long a = TimeLib.getTime();
-        Sequence seq = MarwoodMethod.findMarwoodSWR(retirementYears, lookbackYears, percentStock);
+        List<MonthlyInfo> marwoodList = MarwoodMethod.findMarwoodSWR(retirementYears, lookbackYears, percentStock);
         final long b = TimeLib.getTime();
-        System.out.printf("%d %s (%d ms)\n", retirementYears, seq, b - a);
+        System.out.printf("%d  N=%d  (%d ms)\n", retirementYears, marwoodList.size(), b - a);
 
         // First add all results to the table since they're needed for re-retiring.
-        for (FeatureVec v : seq) {
-          MarwoodEntry info = new MarwoodEntry(retirementYears, lookbackYears, percentStock, v);
-          assert info.isRetirementStart();
-          marwoodMap.put(info, info);
-          writer.writeln(info.toCSV());
+        for (MonthlyInfo info : marwoodList) {
+          MarwoodEntry entry = new MarwoodEntry(retirementYears, lookbackYears, percentStock, info);
+          assert entry.isRetirementStart();
+          marwoodMap.put(entry, entry);
+          writer.writeln(entry.toCSV());
         }
 
         // Now generate data for re-retiring.
-        for (FeatureVec vStart : seq) {
-          Sequence trajectory = MarwoodMethod.reretire(vStart.getTime(), retirementYears, lookbackYears, percentStock);
+        for (MonthlyInfo startInfo : marwoodList) {
+          final double nestEgg = SwrLib.getNestEgg(startInfo.index, lookbackYears, percentStock);
+          List<MonthlyInfo> trajectory = MarwoodMethod.reretire(startInfo.currentTime, retirementYears, lookbackYears,
+              percentStock, Inflation.Real, nestEgg);
 
           MarwoodEntry newEntry = new MarwoodEntry(retirementYears, lookbackYears, percentStock, trajectory.get(0));
           MarwoodEntry oldEntry = MarwoodTable.marwoodMap.get(newEntry);
           assert newEntry.equals(oldEntry); // only tests that the key fields match
           assert newEntry.isRetirementStart();
-          assert newEntry.swr == oldEntry.swr;
+          assert newEntry.dmswr == oldEntry.dmswr;
           assert Library.almostEqual(newEntry.bengenSalary, oldEntry.bengenSalary, 1e-5);
           assert Library.almostEqual(newEntry.crystalSalary, oldEntry.crystalSalary, 1e-5);
           assert Library.almostEqual(newEntry.marwoodSalary, oldEntry.marwoodSalary, 1e-5);
 
-          for (FeatureVec vTrajectory : trajectory) {
-            MarwoodEntry info = new MarwoodEntry(retirementYears, lookbackYears, percentStock, vTrajectory);
-            if (marwoodMap.containsKey(info)) {
-              assert info.isRetirementStart(); // data for retirement start dates are already in the table
+          for (MonthlyInfo info : trajectory) {
+            MarwoodEntry entry = new MarwoodEntry(retirementYears, lookbackYears, percentStock, info);
+            if (marwoodMap.containsKey(entry)) {
+              assert entry.isRetirementStart(); // data for retirement start dates are already in the table
             } else {
               // This entry is for a re-retire trajectory so add it to the table.
-              assert info.currentTime > info.retireTime;
-              marwoodMap.put(info, info);
-              writer.writeln(info.toCSV());
+              assert entry.currentTime > entry.retireTime;
+              marwoodMap.put(entry, entry);
+              writer.writeln(entry.toCSV());
             }
           }
         }
@@ -168,7 +173,7 @@ public class MarwoodTable
 
           // Add new month to sequence.
           assert seq.isEmpty() || info.retireTime > seq.getEndMS();
-          seq.addData(info.swr, info.retireTime);
+          seq.addData(info.dmswr, info.retireTime);
         }
       }
       if (seq != null) { // store last sequence and final SWR
@@ -185,7 +190,9 @@ public class MarwoodTable
     final int lookbackMonths = lookbackYears * 12;
     for (int i = lookbackMonths; i < SwrLib.lastIndex(retirementYears); ++i) {
       final long retireTime = SwrLib.time(i);
-      Sequence trajectory = MarwoodMethod.reretire(retireTime, retirementYears, lookbackYears, percentStock);
+      final double nestEgg = SwrLib.getNestEgg(SwrLib.indexForTime(retireTime), lookbackYears, percentStock);
+      List<MonthlyInfo> trajectory = MarwoodMethod.reretire(retireTime, retirementYears, lookbackYears, percentStock,
+          Inflation.Real, nestEgg);
 
       MarwoodEntry key = new MarwoodEntry(retireTime, retirementYears, lookbackYears, percentStock);
       MarwoodTable.marwoodTrajectories.put(key, trajectory);
@@ -196,7 +203,7 @@ public class MarwoodTable
   {
     for (MarwoodEntry marwood : marwoodMap.values()) {
       if (marwood.isRetirementStart()) {
-        MonthlyInfo info = SwrLib.runPeriod(marwood);
+        MonthlyInfo info = BengenMethod.runPeriod(marwood);
         assert info.ok();
       }
     }

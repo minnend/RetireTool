@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.minnen.retiretool.Bond;
-import org.minnen.retiretool.Bond.DivOrPow;
 import org.minnen.retiretool.BondFactory;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
@@ -17,9 +16,7 @@ import org.minnen.retiretool.swr.data.BengenTable;
 import org.minnen.retiretool.swr.data.MarwoodEntry;
 import org.minnen.retiretool.swr.data.MarwoodTable;
 import org.minnen.retiretool.swr.data.MonthlyInfo;
-import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.FinLib.Inflation;
-import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
 import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
 import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
@@ -96,6 +93,12 @@ public class SwrLib
     }
   }
 
+  /** @return inflation (as a multiplier) at `index` (i.e. from [index..index+1]). */
+  public static double inflation(int index)
+  {
+    return cpi.get(index + 1, 0) / cpi.get(index, 0);
+  }
+
   /** @return inflation (as a multiplier) over [from..to]. */
   public static double inflation(int from, int to)
   {
@@ -110,127 +113,6 @@ public class SwrLib
 
     double nestEgg = 1e6 * SwrLib.inflation(-1, lookbackMonths); // $1M adjusted for inflation to start of sim
     return nestEgg * SwrLib.growth(lookbackMonths, i, percentStock); // update forward based on market growth
-  }
-
-  public static MonthlyInfo runPeriod(BengenEntry info)
-  {
-    return runPeriod(info, null);
-  }
-
-  public static MonthlyInfo runPeriod(BengenEntry info, List<MonthlyInfo> salaries)
-  {
-    final int index = indexForTime(info.time);
-    return runPeriod(index, info.swr / 100.0, info.retirementYears, info.percentStock, salaries);
-  }
-
-  public static MonthlyInfo runPeriod(MarwoodEntry info)
-  {
-    return runPeriod(info, null);
-  }
-
-  public static MonthlyInfo runPeriod(MarwoodEntry info, List<MonthlyInfo> salaries)
-  {
-    final int index = indexForTime(info.retireTime);
-    return runPeriod(index, info.swr / 100.0, info.retirementYears, info.percentStock, salaries);
-  }
-
-  /**
-   * Simulate a retirement.
-   * 
-   * @param iStart index of retirement month (first withdrawal)
-   * @param withdrawalRate annual withdrawal rate as a percent (3.5 = 3.5%)
-   * @param years number of years of retirement
-   * @param percentStock percent stock (vs. bonds) held in brokerage account
-   * @param salaries if non-null, will be filled with monthly info objects (optional)
-   * @return info for the final month: either the last month of retirement or the failure month
-   */
-  public static MonthlyInfo runPeriod(int iStart, double withdrawalRate, int years, int percentStock,
-      List<MonthlyInfo> salaries)
-  {
-    final int iEnd = Math.min(iStart + 12 * years, length());
-    return run(iStart, iEnd, withdrawalRate, percentStock, salaries);
-  }
-
-  /**
-   * Simulate a retirement.
-   * 
-   * @param iStart index of retirement month (first withdrawal)
-   * @param iEnd last index of simulation period (exclusive)
-   * @param withdrawalRate annual withdrawal rate as a percent (3.5 = 3.5%) *
-   * @param percentStock percent stock (vs. bonds) held in brokerage account
-   * @param salaries if non-null, will be filled with monthly info objects (optional)
-   * @return info for the final month: either the last month of retirement or the failure month
-   */
-  public static MonthlyInfo run(int iStart, int iEnd, double withdrawalRate, int percentStock,
-      List<MonthlyInfo> salaries)
-  {
-    assert iStart >= 0 && iStart < length();
-    assert iEnd > iStart && iEnd <= length();
-    assert withdrawalRate > 0.0 : withdrawalRate;
-
-    double balance = 1000000.0; // starting balance is mostly arbitrary since all results are relative
-    double annualWithdrawal = balance * withdrawalRate / 100.0;
-    double monthlyWithdrawal = annualWithdrawal / 12;
-
-    MonthlyInfo info = null;
-    for (int i = iStart; i < iEnd; ++i) {
-      info = new MonthlyInfo(i, SwrLib.time(i), i - iStart + 1, monthlyWithdrawal, balance);
-      if (salaries != null) salaries.add(info);
-      if (info.failed()) return info;
-
-      // Make withdrawal at the beginning of the month.
-      balance -= monthlyWithdrawal;
-      assert balance > -1e-5; // TODO avoid floating point issues
-
-      // Remaining balance grows during the rest of month.
-      balance *= growth(i, percentStock);
-    }
-    return info;
-  }
-
-  /**
-   * Find the SWR for a given retirement date.
-   * 
-   * @param index index of retirement date
-   * @param years number of years of retirement
-   * @param percentStock percent stock (vs bonds) in asset allocation (70 = 70%)
-   * @param quantum withdrawalRate % quantum == 0
-   * @return safe withdrawal rate for the given retirement index and parameters
-   */
-  public static int findSwrForYear(int index, int years, int percentStock, int quantum)
-  {
-    int lowSWR = 0;
-    int highSWR = 10001;
-
-    BengenEntry entry = BengenTable.get(years - 1, percentStock, SwrLib.time(index));
-    if (entry != null) {
-      highSWR = entry.swr; // SWR for N years can't be larger than SWR for (N-1) years
-    }
-
-    while (highSWR - lowSWR > quantum) {
-      final int swr = (lowSWR + highSWR) / (2 * quantum) * quantum;
-      assert swr >= lowSWR && swr <= highSWR && swr % quantum == 0 : swr;
-      MonthlyInfo info = SwrLib.runPeriod(index, swr / 100.0, years, percentStock, null);
-      if (info.ok()) {
-        lowSWR = swr;
-      } else {
-        highSWR = swr;
-      }
-    }
-    return lowSWR;
-  }
-
-  /** @return true if the withdrawal rate works for all retirement starting times. */
-  public static boolean isSafe(int withdrawalRate, int years, int percentStock)
-  {
-    final int lastIndex = SwrLib.lastIndex(years);
-    final double floatWR = withdrawalRate / 100.0;
-    for (int i = 0; i <= lastIndex; ++i) {
-      MonthlyInfo info = SwrLib.runPeriod(i, floatWR, years, percentStock, null);
-      if (info.failed()) return false;
-      assert info.balance > 0 && info.salary > 0;
-    }
-    return true;
   }
 
   /** Verify that we're matching the "Real Total Return Price" from Shiller's spreadsheet. */
@@ -382,7 +264,8 @@ public class SwrLib
         int nFail = 0;
         int nWin = 0;
         for (int iStart = 0; iStart <= lastIndex(nYears); ++iStart) {
-          MonthlyInfo info = runPeriod(iStart, withdrawalRate / 100.0, nYears, percentStock, null);
+          MonthlyInfo info = BengenMethod.runPeriod(iStart, withdrawalRate / 100.0, nYears, percentStock,
+              Inflation.Real, null);
           if (info.failed()) {
             ++nFail;
           } else {

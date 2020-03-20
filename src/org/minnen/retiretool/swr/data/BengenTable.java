@@ -79,7 +79,7 @@ public class BengenTable
       for (int nRetireYears = 1; nRetireYears <= 60; ++nRetireYears) {
         final long a = TimeLib.getTime();
         for (int percentStock : percentStockList) {
-          Sequence seq = BengenMethod.findSwrSequence(nRetireYears, percentStock);
+          Sequence seq = BengenMethod.findSwrAcrossTime(nRetireYears, percentStock);
           int swr = (int) Math.round(seq.getMin().get(0) * 100);
           System.out.printf("%d, %3d [%s] -> %d\n", nRetireYears, percentStock, TimeLib.formatYM(seq.getEndMS()), swr);
           for (FeatureVec v : seq) {
@@ -147,7 +147,7 @@ public class BengenTable
   private static void verifyTable() throws IOException
   {
     for (BengenEntry bengen : bengenMap.values()) {
-      MonthlyInfo info = SwrLib.runPeriod(bengen);
+      MonthlyInfo info = BengenMethod.runPeriod(bengen);
       assert info.ok() : bengen;
     }
     System.out.printf("Verified entries: %d\n", bengenMap.size());
