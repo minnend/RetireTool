@@ -391,7 +391,7 @@ public class YahooIO
   {
     try (Writer writer = new Writer(file)) {
       for (Map.Entry<String, String> entry : fundamentals.entrySet()) {
-        writer.write("%s|%s\n", entry.getKey(), entry.getValue());
+        writer.writef("%s|%s\n", entry.getKey(), entry.getValue());
       }
     }
   }

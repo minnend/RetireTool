@@ -155,12 +155,12 @@ public class SearchConfigs
         // System.out.printf(" Optimized: %s\n", optimized);
         if (!optimized.isBeaten(dominators, compCumDom)) {
           System.out.printf("New dominator: %s (%s) *******\n", optimized, optimized.config);
-          writer.write("New: %s  %s\n", optimized, optimized.config);
+          writer.writef("New: %s  %s\n", optimized, optimized.config);
           dominators.add(optimized);
           AllStats.filter(dominators, compCumDom);
           for (AllStats x : dominators) {
             System.out.printf(" Defender: %s (%s)\n", x, x.config);
-            writer.write(" Defender: %s  %s\n", x, x.config);
+            writer.writef(" Defender: %s  %s\n", x, x.config);
           }
           writer.flush();
         } else if (optimized.config != config) {

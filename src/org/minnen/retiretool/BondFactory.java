@@ -35,14 +35,16 @@ public abstract class BondFactory
 
   public double getMaxSpendZeroCoupon(double cash, double interestRate)
   {
-    double x = FinLib.getFutureValue(cash, interestRate, durationInMonths());
+    final double years = durationInMonths() / 12.0;
+    double x = FinLib.getFutureValue(cash, interestRate, years);
     x = getClosestQuantum(x);
-    return FinLib.getPresentValue(x, interestRate, durationInMonths());
+    return FinLib.getPresentValue(x, interestRate, years);
   }
 
   public double getParForPriceZeroCoupon(double price, double interestRate)
   {
-    return FinLib.getFutureValue(price, interestRate, durationInMonths());
+    final double years = durationInMonths() / 12.0;
+    return FinLib.getFutureValue(price, interestRate, years);
   }
 
   /** @return Maximum bond value you can buy with the given amount of cash. */

@@ -149,7 +149,7 @@ public class MarwoodMethod
 
       // Jump to higher salary if re-retiring helps.
       final MarwoodEntry entry = MarwoodTable.get(now, yearsLeft, lookbackYears, percentStock);
-      final double reSalary = Math.min(balance * entry.dmswr / 10000.0, balance * 0.2); // cap salary at 20% of balance
+      final double reSalary = Math.min(balance * entry.swr / 10000.0, balance * 0.2); // cap salary at 20% of balance
       if (reSalary > salary) {
         salary = reSalary;
         virtualRetirementMonths = entry.virtualRetirementMonths;
@@ -218,7 +218,7 @@ public class MarwoodMethod
     for (int iRetire = iStartSim; iRetire < SwrLib.length(); ++iRetire) {
       // Find best "virtual" retirement year within the lookback period.
       MarwoodEntry dmswr = MarwoodTable.get(SwrLib.time(iRetire), retirementYears, lookbackYears, percentStock);
-      final int bestSWR = dmswr.dmswr;
+      final int bestSWR = dmswr.swr;
       final int bestIndex = iRetire - dmswr.virtualRetirementMonths;
       assert bestIndex >= 0;
 
@@ -313,7 +313,7 @@ public class MarwoodMethod
 
       Sequence seq = new Sequence(TimeLib.ms2date(trajectory.get(0).retireTime).format(TimeLib.dtfY));
       for (MonthlyInfo info : trajectory) {
-        seq.addData(info.dmswr / 100.0, info.currentTime);
+        seq.addData(info.swr / 100.0, info.currentTime);
       }
       trajectories.add(seq);
     }
@@ -342,91 +342,19 @@ public class MarwoodMethod
     Chart.saveChart(config);
   }
 
-  public static void createCarolTable(int lookbackYears, int percentStock)
-  {
-    final int[] years = new int[] { 1950, 1951, 1952, 1953, 1954, 1955, 1956, 1957, 1958, 1959, 1960, 1965, 1970, 1975,
-        1980, 1985, 1990, 1995, 2000, 2005 };
-    Set<Integer> yearsToPrint = new HashSet<>();
-    for (int year : years) {
-      yearsToPrint.add(year);
-    }
-
-    final double nestEgg = 1e6;
-    final int retirementYears = 35;
-    final int finalYear = years[0] + retirementYears - 1;
-    final long timeStart = TimeLib.toMs(years[0], Month.JANUARY, 1);
-    final long timeEnd = TimeLib.toMs(years[0] + retirementYears - 1, Month.DECEMBER, 1);
-    final int iStart = SwrLib.indexForTime(timeStart);
-    final int iEnd = SwrLib.indexForTime(timeEnd);
-
-    final double bengenSWR = BengenTable.getSWR(retirementYears, percentStock) / 100.0;
-    List<MonthlyInfo> bengenTrajectory = new ArrayList<>();
-    BengenMethod.run(iStart, iEnd + 1, bengenSWR, percentStock, Inflation.Nominal, bengenTrajectory);
-    assert bengenTrajectory.size() == (iEnd - iStart + 1);
-
-    List<MonthlyInfo> dmTrajectory = MarwoodMethod.reretire(timeStart, retirementYears, lookbackYears, percentStock,
-        Inflation.Nominal, nestEgg);
-    assert dmTrajectory.size() == (iEnd - iStart + 1);
-
-    for (MonthlyInfo bengenInfo : bengenTrajectory) {
-      final int index = bengenInfo.index;
-      final LocalDate date = TimeLib.ms2date(bengenInfo.currentTime);
-
-      final boolean isNewYear = (date.getMonth() == Month.JANUARY && yearsToPrint.contains(date.getYear()));
-      final boolean isLastMonth = (date.getMonth() == Month.DECEMBER && date.getYear() == finalYear);
-      if (!isNewYear && !isLastMonth) continue;
-      final int year = (isLastMonth ? finalYear + 1 : date.getYear());
-
-      MonthlyInfo dmInfo = dmTrajectory.get(index - iStart);
-      assert (dmInfo.retireTime == bengenInfo.retireTime) && (dmInfo.currentTime == bengenInfo.currentTime);
-      assert dmInfo.index == index;
-      assert Library.almostEqual(bengenInfo.bengenSalary, dmInfo.bengenSalary, 1e-6);
-
-      double growth = SwrLib.growth(index, index + 12, 100); // market returns for the year
-      growth *= SwrLib.inflation(index + 12, index); // adjust market returns for inflation
-      final int yearsLeft = Math.max(0, retirementYears - (year - years[0]));
-
-      final double inflation = SwrLib.inflation(dmInfo.index, iStart); // inflation multiplier back to retirement date
-      final double dmSalaryReal = dmInfo.monthlyIncome * 12 * inflation;
-      final double bengenSalaryReal = bengenInfo.monthlyIncome * 12 * inflation;
-
-      final double bengenBalance = (isLastMonth ? bengenInfo.endBalance : bengenInfo.startBalance) * inflation;
-      final double dmBalance = (isLastMonth ? dmInfo.endBalance : dmInfo.startBalance) * inflation;
-
-      final long lookbackDate = SwrLib.time(dmInfo.index - dmInfo.virtualRetirementMonths);
-      final double dmswr = dmInfo.dmswr / 100.0;
-
-      final String sBengenBalance = String.format("\\$%s", FinLib.dollarFormatter.format(bengenBalance));
-      final String sDmswrBalance = String.format("\\$%s", FinLib.dollarFormatter.format(dmBalance));
-      final String sBengenSalaryReal = String.format("\\$%s", FinLib.dollarFormatter.format(bengenSalaryReal));
-      final String sDmswrSalaryReal = String.format("\\$%s", FinLib.dollarFormatter.format(dmSalaryReal));
-
-      System.out.printf("%d  & %2d  & %5.1f\\%%  & %12s  & %12s  & %12s  & %12s  & %5.2f\\%%  &  %9s  \\\\\n", year,
-          yearsLeft, FinLib.mul2ret(growth), sBengenSalaryReal, sDmswrSalaryReal, sBengenBalance, sDmswrBalance, dmswr,
-          TimeLib.formatMonth(lookbackDate));
-    }
-  }
-
   public static void main(String[] args) throws IOException
   {
     final int retirementYears = 30;
     final int lookbackYears = 20;
     final int percentStock = 75;
 
-    final boolean buildCarolTable = true;
+    SwrLib.setupWithDefaultFiles();
+    System.out.printf("DMSWR entries: %d\n", MarwoodTable.marwoodMap.size());
+    System.out.printf("DMSWR sequences: %d\n", MarwoodTable.marwoodSequences.size());
 
-    if (buildCarolTable) {
-      SwrLib.setupWithDefaultFiles(Inflation.Nominal);
-      createCarolTable(lookbackYears, percentStock);
-    } else {
-      SwrLib.setupWithDefaultFiles();
-      System.out.printf("DMSWR entries: %d\n", MarwoodTable.marwoodMap.size());
-      System.out.printf("DMSWR sequences: %d\n", MarwoodTable.marwoodSequences.size());
+    createCharts(retirementYears, lookbackYears, percentStock);
 
-      createCharts(retirementYears, lookbackYears, percentStock);
-
-      MarwoodTable.genReRetireTable(retirementYears, lookbackYears, percentStock);
-      createReRetireCharts(retirementYears, lookbackYears, percentStock);
-    }
+    MarwoodTable.genReRetireTable(retirementYears, lookbackYears, percentStock);
+    createReRetireCharts(retirementYears, lookbackYears, percentStock);
   }
 }

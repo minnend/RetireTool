@@ -24,6 +24,7 @@ public class ChartConfig
 
   public File           file;
   public Sequence[]     data;
+  public String         dataLabelConfig;
   public Type           type               = Type.Unknown;
   public ChartTiming    timing             = ChartTiming.DAILY;
   public boolean        logarthimicYAxis;
@@ -31,6 +32,7 @@ public class ChartConfig
   public String[]       labels;
   public String[]       colors;
   public String         title;
+  public String         titleConfig        = "margin: 0";
   public String         xAxisTitle;
   public String         yAxisTitle;
   public double         ymin               = Double.NaN;
@@ -59,6 +61,7 @@ public class ChartConfig
   public List<PlotLine> yLines             = new ArrayList<PlotLine>();
   public String         pathToBase;
   public int            lineWidth          = 2;
+  public boolean        animation          = true;
 
   // Specific to scatter plots.
   public double         radius             = 3;
@@ -203,6 +206,17 @@ public class ChartConfig
   public ChartConfig setTitle(String title)
   {
     this.title = title;
+    return this;
+  }
+
+  /**
+   * Set extra json for the title object.
+   * 
+   * The final json will be "title: { text: `<title>`, <config> }".
+   */
+  public ChartConfig setTitleConfig(String config)
+  {
+    this.titleConfig = config;
     return this;
   }
 
@@ -436,6 +450,32 @@ public class ChartConfig
   public ChartConfig setPathToBase(String relPath)
   {
     pathToBase = relPath;
+    return this;
+  }
+
+  public ChartConfig setAnimation(boolean animation)
+  {
+    this.animation = animation;
+    return this;
+  }
+
+  public ChartConfig setDataLabelConfig(boolean enabled)
+  {
+    return setDataLabelConfig(enabled, -90, "#fff", 2, 1, 4, 16, false);
+  }
+
+  public ChartConfig setDataLabelConfig(boolean enabled, int rotation, String color, int nSigDigs, int x, int y,
+      int fontSize, boolean outline)
+  {
+    if (!enabled) {
+      this.dataLabelConfig = null;
+    } else {
+      this.dataLabelConfig = String.format(
+          "dataLabels: { enabled: %s, crop: false, overflow: 'none', rotation: %d, "
+              + "color: '%s', align: 'right', format: '{point.y:.%df}', x: %d, y: %d, style: { "
+              + "fontSize: '%dpx', fontFamily: 'Verdana, sans-serif', fontWeight: 'normal', textOutline: %d, }, },",
+          enabled ? "true" : "false", rotation, color, nSigDigs, x, y, fontSize, outline ? 1 : 0);
+    }
     return this;
   }
 }

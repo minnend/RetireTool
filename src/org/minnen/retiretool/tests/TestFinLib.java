@@ -356,4 +356,17 @@ public class TestFinLib
     double expected = -0.2951444;
     assertEquals(expected, sharpe, 1e-6);
   }
+
+  @Test
+  public void testPresentValue()
+  {
+    final double value = 1000.0;
+    final double interestRate = 10.0;
+    final int nPeriods = 5;
+    double pv = FinLib.getPresentValue(value, interestRate, nPeriods);
+    assertEquals(620.92, pv, 0.0051); // from: https://en.wikipedia.org/wiki/Present_value#Present_value_of_a_lump_sum
+
+    double fv = FinLib.getFutureValue(pv, interestRate, nPeriods);
+    assertEquals(value, fv, 1e-6);
+  }
 }

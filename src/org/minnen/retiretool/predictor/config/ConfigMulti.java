@@ -98,7 +98,7 @@ public class ConfigMulti extends PredictorConfig
     try (Writer writer = new Writer(sw)) {
       writer.write("MultiPredict: ");
       for (int i = 0; i < configs.length; ++i) {
-        writer.write("%s%s", configs[i], i == configs.length - 1 ? "" : " | ");
+        writer.writef("%s%s", configs[i], i == configs.length - 1 ? "" : " | ");
       }
     } catch (IOException e) {}
     return sw.toString();

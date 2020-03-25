@@ -63,7 +63,7 @@ public class Portfolio implements Comparable<Portfolio>
   {
     try (Writer writer = new Writer(file)) {
       for (Portfolio p : portfolios) {
-        writer.write("%s\n", p);
+        writer.writef("%s\n", p);
       }
     }
   }

@@ -39,25 +39,25 @@ public class Screener
           "Net Payout<br/>Yield", "Dividend<br/>(Annual)", "Years Div<br/>Increased", "Payout Ratio<br/>(EPS)",
           "Payout Ratio<br/>(LFCF)", "Sector", "Company Name" };
       for (String s : header) {
-        writer.write(" <th>%s</th>\n", s);
+        writer.writef(" <th>%s</th>\n", s);
       }
       writer.write("</tr></thead>\n");
       writer.write("<tbody>\n");
 
       int iRow = 0;
       for (StockInfo stock : stocks) {
-        writer.write("<tr class=\"%s\">\n", iRow % 2 == 0 ? "evenRow" : "oddRow");
-        writer.write("<td>%s</td>\n", stock.symbol);
-        writer.write("<td>%.2f</td>\n", stock.metrics.get("price"));
-        writer.write("<td>%.2f</td>\n", stock.metrics.get("dividend yield"));
-        writer.write("<td>%.2f</td>\n", stock.metrics.get("buyback yield"));
-        writer.write("<td>%.2f</td>\n", stock.metrics.get("net payout yield"));
-        writer.write("<td>%.2f</td>\n", stock.getFundamental("Forward Annual Dividend Rate"));
-        writer.write("<td>%d</td>\n", stock.nYearsDivIncrease);
-        writer.write("<td>%.2f</td>\n", stock.metrics.get("payout ratio (EPS)") * 100);
-        writer.write("<td>%.2f</td>\n", stock.metrics.get("payout ratio (LFCF)") * 100);
-        writer.write("<td>%s</td>\n", stock.sector);
-        writer.write("<td><a href=\"https://stockrow.com/%s\">%s</a></td>\n", stock.symbol, stock.name);
+        writer.writef("<tr class=\"%s\">\n", iRow % 2 == 0 ? "evenRow" : "oddRow");
+        writer.writef("<td>%s</td>\n", stock.symbol);
+        writer.writef("<td>%.2f</td>\n", stock.metrics.get("price"));
+        writer.writef("<td>%.2f</td>\n", stock.metrics.get("dividend yield"));
+        writer.writef("<td>%.2f</td>\n", stock.metrics.get("buyback yield"));
+        writer.writef("<td>%.2f</td>\n", stock.metrics.get("net payout yield"));
+        writer.writef("<td>%.2f</td>\n", stock.getFundamental("Forward Annual Dividend Rate"));
+        writer.writef("<td>%d</td>\n", stock.nYearsDivIncrease);
+        writer.writef("<td>%.2f</td>\n", stock.metrics.get("payout ratio (EPS)") * 100);
+        writer.writef("<td>%.2f</td>\n", stock.metrics.get("payout ratio (LFCF)") * 100);
+        writer.writef("<td>%s</td>\n", stock.sector);
+        writer.writef("<td><a href=\"https://stockrow.com/%s\">%s</a></td>\n", stock.symbol, stock.name);
         writer.write("</tr>\n");
         ++iRow;
       }
@@ -71,7 +71,7 @@ public class Screener
     try (Writer writer = new Writer(file)) {
       writer.write("<html><head>\n");
       writer.write("<title>Screener</title>\n");
-      writer.write("<script src=\"%s\"></script>\n", Chart.jquery);
+      writer.writef("<script src=\"%s\"></script>\n", Chart.jquery);
       writer.write("<script type=\"text/javascript\" src=\"js/jquery.tablesorter.min.js\"></script>\n");
       writer.write("<script type=\"text/javascript\">\n");
       writer.write(" $(document).ready(function() { $(\"#screenerTable\").tablesorter( {widgets: ['zebra']} ); } );\n");

@@ -18,6 +18,8 @@ import org.minnen.retiretool.util.FinLib.Inflation;
 
 public class BengenTable
 {
+  public static final int[]                   percentStockList;
+
   /** Values have valid SWR fields, queries ignore SWR field. */
   public static Map<BengenEntry, BengenEntry> bengenMap       = new HashMap<>();
 
@@ -27,13 +29,17 @@ public class BengenTable
   /** Values are SWR for the given retirement duration and stock percentage. */
   public static Map<BengenEntry, Integer>     bengenSWRs      = new HashMap<>();
 
+  static {
+    percentStockList = new int[] { 0, 10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 100 };
+  }
+
   public static BengenEntry get(int retirementYears, int percentStock, long time)
   {
     BengenEntry key = new BengenEntry(time, retirementYears, percentStock);
     return bengenMap.getOrDefault(key, null);
   }
 
-  public static Sequence getSeq(int retirementYears, int percentStock)
+  public static Sequence getAcrossTime(int retirementYears, int percentStock)
   {
     BengenEntry key = new BengenEntry(retirementYears, percentStock);
     return bengenSequences.getOrDefault(key, null);
@@ -65,7 +71,6 @@ public class BengenTable
   private static void generateTable(File file) throws IOException
   {
     clear();
-    final int[] percentStockList = new int[] { 0, 10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 100 };
 
     try (Writer writer = new Writer(file)) {
       writer.writeln("# Bengen safe withdrawal rates (SWR).");

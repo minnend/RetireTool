@@ -111,7 +111,7 @@ public class MarwoodTable
           MarwoodEntry oldEntry = MarwoodTable.marwoodMap.get(newEntry);
           assert newEntry.equals(oldEntry); // only tests that the key fields match
           assert newEntry.isRetirementStart();
-          assert newEntry.dmswr == oldEntry.dmswr;
+          assert newEntry.swr == oldEntry.swr;
           assert Library.almostEqual(newEntry.bengenSalary, oldEntry.bengenSalary, 1e-5);
           assert Library.almostEqual(newEntry.crystalSalary, oldEntry.crystalSalary, 1e-5);
           assert Library.almostEqual(newEntry.marwoodSalary, oldEntry.marwoodSalary, 1e-5);
@@ -173,7 +173,7 @@ public class MarwoodTable
 
           // Add new month to sequence.
           assert seq.isEmpty() || info.retireTime > seq.getEndMS();
-          seq.addData(info.dmswr, info.retireTime);
+          seq.addData(info.swr, info.retireTime);
         }
       }
       if (seq != null) { // store last sequence and final SWR

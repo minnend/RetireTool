@@ -2,11 +2,13 @@ package org.minnen.retiretool.swr;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Month;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.minnen.retiretool.Bond;
+import org.minnen.retiretool.Bond.DivOrPow;
 import org.minnen.retiretool.BondFactory;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
@@ -17,6 +19,8 @@ import org.minnen.retiretool.swr.data.MarwoodEntry;
 import org.minnen.retiretool.swr.data.MarwoodTable;
 import org.minnen.retiretool.swr.data.MonthlyInfo;
 import org.minnen.retiretool.util.FinLib.Inflation;
+import org.minnen.retiretool.util.IntPair;
+import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.viz.Chart;
 import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
 import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
@@ -45,6 +49,12 @@ public class SwrLib
   public static int indexForTime(long ms)
   {
     return stockMul.getClosestIndex(ms);
+  }
+
+  /** @return closest index for the given time */
+  public static int indexForTime(Month month, int year)
+  {
+    return stockMul.getClosestIndex(TimeLib.toMs(year, month, 1));
   }
 
   /** @return number of elements in the underlying data. */
@@ -239,6 +249,7 @@ public class SwrLib
   /** Save an interactive chart with stock and bond data as a local HTML file. */
   public static void saveGraph() throws IOException
   {
+    // Save graph of asset growth and related curves (stock, bonds, mixed, CPI, etc.).
     Sequence snpReal = calcSnpReturns(Inflation.Real);
     snpReal.setName("S&P (real, calculated)");
     snpReal._div(snpReal.getFirst(0));
@@ -257,20 +268,12 @@ public class SwrLib
     saveGraph();
 
     // Calculate and print the success rate for different WRs and stock/bond mixes.
-    final int nYears = 30;
+    final int retirementYears = 30;
     for (int withdrawalRate = 300; withdrawalRate <= 400; withdrawalRate += 25) {
       for (int percentStock = 0; percentStock <= 100; percentStock += 25) {
-        int nFail = 0;
-        int nWin = 0;
-        for (int iStart = 0; iStart <= lastIndex(nYears); ++iStart) {
-          MonthlyInfo info = BengenMethod.runPeriod(iStart, withdrawalRate / 100.0, nYears, percentStock,
-              Inflation.Real, null);
-          if (info.failed()) {
-            ++nFail;
-          } else {
-            ++nWin;
-          }
-        }
+        IntPair winFail = BengenMethod.getSuccessFail(withdrawalRate, retirementYears, percentStock);
+        final int nWin = winFail.first;
+        final int nFail = winFail.second;
         System.out.printf("%.2f%%  %3d%%| %6.2f%%   Failed: %3d / %d\n", withdrawalRate / 100.0, percentStock,
             100.0 * nWin / (nWin + nFail), nFail, nWin + nFail);
       }

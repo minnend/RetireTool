@@ -224,7 +224,7 @@ public class Dashboard
 
         double totalReturn = FinLib.mul2ret(total);
         String sTotal = Chart.genColoredCell(String.format("%.2f", totalReturn), totalReturn >= 0, null, red);
-        writer.write(
+        writer.writef(
             " <tr class=\"%s\"><td>%d</td><td>%d</td><td>%.1f</td>%s<td>%.2f</td><td>%.2f</td>%s<td>%.2f</td><td>%s</td></tr>\n",
             className, entry.getKey(), returns.length, 100.0 - 100.0 * nLose / n, sTotal, Library.min(drawdowns),
             FinLib.mul2ret(returns[0]), sMean, FinLib.mul2ret(returns[n - 1]),
@@ -290,7 +290,7 @@ public class Dashboard
         String sMean = Chart.genColoredCell(String.format("%.2f", mean), mean >= 0, null, red);
         double totalReturn = FinLib.mul2ret(total);
         String sTotal = Chart.genColoredCell(String.format("%.2f", totalReturn), totalReturn >= 0, null, red);
-        writer.write(
+        writer.writef(
             " <tr class=\"%s\"><td>%d</td><td>%d</td><td>%d</td><td>%.1f</td>%s<td>%.2f</td><td>%.2f</td>%s<td>%.2f</td><td>%s</td></tr>\n",
             className, pair.first, pair.second, returns.length, 100.0 - 100.0 * nLose / n, sTotal,
             Library.min(drawdowns), FinLib.mul2ret(returns[0]), sMean, FinLib.mul2ret(returns[n - 1]),
@@ -341,7 +341,7 @@ public class Dashboard
 
       int iRow = 0;
       for (CumulativeStats stats : strategyStats) {
-        writer.write("<tr class=\"%s\">\n", iRow % 2 == 0 ? "evenRow" : "oddRow");
+        writer.writef("<tr class=\"%s\">\n", iRow % 2 == 0 ? "evenRow" : "oddRow");
         String name = stats.name();
         writer.write(String.format("<td><b>%s</b></td>\n", name));
         writer.write(String.format("<td>%.2f</td>\n", stats.cagr));
@@ -439,7 +439,7 @@ public class Dashboard
     try (Writer f = new Writer(new File(DataIO.getOutputPath(), dashboardFilename))) {
       f.write("<html><head>\n");
       f.write("<title>Dashboard</title>\n");
-      f.write("<script src=\"%s\"></script>\n", Chart.jquery);
+      f.writef("<script src=\"%s\"></script>\n", Chart.jquery);
       f.write("<link rel=\"stylesheet\" href=\"css/dashboard.css\">\n");
       f.write("</head><body>\n");
 
@@ -465,7 +465,7 @@ public class Dashboard
         }
 
         // Date column.
-        f.write("<tr class=\"%s\"><td class=\"history\">%s</td>%s<td>%d</td>", iCode % 2 == 0 ? "evenRow" : "oddRow",
+        f.writef("<tr class=\"%s\"><td class=\"history\">%s</td>%s<td>%d</td>", iCode % 2 == 0 ? "evenRow" : "oddRow",
             TimeLib.formatDate(timeCodeSingles.time), sRowGap, timeCodeSingles.code);
         f.write(sRowGap);
 
@@ -473,7 +473,7 @@ public class Dashboard
         for (int i = 0; i < singleConfigs.length; ++i) {
           int mask = 1 << (singleConfigs.length - i - 1);
           boolean b = ((timeCodeSingles.code & mask) != 0);
-          f.write("<td><div class=\"color\" style=\"background: #%s;\">&nbsp;</div></td>", b ? green : red);
+          f.writef("<td><div class=\"color\" style=\"background: #%s;\">&nbsp;</div></td>", b ? green : red);
         }
 
         // Final decision.
@@ -486,7 +486,7 @@ public class Dashboard
 
         f.write(sRowGap);
         boolean b = (timeCodeStrategy.code != 0);
-        f.write("<td><div class=\"color\" style=\"background: #%s;\">&nbsp;</div></td>", b ? green : red);
+        f.writef("<td><div class=\"color\" style=\"background: #%s;\">&nbsp;</div></td>", b ? green : red);
         // Return for this time period (single change).
         int index1 = baselineDailyReturns.getClosestIndex(timeCodeSingles.time);
         int index2 = baselineDailyReturns.getClosestIndex(nextTime);
@@ -513,7 +513,7 @@ public class Dashboard
           returns.add(new CodeInfo(totalMul, drawdown, timeCodeSingles.time, nextTime));
         }
 
-        f.write("<td>%.2f</td>", FinLib.mul2ret(totalMul));
+        f.writef("<td>%.2f</td>", FinLib.mul2ret(totalMul));
 
         // Return for this time period (top-level change).
         boolean b1 = (timeCodeStrategy.code != 0);
@@ -536,7 +536,7 @@ public class Dashboard
         index2 = baselineDailyReturns.getClosestIndex(nextTopTime);
         totalMul = FinLib.getTotalReturn(baselineDailyReturns, index1, index2);
         f.write(sRowGap);
-        f.write("<td>%s</td>", bTopChange ? String.format("%.2f", FinLib.mul2ret(totalMul)) : "");
+        f.writef("<td>%s</td>", bTopChange ? String.format("%.2f", FinLib.mul2ret(totalMul)) : "");
         f.write(sRowGap);
         f.write("</tr>\n");
       }
@@ -544,17 +544,17 @@ public class Dashboard
 
       // Start Column 2.
       f.write("<div class=\"column\">\n");
-      f.write("<b>Dates Covered:</b> [%s] &rarr; [%s]<br/><br/>\n", TimeLib.formatDate(sim.getStartMS()),
+      f.writef("<b>Dates Covered:</b> [%s] &rarr; [%s]<br/><br/>\n", TimeLib.formatDate(sim.getStartMS()),
           TimeLib.formatDate(sim.getEndMS()));
       DateTimeFormatter dtf = DateTimeFormatter.ofPattern("MMM d, yyyy @ h:mm:ss a");
-      f.write("<b>Last Updated:</b> %s<br/><br/>\n",
+      f.writef("<b>Last Updated:</b> %s<br/><br/>\n",
           TimeLib.formatTime(TimeLib.getTime(), dtf, ZoneId.of("US/Pacific")));
       f.write("<div><b>Additional Analysis</b><ul style=\"margin-top: 4px\">\n");
       f.write("<li>SMA Predictors: ");
       for (int i = 0; i < allParams.length; ++i) {
         int code = 1 << (allParams.length - 1 - i);
         String filename = String.format("sma%d-code%d.html", i + 1, code);
-        f.write("<a href=\"%s/%s\">SMA (%d)</a>", miscDirName, filename, code);
+        f.writef("<a href=\"%s/%s\">SMA (%d)</a>", miscDirName, filename, code);
         if (i + 1 < allParams.length) {
           f.write("&nbsp;|");
         }
@@ -583,7 +583,7 @@ public class Dashboard
       f.write("<li>Date of event\n");
       f.write("<li>Prediction Code\n");
       f.write("<li>Vote for each of the three SMA predictors\n");
-      f.write("<li>Trade decision (combined vote: <font color=\"#%s\">"
+      f.writef("<li>Trade decision (combined vote: <font color=\"#%s\">"
           + "Green</font>=Risky, <font color=\"#%s\">Red</font>=Safe)\n", green, red);
       f.write("<li>Price change between events\n");
       f.write("<li>Price change between trades\n");

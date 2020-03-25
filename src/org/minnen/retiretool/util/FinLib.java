@@ -69,14 +69,14 @@ public final class FinLib
     return mul2ret(Math.pow(totalReturn, 12.0 / nMonths));
   }
 
-  public static double getFutureValue(double presentValue, double interestRate, int nMonths)
+  public static double getFutureValue(double presentValue, double interestRate, double nPeriods)
   {
-    return presentValue * Math.pow(FinLib.ret2mul(interestRate), nMonths / 12.0);
+    return presentValue * Math.pow(FinLib.ret2mul(interestRate), nPeriods);
   }
 
-  public static double getPresentValue(double futureValue, double interestRate, int nMonths)
+  public static double getPresentValue(double futureValue, double interestRate, double nPeriods)
   {
-    return futureValue * Math.pow(FinLib.ret2mul(interestRate), -nMonths / 12.0);
+    return futureValue * Math.pow(FinLib.ret2mul(interestRate), -nPeriods);
   }
 
   /**

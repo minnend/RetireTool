@@ -12,8 +12,8 @@ import org.minnen.retiretool.data.simba.SimbaIO;
 public class BengenAnnual
 {
   private static final Map<String, SimbaFund> data;
-  private static final Sequence               stock;
-  private static final Sequence               bonds;
+  public static final Sequence                stock;
+  public static final Sequence                bonds;
 
   static {
     Map<String, SimbaFund> temp = null;
@@ -24,7 +24,8 @@ public class BengenAnnual
     }
     data = temp;
     stock = data.get("TSM").annualReturns;
-    bonds = data.get("TBM").annualReturns;
+    String bondSymbol = "ITT"; // TBM
+    bonds = data.get(bondSymbol).annualReturns;
     assert stock.matches(bonds);
   }
 

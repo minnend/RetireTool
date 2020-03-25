@@ -19,7 +19,7 @@ public class Writer extends BufferedWriter
     super(sw);
   }
 
-  public void write(String format, Object... args) throws IOException
+  public void writef(String format, Object... args) throws IOException
   {
     super.write(String.format(format, args));
   }

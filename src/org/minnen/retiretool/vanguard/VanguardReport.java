@@ -93,27 +93,27 @@ public class VanguardReport
       f.write("<title>Vanguard Report</title>\n");
       f.write("<link rel=\"stylesheet\" href=\"css/vanguard-report.css\">\n");
       f.write("</head><body>\n");
-      f.write("<div><b>End Date:</b> %s<br/><br/></div>\n", TimeLib.formatDate(endTime));
+      f.writef("<div><b>End Date:</b> %s<br/><br/></div>\n", TimeLib.formatDate(endTime));
       f.write("<table>\n");
       f.write("<tr>\n");
       f.write("<th>Symbol</th>\n");
       f.write("<th>Description</th>\n");
       for (int iMom = 0; iMom < momentumMonths.length; ++iMom) {
-        f.write("<th>%d</th>", momentumMonths[iMom]);
+        f.writef("<th>%d</th>", momentumMonths[iMom]);
       }
       f.write("</tr>\n");
 
       for (int iSymbol = 0; iSymbol < fundSymbols.length; ++iSymbol) {
         VanguardFund fund = funds.get(fundSymbols[iSymbol]);
 
-        f.write("<tr class=\"%s\">", iSymbol % 2 == 0 ? "evenRow" : "oddRow");
-        f.write("<td><a href=\"%s\">%s</a></td>", getFundGraphUrl(fund.symbol), fund.symbol);
-        f.write("<td class=\"desc\">%s</td>", fund.description.replace("&", "&amp;"));
+        f.writef("<tr class=\"%s\">", iSymbol % 2 == 0 ? "evenRow" : "oddRow");
+        f.writef("<td><a href=\"%s\">%s</a></td>", getFundGraphUrl(fund.symbol), fund.symbol);
+        f.writef("<td class=\"desc\">%s</td>", fund.description.replace("&", "&amp;"));
         for (int iMom = 0; iMom < momentumMonths.length; ++iMom) {
           int nMonths = momentumMonths[iMom];
           double totalReturn = calcMomentum(fund, nMonths, endTime);
           double monthlyReturn = FinLib.mul2ret(Math.pow(FinLib.ret2mul(totalReturn), 1.0 / nMonths));
-          f.write("<td style=\"background-color: %s\">%.2f</td>", getColorString(monthlyReturn), monthlyReturn);
+          f.writef("<td style=\"background-color: %s\">%.2f</td>", getColorString(monthlyReturn), monthlyReturn);
         }
         f.write("</tr>\n");
       }

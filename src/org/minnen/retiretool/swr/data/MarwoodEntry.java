@@ -15,7 +15,7 @@ public final class MarwoodEntry
   public final int    retirementYears;
   public final int    lookbackYears;
   public final int    percentStock;
-  public final int    dmswr;
+  public final int    swr;
   public final int    virtualRetirementMonths;
   public final double finalBalance;
   public final double bengenSalary;
@@ -48,7 +48,7 @@ public final class MarwoodEntry
     this.retirementYears = retirementYears;
     this.lookbackYears = lookbackYears;
     this.percentStock = percentStock;
-    this.dmswr = SwrLib.percentToBasisPoints(info.dmswr);
+    this.swr = SwrLib.percentToBasisPoints(info.swr);
     this.virtualRetirementMonths = info.virtualRetirementMonths;
     this.finalBalance = info.finalBalance;
     this.bengenSalary = info.bengenSalary;
@@ -65,7 +65,7 @@ public final class MarwoodEntry
     this.retirementYears = retirementYears;
     this.lookbackYears = lookbackYears;
     this.percentStock = percentStock;
-    this.dmswr = swr;
+    this.swr = swr;
     this.virtualRetirementMonths = virtualRetirementMonths;
     this.finalBalance = finalBalance;
     this.bengenSalary = bengenSalary;
@@ -111,18 +111,18 @@ public final class MarwoodEntry
 
   public String toCSV()
   {
-    assert dmswr > 0;
+    assert swr > 0;
     return String.format("%d,%d,%d,%s,%s,%d,%d,%.2f,%.2f,%.2f,%.2f", retirementYears, lookbackYears, percentStock,
-        TimeLib.formatYM(retireTime), TimeLib.formatYM(currentTime), dmswr, virtualRetirementMonths, finalBalance,
+        TimeLib.formatYM(retireTime), TimeLib.formatYM(currentTime), swr, virtualRetirementMonths, finalBalance,
         bengenSalary, marwoodSalary, crystalSalary);
   }
 
   @Override
   public String toString()
   {
-    if (dmswr > 0) {
+    if (swr > 0) {
       return String.format("[%s (%d,%d,%d) %d]", TimeLib.formatYM(retireTime), retirementYears, lookbackYears,
-          percentStock, dmswr);
+          percentStock, swr);
     } else if (retireTime != TimeLib.TIME_ERROR) {
       return String.format("[%s, %d, %d, %d]", TimeLib.formatYM(retireTime), retirementYears, lookbackYears,
           percentStock);

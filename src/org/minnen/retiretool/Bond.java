@@ -7,6 +7,21 @@ import java.util.List;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.util.FinLib;
 
+/**
+ * Model a bond.
+ * 
+ * Information on bond modeling:
+ * 
+ * http://admainnew.morningstar.com/directhelp/Morningstar_UST_Constant_Maturity_Return_Methodology.pdf
+ * 
+ * https://en.wikipedia.org/wiki/Bond_valuation
+ * 
+ * https://dqydj.com/bond-pricing-calculator/
+ * 
+ * https://www.bogleheads.org/wiki/Bond_pricing
+ * 
+ * See the unit tests for examples and more references.
+ */
 public class Bond
 {
   private final Sequence bondData;
@@ -129,6 +144,8 @@ public class Bond
     // interestRate, nextPaymentIndex, monthsBetweenPayments, n, years);
 
     // Calculations for fractional interest.
+    // TODO should calculate fraction based on *days* not months since that's how real pricing works and different
+    // months have different numbers of days.
     double fractionalInterest = 0.0;
     assert numMonthsToPayment >= 0 && numMonthsToPayment <= monthsBetweenPayments;
     if (numMonthsToPayment > 0) {
@@ -142,42 +159,58 @@ public class Bond
     return price;
   }
 
+  /** Calculates the dirty price of a zero-coupon bond. */
+  public static double calcPriceZeroCoupon(double annualInterestRate, double parValue, double years)
+  {
+    return calcPrice(0, annualInterestRate, parValue, years, 0, 0);
+  }
+
   /**
-   * Calculates the price of a bond.
+   * Calculates the dirty price of a bond = clean price plus any accrued interest.
    * 
-   * @param coupon total interest payments for each year
-   * @param interestRate current interest rate
+   * @param annualCoupon total interest payments for each year
+   * @param annualInterestRate current interest rate
    * @param parValue amount paid at maturity
    * @param years years until maturity
-   * @param annualFreq number of times per year that the coupon is paid
+   * @param paymentsPerYear number of times per year that the coupon is paid
    * @param fractionalInterest fraction of coupon payment period already passed [0..1)
    * @return current price of the bond
    */
-  public static double calcPrice(double coupon, double interestRate, double parValue, double years, double annualFreq,
-      double fractionalInterest)
+  public static double calcPrice(double annualCoupon, double annualInterestRate, double parValue, double years,
+      double paymentsPerYear, double fractionalInterest)
   {
-    if (annualFreq <= 0.0) {
-      annualFreq = 1.0;
+    if (paymentsPerYear <= 0.0) {
+      paymentsPerYear = 1.0;
     }
-    double couponPayment = coupon / annualFreq;
-    double nf = years * annualFreq; // number of payments left
-    double effIR = (interestRate / 100.0) / annualFreq; // effective interest rate per payment
-    double x = Math.pow(1.0 + effIR, -nf);
-    double couponPrice = (effIR > 0 ? couponPayment * (1.0 - x) / effIR : 0.0);
-    double maturityPrice = parValue * x;
+    final double nPayments = years * paymentsPerYear; // number of payments left
+    final double couponPayment = annualCoupon / paymentsPerYear;
+    final double effIR = (annualInterestRate / 100.0) / paymentsPerYear; // effective interest rate per payment
 
+    final double valueFactor = Math.pow(1.0 + effIR, -nPayments); // value factor used for present value
+
+    // Price due to payment at maturity is present value.
+    final double maturityPrice = parValue * valueFactor;
+
+    // Price due to the coupon payments is modeled as a fixed term annuity (present value of a fixed number of
+    // payments). Details: https://en.wikipedia.org/wiki/Present_value#Present_value_of_an_annuity
+    double couponPrice = 0.0;
+    if (couponPayment > 0 && annualInterestRate > 0) { // check interest rate to avoid zero div zero.
+      couponPrice = couponPayment * (1.0 - valueFactor) / effIR;
+    }
+    final double cleanPrice = couponPrice + maturityPrice;
+
+    // If we're in between coupon payments, account for accrued interest since last coupon.
+    // Details: http://www.economics-finance.org/jefe/fin/Secrestpaper.pdf
+    // TODO also support simple (linear) accrued interest?
     double accruedInterest = 0.0;
-    if (coupon > 0.0 && fractionalInterest > 0.0) {
-      double curPrice = couponPrice + maturityPrice;
-      double futurePrice = calcPrice(coupon, interestRate, parValue, years - 1.0 / annualFreq, annualFreq, 0.0)
-          + couponPayment;
-      double priceRatio = futurePrice / curPrice;
-      accruedInterest = curPrice * (Math.pow(priceRatio, fractionalInterest) - 1.0);
-      // System.out.printf("Current Price: %.2f Future Price: %.2f ratio=%f\n", curPrice, futurePrice, priceRatio);
+    if (fractionalInterest > 0) {
+      double futurePrice = calcPrice(annualCoupon, annualInterestRate, parValue, years - 1.0 / paymentsPerYear,
+          paymentsPerYear, 0.0) + couponPayment;
+      double priceRatio = futurePrice / cleanPrice;
+      accruedInterest = cleanPrice * (Math.pow(priceRatio, fractionalInterest) - 1.0);
     }
 
-    // System.out.printf("[%.2f + %.2f + %.2f]\n", couponPrice, maturityPrice, accruedInterest);
-    return couponPrice + maturityPrice + accruedInterest;
+    return cleanPrice + accruedInterest;
   }
 
   /**
@@ -204,7 +237,7 @@ public class Bond
       throw new IllegalArgumentException(String.format("iStart=%d, iEnd=%d, size=%d", iStart, iEnd, bondData.size()));
     }
 
-    final double principal = 10000.0;
+    final double principal = 1e6; // start with $1M to minimize effect of bond quantum
     double cash = principal;
     Sequence seq = new Sequence(factory.name() + " (Rebuy)");
     seq.addData(cash, bondData.getTimeMS(iStart));
@@ -214,11 +247,9 @@ public class Bond
       BondFactory.Receipt receipt = factory.buy(bondData, cash, i);
       Bond bond = receipt.bond;
       cash = receipt.cash;
-      // System.out.printf("Bought %d: cash=%f, price=%f\n", i, cash, bond.price(i));
 
       // Sell bond at end of the month (we use start of next month).
       cash += bond.price(i + 1);
-      // System.out.printf(" Sell %d: price=%f\n", i + 1, cash);
 
       // Add sequence data point for new month.
       seq.addData(cash, bondData.getTimeMS(i + 1));
@@ -250,7 +281,7 @@ public class Bond
       throw new IllegalArgumentException(String.format("iStart=%d, iEnd=%d, size=%d", iStart, iEnd, bondData.size()));
     }
 
-    final double principal = 10000.0;
+    final double principal = 1e6; // start with $1M to minimize effect of bond quantum
     double cash = principal;
     Sequence seq = new Sequence(factory.name() + " (Hold)");
     seq.addData(cash, bondData.getTimeMS(iStart));
@@ -310,7 +341,7 @@ public class Bond
       throw new IllegalArgumentException(String.format("iStart=%d, iEnd=%d, size=%d", iStart, iEnd, bondData.size()));
     }
 
-    final double principal = 10000.0;
+    final double principal = 1e6; // start with $1M to minimize effect of bond quantum
     double balance = principal;
     String name = String.format("%s (Naive Interest - %s)", factory.name(),
         divOrPow == DivOrPow.DivideBy12 ? "Div12" : "Pow12");

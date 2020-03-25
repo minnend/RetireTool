@@ -32,7 +32,7 @@ public class MonthlyInfo
   public final double endBalance;
 
   /** DMSWR in basis points (314 = 3.14%). */
-  public final int    dmswr;
+  public final int    swr;
 
   /** Number of virtual retirement months for calculating DMSWR. */
   public final int    virtualRetirementMonths;
@@ -49,12 +49,13 @@ public class MonthlyInfo
   /** Final balance at the end of retirement (not end of this month). */
   public double       finalBalance;           // TODO safer to make this `final` but complicates calculations
 
-  public MonthlyInfo(long retireTime, long currentTime, int retirementMonth, double monthlyIncome, double startBalance,
-      double endBalance, double bengenSalary)
+  public MonthlyInfo(long retireTime, long currentTime, int swr, int retirementMonth, double monthlyIncome,
+      double startBalance, double endBalance, double bengenSalary)
   {
     this.retireTime = retireTime;
     this.currentTime = currentTime;
     this.index = SwrLib.indexForTime(currentTime);
+    this.swr = swr;
     this.retirementMonth = retirementMonth;
     this.monthlyIncome = monthlyIncome;
     this.startBalance = startBalance;
@@ -64,7 +65,6 @@ public class MonthlyInfo
     this.finalBalance = Double.NaN; // must be filled in later
 
     // The following values are not used for a Bengen simulation.
-    this.dmswr = -1;
     this.virtualRetirementMonths = -1;
     this.marwoodSalary = Double.NaN;
     this.crystalSalary = Double.NaN;
@@ -82,7 +82,7 @@ public class MonthlyInfo
     this.startBalance = startBalance;
     this.endBalance = endBalance;
 
-    this.dmswr = dmswr;
+    this.swr = dmswr;
     this.virtualRetirementMonths = virtualRetirementMonths;
     this.bengenSalary = bengenSalary;
     this.marwoodSalary = marwoodSalary;
