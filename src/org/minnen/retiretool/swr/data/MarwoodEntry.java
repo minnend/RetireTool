@@ -48,7 +48,7 @@ public final class MarwoodEntry
     this.retirementYears = retirementYears;
     this.lookbackYears = lookbackYears;
     this.percentStock = percentStock;
-    this.swr = SwrLib.percentToBasisPoints(info.swr);
+    this.swr = info.swr;
     this.virtualRetirementMonths = info.virtualRetirementMonths;
     this.finalBalance = info.finalBalance;
     this.bengenSalary = info.bengenSalary;

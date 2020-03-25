@@ -363,4 +363,25 @@ public class Bond
 
     return seq._div(principal);
   }
+
+  public static Sequence calcBondReturnsYTM(Sequence bondData)
+  {
+    // More info: https://courses.lumenlearning.com/boundless-finance/chapter/valuing-bonds/
+    Sequence seq = new Sequence("Bonds (YTM)");
+    seq.addData(1.0, bondData.getStartMS());
+
+    final double par = 100.0; // exact value doesn't matter since it divides out
+    for (int i = 1; i < bondData.size(); ++i) {
+      final double prevYTM = bondData.get(i - 1, 0);
+      final double curYTM = bondData.get(i, 0);
+
+      final double purchase = FinLib.getPresentValue(par, prevYTM, 10);
+      final double sell = FinLib.getPresentValue(par, curYTM, 10 - 1.0 / 12.0);
+
+      final double r = sell / purchase;
+      final double cumulative = seq.getLast(0) * r;
+      seq.addData(cumulative, bondData.getTimeMS(i));
+    }
+    return seq;
+  }
 }

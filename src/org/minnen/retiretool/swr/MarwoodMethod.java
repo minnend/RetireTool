@@ -12,6 +12,7 @@ import java.util.Set;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
+import org.minnen.retiretool.swr.data.BengenEntry;
 import org.minnen.retiretool.swr.data.BengenTable;
 import org.minnen.retiretool.swr.data.MarwoodEntry;
 import org.minnen.retiretool.swr.data.MarwoodTable;
@@ -28,7 +29,7 @@ import org.minnen.retiretool.viz.PlotLine;
 
 public class MarwoodMethod
 {
-  // TODO Calculate DMSWR for all retirement lengths for each month.
+  // TODO Enforce 20% cap on DMSWR and Bengen SWR? If not enforced, salaries and final balance could be wrong.
   // TODO Walk-forward optimization for Bengen SWR -- how well does it generalize?
   // TODO allow for changing asset allocation over time? need to model taxes in this case?
   // TODO final balance with re-retire or without? Currently, retireTime==currentTime is without, others are with.
@@ -59,7 +60,7 @@ public class MarwoodMethod
       final long retireTime = SwrLib.time(iRetire);
 
       // Find best "virtual" retirement year within the lookback period.
-      int bestSWR = 0;
+      int dmswr = 0;
       int bestIndex = -1;
       for (int iLookback = 0; iLookback <= lookbackMonths; ++iLookback) {
         final int iVirtualStart = iRetire - iLookback; // index of start of virtual retirement
@@ -79,26 +80,28 @@ public class MarwoodMethod
 
         final int swr = SwrLib.percentToBasisPoints(virtualNow.percent());
         assert iLookback > 0 || swr == bengenSWR; // iLookback == 0 must match Bengen
-        if (swr > bestSWR) {
-          bestSWR = swr;
+        if (swr > dmswr) {
+          dmswr = swr;
           bestIndex = iVirtualStart;
         }
       }
-      assert bestSWR > 0 && bestIndex >= 0; // must find something
+      assert dmswr > 0 && bestIndex >= 0; // must find something
+      assert dmswr >= bengenSWR; // Bengen is lower bound on DMSWR
 
       List<MonthlyInfo> trajectory = new ArrayList<>();
-      MonthlyInfo info = BengenMethod.runPeriod(iRetire, bestSWR / 100.0, retirementYears, percentStock, Inflation.Real,
-          trajectory);
+      MonthlyInfo info = BengenMethod.runPeriod(iRetire, dmswr / 100.0, retirementYears, percentStock, Inflation.Real,
+          nestEgg, trajectory);
       assert info.ok(); // safe by construction, but still verify
       assert iRetire > iLastWithFullRetirement || info.retirementMonth == retirementYears * 12;
+      final double finalBalance = info.finalBalance;
 
       final double bengenSalary = balance * bengenSWR / 10000.0;
-      final double marwoodSalary = balance * bestSWR / 10000.0;
+      final double marwoodSalary = balance * dmswr / 10000.0;
 
       double crystalSalary = Double.NaN; // may not exist if the retirement period extends into the future
-      if (iRetire <= SwrLib.lastIndex(retirementYears)) {
-        final double cbswr = BengenTable.get(retirementYears, percentStock, retireTime).swr / 10000.0;
-        crystalSalary = cbswr * balance;
+      if (iRetire <= iLastWithFullRetirement) {
+        final int cbswr = BengenTable.get(retirementYears, percentStock, retireTime).swr;
+        crystalSalary = balance * cbswr / 10000.0;
       }
 
       final MonthlyInfo firstMonth = trajectory.get(0);
@@ -108,12 +111,16 @@ public class MarwoodMethod
       assert firstMonth.retirementMonth == 1;
 
       final int virtualRetirementMonths = iRetire - bestIndex;
-      info = new MonthlyInfo(retireTime, retireTime, 1, firstMonth.monthlyIncome, nestEgg, firstMonth.endBalance,
-          bestSWR, virtualRetirementMonths, bengenSalary, marwoodSalary, crystalSalary);
+      final double growth = SwrLib.growth(iRetire, percentStock); // growth due to market
+      final double monthlyIncome = marwoodSalary / 12.0;
+      final double endBalance = (nestEgg - monthlyIncome) * growth;
+      info = new MonthlyInfo(retireTime, retireTime, 1, monthlyIncome, nestEgg, endBalance, dmswr,
+          virtualRetirementMonths, bengenSalary, marwoodSalary, crystalSalary);
+      info.finalBalance = finalBalance;
       results.add(info);
 
       // Simulate nest egg value so that we can report retirement salary in dollars.
-      balance *= SwrLib.growth(iRetire, percentStock); // growth due to market
+      balance *= growth;
     }
 
     return results;
@@ -129,7 +136,11 @@ public class MarwoodMethod
     final double bengenSWR = BengenTable.getSWR(retirementYears, percentStock) / 10000.0;
     double bengenSalary = bengenSWR * nestEgg;
 
-    final double cbswr = BengenTable.get(retirementYears, percentStock, retireTime).swr / 10000.0;
+    double cbswr = Double.NaN;
+    if (iRetire <= SwrLib.lastIndex(retirementYears)) {
+      BengenEntry bengen = BengenTable.get(retirementYears, percentStock, retireTime);
+      cbswr = bengen.swr / 10000.0;
+    }
     double crystalSalary = cbswr * nestEgg;
 
     double balance = nestEgg;

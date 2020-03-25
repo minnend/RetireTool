@@ -160,7 +160,7 @@ public class BengenTable
 
   public static void main(String[] args) throws IOException
   {
-    final String mode = "verify";
+    final String mode = "generate";
 
     if (mode.equals("generate")) {
       SwrLib.setup(null, null, Inflation.Real); // don't load bengen or dmswr table

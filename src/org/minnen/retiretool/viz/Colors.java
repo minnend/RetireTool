@@ -1,5 +1,7 @@
 package org.minnen.retiretool.viz;
 
+import java.util.Arrays;
+
 /**
  * Contains pre-defined color sets for visualization. The colors are chosen to be perceptually different to facilitate
  * data visualization.
@@ -44,5 +46,69 @@ public class Colors
     if (n >= 12) return hex30;
     else if (n > 5) return hex12;
     else return hex5;
+  }
+
+  /**
+   * Interpolate a value, e.g. for linear interpolation between anchor colors.
+   * 
+   * Example: interpolate(50, 0, 100, 20, 30) --> 25.
+   * 
+   * @param x value at which to interpolate
+   * @param pairs an even number of integers where the first half are keys and the second half are values.
+   * @return interpolated color.
+   */
+  public static int interpolate(int x, int... pairs)
+  {
+    int n = pairs.length;
+    assert n % 2 == 0;
+    n = n / 2;
+
+    int[] keys = new int[n];
+    int[] values = new int[n];
+    for (int i = 0; i < n; ++i) {
+      keys[i] = pairs[i];
+      values[i] = pairs[n + i];
+    }
+
+    if (x <= keys[0]) return values[0];
+    if (x >= keys[n - 1]) return values[n - 1];
+
+    int index = Arrays.binarySearch(keys, x);
+    if (index >= 0) return values[index];
+
+    index = -(index + 1);
+
+    final int a = keys[index - 1];
+    final int b = keys[index];
+    assert a <= x && b >= x;
+
+    final int p = values[index - 1];
+    final int q = values[index];
+
+    final double percent = (double) (x - a) / (b - a);
+    return p + (int) Math.round((q - p) * percent);
+  }
+
+  /** @return colormap holding colors in the form "rgb(R, G, B)". */
+  public static String[] buildRedToGreenColorMap()
+  {
+    // Build color table; colors adapted from: https://learnui.design/tools/data-color-picker.html#divergent
+    String[] colors = new String[101];
+    for (int i = 0; i < colors.length; ++i) {
+      final int red = Colors.interpolate(i, //
+          0, 30, 50, 80, 100, //
+          255, 250, 253, 241, 100);
+      final int green = Colors.interpolate(i, //
+          0, 30, 50, 80, 100, //
+          90, 148, 183, 232, 191);
+      final int blue = Colors.interpolate(i, //
+          0, 30, 50, 80, 100, //
+          80, 116, 122, 133, 124);
+      assert red >= 0 && red <= 255 : red;
+      assert green >= 0 && green <= 255 : green;
+      assert blue >= 0 && blue <= 255 : blue;
+      colors[i] = String.format("rgb(%d, %d, %d)", red, green, blue);
+    }
+    return colors;
   }
 }

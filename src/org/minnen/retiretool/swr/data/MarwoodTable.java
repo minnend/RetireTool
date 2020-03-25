@@ -68,7 +68,7 @@ public class MarwoodTable
     marwoodTrajectories.clear();
   }
 
-  private static void generateTable(File file, int percentStock, int lookbackYears) throws IOException
+  private static void generateTable(File file, int percentStock, int lookbackYears, boolean reretire) throws IOException
   {
     clear();
 
@@ -95,6 +95,7 @@ public class MarwoodTable
 
         // First add all results to the table since they're needed for re-retiring.
         for (MonthlyInfo info : marwoodList) {
+          assert !Double.isNaN(info.finalBalance); // TODO for debug
           MarwoodEntry entry = new MarwoodEntry(retirementYears, lookbackYears, percentStock, info);
           assert entry.isRetirementStart();
           marwoodMap.put(entry, entry);
@@ -102,6 +103,8 @@ public class MarwoodTable
         }
 
         // Now generate data for re-retiring.
+        if (!reretire) continue;
+
         for (MonthlyInfo startInfo : marwoodList) {
           final double nestEgg = SwrLib.getNestEgg(startInfo.index, lookbackYears, percentStock);
           List<MonthlyInfo> trajectory = MarwoodMethod.reretire(startInfo.currentTime, retirementYears, lookbackYears,
@@ -111,7 +114,7 @@ public class MarwoodTable
           MarwoodEntry oldEntry = MarwoodTable.marwoodMap.get(newEntry);
           assert newEntry.equals(oldEntry); // only tests that the key fields match
           assert newEntry.isRetirementStart();
-          assert newEntry.swr == oldEntry.swr;
+          assert newEntry.swr == oldEntry.swr || (newEntry.swr == 2000 && oldEntry.swr > 2000); // 20% cap
           assert Library.almostEqual(newEntry.bengenSalary, oldEntry.bengenSalary, 1e-5);
           assert Library.almostEqual(newEntry.crystalSalary, oldEntry.crystalSalary, 1e-5);
           assert Library.almostEqual(newEntry.marwoodSalary, oldEntry.marwoodSalary, 1e-5);
@@ -127,6 +130,7 @@ public class MarwoodTable
               writer.writeln(entry.toCSV());
             }
           }
+
         }
       }
     }
@@ -212,17 +216,18 @@ public class MarwoodTable
 
   public static void main(String[] args) throws IOException
   {
-    final String mode = "verify";
+    final String mode = "generate";
 
     final int percentStock = 75;
     final int lookbackYears = 20;
+    final boolean reretire = false;
 
     final String filename = String.format("dmswr-stock%d-lookback%d.csv", percentStock, lookbackYears);
     final File file = new File(DataIO.getFinancePath(), filename);
 
     if (mode.equals("generate")) {
       SwrLib.setup(SwrLib.getDefaultBengenFile(), null, Inflation.Real); // only load bengen table
-      generateTable(file, percentStock, lookbackYears);
+      generateTable(file, percentStock, lookbackYears, reretire);
     } else {
       SwrLib.setup(SwrLib.getDefaultBengenFile(), file, Inflation.Real);
       System.out.printf("DMSWR entries: %d\n", marwoodMap.size());

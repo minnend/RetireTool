@@ -70,39 +70,10 @@ public class BondComparison
     bar = Bond.calcPriceZeroCoupon(10, 1000, 10 - 1.0 / 12.0);
     double x = Bond.calcPrice(0, 10, 1000, 10, 0, 1.0 / 12.0);
     double accruedInterest = (1000 - pv) / 120.0;
-    System.out.printf("zero: (%.2f) $%.2f $%.2f -> %f (%f, %f)\n", pv, foo, bar, FinLib.mul2ret(bar / foo), pv + accruedInterest,
-        FinLib.mul2ret((pv + accruedInterest) / foo));
+    System.out.printf("zero: (%.2f) $%.2f $%.2f -> %f (%f, %f)\n", pv, foo, bar, FinLib.mul2ret(bar / foo),
+        pv + accruedInterest, FinLib.mul2ret((pv + accruedInterest) / foo));
 
     System.exit(0);
-  }
-
-  public static Sequence calcBondReturnsYTM(Sequence bondData)
-  {
-    // More info: https://courses.lumenlearning.com/boundless-finance/chapter/valuing-bonds/
-    Sequence seq = new Sequence("Bonds (YTM)");
-    seq.addData(1.0, bondData.getStartMS());
-
-    final double timePeriods = 20; // semi-annual for 10 years
-    final double parValue = 100.0;
-    double purchasePrice = Double.NaN;
-    for (int i = 0; i < bondData.size(); ++i) {
-      // present_value = face_value / ((1+YTM)^time_period)
-      final double annualYTM = bondData.get(i, 0);
-      final double semiYTM = annualYTM / 2.0;
-      final double currentPrice = parValue / Math.pow(FinLib.ret2mul(semiYTM), timePeriods);
-
-      System.out.printf("%.2f, %.2f, %.2f\n", annualYTM, semiYTM, currentPrice);
-
-      if (i > 0) {
-        final double r = currentPrice / purchasePrice;
-        final double cumulative = seq.getLast(0) * r;
-        seq.addData(cumulative, bondData.getTimeMS(i));
-      }
-
-      purchasePrice = currentPrice;
-    }
-
-    return seq;
   }
 
   public static void main(String[] args) throws IOException
@@ -112,9 +83,9 @@ public class BondComparison
     Sequence shillerData = Shiller.loadAll(Shiller.getPathCSV(), false);
     Sequence bondData = shillerData.extractDimAsSeq(Shiller.GS10).setName("GS10");
 
-    explore();
+    // explore();
 
-    Sequence bondsYTM = calcBondReturnsYTM(bondData);
+    Sequence bondsYTM = Bond.calcBondReturnsYTM(bondData);
     Sequence bondsRebuy = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, -1);
     Sequence bondsHold = Bond.calcReturnsHold(BondFactory.note10Year, bondData, 0, -1);
     Sequence bondsNaiveDiv = Bond.calcReturnsNaiveInterest(BondFactory.note10Year, bondData, 0, -1,
@@ -124,7 +95,7 @@ public class BondComparison
         DivOrPow.TwelfthRoot);
 
     Map<String, SimbaFund> simba = SimbaIO.loadSimbaData(Inflation.Nominal);
-    SimbaFund simbaReturns = simba.get("TBM");
+    SimbaFund simbaReturns = simba.get("ITT");
     Sequence simbaBonds = new Sequence(String.format("%s (%s)", simbaReturns.name, simbaReturns.symbol));
     double x = 1.0;
     LocalDate date = TimeLib.ms2date(TimeLib.toMs(simbaReturns.startYear, Month.JANUARY, 1));
@@ -141,7 +112,7 @@ public class BondComparison
         bondsRebuy, bondsNaiveDiv, bondsYTM);
     // bondsRebuy, bondsHold, bondsNaiveDiv, bondsNaivePow, simbaBonds);
     config.setAxisLabelFontSize(24);
-    config.setLineWidth(4);
+    config.setLineWidth(3);
     config.setTickInterval(48, -1);
     config.setTickFormatter("return this.value.split(' ')[1];", null);
     config.setMinMaxY(1, 1024);
