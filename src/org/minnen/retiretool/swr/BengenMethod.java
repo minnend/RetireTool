@@ -2,10 +2,8 @@ package org.minnen.retiretool.swr;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.time.Month;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.minnen.retiretool.data.DataIO;
@@ -18,9 +16,7 @@ import org.minnen.retiretool.swr.data.MonthlyInfo;
 import org.minnen.retiretool.util.FinLib.Inflation;
 import org.minnen.retiretool.util.IntPair;
 import org.minnen.retiretool.util.TimeLib;
-import org.minnen.retiretool.util.Writer;
 import org.minnen.retiretool.viz.Chart;
-import org.minnen.retiretool.viz.ChartConfig;
 import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
 import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 

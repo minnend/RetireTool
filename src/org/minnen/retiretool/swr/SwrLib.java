@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.time.Month;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.minnen.retiretool.Bond;
@@ -13,11 +12,8 @@ import org.minnen.retiretool.BondFactory;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.data.Shiller;
-import org.minnen.retiretool.swr.data.BengenEntry;
 import org.minnen.retiretool.swr.data.BengenTable;
-import org.minnen.retiretool.swr.data.MarwoodEntry;
 import org.minnen.retiretool.swr.data.MarwoodTable;
-import org.minnen.retiretool.swr.data.MonthlyInfo;
 import org.minnen.retiretool.util.FinLib.Inflation;
 import org.minnen.retiretool.util.IntPair;
 import org.minnen.retiretool.util.TimeLib;
@@ -169,7 +165,7 @@ public class SwrLib
 
   public static File getDefaultDmswrFile()
   {
-    return new File(DataIO.getFinancePath(), "dmswr-stock75-lookback20.csv");
+    return new File(DataIO.getFinancePath(), "dmswr-stock75-lookback20-ytm.csv");
   }
 
   /** Load (inflation-adjusted) data and initialize / calculate static data sequences. */
@@ -187,7 +183,7 @@ public class SwrLib
   /** Load data and initialize / calculate static data sequences. */
   public static void setup(File bengenFile, File dmswrFile, Inflation inflation) throws IOException
   {
-    Shiller.downloadData();
+    // Shiller.downloadData(); // TODO Shiller's site is down?
     shiller = Shiller.loadAll(Shiller.getPathCSV(), true);
 
     Sequence bondData = shiller.extractDimAsSeq(Shiller.GS10).setName("GS10");

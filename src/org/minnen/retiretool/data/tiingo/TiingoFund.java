@@ -134,7 +134,8 @@ public class TiingoFund
 
         if (dataEnd.isBefore(lastTradingDay)) {
           long nDays = ChronoUnit.DAYS.between(dataEnd, lastTradingDay);
-          System.out.printf("New end time: %s  [%s] -> [%s]  (%d days)\n", ticker, dataEnd, lastTradingDay, nDays);
+          System.out.printf("New end time: %s  [%s] -> [%s]  (%s, %d days)\n", ticker, dataEnd, lastTradingDay,
+              TimeLib.dayOfWeek(lastTradingDay), nDays);
           if (!TiingoIO.updateFundEodData(this)) {
             System.err.printf("Failed to update EOD data (%s)\n", ticker);
             return false;

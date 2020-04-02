@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.minnen.retiretool.data.DataIO;
-import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.swr.BengenMethod;
 import org.minnen.retiretool.swr.MarwoodMethod;

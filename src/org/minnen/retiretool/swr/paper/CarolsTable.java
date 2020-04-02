@@ -9,14 +9,12 @@ import java.util.List;
 import java.util.Set;
 
 import org.minnen.retiretool.swr.BengenMethod;
-import org.minnen.retiretool.swr.MarwoodMethod;
 import org.minnen.retiretool.swr.SwrLib;
 import org.minnen.retiretool.swr.data.BengenTable;
 import org.minnen.retiretool.swr.data.MonthlyInfo;
 import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.util.FinLib.Inflation;
-import org.minnen.retiretool.util.Library;
 
 public class CarolsTable
 {
@@ -41,12 +39,12 @@ public class CarolsTable
 
     final double bengenSWR = BengenTable.getSWR(retirementYears, percentStock) / 100.0;
     List<MonthlyInfo> bengenTrajectory = new ArrayList<>();
-    BengenMethod.run(iStart, iEnd + 1, bengenSWR, percentStock, Inflation.Nominal, bengenTrajectory);
+    BengenMethod.run(iStart, iEnd + 1, bengenSWR, percentStock, Inflation.Nominal, nestEgg, bengenTrajectory);
     assert bengenTrajectory.size() == (iEnd - iStart + 1);
 
-    List<MonthlyInfo> dmTrajectory = MarwoodMethod.reretire(timeStart, retirementYears, lookbackYears, percentStock,
-        Inflation.Nominal, nestEgg);
-    assert dmTrajectory.size() == (iEnd - iStart + 1);
+    // List<MonthlyInfo> dmTrajectory = MarwoodMethod.reretire(timeStart, retirementYears, lookbackYears, percentStock,
+    // Inflation.Nominal, nestEgg);
+    // assert dmTrajectory.size() == (iEnd - iStart + 1);
 
     for (MonthlyInfo bengenInfo : bengenTrajectory) {
       final int index = bengenInfo.index;
@@ -57,17 +55,17 @@ public class CarolsTable
       if (!isNewYear && !isLastMonth) continue;
       final int year = (isLastMonth ? finalYear + 1 : date.getYear());
 
-      MonthlyInfo dmInfo = dmTrajectory.get(index - iStart);
-      assert (dmInfo.retireTime == bengenInfo.retireTime) && (dmInfo.currentTime == bengenInfo.currentTime);
-      assert dmInfo.index == index;
-      assert Library.almostEqual(bengenInfo.bengenSalary, dmInfo.bengenSalary, 1e-6);
+      // MonthlyInfo dmInfo = dmTrajectory.get(index - iStart);
+      // assert (dmInfo.retireTime == bengenInfo.retireTime) && (dmInfo.currentTime == bengenInfo.currentTime);
+      // assert dmInfo.index == index;
+      // assert Library.almostEqual(bengenInfo.bengenSalary, dmInfo.bengenSalary, 1e-6);
 
       final double annualGrowth = SwrLib.growth(index, index + 12, 100); // market returns for the year
       // growth *= SwrLib.inflation(index + 12, index); // adjust market returns for inflation
       final double annualInflation = SwrLib.inflation(index, index + 12);
       final int yearsLeft = Math.max(0, retirementYears - (year - years[0]));
 
-      final double inflation = SwrLib.inflation(dmInfo.index, iStart); // inflation multiplier to retirement date
+      final double inflation = SwrLib.inflation(bengenInfo.index, iStart); // inflation multiplier to retirement date
       // final double dmSalaryNominal = dmInfo.monthlyIncome * 12;
       final double bengenSalaryNominal = bengenInfo.monthlyIncome * 12;
 
@@ -89,9 +87,9 @@ public class CarolsTable
       // final String sDmswrSalary = String.format("\\$%s", FinLib.dollarFormatter.format(dmSalaryNominal));
 
       System.out.printf(
-          "%d  & %2d  & %5.1f\\hspace{.5pt}\\%%  & %5.2f\\hspace{.5pt}\\%%  & %10s  & %10s  & %12s  & %12s  & %5.2f\\hspace{.5pt}\\%%  \\\\\n",
-          year, yearsLeft, FinLib.mul2ret(annualGrowth), FinLib.mul2ret(annualInflation), sBengenSalary,
-          sBengenSalaryReal, sBengenBalance, sBengenBalanceReal, withdrawalPercent);
+          "%d  & %2d  & %12s & %12s & %10s & %10s & %5.1f\\hspace{.5pt}\\%%  & %5.2f\\hspace{.5pt}\\%%  & %5.2f\\hspace{.5pt}\\%%  \\\\\n",
+          year, yearsLeft, sBengenBalance, sBengenBalanceReal, sBengenSalary, sBengenSalaryReal,
+          FinLib.mul2ret(annualGrowth), FinLib.mul2ret(annualInflation), withdrawalPercent);
     }
   }
 

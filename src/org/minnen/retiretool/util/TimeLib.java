@@ -634,4 +634,10 @@ public class TimeLib
     }
     return true;
   }
+
+  public static String dayOfWeek(LocalDate date)
+  {
+    String dayOfWeek = date.getDayOfWeek().toString();
+    return dayOfWeek.substring(0, 1).toUpperCase() + dayOfWeek.substring(1).toLowerCase();
+  }
 }

@@ -5,9 +5,7 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.FeatureVec;
@@ -17,7 +15,6 @@ import org.minnen.retiretool.swr.data.BengenTable;
 import org.minnen.retiretool.swr.data.MarwoodEntry;
 import org.minnen.retiretool.swr.data.MarwoodTable;
 import org.minnen.retiretool.swr.data.MonthlyInfo;
-import org.minnen.retiretool.util.FinLib;
 import org.minnen.retiretool.util.TimeLib;
 import org.minnen.retiretool.util.FinLib.Inflation;
 import org.minnen.retiretool.util.Library;
@@ -347,7 +344,7 @@ public class MarwoodMethod
     config.setAxisLabelFontSize(20);
     config.setLineWidth(3);
     config.setTickInterval(12, -1);
-    config.setMinMaxY(3.0, 15.0);
+    config.setMinMaxY(3.0, 16.0);
     config.setTickFormatter(null, "return this.value + '%';");
     config.setMinorTickIntervalY(1.0);
     Chart.saveChart(config);

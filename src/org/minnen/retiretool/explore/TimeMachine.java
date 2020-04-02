@@ -75,7 +75,8 @@ public class TimeMachine
   {
     TiingoFund fund = TiingoFund.fromSymbol("VFINX", true);
     Sequence data = fund.data;
-    System.out.printf("[%s] -> [%s]\n", TimeLib.formatDate(data.getStartMS()), TimeLib.formatDate(data.getEndMS()));
+    System.out.printf("[%s] -> [%s] (%s)\n", TimeLib.formatDate(data.getStartMS()), TimeLib.formatDate(data.getEndMS()),
+        TimeLib.dayOfWeek(TimeLib.ms2date(data.getEndMS())));
 
     fromToday(data);
 
