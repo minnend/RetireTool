@@ -127,10 +127,11 @@ public class IncomeComparison
     System.out.printf("DMSWR entries: %d\n", MarwoodTable.marwoodMap.size());
     System.out.printf("DMSWR sequences: %d\n", MarwoodTable.marwoodSequences.size());
 
+    // TODO long graph uses different nest egg calculation than short graph -- need to change code in findDMSWR().
     // createLongIncomeGraph(retirementYears, lookbackYears, percentStock);
 
-    // createShortIncomeGraph(1929, 10, retirementYears, lookbackYears, percentStock, true);
-    // createShortIncomeGraph(1960, 10, retirementYears, lookbackYears, percentStock, false);
-    createShortIncomeGraph(2000, 5, retirementYears, lookbackYears, percentStock, false);
+    createShortIncomeGraph(1929, 10, retirementYears, lookbackYears, percentStock, true);
+    createShortIncomeGraph(1960, 10, retirementYears, lookbackYears, percentStock, false);
+    createShortIncomeGraph(2000, 10, retirementYears, lookbackYears, percentStock, false);
   }
 }
