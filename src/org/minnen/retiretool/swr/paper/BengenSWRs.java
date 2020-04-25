@@ -31,13 +31,16 @@ public class BengenSWRs
       // System.out.printf("%d %d\n", retirementYears, swr);
     }
     File file = new File(DataIO.getOutputPath(), "bengen-swr-durations.html");
-    ChartConfig config = ChartConfig.build(file, ChartConfig.Type.Bar, "Bengen SWR", labels.toArray(new String[0]),
-        null, "100%", "500px", 0, 8, 0.5, ChartScaling.LINEAR, ChartTiming.INDEX, 0, seqBengenSWR);
-    config.setAxisLabelFontSize(24);
+    ChartConfig config = ChartConfig.build(file, ChartConfig.Type.Bar, "Safe Withdrawl Rates for the 4% Rule",
+        labels.toArray(new String[0]), null, "100%", "800px", 0, 7.5, 0.5, ChartScaling.LINEAR, ChartTiming.INDEX, 0,
+        seqBengenSWR);
+    config.setAxisTitles("Retirement Duration (years)", "Withdrawal Rate");
+    config.setAxisLabelFontSize(28);
+    config.setAxisTitleFontSize(28);
     config.setTickFormatter(null, "return this.value + '%';");
-    config.setTitleConfig("margin: 0, y: 32, style: { fontSize: 32 }");
+    config.setTitleConfig("margin: 0, y: 50, style: { fontSize: 42 }");
     config.setTickInterval(2, 1);
-    config.setDataLabelConfig(true, -90, "#fff", 2, 1, 4, 16, false);
+    config.setDataLabelConfig(true, -90, "#fff", 2, 1, 4, 20, false);
     config.setAnimation(false);
     Chart.saveChart(config);
   }

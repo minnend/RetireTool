@@ -99,6 +99,8 @@ public class BengenMethod
     double balance = nestEgg;
     double monthlyWithdrawal = balance * withdrawalRate / 1200.0;
 
+    if (trajectory != null) trajectory.clear();
+
     MonthlyInfo info = null;
     for (int i = iStart; i < iEnd; ++i) {
       final double startBalance = balance;
@@ -157,7 +159,7 @@ public class BengenMethod
     int lowSWR = 0;
     int highSWR = 10001;
 
-    BengenEntry entry = BengenTable.get(years - 1, percentStock, SwrLib.time(index));
+    BengenEntry entry = BengenTable.get(SwrLib.time(index), years - 1, percentStock);
     if (entry != null) {
       highSWR = entry.swr; // SWR for N years can't be larger than SWR for (N-1) years
     }
@@ -216,14 +218,24 @@ public class BengenMethod
     return lowSWR;
   }
 
-  /** @return Sequence holding the SWR for each starting month. */
-  public static Sequence findSwrAcrossTime(int nRetireYears, int percentStock)
+  /**
+   * Calculate SWR for all retirement periods (342 => 3.42%).
+   * 
+   * Note that this function does NOT ensure that SWR(N years) <= SWR(N-1 years). This check is performed when the
+   * Bengen Table is loaded.
+   * 
+   * @param retirementYears length of retirement, i.e. the account balance must be >= 0 for this many years
+   * @param percentStock the percent of stock (vs. bond) in the brokerage account
+   * @return Sequence holding the SWR for each starting month.
+   */
+  public static Sequence calcSwrAcrossTime(int retirementYears, int percentStock)
   {
-    Sequence seq = new Sequence(String.format("%d year SWR (%d/%d)", nRetireYears, percentStock, 100 - percentStock));
-    final int lastIndex = SwrLib.lastIndex(nRetireYears);
+    Sequence seq = new Sequence(
+        String.format("%d year SWR (%d/%d)", retirementYears, percentStock, 100 - percentStock));
+    final int lastIndex = SwrLib.lastIndex(retirementYears);
     for (int i = 0; i <= lastIndex; ++i) {
-      final int swr = findSwrForDate(i, nRetireYears, percentStock, Inflation.Real, 1);
-      seq.addData(swr / 100.0, SwrLib.time(i));
+      final int swr = findSwrForDate(i, retirementYears, percentStock, Inflation.Real, 1);
+      seq.addData(swr, SwrLib.time(i));
     }
     return seq;
   }
@@ -239,23 +251,14 @@ public class BengenMethod
     }
   }
 
-  public static void createChartSwrAcrossTime(int percentStock) throws IOException
-  {
-    List<Sequence> seqs = new ArrayList<>();
-    for (int years = 10; years <= 50; years += 10) {
-      seqs.add(findSwrAcrossTime(years, percentStock));
-    }
-
-    Chart.saveLineChart(new File(DataIO.getOutputPath(), "max-swr-across-time.html"), "Max SWR", "100%", "800px",
-        ChartScaling.LINEAR, ChartTiming.MONTHLY, seqs);
-  }
-
   public static IntPair getSuccessFail(int withdrawalRate, int retirementYears, int percentStock)
   {
+    // TODO how to handle case where `withdrawalRate` would fail for a shorter duration starting a time that's too
+    // recent to fit a full `retirementYears` retirement?
     final int n = SwrLib.lastIndex(retirementYears) + 1;
     int nWin = 0;
     for (int i = 0; i < n; ++i) {
-      final int swr = BengenTable.get(retirementYears, percentStock, SwrLib.time(i)).swr;
+      final int swr = BengenTable.get(SwrLib.time(i), retirementYears, percentStock).swr;
       if (withdrawalRate <= swr) ++nWin;
     }
     final int nFail = n - nWin;
@@ -279,13 +282,32 @@ public class BengenMethod
         TimeLib.formatYM(info.currentTime), info.swr / 100.0, info.finalBalance / 1e6);
     System.out.println(trajectory.get(trajectory.size() - 1));
 
+    // Worst time to start a 35-year retirement with a 75/25 asset allocation.
     int swr = BengenTable.getSWR(35, 75);
     System.out.printf("SWR (35, 75): %d\n", swr);
     for (FeatureVec v : BengenTable.getAcrossTime(35, 75)) {
-      if ((int) Math.round(v.get(0)) == swr) {
-        System.out.printf(" [%s]\n", TimeLib.formatYM(v.getTime()));
+      final int wr = (int) Math.round(v.get(0));
+      assert wr >= swr;
+      if (wr == swr) {
+        System.out.printf(" [%s] <-- worst month to retire\n", TimeLib.formatYM(v.getTime()));
       }
     }
+
+    // Jan 1966 retiree ending in Dec 2004.
+    System.out.println("Retiree 1966 -> 2004, WR in Jan 1975");
+    int retirementYears = 39;
+    int percentStock = 75;
+    double wr = BengenTable.getSWR(retirementYears, percentStock) / 100.0;
+    info = BengenMethod.runPeriod(SwrLib.indexForTime(Month.JANUARY, 1966), wr, retirementYears, percentStock,
+        inflation, 1e6, trajectory);
+    System.out.printf("[%s] -> [%s] %.2f%% -> %f\n", TimeLib.formatYM(info.retireTime),
+        TimeLib.formatYM(info.currentTime), info.swr / 100.0, info.finalBalance / 1e6);
+    info = trajectory.get(9 * 12); // Jan 1975 = 9 years later
+    System.out.println(info);
+    // System.out.println("Full Trajectory:");
+    // for (MonthlyInfo x : trajectory) {
+    // System.out.println(x);
+    // }
 
     // printSWRs(new int[] { 20, 30, 40, 50, 60 }, BengenTable.percentStockList);
     // createChartSwrAcrossTime(75);

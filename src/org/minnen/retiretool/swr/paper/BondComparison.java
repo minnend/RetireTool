@@ -1,4 +1,4 @@
-package org.minnen.retiretool.swr;
+package org.minnen.retiretool.swr.paper;
 
 import java.io.File;
 import java.io.IOException;
@@ -90,7 +90,6 @@ public class BondComparison
     Sequence bondsHold = Bond.calcReturnsHold(BondFactory.note10Year, bondData, 0, -1);
     Sequence bondsNaiveDiv = Bond.calcReturnsNaiveInterest(BondFactory.note10Year, bondData, 0, -1,
         DivOrPow.DivideBy12);
-    bondsNaiveDiv.setName("10-Year Note (Naive Interest)");
     Sequence bondsNaivePow = Bond.calcReturnsNaiveInterest(BondFactory.note10Year, bondData, 0, -1,
         DivOrPow.TwelfthRoot);
 
@@ -107,19 +106,23 @@ public class BondComparison
     }
     System.out.println(simbaBonds);
 
+    bondsYTM.setName("10-Year Constant Maturity (YTM)");
+    bondsNaiveDiv.setName("10-Year Constant Maturity (Naive Interest)");
+    
     ChartConfig config = Chart.saveLineChart(new File(DataIO.getOutputPath(), "bond-comparison.html"),
-        "Bond Growth Calculation Comparison", "100%", "800px", ChartScaling.LOGARITHMIC, ChartTiming.MONTHLY,
-        bondsRebuy, bondsNaiveDiv, bondsYTM);
+        "Bond Fund Growth Comparison", "100%", "800px", ChartScaling.LOGARITHMIC, ChartTiming.MONTHLY, bondsNaiveDiv,
+        bondsYTM);
     // bondsRebuy, bondsHold, bondsNaiveDiv, bondsNaivePow, simbaBonds);
-    config.setAxisLabelFontSize(24);
-    config.setLineWidth(3);
-    config.setTickInterval(48, -1);
+    config.setAxisLabelFontSize(28);
+    config.setLineWidth(5);
+    config.setAnimation(false);
+    config.setTickInterval(72, -1);
     config.setTickFormatter("return this.value.split(' ')[1];", null);
     config.setMinMaxY(1, 1024);
-    config.setTitleConfig("margin: 0, style: { fontSize: 24 }");
+    config.setTitleConfig("margin: -20, y: 20, style: { fontSize: 36 }");
     config.setLegendConfig(
         "align: 'left', verticalAlign: 'top', x: 100, y: 60, layout: 'vertical', floating: true, itemStyle: {"
-            + "fontSize: 20, }, backgroundColor: '#fff', borderWidth: 1, padding: 16, shadow: true, symbolWidth: 32,");
+            + "fontSize: 24, }, backgroundColor: '#fff', borderWidth: 1, padding: 10, shadow: true, symbolWidth: 32,");
 
     Chart.saveChart(config);
   }

@@ -4,7 +4,9 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.minnen.retiretool.data.DataIO;
@@ -26,19 +28,20 @@ public class BengenTable
   /** Values hold sequences with all Bengen SWRs for a given retirement duration and stock percentage. */
   public static Map<BengenEntry, Sequence>    bengenSequences = new HashMap<>();
 
-  /** Values are SWR for the given retirement duration and stock percentage. */
+  /** Values are MinSWR for the given retirement duration and stock percentage (342 => 3.42%). */
   public static Map<BengenEntry, Integer>     bengenSWRs      = new HashMap<>();
 
   static {
     percentStockList = new int[] { 0, 10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 100 };
   }
 
-  public static BengenEntry get(int retirementYears, int percentStock, long time)
+  public static BengenEntry get(long time, int retirementYears, int percentStock)
   {
     BengenEntry key = new BengenEntry(time, retirementYears, percentStock);
     return bengenMap.getOrDefault(key, null);
   }
 
+  /** @return Sequence holding CBSWR as basis points for each starting retirement (423 = 4.23%). */
   public static Sequence getAcrossTime(int retirementYears, int percentStock)
   {
     BengenEntry key = new BengenEntry(retirementYears, percentStock);
@@ -48,7 +51,7 @@ public class BengenTable
   public static int getSWR(int retirementYears, int percentStock)
   {
     BengenEntry key = new BengenEntry(retirementYears, percentStock);
-    return bengenSWRs.getOrDefault(key, null);
+    return bengenSWRs.getOrDefault(key, -1);
   }
 
   public static void clear()
@@ -61,9 +64,9 @@ public class BengenTable
   /**
    * Generate a file containing Bengen SWR result.
    * 
-   * Each line in the CSV file has the form: retirement_years, percent_stock, yyyy-mm, swr
-   * 
-   * The SWR is an integer representing basis points, i.e. 500 = 5.0%.
+   * Each line in the CSV file has the form: retirement_years, percent_stock, yyyy-mm, swr. The SWR is an integer
+   * representing basis points, i.e. 500 = 5.0%. This function fills in the `bengenMap` table, but not `bengenSWRs` or
+   * `bengenSequences`.
    * 
    * @param file write results to this file.
    * @throws IOException
@@ -81,29 +84,55 @@ public class BengenTable
       writer.writeln("# 3) retirement month");
       writer.writeln("# 4) safe withdrawal rate in basis points (500=5.0%)");
 
-      for (int nRetireYears = 1; nRetireYears <= 60; ++nRetireYears) {
+      for (int retirementYears = 1; retirementYears <= 60; ++retirementYears) {
         final long a = TimeLib.getTime();
         for (int percentStock : percentStockList) {
-          Sequence seq = BengenMethod.findSwrAcrossTime(nRetireYears, percentStock);
-          int swr = (int) Math.round(seq.getMin().get(0) * 100);
-          System.out.printf("%d, %3d [%s] -> %d\n", nRetireYears, percentStock, TimeLib.formatYM(seq.getEndMS()), swr);
+          Sequence seq = BengenMethod.calcSwrAcrossTime(retirementYears, percentStock);
+          int minSWR = Integer.MAX_VALUE;
+          int maxSWR = 0;
           for (FeatureVec v : seq) {
-            swr = (int) Math.round(v.get(0) * 100.0);
-            BengenEntry bengen = new BengenEntry(v.getTime(), nRetireYears, percentStock, swr);
+            final int swr = (int) Math.round(v.get(0));
+            minSWR = Math.min(minSWR, swr);
+            maxSWR = Math.max(maxSWR, swr);
+            BengenEntry bengen = new BengenEntry(v.getTime(), retirementYears, percentStock, swr);
             bengenMap.put(bengen, bengen);
             writer.writeln(bengen.toCSV());
           }
+          System.out.printf("%d, %3d [%s] -> [%d, %d]\n", retirementYears, percentStock,
+              TimeLib.formatYM(seq.getEndMS()), minSWR, maxSWR);
         }
         final long b = TimeLib.getTime();
-        System.out.printf("%d years -> %d ms\n", nRetireYears, b - a);
+        System.out.printf("%d years -> %d ms\n", retirementYears, b - a);
       }
     }
+  }
+
+  /**
+   * Calculate MinSWR and protected against duration inversions.
+   * 
+   * @param key key for getting the sequences of SWRs
+   * @return SWR that avoids duration inversions.
+   */
+  private static int storeSafeMinSWR(BengenEntry key)
+  {
+    Sequence seq = bengenSequences.get(key);
+    int swr = (int) Math.round(seq.getMin().get(0));
+
+    // Avoid inversions where MinSWR(N years) > MinSWR(N-1 years).
+    if (key.retirementYears > 1) {
+      final int shorterSWR = BengenTable.getSWR(key.retirementYears - 1, key.percentStock);
+      assert shorterSWR > 0;
+      swr = Math.min(swr, shorterSWR);
+    }
+
+    bengenSWRs.put(key, swr);
+    return swr;
   }
 
   public static void loadTable(File file) throws IOException
   {
     try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-      BengenEntry bengenKey = null;
+      BengenEntry key = null;
       Sequence seq = null;
       while (true) {
         String line = reader.readLine();
@@ -125,15 +154,15 @@ public class BengenTable
         bengenMap.put(info, info);
 
         // Create new sequence when retirement scenario changes.
-        if (bengenKey == null || info.retirementYears != bengenKey.retirementYears
-            || info.percentStock != bengenKey.percentStock) {
+        if (key == null || info.retirementYears != key.retirementYears || info.percentStock != key.percentStock) {
           if (seq != null) { // store previous sequence and SWR
-            bengenSequences.put(bengenKey, seq);
-            final int swr = (int) Math.round(seq.getMin().get(0));
-            bengenSWRs.put(bengenKey, swr);
+            assert key != null;
+            bengenSequences.put(key, seq);
+            storeSafeMinSWR(key);
           }
 
-          bengenKey = new BengenEntry(info.retirementYears, info.percentStock);
+          // Create new key and start new sequence.
+          key = new BengenEntry(info.retirementYears, info.percentStock);
           seq = new Sequence(String.format("Bengen (%d, %d)", info.retirementYears, info.percentStock));
         }
 
@@ -142,9 +171,9 @@ public class BengenTable
         seq.addData(info.swr, info.time);
       }
       if (seq != null) { // store last sequence and final SWR
-        bengenSequences.put(bengenKey, seq);
-        final int swr = (int) Math.round(seq.getMin().get(0));
-        bengenSWRs.put(bengenKey, swr);
+        assert key != null;
+        bengenSequences.put(key, seq);
+        storeSafeMinSWR(key);
       }
     }
   }
@@ -160,7 +189,7 @@ public class BengenTable
 
   public static void main(String[] args) throws IOException
   {
-    final String mode = "generate";
+    final String mode = "verify";
 
     if (mode.equals("generate")) {
       SwrLib.setup(null, null, Inflation.Real); // don't load bengen or dmswr table

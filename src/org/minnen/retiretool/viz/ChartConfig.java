@@ -62,6 +62,7 @@ public class ChartConfig
   public String         pathToBase;
   public int            lineWidth          = 2;
   public boolean        animation          = true;
+  public double         fillOpacity        = 1.0;
 
   // Specific to scatter plots.
   public double         radius             = 3;
@@ -459,9 +460,15 @@ public class ChartConfig
     return this;
   }
 
+  public ChartConfig setFillOpacity(double opacity)
+  {
+    this.fillOpacity = opacity;
+    return this;
+  }
+
   public ChartConfig setDataLabelConfig(boolean enabled)
   {
-    return setDataLabelConfig(enabled, -90, "#fff", 2, 1, 4, 16, false);
+    return setDataLabelConfig(enabled, -90, "#fff", 2, 1, 4, 20, false);
   }
 
   public ChartConfig setDataLabelConfig(boolean enabled, int rotation, String color, int nSigDigs, int x, int y,

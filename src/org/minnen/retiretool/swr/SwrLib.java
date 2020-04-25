@@ -75,6 +75,7 @@ public class SwrLib
   public static double growth(int from, int to, int percentStock)
   {
     if (from == to) return 1.0;
+    assert percentStock >= 0 && percentStock <= 100;
     Sequence mixed = mixedMap.get(percentStock);
     return mixed.get(to, 0) / mixed.get(from, 0);
   }
@@ -88,6 +89,7 @@ public class SwrLib
    */
   public static double growth(int i, int percentStock)
   {
+    assert percentStock >= 0 && percentStock <= 100;
     if (percentStock == 100) {
       return stockMul.get(i, 0);
     } else if (percentStock == 0) {
@@ -112,13 +114,27 @@ public class SwrLib
     return cpi.get(to, 0) / cpi.get(from, 0);
   }
 
+  /**
+   * Calculate nest egg (initial portfolio value) for the given index.
+   * 
+   * The nest egg is $1M adjusted for inflation back to the first index in the simulation and then projected forward
+   * according to market growth.
+   * 
+   * @param i index for which we want a nest egg value
+   * @param lookbackYears number of lookback years for DMSWR, which sets the first index of the simulation
+   * @param percentStock percent invested in stock vs. bonds (70 => 70%)
+   * @return nest egg dollar amount for index `i`
+   */
   public static double getNestEgg(int i, int lookbackYears, int percentStock)
   {
     final int lookbackMonths = lookbackYears * 12;
     assert i >= lookbackMonths;
 
-    double nestEgg = 1e6 * SwrLib.inflation(-1, lookbackMonths); // $1M adjusted for inflation to start of sim
-    return nestEgg * SwrLib.growth(lookbackMonths, i, percentStock); // update forward based on market growth
+    // double nestEgg = 1e6 * SwrLib.inflation(-1, lookbackMonths); // $1M adjusted for inflation to start of sim
+    double nestEgg = 1000.0; // starts with $1k in first year (regardless of what it is)
+    nestEgg *= SwrLib.growth(lookbackMonths, i, percentStock); // update forward based on market growth
+    // nestEgg *= SwrLib.inflation(i, -1); // adjust for inflation to today's dollars
+    return nestEgg;
   }
 
   /** Verify that we're matching the "Real Total Return Price" from Shiller's spreadsheet. */
@@ -160,12 +176,12 @@ public class SwrLib
 
   public static File getDefaultBengenFile()
   {
-    return new File(DataIO.getFinancePath(), "bengen-table-ytm.csv");
+    return new File(DataIO.getFinancePath(), "bengen-table.csv");
   }
 
   public static File getDefaultDmswrFile()
   {
-    return new File(DataIO.getFinancePath(), "dmswr-stock75-lookback20-ytm.csv");
+    return new File(DataIO.getFinancePath(), "dmswr-stock75-lookback20.csv");
   }
 
   /** Load (inflation-adjusted) data and initialize / calculate static data sequences. */
@@ -183,12 +199,13 @@ public class SwrLib
   /** Load data and initialize / calculate static data sequences. */
   public static void setup(File bengenFile, File dmswrFile, Inflation inflation) throws IOException
   {
-    // Shiller.downloadData(); // TODO Shiller's site is down?
+    // TODO If we download new data, Bengen and Marwood tables must be regenerated.
+    // Shiller.downloadData();
     shiller = Shiller.loadAll(Shiller.getPathCSV(), true);
 
     Sequence bondData = shiller.extractDimAsSeq(Shiller.GS10).setName("GS10");
-    // bonds = Bond.calcBondReturnsYTM(bondData);
-    bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, -1);
+    bonds = Bond.calcBondReturnsYTM(bondData);
+    // bonds = Bond.calcReturnsRebuy(BondFactory.note10Year, bondData, 0, -1);
     // bonds = Bond.calcReturnsNaiveInterest(BondFactory.note10Year, bondData, 0, -1, DivOrPow.DivideBy12);
     // bonds = Bond.calcReturnsHold(BondFactory.note10Year, bondData, 0, -1);
 

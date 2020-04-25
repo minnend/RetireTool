@@ -94,7 +94,6 @@ public class MarwoodTable
 
         // First add all results to the table since they're needed for re-retiring.
         for (MonthlyInfo info : marwoodList) {
-          assert !Double.isNaN(info.finalBalance); // TODO for debug
           MarwoodEntry entry = new MarwoodEntry(retirementYears, lookbackYears, percentStock, info);
           assert entry.isRetirementStart();
           marwoodMap.put(entry, entry);

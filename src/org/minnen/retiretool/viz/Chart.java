@@ -137,10 +137,6 @@ public class Chart
   public static void saveChart(ChartConfig config) throws IOException
   {
     Sequence[] seqs = config.data;
-    // for (Sequence seq : seqs) {
-    // System.out.printf("%20s (%d): [%s] -> [%s]\n", seq.getName(), seq.length(), TimeLib.formatDate(seq.getStartMS()),
-    // TimeLib.formatDate(seq.getEndMS()));
-    // }
 
     // saveDataCSV(config, seqs);
     try (Writer writer = new Writer(config.file)) {
@@ -173,13 +169,21 @@ public class Chart
       writer.write("  xAxis: {\n");
 
       if (config.xTickInterval >= 0) {
-        writer.writef("  tickInterval: %d,\n", config.xTickInterval);
+        writer.writef("   tickInterval: %d,\n", config.xTickInterval);
+      }
+
+      if (config.xAxisTitle != null) {
+        writer.writeln("   title: {");
+        writer.writef("      text: '%s',\n", config.xAxisTitle);
+        writer.writef("      style: { fontSize: %d, },\n", config.axisLabelFontSize);
+        writer.writeln("   },");
       }
 
       writer.write("  labels: {\n");
       writer.write("    style: {\n");
       writer.writef("      fontSize: %d\n", config.axisLabelFontSize);
       writer.write("    },\n");
+      writer.writef("    y: %d,\n", config.axisLabelFontSize + 2);
       if (config.xTickFormatter != null) {
         writer.write("    formatter: function () {\n");
         writer.writef("      %s\n", config.xTickFormatter);
@@ -274,42 +278,48 @@ public class Chart
         writer.write("    borderWidth: 0\n");
         writer.write("   },\n");
       } else if (config.type == ChartConfig.Type.Area || config.type == ChartConfig.Type.PosNegArea) {
-        writer.write("   area: {\n");
-        writer.write("    fillColor: {\n");
-        writer.write("      linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },\n");
-        writer.write("      stops: [\n");
-        if (config.type == ChartConfig.Type.Area) {
-          writer.write("        [0, Highcharts.getOptions().colors[0]],\n");
-          writer.write("        [1, Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]\n");
-        } else {
-          assert config.type == ChartConfig.Type.PosNegArea;
-          FeatureVec vmin = seqs[0].getMin();
-          FeatureVec vmax = seqs[0].getMax();
-          for (int i = 1; i < seqs.length; ++i) {
-            vmin._min(seqs[i].getMin());
-            vmax._max(seqs[i].getMax());
-          }
-          double vzero = vmax.get(0) / (vmax.get(0) - vmin.get(0));
+        if (seqs.length == 1) {
+          writer.write("   area: {\n");
+          writer.write("    fillColor: {\n");
+          writer.write("      linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },\n");
+          writer.write("      stops: [\n");
+          if (config.type == ChartConfig.Type.Area) {
+            writer.write("        [0, Highcharts.getOptions().colors[0]],\n");
+            writer
+                .write("        [1, Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]\n");
+          } else {
+            assert config.type == ChartConfig.Type.PosNegArea;
+            FeatureVec vmin = seqs[0].getMin();
+            FeatureVec vmax = seqs[0].getMax();
+            for (int i = 1; i < seqs.length; ++i) {
+              vmin._min(seqs[i].getMin());
+              vmax._max(seqs[i].getMax());
+            }
+            double vzero = vmax.get(0) / (vmax.get(0) - vmin.get(0));
 
-          writer.write("        [0, 'rgb(0,255,0)'],\n");
-          writer.writef("        [%f, 'rgba(0,255,0,0.5)'],\n", vzero);
-          writer.writef("        [%f, 'rgba(255,0,0,0.5)'],\n", vzero + 0.01);
-          writer.write("        [1, 'rgb(255,0,0)'],\n");
+            writer.write("        [0, 'rgb(0,255,0)'],\n");
+            writer.writef("        [%f, 'rgba(0,255,0,0.5)'],\n", vzero);
+            writer.writef("        [%f, 'rgba(255,0,0,0.5)'],\n", vzero + 0.01);
+            writer.write("        [1, 'rgb(255,0,0)'],\n");
+          }
+          writer.write("      ]},\n");
+          writer.write("    marker: { radius: 2 },\n");
+          writer.write("    lineWidth: 1,\n");
+          writer.write("    states: {\n");
+          writer.write("      hover: { lineWidth: 1 }\n");
+          writer.write("    },\n");
+          // writer.write(" threshold: null\n");
+          writer.write("   },\n");
         }
-        writer.write("      ]},\n");
-        writer.write("    marker: { radius: 2 },\n");
-        writer.write("    lineWidth: 1\n");
-        writer.write("    states: {\n");
-        writer.write("      hover: { lineWidth: 1 }\n");
-        writer.write("    },\n");
-        // writer.write(" threshold: null\n");
-        writer.write("   },\n");
       } else if (config.type == ChartConfig.Type.Line) {
         writer.write("    line: { marker: { enabled: false },\n");
         writer.writef("            lineWidth: %d, },\n", config.lineWidth);
       }
-      writer.writef("  series: { animation: %s, },\n", config.animation ? "true" : "false");
-      writer.write("  },\n");
+      writer.writeln("  series: {");
+      writer.writef("    animation: %s,\n", config.animation ? "true" : "false");
+      writer.writef("    fillOpacity: %.2f,\n", config.fillOpacity);
+      writer.writeln("  },");
+      writer.writeln("  },");
 
       writer.write("  series: [\n");
       for (int i = 0; i < seqs.length; ++i) {

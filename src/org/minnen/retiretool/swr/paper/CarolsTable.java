@@ -6,7 +6,9 @@ import java.time.Month;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 import org.minnen.retiretool.swr.BengenMethod;
 import org.minnen.retiretool.swr.SwrLib;
@@ -21,12 +23,11 @@ public class CarolsTable
   public static void createCarolTable(int lookbackYears, int percentStock)
   {
     final int[] years = new int[] { 1970, 1971, 1972, 1973, 1974, 1975, 1980, 1985, 1990, 1995, 2000, 2005 };
-    // final int[] years = new int[36];
-    // for (int i = 0; i <= 35; ++i)
-    // years[i] = i + 1970;
-    Set<Integer> yearsToPrint = new HashSet<>();
-    for (int year : years) {
-      yearsToPrint.add(year);
+    Map<Integer, Integer> yearsToPrint = new TreeMap<>();
+    for (int i = 0; i < years.length; ++i) {
+      final int year = years[i];
+      final int next = i + 1 < years.length ? years[i + 1] : year + 1;
+      yearsToPrint.put(year, next);
     }
 
     final double nestEgg = 1e6;
@@ -50,19 +51,25 @@ public class CarolsTable
       final int index = bengenInfo.index;
       final LocalDate date = TimeLib.ms2date(bengenInfo.currentTime);
 
-      final boolean isNewYear = (date.getMonth() == Month.JANUARY && yearsToPrint.contains(date.getYear()));
+      final boolean isNewYear = (date.getMonth() == Month.JANUARY && yearsToPrint.containsKey(date.getYear()));
       final boolean isLastMonth = (date.getMonth() == Month.DECEMBER && date.getYear() == finalYear);
       if (!isNewYear && !isLastMonth) continue;
       final int year = (isLastMonth ? finalYear + 1 : date.getYear());
+
+      final int nextRowYear = isLastMonth ? year + 1 : yearsToPrint.get(date.getYear());
+      final int yearsBetween = nextRowYear - year;
 
       // MonthlyInfo dmInfo = dmTrajectory.get(index - iStart);
       // assert (dmInfo.retireTime == bengenInfo.retireTime) && (dmInfo.currentTime == bengenInfo.currentTime);
       // assert dmInfo.index == index;
       // assert Library.almostEqual(bengenInfo.bengenSalary, dmInfo.bengenSalary, 1e-6);
 
-      final double annualGrowth = SwrLib.growth(index, index + 12, 100); // market returns for the year
+      final double totalGrowth = SwrLib.growth(index, index + 12 * yearsBetween, percentStock);
+      final double annualizedGrowth = Math.pow(totalGrowth, 1.0 / yearsBetween);
+
       // growth *= SwrLib.inflation(index + 12, index); // adjust market returns for inflation
-      final double annualInflation = SwrLib.inflation(index, index + 12);
+      final double totalInflation = SwrLib.inflation(index, index + 12 * yearsBetween);
+      final double annualizedInflation = Math.pow(totalInflation, 1.0 / yearsBetween);
       final int yearsLeft = Math.max(0, retirementYears - (year - years[0]));
 
       final double inflation = SwrLib.inflation(bengenInfo.index, iStart); // inflation multiplier to retirement date
@@ -87,9 +94,9 @@ public class CarolsTable
       // final String sDmswrSalary = String.format("\\$%s", FinLib.dollarFormatter.format(dmSalaryNominal));
 
       System.out.printf(
-          "%d  & %2d  & %12s & %12s & %10s & %10s & %5.1f\\hspace{.5pt}\\%%  & %5.2f\\hspace{.5pt}\\%%  & %5.2f\\hspace{.5pt}\\%%  \\\\\n",
+          "%d & %2d & %12s & %12s & %10s & %10s & %5.1f\\hspace{.5pt}\\%% & %5.2f\\hspace{.5pt}\\%% & %5.2f\\hspace{.5pt}\\%% \\\\\n",
           year, yearsLeft, sBengenBalance, sBengenBalanceReal, sBengenSalary, sBengenSalaryReal,
-          FinLib.mul2ret(annualGrowth), FinLib.mul2ret(annualInflation), withdrawalPercent);
+          FinLib.mul2ret(annualizedGrowth), FinLib.mul2ret(annualizedInflation), withdrawalPercent);
     }
   }
 
