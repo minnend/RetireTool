@@ -19,16 +19,9 @@ import org.minnen.retiretool.viz.ChartConfig;
 import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
 import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 
-public class DmswrAndSalaryGraphs
+public class DmswrGraph
 {
-  /**
-   * Run a Marwood-Minnen SWR simulation and print results.
-   * 
-   * @param retirementYears duration of retirement in years
-   * @param lookbackYears number of previous years to check for a better "virtual retirement" time
-   * @pparam percentStock percent stock (vs. bonds) to hold (70 = 70%)
-   */
-  public static void createCharts(int retirementYears, int lookbackYears, int percentStock) throws IOException
+  public static void createDmswrGraph(int retirementYears, int lookbackYears, int percentStock) throws IOException
   {
     final int bengenSWR = BengenTable.getSWR(retirementYears, percentStock);
     final int lookbackMonths = lookbackYears * 12;
@@ -36,9 +29,6 @@ public class DmswrAndSalaryGraphs
     final int iStartSim = iFirstWithHistory;
 
     Sequence seqMarwoodSWR = new Sequence(String.format("DMSWR (rd, rd+%d years)", retirementYears));
-    Sequence seqBengenSalary = new Sequence(String.format("MinSWR (%d years)", retirementYears));
-    Sequence seqCrystalSalary = new Sequence(String.format("CBSWR (%d years)", retirementYears));
-    Sequence seqMarwoodSalary = new Sequence(String.format("DMSWR (rd, rd+%d years)", retirementYears));
 
     final double firstNestEgg = SwrLib.getNestEgg(iStartSim, lookbackYears, percentStock);
     System.out.printf("First nest egg: $%.2f in [%s] = $%.2f in today's dollars\n", firstNestEgg,
@@ -48,7 +38,7 @@ public class DmswrAndSalaryGraphs
     System.out.printf("Last nest egg: $%.2f in [%s]\n", lastNestEgg,
         TimeLib.formatMonth(SwrLib.time(SwrLib.length() - 1)));
 
-    List<MonthlyInfo> infos = MarwoodMethod.findMarwoodSWR(retirementYears, lookbackYears, percentStock);
+    List<MonthlyInfo> infos = MarwoodMethod.findDMSWR(retirementYears, lookbackYears, percentStock);
     assert infos.size() == (SwrLib.length() - iStartSim);
 
     for (int iRetire = iStartSim; iRetire < SwrLib.length(); ++iRetire) {
@@ -58,9 +48,6 @@ public class DmswrAndSalaryGraphs
 
       if (iRetire == iStartSim || iRetire == SwrLib.length() - 1) System.out.printf("%d\n", dmswr.swr);
       seqMarwoodSWR.addData(dmswr.swr / 100.0, now);
-      seqMarwoodSalary.addData(dmswr.marwoodSalary, now);
-      seqBengenSalary.addData(dmswr.bengenSalary, now);
-      seqCrystalSalary.addData(dmswr.crystalSalary, now);
     }
 
     // The crystall ball SWR is the same as Bengen per retirement start date.
@@ -97,24 +84,6 @@ public class DmswrAndSalaryGraphs
             + "itemMarginTop: 16, itemMarginBottom: -16, shadow: true, symbolWidth: 32,");
     config.setAnimation(false);
     Chart.saveChart(config);
-
-    // Create DMSWR income chart vs. Bengen income.
-    config = Chart.saveLineChart(
-        new File(DataIO.getOutputPath(), String.format("marwood-salary-%d-%d.html", retirementYears, lookbackYears)),
-        "Annualized Income (Nominal Dollars)", "100%", "800px", ChartScaling.LOGARITHMIC, ChartTiming.MONTHLY,
-        seqBengenSalary, seqMarwoodSalary);
-    // config.setColors(new String[] { "#434348", "#272" });
-    config.setLineWidth(5);
-    config.setAxisLabelFontSize(28);
-    config.setMinMaxY(32, 60000);
-    config.setTitleConfig("margin: 0, y: 40, style: { fontSize: 36 }");
-    config.setTickInterval(48, -1);
-    config.setTickFormatter("return this.value.split(' ')[1];", "return '$' + this.value;");
-    config.setLegendConfig(
-        "align: 'left', verticalAlign: 'top', x: 160, y: 70, layout: 'vertical', floating: true, itemStyle: {"
-            + "fontSize: 28, }, backgroundColor: '#fff', borderWidth: 1, padding: 12, "
-            + "itemMarginTop: 16, itemMarginBottom: -16, shadow: true, symbolWidth: 32,");
-    Chart.saveChart(config);
   }
 
   public static void main(String[] args) throws IOException
@@ -127,6 +96,6 @@ public class DmswrAndSalaryGraphs
     System.out.printf("DMSWR entries: %d\n", MarwoodTable.marwoodMap.size());
     System.out.printf("DMSWR sequences: %d\n", MarwoodTable.marwoodSequences.size());
 
-    createCharts(retirementYears, lookbackYears, percentStock);
+    createDmswrGraph(retirementYears, lookbackYears, percentStock);
   }
 }

@@ -181,7 +181,7 @@ public class BengenTable
   private static void verifyTable() throws IOException
   {
     for (BengenEntry bengen : bengenMap.values()) {
-      MonthlyInfo info = BengenMethod.runPeriod(bengen);
+      MonthlyInfo info = BengenMethod.run(bengen);
       assert info.ok() : bengen;
     }
     System.out.printf("Verified entries: %d\n", bengenMap.size());

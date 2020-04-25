@@ -1,12 +1,10 @@
 package org.minnen.retiretool.swr;
 
-import java.io.File;
 import java.io.IOException;
 import java.time.Month;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.swr.data.BengenEntry;
@@ -16,36 +14,33 @@ import org.minnen.retiretool.swr.data.MonthlyInfo;
 import org.minnen.retiretool.util.FinLib.Inflation;
 import org.minnen.retiretool.util.IntPair;
 import org.minnen.retiretool.util.TimeLib;
-import org.minnen.retiretool.viz.Chart;
-import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
-import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 
 public class BengenMethod
 {
-  public static MonthlyInfo runPeriod(BengenEntry info)
+  public static MonthlyInfo run(BengenEntry info)
   {
     List<MonthlyInfo> trajectory = new ArrayList<>();
-    return runPeriod(info, trajectory);
+    return run(info, trajectory);
   }
 
-  public static MonthlyInfo runPeriod(BengenEntry info, List<MonthlyInfo> trajectory)
+  public static MonthlyInfo run(BengenEntry info, List<MonthlyInfo> trajectory)
   {
     final int index = SwrLib.indexForTime(info.time);
     final double nestEgg = SwrLib.getNestEgg(index, 0, info.percentStock);
-    return runPeriod(index, info.swr / 100.0, info.retirementYears, info.percentStock, Inflation.Real, nestEgg,
+    return runForDuration(index, info.retirementYears, info.swr / 100.0, info.percentStock, Inflation.Real, nestEgg,
         trajectory);
   }
 
-  public static MonthlyInfo runPeriod(MarwoodEntry info)
+  public static MonthlyInfo run(MarwoodEntry info)
   {
-    return runPeriod(info, Inflation.Real, null);
+    return run(info, Inflation.Real, null);
   }
 
-  public static MonthlyInfo runPeriod(MarwoodEntry info, Inflation inflation, List<MonthlyInfo> trajectory)
+  public static MonthlyInfo run(MarwoodEntry info, Inflation inflation, List<MonthlyInfo> trajectory)
   {
     final int index = SwrLib.indexForTime(info.retireTime);
     final double nestEgg = SwrLib.getNestEgg(index, info.lookbackYears, info.percentStock);
-    return runPeriod(index, info.swr / 100.0, info.retirementYears, info.percentStock, Inflation.Real, nestEgg,
+    return runForDuration(index, info.retirementYears, info.swr / 100.0, info.percentStock, Inflation.Real, nestEgg,
         trajectory);
   }
 
@@ -53,14 +48,14 @@ public class BengenMethod
    * Simulate a retirement.
    * 
    * @param iStart index of retirement month (first withdrawal)
-   * @param withdrawalRate annual withdrawal rate as a percent (3.5 = 3.5%)
    * @param retirementYears number of years of retirement
+   * @param withdrawalRate annual withdrawal rate as a percent (3.5 = 3.5%)
    * @param percentStock percent stock (vs. bonds) held in brokerage account
    * @param inflation if nominal, adjust for inflation here, else assume growth is pre-adjusted
    * @param trajectory if non-null, will be filled with monthly info objects (optional)
    * @return info for the final month: either the last month of retirement or the failure month
    */
-  public static MonthlyInfo runPeriod(int iStart, double withdrawalRate, int retirementYears, int percentStock,
+  public static MonthlyInfo runForDuration(int iStart, int retirementYears, double withdrawalRate, int percentStock,
       Inflation inflation, double nestEgg, List<MonthlyInfo> trajectory)
   {
     final int iEnd = Math.min(iStart + 12 * retirementYears, SwrLib.length());
@@ -95,7 +90,7 @@ public class BengenMethod
     assert withdrawalRate > 0.0 : withdrawalRate;
 
     final long retireTime = SwrLib.time(iStart);
-    final int swrBasisPoints = (int) Math.round(withdrawalRate * 100);
+    final int swrBasisPoints = SwrLib.percentToBasisPoints(withdrawalRate);
     double balance = nestEgg;
     double monthlyWithdrawal = balance * withdrawalRate / 1200.0;
 
@@ -137,7 +132,7 @@ public class BengenMethod
     final int lastIndex = SwrLib.lastIndex(years);
     final double floatWR = withdrawalRate / 100.0;
     for (int i = 0; i <= lastIndex; ++i) {
-      MonthlyInfo info = BengenMethod.runPeriod(i, floatWR, years, percentStock, Inflation.Real, 1e6, null);
+      MonthlyInfo info = BengenMethod.runForDuration(i, years, floatWR, percentStock, Inflation.Real, 1e6, null);
       if (info.failed()) return false;
       assert info.endBalance > 0 && info.monthlyIncome > 0;
     }
@@ -167,7 +162,7 @@ public class BengenMethod
     while (highSWR - lowSWR > quantum) {
       final int swr = (lowSWR + highSWR) / (2 * quantum) * quantum;
       assert swr >= lowSWR && swr <= highSWR && swr % quantum == 0 : swr;
-      MonthlyInfo info = BengenMethod.runPeriod(index, swr / 100.0, years, percentStock, inflation, 1e6, null);
+      MonthlyInfo info = BengenMethod.runForDuration(index, years, swr / 100.0, percentStock, inflation, 1e6, null);
       if (info.ok()) {
         lowSWR = swr;
       } else {
@@ -271,13 +266,14 @@ public class BengenMethod
     SwrLib.setup(SwrLib.getDefaultBengenFile(), null, inflation); // DMSWR data not needed
 
     // Examples from paper.
-    MonthlyInfo info = BengenMethod.runPeriod(SwrLib.indexForTime(Month.JANUARY, 1950), 4.0, 30, 50, inflation, 1e6,
-        null);
+    MonthlyInfo info = BengenMethod.runForDuration(SwrLib.indexForTime(Month.JANUARY, 1950), 30, 4.0, 50, inflation,
+        1e6, null);
     System.out.printf("[%s] -> [%s] %.2f%% -> %f\n", TimeLib.formatYM(info.retireTime),
         TimeLib.formatYM(info.currentTime), info.swr / 100.0, info.finalBalance / 1e6);
 
     List<MonthlyInfo> trajectory = new ArrayList<>();
-    info = BengenMethod.runPeriod(SwrLib.indexForTime(Month.JANUARY, 1965), 8.0, 30, 50, inflation, 1e6, trajectory);
+    info = BengenMethod.runForDuration(SwrLib.indexForTime(Month.JANUARY, 1965), 30, 8.0, 50, inflation, 1e6,
+        trajectory);
     System.out.printf("[%s] -> [%s] %.2f%% -> %f\n", TimeLib.formatYM(info.retireTime),
         TimeLib.formatYM(info.currentTime), info.swr / 100.0, info.finalBalance / 1e6);
     System.out.println(trajectory.get(trajectory.size() - 1));
@@ -298,7 +294,7 @@ public class BengenMethod
     int retirementYears = 39;
     int percentStock = 75;
     double wr = BengenTable.getSWR(retirementYears, percentStock) / 100.0;
-    info = BengenMethod.runPeriod(SwrLib.indexForTime(Month.JANUARY, 1966), wr, retirementYears, percentStock,
+    info = BengenMethod.runForDuration(SwrLib.indexForTime(Month.JANUARY, 1966), retirementYears, wr, percentStock,
         inflation, 1e6, trajectory);
     System.out.printf("[%s] -> [%s] %.2f%% -> %f\n", TimeLib.formatYM(info.retireTime),
         TimeLib.formatYM(info.currentTime), info.swr / 100.0, info.finalBalance / 1e6);

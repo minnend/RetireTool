@@ -148,7 +148,7 @@ public class Chart
 
       writer.write("$(function () {\n");
       writer.writef(" $('#%s').highcharts({\n", config.containerName);
-      writer.writef("  title: { text: '%s', %s },\n", config.title == null ? "" : config.title,
+      writer.writef("  title: { text: %s, %s },\n", config.title == null ? "null" : "'" + config.title + "'",
           config.titleConfig == null ? "" : config.titleConfig);
       if (config.legendConfig != null && !config.legendConfig.isEmpty()) {
         writer.write("  legend: { " + config.legendConfig + " },\n");
@@ -179,7 +179,7 @@ public class Chart
         writer.writeln("   },");
       }
 
-      writer.write("  labels: {\n");
+      writer.write("   labels: {\n");
       writer.write("    style: {\n");
       writer.writef("      fontSize: %d\n", config.axisLabelFontSize);
       writer.write("    },\n");
@@ -189,10 +189,10 @@ public class Chart
         writer.writef("      %s\n", config.xTickFormatter);
         writer.write("    },\n");
       }
-      writer.write("  },\n");
+      writer.write("   },\n"); // end labels
 
       if (config.labels != null || config.timing != ChartTiming.INDEX) {
-        writer.write("  categories: [");
+        writer.write("   categories: [");
         if (config.labels != null) {
           assert config.labels.length == seqs[0].size();
           for (int i = 0; i < config.labels.length; ++i) {
@@ -209,7 +209,7 @@ public class Chart
             }
           }
         }
-        writer.write("],\n"); // categories
+        writer.write("],\n"); // end categories
       }
 
       addPlotBands(config.xBands, writer);
@@ -217,12 +217,11 @@ public class Chart
       writer.write("  },\n"); // xAxis
 
       writer.write("  yAxis: {\n");
-
       if (config.yTickInterval >= 0) {
         writer.writef("  tickInterval: %d,\n", config.yTickInterval);
       }
 
-      writer.write("  labels: {\n");
+      writer.write("   labels: {\n");
       writer.write("    style: {\n");
       writer.writef("      fontSize: %d\n", config.axisLabelFontSize);
       writer.write("    },\n");
@@ -231,7 +230,7 @@ public class Chart
         writer.writef("      %s\n", config.yTickFormatter);
         writer.write("    },\n");
       }
-      writer.write("  },\n");
+      writer.write("   },\n");
 
       if (config.logarthimicYAxis) {
         writer.write("   type: 'logarithmic',\n");
@@ -252,6 +251,9 @@ public class Chart
 
       if (config.type == ChartConfig.Type.Line) {
         writer.write("  chart: {\n");
+        if (config.title == null) {
+          writer.writeln("   marginTop: 20,"); // need extra space at top since no title to push graph down
+        }
         writer.write("   zoomType: 'xy',\n");
         writer.write("  },\n");
       }

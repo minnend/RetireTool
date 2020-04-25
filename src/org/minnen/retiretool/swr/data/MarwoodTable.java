@@ -48,7 +48,7 @@ public class MarwoodTable
   public static int getSWR(int retirementYears, int lookbackYears, int percentStock)
   {
     MarwoodEntry key = new MarwoodEntry(retirementYears, lookbackYears, percentStock);
-    return marwoodSWRs.getOrDefault(key, null);
+    return marwoodSWRs.get(key);
   }
 
   /** @return Sequence of DMSWR info vectors for initial retirement months. */
@@ -88,7 +88,7 @@ public class MarwoodTable
       writer.writeln("# 11) crystal ball salary - salary if we withdrew the maximum safe rate");
       for (int retirementYears = 1; retirementYears <= 40; ++retirementYears) {
         final long a = TimeLib.getTime();
-        List<MonthlyInfo> marwoodList = MarwoodMethod.findMarwoodSWR(retirementYears, lookbackYears, percentStock);
+        List<MonthlyInfo> marwoodList = MarwoodMethod.findDMSWR(retirementYears, lookbackYears, percentStock);
         final long b = TimeLib.getTime();
         System.out.printf("%d  N=%d  (%d ms)\n", retirementYears, marwoodList.size(), b - a);
 
@@ -205,7 +205,7 @@ public class MarwoodTable
   {
     for (MarwoodEntry marwood : marwoodMap.values()) {
       if (marwood.isRetirementStart()) {
-        MonthlyInfo info = BengenMethod.runPeriod(marwood);
+        MonthlyInfo info = BengenMethod.run(marwood);
         assert info.ok();
       }
     }
@@ -214,7 +214,7 @@ public class MarwoodTable
 
   public static void main(String[] args) throws IOException
   {
-    final String mode = "generate";
+    final String mode = "verify";
 
     final int percentStock = 75;
     final int lookbackYears = 20;

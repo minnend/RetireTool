@@ -34,7 +34,7 @@ public class AssetAllocations
       Sequence seq = new Sequence(String.format("DMSWR (%d / %d)", percentStock, 100 - percentStock));
       System.out.println(seq.getName());
 
-      List<MonthlyInfo> infos = MarwoodMethod.findMarwoodSWR(retirementYears, lookbackYears, percentStock);
+      List<MonthlyInfo> infos = MarwoodMethod.findDMSWR(retirementYears, lookbackYears, percentStock);
       assert infos.size() == (SwrLib.length() - iStartSim);
 
       for (int iRetire = iStartSim; iRetire < SwrLib.length(); ++iRetire) {
