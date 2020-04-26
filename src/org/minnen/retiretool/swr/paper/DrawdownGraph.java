@@ -19,6 +19,7 @@ import org.minnen.retiretool.viz.ChartConfig;
 import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
 import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 
+/** Note: this graph was experimental is NOT used in the paper. */
 public class DrawdownGraph
 {
   public static void createDrawdownGraph(int percentStock) throws IOException
@@ -35,7 +36,7 @@ public class DrawdownGraph
 
       final int iStart = SwrLib.indexForTime(TimeLib.toMs(year, Month.JANUARY, 1));
       List<MonthlyInfo> bengenTrajectory = new ArrayList<>();
-      BengenMethod.run(iStart, iEnd, bengenSWR, percentStock, Inflation.Real, bengenTrajectory);
+      BengenMethod.run(iStart, iEnd, bengenSWR, percentStock, bengenTrajectory);
 
       Sequence path = new Sequence(String.format("Drawdown Path (%d)", year));
       for (MonthlyInfo info : bengenTrajectory) {
@@ -49,7 +50,7 @@ public class DrawdownGraph
         ChartTiming.MONTHLY, paths);
     config.setTickInterval(12, 1);
     config.setTickFormatter("return this.value.split(' ')[1];", "return this.value + '%';");
-    //config.setColors(new String[] { "#eee" });
+    // config.setColors(new String[] { "#eee" });
     Chart.saveChart(config);
   }
 

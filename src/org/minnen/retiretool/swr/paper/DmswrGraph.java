@@ -80,8 +80,7 @@ public class DmswrGraph
     config.setAxisTitles("Retirement Date (rd)", null);
     config.setLegendConfig(
         "align: 'right', verticalAlign: 'top', x: 0, y: 60, layout: 'vertical', floating: true, itemStyle: {"
-            + "fontSize: 32, }, backgroundColor: '#fff', borderWidth: 1, padding: 12, "
-            + "itemMarginTop: 16, itemMarginBottom: -16, shadow: true, symbolWidth: 32,");
+            + "fontSize: 32, }, backgroundColor: '#fff', borderWidth: 1, padding: 12, shadow: true, symbolWidth: 32,");
     config.setAnimation(false);
     Chart.saveChart(config);
   }

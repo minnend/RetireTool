@@ -38,7 +38,7 @@ public class CarolsTable
 
     final double bengenSWR = BengenTable.getSWR(retirementYears, percentStock) / 100.0;
     List<MonthlyInfo> bengenTrajectory = new ArrayList<>();
-    BengenMethod.run(iStart, iEnd + 1, bengenSWR, percentStock, Inflation.Nominal, nestEgg, bengenTrajectory);
+    BengenMethod.run(iStart, iEnd + 1, bengenSWR, percentStock, nestEgg, bengenTrajectory);
     assert bengenTrajectory.size() == (iEnd - iStart + 1);
 
     // List<MonthlyInfo> dmTrajectory = MarwoodMethod.reretire(timeStart, retirementYears, lookbackYears, percentStock,

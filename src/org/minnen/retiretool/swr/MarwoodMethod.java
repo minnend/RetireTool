@@ -58,7 +58,7 @@ public class MarwoodMethod
     for (int iRetire = iStartSim; iRetire <= iEndSim; ++iRetire) {
       final long retireTime = SwrLib.time(iRetire);
       // TODO arg to select nest egg calculation + real or nominal dollars.
-      final double nestEgg = SwrLib.getNestEgg(iRetire, iStartSim, lookbackYears, percentStock, Inflation.Nominal);
+      final double nestEgg = SwrLib.getNestEgg(iRetire, iStartSim, lookbackYears, percentStock, Inflation.Real);
       // final double nestEgg = SwrLib.getNestEgg(iRetire, lookbackYears, percentStock);
 
       // Find best "virtual" retirement year within the lookback period.
@@ -66,13 +66,12 @@ public class MarwoodMethod
       int bestVirtualIndex = -1;
       for (int iLookback = 0; iLookback <= lookbackMonths; ++iLookback) {
         final int iVirtualStart = iRetire - iLookback; // index of start of virtual retirement
-        final int virtualYears = retirementYears + (int) Math.ceil(iLookback / 12.0);
+        final int virtualYears = retirementYears + (int) Math.ceil(iLookback / 12.0 - 1e-5);
         final double virtualSWR = BengenTable.getSWR(virtualYears, percentStock) / 100.0;
 
         // Run simulation for virtual retirement period.
         List<MonthlyInfo> virtualTrajectory = new ArrayList<MonthlyInfo>();
-        MonthlyInfo info = BengenMethod.run(iVirtualStart, iRetire + 1, virtualSWR, percentStock, Inflation.Real,
-            virtualTrajectory);
+        MonthlyInfo info = BengenMethod.run(iVirtualStart, iRetire + 1, virtualSWR, percentStock, virtualTrajectory);
         assert info.ok();
 
         assert iLookback + 1 == virtualTrajectory.size();
@@ -90,8 +89,8 @@ public class MarwoodMethod
       assert dmswr >= bengenSWR; // Bengen is lower bound on DMSWR
 
       List<MonthlyInfo> trajectory = new ArrayList<>();
-      MonthlyInfo info = BengenMethod.runForDuration(iRetire, retirementYears, dmswr / 100.0, percentStock,
-          Inflation.Real, nestEgg, trajectory);
+      MonthlyInfo info = BengenMethod.runForDuration(iRetire, retirementYears, dmswr / 100.0, percentStock, nestEgg,
+          trajectory);
       assert info.ok(); // safe by construction, but still verify
       assert iRetire > iLastWithFullRetirement || info.retirementMonth == retirementYears * 12;
       final double finalBalance = info.finalBalance;
@@ -152,7 +151,7 @@ public class MarwoodMethod
 
       // Look up SWR for a new retiree with a reduced retirement period.
       final int nMonthsRetired = i - iRetire;
-      final int yearsLeft = (int) Math.ceil((nRetirementMonths - nMonthsRetired) / 12.0);
+      final int yearsLeft = (int) Math.ceil((nRetirementMonths - nMonthsRetired) / 12.0 - 1e-5);
       assert yearsLeft > 0 && yearsLeft <= retirementYears;
       assert (i > iRetire || yearsLeft == retirementYears);
 

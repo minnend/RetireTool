@@ -35,6 +35,14 @@ public class SwrLib
   /** Mixed stock/bond cumulative returns keyed by stock percent (70 = 70% stocks / 30% bonds). */
   private static Map<Integer, Sequence> mixedMap;
 
+  /** Was the data adjusted for inflation (Real) or not (Nominal)? */
+  private static Inflation              inflationAdjustment;
+
+  public static Inflation getInflationAdjustment()
+  {
+    return inflationAdjustment;
+  }
+
   /** @return timestamp (in ms) for the i'th data point. */
   public static long time(int i)
   {
@@ -232,6 +240,7 @@ public class SwrLib
     // bonds = Bond.calcReturnsHold(BondFactory.note10Year, bondData, 0, -1);
 
     cpi = shiller.extractDimAsSeq(Shiller.CPI).setName("CPI");
+    SwrLib.inflationAdjustment = inflation;
     if (inflation == Inflation.Real) {
       stock = shiller.extractDimAsSeq(Shiller.RTRP).setName("Stock (real)");
       bonds = adjustForInflation(bonds, cpi).setName("Bonds (real)");

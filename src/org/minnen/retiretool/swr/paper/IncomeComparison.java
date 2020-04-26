@@ -82,8 +82,8 @@ public class IncomeComparison
     final int iEndSim = SwrLib.indexForTime(TimeLib.toMs(startYear + graphDurationYears - 1, Month.DECEMBER, 1));
     assert iEndSim <= SwrLib.length();
 
-    Sequence seqBengenSalary = new Sequence("MinSWR");
-    Sequence seqMarwoodSalary = new Sequence("DMSWR");
+    Sequence seqBengenSalary = new Sequence(String.format("MinSWR(%d years)", retirementYears));
+    Sequence seqMarwoodSalary = new Sequence(String.format("DMSWR(%d years)", retirementYears));
 
     List<MonthlyInfo> infos = MarwoodMethod.findDMSWR(iStartSim, iEndSim, retirementYears, lookbackYears, percentStock);
     assert infos.size() == (iEndSim - iStartSim + 1);
@@ -104,14 +104,14 @@ public class IncomeComparison
     config.setLineWidth(5);
     config.setAxisLabelFontSize(28);
     config.setTitleConfig("margin: 0, y: 40, style: { fontSize: 32 }");
-    config.setTickInterval(12, -1);
+    config.setTickInterval(12, 10000);
     // config.setMinorTickIntervalY(5000);
-    // config.setMinMaxY(21000, 93000);
+    config.setMinMaxY(15000, 80000);
     config.setTickFormatter("return this.value.split(' ')[1];",
         "return '$' + Highcharts.numberFormat(this.value, 0, '.', ',');");
     if (includeLegend) {
       config.setLegendConfig(
-          "align: 'left', verticalAlign: 'top', x: 160, y: 20, layout: 'vertical', floating: true, itemStyle: {"
+          "align: 'left', verticalAlign: 'top', x: 160, y: 30, layout: 'vertical', floating: true, itemStyle: {"
               + "fontSize: 28, }, backgroundColor: '#fff', borderWidth: 1, padding: 12, shadow: true, symbolWidth: 32,");
     }
     Chart.saveChart(config);
@@ -130,7 +130,7 @@ public class IncomeComparison
     // TODO long graph uses different nest egg calculation than short graph -- need to change code in findDMSWR().
     // createLongIncomeGraph(retirementYears, lookbackYears, percentStock);
 
-    createShortIncomeGraph(1929, 10, retirementYears, lookbackYears, percentStock, true);
+    createShortIncomeGraph(1929, 10, retirementYears, lookbackYears, percentStock, false);
     createShortIncomeGraph(1960, 10, retirementYears, lookbackYears, percentStock, false);
     createShortIncomeGraph(2000, 10, retirementYears, lookbackYears, percentStock, false);
   }
