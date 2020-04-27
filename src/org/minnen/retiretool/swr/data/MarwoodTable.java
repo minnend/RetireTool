@@ -12,6 +12,7 @@ import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.swr.BengenMethod;
 import org.minnen.retiretool.swr.MarwoodMethod;
+import org.minnen.retiretool.swr.NestEggCalculator;
 import org.minnen.retiretool.swr.SwrLib;
 import org.minnen.retiretool.util.Library;
 import org.minnen.retiretool.util.TimeLib;
@@ -70,6 +71,7 @@ public class MarwoodTable
   private static void generateTable(File file, int percentStock, int lookbackYears, boolean reretire) throws IOException
   {
     clear();
+    NestEggCalculator nestEggCalculator = NestEggCalculator.constant(1e6);
 
     try (Writer writer = new Writer(file)) {
       writer.writeln("# DMSWR (safe withdrawal rates).");
@@ -83,12 +85,13 @@ public class MarwoodTable
       writer.writeln("# 6) DMSWR in basis points (500=5.0%)");
       writer.writeln("# 7) virtual retirement months - length of \"virtual retirement\" for best SWR");
       writer.writeln("# 8) final balance - balance at the end of retirement");
-      writer.writeln("# 9) Bengen salary - salary using the Bengen SWR");
-      writer.writeln("# 10) DMSWR salary - salary using the DMSWR method");
-      writer.writeln("# 11) crystal ball salary - salary if we withdrew the maximum safe rate");
+      writer.writeln("# 9) Bengen (MinSWR) income - annualized income using the Bengen SWR");
+      writer.writeln("# 10) DMSWR income - annualized income using the DMSWR method");
+      writer.writeln("# 11) CBSWR income - annualized income if we withdrew the maximum safe rate");
       for (int retirementYears = 1; retirementYears <= 40; ++retirementYears) {
         final long a = TimeLib.getTime();
-        List<MonthlyInfo> marwoodList = MarwoodMethod.findDMSWR(retirementYears, lookbackYears, percentStock);
+        List<MonthlyInfo> marwoodList = MarwoodMethod.findDMSWR(retirementYears, lookbackYears, percentStock,
+            nestEggCalculator);
         final long b = TimeLib.getTime();
         System.out.printf("%d  N=%d  (%d ms)\n", retirementYears, marwoodList.size(), b - a);
 
@@ -104,7 +107,8 @@ public class MarwoodTable
         if (!reretire) continue;
 
         for (MonthlyInfo startInfo : marwoodList) {
-          final double nestEgg = SwrLib.getNestEgg(startInfo.index, lookbackYears, percentStock);
+          final double nestEgg = nestEggCalculator.getNestEgg(startInfo.index, lookbackYears, lookbackYears,
+              percentStock);
           List<MonthlyInfo> trajectory = MarwoodMethod.reretire(startInfo.currentTime, retirementYears, lookbackYears,
               percentStock, Inflation.Real, nestEgg);
 
@@ -189,10 +193,10 @@ public class MarwoodTable
   /** Simulate re-retiring to boost withdrawals after the original retirement date. */
   public static void genReRetireTable(int retirementYears, int lookbackYears, int percentStock) throws IOException
   {
+    final double nestEgg = 1e6;
     final int lookbackMonths = lookbackYears * 12;
     for (int i = lookbackMonths; i < SwrLib.lastIndex(retirementYears); ++i) {
       final long retireTime = SwrLib.time(i);
-      final double nestEgg = SwrLib.getNestEgg(SwrLib.indexForTime(retireTime), lookbackYears, percentStock);
       List<MonthlyInfo> trajectory = MarwoodMethod.reretire(retireTime, retirementYears, lookbackYears, percentStock,
           Inflation.Real, nestEgg);
 
@@ -214,7 +218,7 @@ public class MarwoodTable
 
   public static void main(String[] args) throws IOException
   {
-    final String mode = "verify";
+    final String mode = "generate";
 
     final int percentStock = 75;
     final int lookbackYears = 20;

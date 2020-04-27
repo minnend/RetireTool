@@ -26,7 +26,7 @@ public class BengenMethod
   public static MonthlyInfo run(BengenEntry info, List<MonthlyInfo> trajectory)
   {
     final int index = SwrLib.indexForTime(info.time);
-    final double nestEgg = SwrLib.getNestEgg(index, 0, info.percentStock);
+    final double nestEgg = 1e6; // SwrLib.getNestEgg(index, 0, info.percentStock);
     return runForDuration(index, info.retirementYears, info.swr / 100.0, info.percentStock, nestEgg, trajectory);
   }
 
@@ -38,7 +38,7 @@ public class BengenMethod
   public static MonthlyInfo run(MarwoodEntry info, List<MonthlyInfo> trajectory)
   {
     final int index = SwrLib.indexForTime(info.retireTime);
-    final double nestEgg = SwrLib.getNestEgg(index, info.lookbackYears, info.percentStock);
+    final double nestEgg = 1e6; // SwrLib.getNestEgg(index, info.lookbackYears, info.percentStock);
     return runForDuration(index, info.retirementYears, info.swr / 100.0, info.percentStock, nestEgg, trajectory);
   }
 
@@ -63,7 +63,7 @@ public class BengenMethod
   public static MonthlyInfo run(int iStart, int iEnd, double withdrawalRate, int percentStock,
       List<MonthlyInfo> trajectory)
   {
-    final double nestEgg = SwrLib.getNestEgg(iStart, 0, percentStock);
+    final double nestEgg = 1e6; // SwrLib.getNestEgg(iStart, 0, percentStock);
     return run(iStart, iEnd, withdrawalRate, percentStock, nestEgg, trajectory);
   }
 

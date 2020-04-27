@@ -122,51 +122,6 @@ public class SwrLib
     return cpi.get(to, 0) / cpi.get(from, 0);
   }
 
-  /**
-   * Calculate nest egg (initial portfolio value) for the given index.
-   * 
-   * The nest egg is $1M adjusted for inflation back to the first index in the simulation and then projected forward
-   * according to market growth.
-   * 
-   * @param i index for which we want a nest egg value
-   * @param lookbackYears number of lookback years for DMSWR, which sets the first index of the simulation
-   * @param percentStock percent invested in stock vs. bonds (70 => 70%)
-   * @return nest egg dollar amount for index `i`
-   */
-  public static double getNestEgg(int i, int lookbackYears, int percentStock)
-  {
-    final int lookbackMonths = lookbackYears * 12;
-    assert i >= lookbackMonths;
-
-    // double nestEgg = 1e6 * SwrLib.inflation(-1, lookbackMonths); // $1M adjusted for inflation to start of sim
-    double nestEgg = 1000.0; // starts with $1k in first year (regardless of what it is)
-    nestEgg *= SwrLib.growth(lookbackMonths, i, percentStock); // update forward based on market growth
-    // nestEgg *= SwrLib.inflation(i, -1); // adjust for inflation to today's dollars
-    return nestEgg;
-  }
-
-  /**
-   * Calculate nest egg relative to the given simulation start index.
-   * 
-   * The nest egg starts with $1M at `iStartSim`. Every month, $500 is saved and the portfolio value moves up or down
-   * with the market. If Inflation is set to `Real`, the value at `iCurrent` is adjusted to `iStartSim` dollars.
-   */
-  public static double getNestEgg(int iCurrent, int iStartSim, int lookbackYears, int percentStock,
-      Inflation adjustForInflation)
-  {
-    // TODO use function interface / lambda to control nest egg calculation.
-    assert iCurrent >= iStartSim;
-    double balance = 1e6; // start with $1M in first year
-    for (int i = iStartSim; i < iCurrent; ++i) {
-      balance += 500; // save $500/mo
-      balance *= SwrLib.growth(i, percentStock); // update forward based on market growth
-    }
-    if (adjustForInflation == Inflation.Real) {
-      balance *= SwrLib.inflation(iCurrent, iStartSim); // adjust for inflation
-    }
-    return balance;
-  }
-
   /** Verify that we're matching the "Real Total Return Price" from Shiller's spreadsheet. */
   private static Sequence calcSnpReturns(Inflation adjustForInflation)
   {

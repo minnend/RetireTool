@@ -8,6 +8,7 @@ import java.util.List;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.swr.MarwoodMethod;
+import org.minnen.retiretool.swr.NestEggCalculator;
 import org.minnen.retiretool.swr.SwrLib;
 import org.minnen.retiretool.swr.data.MonthlyInfo;
 import org.minnen.retiretool.util.FinLib.Inflation;
@@ -28,13 +29,15 @@ public class AssetAllocations
     final int lookbackMonths = lookbackYears * 12;
     final int iFirstWithHistory = lookbackMonths;
     final int iStartSim = iFirstWithHistory;
+    NestEggCalculator nestEggCalculator = NestEggCalculator.constant(1e6);
 
     List<Sequence> sequences = new ArrayList<>();
     for (int percentStock = 0; percentStock <= 100; percentStock += 25) {
       Sequence seq = new Sequence(String.format("DMSWR (%d / %d)", percentStock, 100 - percentStock));
       System.out.println(seq.getName());
 
-      List<MonthlyInfo> infos = MarwoodMethod.findDMSWR(retirementYears, lookbackYears, percentStock);
+      List<MonthlyInfo> infos = MarwoodMethod.findDMSWR(retirementYears, lookbackYears, percentStock,
+          nestEggCalculator);
       assert infos.size() == (SwrLib.length() - iStartSim);
 
       for (int iRetire = iStartSim; iRetire < SwrLib.length(); ++iRetire) {

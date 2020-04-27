@@ -8,6 +8,7 @@ import java.util.List;
 import org.minnen.retiretool.data.DataIO;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.swr.MarwoodMethod;
+import org.minnen.retiretool.swr.NestEggCalculator;
 import org.minnen.retiretool.swr.SwrLib;
 import org.minnen.retiretool.swr.data.MarwoodTable;
 import org.minnen.retiretool.swr.data.MonthlyInfo;
@@ -33,15 +34,8 @@ public class IncomeComparison
     Sequence seqCrystalSalary = new Sequence(String.format("CBSWR (%d years)", retirementYears));
     Sequence seqMarwoodSalary = new Sequence(String.format("DMSWR (rd, rd+%d years)", retirementYears));
 
-    final double firstNestEgg = SwrLib.getNestEgg(iStartSim, lookbackYears, percentStock);
-    System.out.printf("First nest egg: $%.2f in [%s] = $%.2f in today's dollars\n", firstNestEgg,
-        TimeLib.formatMonth(SwrLib.time(iStartSim)), firstNestEgg * SwrLib.inflation(iStartSim, -1));
-
-    final double lastNestEgg = SwrLib.getNestEgg(SwrLib.length() - 1, lookbackYears, percentStock);
-    System.out.printf("Last nest egg: $%.2f in [%s]\n", lastNestEgg,
-        TimeLib.formatMonth(SwrLib.time(SwrLib.length() - 1)));
-
-    List<MonthlyInfo> infos = MarwoodMethod.findDMSWR(retirementYears, lookbackYears, percentStock);
+    NestEggCalculator nestEggCalculator = NestEggCalculator.inflationThenGrowth(1000, false);
+    List<MonthlyInfo> infos = MarwoodMethod.findDMSWR(retirementYears, lookbackYears, percentStock, nestEggCalculator);
     assert infos.size() == (SwrLib.length() - iStartSim);
 
     for (int iRetire = iStartSim; iRetire < SwrLib.length(); ++iRetire) {
@@ -85,7 +79,9 @@ public class IncomeComparison
     Sequence seqBengenSalary = new Sequence(String.format("MinSWR(%d years)", retirementYears));
     Sequence seqMarwoodSalary = new Sequence(String.format("DMSWR(%d years)", retirementYears));
 
-    List<MonthlyInfo> infos = MarwoodMethod.findDMSWR(iStartSim, iEndSim, retirementYears, lookbackYears, percentStock);
+    NestEggCalculator nestEggCalculator = NestEggCalculator.monthlySavings(1e6, 500, false, true, false);
+    List<MonthlyInfo> infos = MarwoodMethod.findDMSWR(iStartSim, iEndSim, retirementYears, lookbackYears, percentStock,
+        nestEggCalculator);
     assert infos.size() == (iEndSim - iStartSim + 1);
 
     for (int iRetire = iStartSim; iRetire <= iEndSim; ++iRetire) {
@@ -127,8 +123,7 @@ public class IncomeComparison
     System.out.printf("DMSWR entries: %d\n", MarwoodTable.marwoodMap.size());
     System.out.printf("DMSWR sequences: %d\n", MarwoodTable.marwoodSequences.size());
 
-    // TODO long graph uses different nest egg calculation than short graph -- need to change code in findDMSWR().
-    // createLongIncomeGraph(retirementYears, lookbackYears, percentStock);
+    createLongIncomeGraph(retirementYears, lookbackYears, percentStock);
 
     createShortIncomeGraph(1929, 10, retirementYears, lookbackYears, percentStock, false);
     createShortIncomeGraph(1960, 10, retirementYears, lookbackYears, percentStock, false);

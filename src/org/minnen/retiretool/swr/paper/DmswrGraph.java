@@ -9,6 +9,7 @@ import org.minnen.retiretool.data.FeatureVec;
 import org.minnen.retiretool.data.Sequence;
 import org.minnen.retiretool.swr.BengenMethod;
 import org.minnen.retiretool.swr.MarwoodMethod;
+import org.minnen.retiretool.swr.NestEggCalculator;
 import org.minnen.retiretool.swr.SwrLib;
 import org.minnen.retiretool.swr.data.BengenTable;
 import org.minnen.retiretool.swr.data.MarwoodTable;
@@ -30,15 +31,8 @@ public class DmswrGraph
 
     Sequence seqMarwoodSWR = new Sequence(String.format("DMSWR (rd, rd+%d years)", retirementYears));
 
-    final double firstNestEgg = SwrLib.getNestEgg(iStartSim, lookbackYears, percentStock);
-    System.out.printf("First nest egg: $%.2f in [%s] = $%.2f in today's dollars\n", firstNestEgg,
-        TimeLib.formatMonth(SwrLib.time(iStartSim)), firstNestEgg * SwrLib.inflation(iStartSim, -1));
-
-    final double lastNestEgg = SwrLib.getNestEgg(SwrLib.length() - 1, lookbackYears, percentStock);
-    System.out.printf("Last nest egg: $%.2f in [%s]\n", lastNestEgg,
-        TimeLib.formatMonth(SwrLib.time(SwrLib.length() - 1)));
-
-    List<MonthlyInfo> infos = MarwoodMethod.findDMSWR(retirementYears, lookbackYears, percentStock);
+    NestEggCalculator nestEggCalculator = NestEggCalculator.constant(1e6);
+    List<MonthlyInfo> infos = MarwoodMethod.findDMSWR(retirementYears, lookbackYears, percentStock, nestEggCalculator);
     assert infos.size() == (SwrLib.length() - iStartSim);
 
     for (int iRetire = iStartSim; iRetire < SwrLib.length(); ++iRetire) {

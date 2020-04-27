@@ -29,12 +29,13 @@ public class MarwoodMethod
    * @pparam percentStock percent stock (vs. bonds) to hold (70 = 70%)
    * @return List of monthly info objects for each month that starts a retirement period
    */
-  public static List<MonthlyInfo> findDMSWR(int retirementYears, int lookbackYears, int percentStock) throws IOException
+  public static List<MonthlyInfo> findDMSWR(int retirementYears, int lookbackYears, int percentStock,
+      NestEggCalculator nestEggCalculator) throws IOException
   {
     final int lookbackMonths = lookbackYears * 12;
     final int iStartSim = lookbackMonths; // first data point with fully lookback history
     final int iEndSim = SwrLib.length() - 1;
-    return findDMSWR(iStartSim, iEndSim, retirementYears, lookbackYears, percentStock);
+    return findDMSWR(iStartSim, iEndSim, retirementYears, lookbackYears, percentStock, nestEggCalculator);
   }
 
   /**
@@ -48,7 +49,7 @@ public class MarwoodMethod
    * @return List of monthly info objects for each month that starts a retirement period
    */
   public static List<MonthlyInfo> findDMSWR(int iStartSim, int iEndSim, int retirementYears, int lookbackYears,
-      int percentStock) throws IOException
+      int percentStock, NestEggCalculator nestEggCalculator) throws IOException
   {
     final int bengenSWR = BengenTable.getSWR(retirementYears, percentStock);
     final int lookbackMonths = lookbackYears * 12;
@@ -57,9 +58,7 @@ public class MarwoodMethod
     List<MonthlyInfo> results = new ArrayList<>();
     for (int iRetire = iStartSim; iRetire <= iEndSim; ++iRetire) {
       final long retireTime = SwrLib.time(iRetire);
-      // TODO arg to select nest egg calculation + real or nominal dollars.
-      final double nestEgg = SwrLib.getNestEgg(iRetire, iStartSim, lookbackYears, percentStock, Inflation.Real);
-      // final double nestEgg = SwrLib.getNestEgg(iRetire, lookbackYears, percentStock);
+      final double nestEgg = nestEggCalculator.getNestEgg(iRetire, iStartSim, lookbackYears, percentStock);
 
       // Find best "virtual" retirement year within the lookback period.
       int dmswr = 0;
