@@ -26,7 +26,6 @@ public final class BengenEntry
 
   public BengenEntry(long time, int retirementYears, int percentStock, int swr)
   {
-    assert retirementYears >= 0 : retirementYears;
     assert percentStock >= 0 && percentStock <= 100 : percentStock;
 
     this.time = time;

@@ -56,14 +56,7 @@ public class BengenMethod
   public static MonthlyInfo runForDuration(int iStart, int retirementYears, double withdrawalRate, int percentStock,
       double nestEgg, List<MonthlyInfo> trajectory)
   {
-    final int iEnd = Math.min(iStart + 12 * retirementYears, SwrLib.length());
-    return run(iStart, iEnd, withdrawalRate, percentStock, nestEgg, trajectory);
-  }
-
-  public static MonthlyInfo run(int iStart, int iEnd, double withdrawalRate, int percentStock,
-      List<MonthlyInfo> trajectory)
-  {
-    final double nestEgg = 1e6; // SwrLib.getNestEgg(iStart, 0, percentStock);
+    final int iEnd = iStart + 12 * retirementYears;
     return run(iStart, iEnd, withdrawalRate, percentStock, nestEgg, trajectory);
   }
 
@@ -85,6 +78,7 @@ public class BengenMethod
     assert iStart >= 0 && iStart < SwrLib.length();
     assert iEnd > iStart && iEnd <= SwrLib.length();
     assert withdrawalRate > 0.0 : withdrawalRate;
+    assert percentStock >= 0 && percentStock <= 100;
 
     final long retireTime = SwrLib.time(iStart);
     final int swrBasisPoints = SwrLib.percentToBasisPoints(withdrawalRate);
@@ -125,12 +119,12 @@ public class BengenMethod
   }
 
   /** @return true if the withdrawal rate works for all retirement starting times. */
-  public static boolean isSafe(int withdrawalRate, int years, int percentStock)
+  public static boolean isSafe(int withdrawalRate, int retirementYears, int percentStock)
   {
-    final int lastIndex = SwrLib.lastIndex(years);
+    final int lastIndex = SwrLib.lastIndex(retirementYears);
     final double floatWR = withdrawalRate / 100.0;
     for (int i = 0; i <= lastIndex; ++i) {
-      MonthlyInfo info = BengenMethod.runForDuration(i, years, floatWR, percentStock, 1e6, null);
+      MonthlyInfo info = BengenMethod.runForDuration(i, retirementYears, floatWR, percentStock, 1e6, null);
       if (info.failed()) return false;
       assert info.endBalance > 0 && info.monthlyIncome > 0;
     }
@@ -141,17 +135,27 @@ public class BengenMethod
    * Find the SWR for a given retirement date.
    * 
    * @param index index of retirement date
-   * @param years number of years of retirement
+   * @param retirementYears number of years of retirement
    * @param percentStock percent stock (vs bonds) in asset allocation (70 = 70%)
    * @param quantum withdrawalRate % quantum == 0
    * @return safe withdrawal rate for the given retirement index and parameters
    */
-  public static int findSwrForDate(int index, int years, int percentStock, int quantum)
+  public static int findSwrForDate(int index, int retirementYears, int percentStock, int quantum)
   {
+    assert index <= SwrLib.lastIndex(retirementYears);
+    final int iEnd = index + retirementYears * 12;
+    return findSwrForWindow(index, iEnd, percentStock, quantum);
+  }
+
+  public static int findSwrForWindow(int iStart, int iEnd, int percentStock, int quantum)
+  {
+    assert quantum >= 1;
+
     int lowSWR = 0;
     int highSWR = 10001;
 
-    BengenEntry entry = BengenTable.get(SwrLib.time(index), years - 1, percentStock);
+    final int years = (iEnd - iStart) / 12;
+    BengenEntry entry = BengenTable.get(SwrLib.time(iStart), years - 1, percentStock);
     if (entry != null) {
       highSWR = entry.swr; // SWR for N years can't be larger than SWR for (N-1) years
     }
@@ -159,7 +163,7 @@ public class BengenMethod
     while (highSWR - lowSWR > quantum) {
       final int swr = (lowSWR + highSWR) / (2 * quantum) * quantum;
       assert swr >= lowSWR && swr <= highSWR && swr % quantum == 0 : swr;
-      MonthlyInfo info = BengenMethod.runForDuration(index, years, swr / 100.0, percentStock, 1e6, null);
+      MonthlyInfo info = BengenMethod.run(iStart, iEnd, swr / 100.0, percentStock, 1e6, null);
       if (info.ok()) {
         lowSWR = swr;
       } else {
@@ -218,15 +222,19 @@ public class BengenMethod
    * 
    * @param retirementYears length of retirement, i.e. the account balance must be >= 0 for this many years
    * @param percentStock the percent of stock (vs. bond) in the brokerage account
+   * @param includePartialWindows if True, include SWR for incomplete/ongoing retirements
    * @return Sequence holding the SWR for each starting month.
    */
-  public static Sequence calcSwrAcrossTime(int retirementYears, int percentStock)
+  public static Sequence calcSwrAcrossTime(int retirementYears, int percentStock, boolean includePartialWindows)
   {
     Sequence seq = new Sequence(
         String.format("%d year SWR (%d/%d)", retirementYears, percentStock, 100 - percentStock));
-    final int lastIndex = SwrLib.lastIndex(retirementYears);
+
+    final int retirementMonths = retirementYears * 12;
+    final int lastIndex = includePartialWindows ? SwrLib.length() - 1 : SwrLib.lastIndex(retirementYears);
     for (int i = 0; i <= lastIndex; ++i) {
-      final int swr = findSwrForDate(i, retirementYears, percentStock, 1);
+      final int iEnd = Math.min(i + retirementMonths, SwrLib.length());
+      final int swr = findSwrForWindow(i, iEnd, percentStock, 1);
       seq.addData(swr, SwrLib.time(i));
     }
     return seq;

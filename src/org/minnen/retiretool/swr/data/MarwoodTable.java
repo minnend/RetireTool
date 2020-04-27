@@ -218,23 +218,32 @@ public class MarwoodTable
 
   public static void main(String[] args) throws IOException
   {
-    final String mode = "generate";
-
-    final int percentStock = 75;
+    final String mode = "generate"; // generate or verify
     final int lookbackYears = 20;
     final boolean reretire = false;
-
-    final String filename = String.format("dmswr-stock%d-lookback%d.csv", percentStock, lookbackYears);
-    final File file = new File(DataIO.getFinancePath(), filename);
+    final int[] percentStockList = new int[] { 0, 10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 100 };
+    // final int[] percentStockList = new int[] { 75 };
 
     if (mode.equals("generate")) {
       SwrLib.setup(SwrLib.getDefaultBengenFile(), null, Inflation.Real); // only load bengen table
-      generateTable(file, percentStock, lookbackYears, reretire);
+      for (int percentStock : percentStockList) {
+        System.out.printf("Percent Stock: %d\n", percentStock);
+
+        final String filename = String.format("dmswr-stock%d-lookback%d.csv", percentStock, lookbackYears);
+        final File file = new File(DataIO.getFinancePath(), filename);
+
+        generateTable(file, percentStock, lookbackYears, reretire);
+      }
     } else {
-      SwrLib.setup(SwrLib.getDefaultBengenFile(), file, Inflation.Real);
-      System.out.printf("DMSWR entries: %d\n", marwoodMap.size());
-      System.out.printf("DMSWR sequences: %d\n", marwoodSequences.size());
-      verifyTable();
+      for (int percentStock : percentStockList) {
+        final String filename = String.format("dmswr-stock%d-lookback%d.csv", percentStock, lookbackYears);
+        final File file = new File(DataIO.getFinancePath(), filename);
+
+        SwrLib.setup(SwrLib.getDefaultBengenFile(), file, Inflation.Real);
+        System.out.printf("DMSWR entries: %d\n", marwoodMap.size());
+        System.out.printf("DMSWR sequences: %d\n", marwoodSequences.size());
+        verifyTable();
+      }
     }
   }
 }

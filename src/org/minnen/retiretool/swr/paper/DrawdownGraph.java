@@ -36,7 +36,7 @@ public class DrawdownGraph
 
       final int iStart = SwrLib.indexForTime(TimeLib.toMs(year, Month.JANUARY, 1));
       List<MonthlyInfo> bengenTrajectory = new ArrayList<>();
-      BengenMethod.run(iStart, iEnd, bengenSWR, percentStock, bengenTrajectory);
+      BengenMethod.run(iStart, iEnd, bengenSWR, percentStock, 1e6, bengenTrajectory);
 
       Sequence path = new Sequence(String.format("Drawdown Path (%d)", year));
       for (MonthlyInfo info : bengenTrajectory) {

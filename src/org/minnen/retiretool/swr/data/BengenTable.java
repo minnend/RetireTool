@@ -4,9 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.minnen.retiretool.data.DataIO;
@@ -20,8 +18,6 @@ import org.minnen.retiretool.util.FinLib.Inflation;
 
 public class BengenTable
 {
-  public static final int[]                   percentStockList;
-
   /** Values have valid SWR fields, queries ignore SWR field. */
   public static Map<BengenEntry, BengenEntry> bengenMap       = new HashMap<>();
 
@@ -30,10 +26,6 @@ public class BengenTable
 
   /** Values are MinSWR for the given retirement duration and stock percentage (342 => 3.42%). */
   public static Map<BengenEntry, Integer>     bengenSWRs      = new HashMap<>();
-
-  static {
-    percentStockList = new int[] { 0, 10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 100 };
-  }
 
   public static BengenEntry get(long time, int retirementYears, int percentStock)
   {
@@ -86,20 +78,19 @@ public class BengenTable
 
       for (int retirementYears = 1; retirementYears <= 60; ++retirementYears) {
         final long a = TimeLib.getTime();
-        for (int percentStock : percentStockList) {
-          Sequence seq = BengenMethod.calcSwrAcrossTime(retirementYears, percentStock);
+        for (int percentStock : SwrLib.percentStockList) {
+          // TODO include partial windows? perhaps add a field marking them as partial?
+          Sequence seq = BengenMethod.calcSwrAcrossTime(retirementYears, percentStock, false);
           int minSWR = Integer.MAX_VALUE;
-          int maxSWR = 0;
           for (FeatureVec v : seq) {
             final int swr = (int) Math.round(v.get(0));
             minSWR = Math.min(minSWR, swr);
-            maxSWR = Math.max(maxSWR, swr);
             BengenEntry bengen = new BengenEntry(v.getTime(), retirementYears, percentStock, swr);
             bengenMap.put(bengen, bengen);
             writer.writeln(bengen.toCSV());
           }
-          System.out.printf("%d, %3d [%s] -> [%d, %d]\n", retirementYears, percentStock,
-              TimeLib.formatYM(seq.getEndMS()), minSWR, maxSWR);
+          System.out.printf("%d, %3d [%s] -> %d\n", retirementYears, percentStock, TimeLib.formatYM(seq.getEndMS()),
+              minSWR);
         }
         final long b = TimeLib.getTime();
         System.out.printf("%d years -> %d ms\n", retirementYears, b - a);
@@ -189,7 +180,7 @@ public class BengenTable
 
   public static void main(String[] args) throws IOException
   {
-    final String mode = "verify";
+    final String mode = "generate";
 
     if (mode.equals("generate")) {
       SwrLib.setup(null, null, Inflation.Real); // don't load bengen or dmswr table

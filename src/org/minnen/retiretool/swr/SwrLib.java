@@ -38,6 +38,12 @@ public class SwrLib
   /** Was the data adjusted for inflation (Real) or not (Nominal)? */
   private static Inflation              inflationAdjustment;
 
+  public static final int[]             percentStockList;
+
+  static {
+    percentStockList = new int[] { 0, 10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 100 };
+  }
+
   public static Inflation getInflationAdjustment()
   {
     return inflationAdjustment;
@@ -185,6 +191,7 @@ public class SwrLib
   public static void setup(File bengenFile, File dmswrFile, Inflation inflation) throws IOException
   {
     // TODO If we download new data, Bengen and Marwood tables must be regenerated.
+    // TODO last row in shiller data may be for a partial month and should be discarded.
     // Shiller.downloadData();
     shiller = Shiller.loadAll(Shiller.getPathCSV(), true);
 

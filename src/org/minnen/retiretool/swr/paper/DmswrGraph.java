@@ -15,6 +15,7 @@ import org.minnen.retiretool.swr.data.BengenTable;
 import org.minnen.retiretool.swr.data.MarwoodTable;
 import org.minnen.retiretool.swr.data.MonthlyInfo;
 import org.minnen.retiretool.util.TimeLib;
+import org.minnen.retiretool.util.Writer;
 import org.minnen.retiretool.viz.Chart;
 import org.minnen.retiretool.viz.ChartConfig;
 import org.minnen.retiretool.viz.ChartConfig.ChartScaling;
@@ -44,13 +45,14 @@ public class DmswrGraph
       seqMarwoodSWR.addData(dmswr.swr / 100.0, now);
     }
 
-    // The crystall ball SWR is the same as Bengen per retirement start date.
-    Sequence seqCrystalSWR = BengenMethod.calcSwrAcrossTime(retirementYears, percentStock);
+    // The crystal ball SWR is the same as Bengen per retirement start date.
+    Sequence seqCrystalSWR = BengenMethod.calcSwrAcrossTime(retirementYears, percentStock, false);
     seqCrystalSWR.setName(String.format("CBSWR (rd, rd+%d years)", retirementYears));
     seqCrystalSWR._div(100.0); // convert basis points to percentages (342 -> 3.42).
     int index = seqCrystalSWR.getIndexAtOrAfter(seqMarwoodSWR.getStartMS());
     seqCrystalSWR = seqCrystalSWR.subseq(index);
 
+    // Create sequence for MinSWR. It's constant, but it's better to plot it so that it shows up in the legend.
     final double bengenAsPercent = bengenSWR / 100.0;
     Sequence seqBengenSWR = new Sequence(String.format("MinSWR(%d years)", retirementYears));
     for (FeatureVec v : seqMarwoodSWR) {

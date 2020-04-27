@@ -33,7 +33,7 @@ public class MarwoodMethod
       NestEggCalculator nestEggCalculator) throws IOException
   {
     final int lookbackMonths = lookbackYears * 12;
-    final int iStartSim = lookbackMonths; // first data point with fully lookback history
+    final int iStartSim = lookbackMonths; // first data point with full lookback history
     final int iEndSim = SwrLib.length() - 1;
     return findDMSWR(iStartSim, iEndSim, retirementYears, lookbackYears, percentStock, nestEggCalculator);
   }
@@ -54,6 +54,7 @@ public class MarwoodMethod
     final int bengenSWR = BengenTable.getSWR(retirementYears, percentStock);
     final int lookbackMonths = lookbackYears * 12;
     final int iLastWithFullRetirement = SwrLib.lastIndex(retirementYears);
+    assert iStartSim >= lookbackMonths; // else not enough historical data for virtual retirees
 
     List<MonthlyInfo> results = new ArrayList<>();
     for (int iRetire = iStartSim; iRetire <= iEndSim; ++iRetire) {
@@ -70,7 +71,8 @@ public class MarwoodMethod
 
         // Run simulation for virtual retirement period.
         List<MonthlyInfo> virtualTrajectory = new ArrayList<MonthlyInfo>();
-        MonthlyInfo info = BengenMethod.run(iVirtualStart, iRetire + 1, virtualSWR, percentStock, virtualTrajectory);
+        MonthlyInfo info = BengenMethod.run(iVirtualStart, iRetire + 1, virtualSWR, percentStock, 1e6,
+            virtualTrajectory);
         assert info.ok();
 
         assert iLookback + 1 == virtualTrajectory.size();
@@ -88,11 +90,25 @@ public class MarwoodMethod
       assert dmswr >= bengenSWR; // Bengen is lower bound on DMSWR
 
       List<MonthlyInfo> trajectory = new ArrayList<>();
-      MonthlyInfo info = BengenMethod.runForDuration(iRetire, retirementYears, dmswr / 100.0, percentStock, nestEgg,
-          trajectory);
+      final boolean isPartialRun = (iRetire > iLastWithFullRetirement);
+      final int iEnd = Math.min(iRetire + 12 * retirementYears, SwrLib.length());
+      MonthlyInfo info = BengenMethod.run(iRetire, iEnd, dmswr / 100.0, percentStock, nestEgg, trajectory);
+      if (!info.ok()) { // TODO for debug
+        // System.out.println(info);
+        BengenEntry bengen = BengenTable.get(retireTime, retirementYears, percentStock);
+        int cbswr = -1;
+        if (bengen == null) {
+          // System.out.printf("Not in bengen table! (partial? %s)\n", isPartialRun);
+          // System.out.printf("[%s] %d\n", TimeLib.formatMonth(SwrLib.time(iRetire)), retirementYears);
+          cbswr = BengenMethod.findSwrForWindow(iRetire, iEnd, percentStock, 1);
+        } else {
+          cbswr = bengen.swr;
+        }
+        System.out.printf("OOPS! %d vs. %d\n", cbswr, dmswr);
+      }
       assert info.ok(); // safe by construction, but still verify
-      assert iRetire > iLastWithFullRetirement || info.retirementMonth == retirementYears * 12;
-      final double finalBalance = info.finalBalance;
+      assert isPartialRun || info.retirementMonth == retirementYears * 12;
+      final double finalBalance = isPartialRun ? Double.NaN : info.finalBalance;
 
       final double bengenSalary = nestEgg * bengenSWR / 10000.0;
       final double marwoodSalary = nestEgg * dmswr / 10000.0;
