@@ -14,8 +14,6 @@ import org.minnen.retiretool.swr.SwrLib;
 import org.minnen.retiretool.swr.data.BengenTable;
 import org.minnen.retiretool.swr.data.MarwoodTable;
 import org.minnen.retiretool.swr.data.MonthlyInfo;
-import org.minnen.retiretool.util.TimeLib;
-import org.minnen.retiretool.util.Writer;
 import org.minnen.retiretool.viz.Chart;
 import org.minnen.retiretool.viz.ChartConfig;
 import org.minnen.retiretool.viz.ChartConfig.ChartScaling;

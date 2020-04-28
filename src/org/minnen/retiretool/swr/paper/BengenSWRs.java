@@ -18,18 +18,16 @@ import org.minnen.retiretool.viz.ChartConfig.ChartTiming;
 
 public class BengenSWRs
 {
-  public static void main(String[] args) throws IOException
+  /** Save Bengen SWR (MinSwr) values in a CSV file. */
+  private static void saveBengenSwrAsCsv() throws IOException
   {
-    SwrLib.setup(SwrLib.getDefaultBengenFile(), null, Inflation.Real); // DMSWR data not needed
-
-    // Save text file with Bengen SWRs.
-    File file = new File(DataIO.getFinancePath(), "bengen-swr.csv");
+    File file = new File(DataIO.getFinancePath(), "bengen-minswr.csv");
     try (Writer writer = new Writer(file)) {
       writer.writeln("# Bengen Safe Withdrawal Rates (MinSWR)");
       writer.writeln("# Fields:");
       writer.writeln("# 1) Retirement duration in years");
       writer.writeln("# 2) Percent stock in a stock/bond portfolio");
-      writer.writeln("# 3) Safe withdrawal rate (annualized)");
+      writer.writeln("# 3) Safe withdrawal rate (annualized, 314 => 3.14%)");
       for (int retirementYears = 1; retirementYears <= 60; ++retirementYears) {
         for (int percentStock : SwrLib.percentStockList) {
           final int swr = BengenTable.getSWR(retirementYears, percentStock);
@@ -37,7 +35,11 @@ public class BengenSWRs
         }
       }
     }
+  }
 
+  /** Generate a bar chart with Bengen SWR (MinSWR) values. */
+  private static void generateBengenSwrGraph() throws IOException
+  {
     // Bengen SWR for different retirement durations.
     final int percentStock = 75;
     Sequence seqBengenSWR = new Sequence("Bengen SWR");
@@ -50,18 +52,28 @@ public class BengenSWRs
     }
 
     // Generate graph showing Bengen SWRs.
-    file = new File(DataIO.getOutputPath(), "bengen-swr-durations.html");
-    ChartConfig config = ChartConfig.build(file, ChartConfig.Type.Bar, "Safe Withdrawl Rates for the 4% Rule",
-        labels.toArray(new String[0]), null, "100%", "800px", 0, 7.5, 0.5, ChartScaling.LINEAR, ChartTiming.INDEX, 0,
-        seqBengenSWR);
+    File file = new File(DataIO.getOutputPath(), "bengen-swr-durations.html");
+    ChartConfig config = ChartConfig.build(file, ChartConfig.Type.Bar, "MinSWR for Different Retirement Durations",
+        labels.toArray(new String[0]), null, "100%", "700px", 0.0, seqBengenSWR.getFirst(0), 0.5, ChartScaling.LINEAR,
+        ChartTiming.INDEX, 0, seqBengenSWR);
     config.setAxisTitles("Retirement Duration (years)", "Withdrawal Rate");
-    config.setAxisLabelFontSize(28);
-    config.setAxisTitleFontSize(28);
+    config.setAxisLabelFontSize(32);
+    config.setAxisTitleFontSize(32);
     config.setTickFormatter(null, "return this.value + '%';");
-    config.setTitleConfig("margin: 0, y: 50, style: { fontSize: 42 }");
+    config.setTitleConfig("margin: 0, y: 68, style: { fontSize: 42 }");
     config.setTickInterval(2, 1);
-    config.setDataLabelConfig(true, -90, "#fff", 2, 1, 4, 20, false);
+    config.setEndOnTick(false);
+    config.setDataLabelConfig(true, -90, "#fff", 2, 1, 6, 32, false);
     config.setAnimation(false);
     Chart.saveChart(config);
+
+  }
+
+  public static void main(String[] args) throws IOException
+  {
+    SwrLib.setup(SwrLib.getDefaultBengenFile(), null, Inflation.Real); // DMSWR data not needed
+
+    saveBengenSwrAsCsv();
+    generateBengenSwrGraph();
   }
 }

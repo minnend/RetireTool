@@ -11,7 +11,7 @@ import org.minnen.retiretool.data.Sequence;
 public class ChartConfig
 {
   public static enum Type {
-    Unknown, Line, Bar, Area, PosNegArea, Scatter, Bubble
+    Unknown, Line, Bar, Area, PosNegArea, Scatter, Bubble, HorizontalBars,
   };
 
   public enum ChartScaling {
@@ -63,6 +63,7 @@ public class ChartConfig
   public int            lineWidth          = 2;
   public boolean        animation          = true;
   public double         fillOpacity        = 1.0;
+  public boolean        endOnTick          = true;
 
   // Specific to scatter plots.
   public double         radius             = 3;
@@ -73,6 +74,8 @@ public class ChartConfig
       return "line";
     } else if (chartType == Type.Bar) {
       return "column";
+    } else if (chartType == Type.HorizontalBars) {
+      return "bar";
     } else if (chartType == Type.Area || chartType == Type.PosNegArea) {
       return "area";
     } else if (chartType == Type.Scatter) {
@@ -483,6 +486,12 @@ public class ChartConfig
               + "fontSize: '%dpx', fontFamily: 'Verdana, sans-serif', fontWeight: 'normal', textOutline: %d, }, },",
           enabled ? "true" : "false", rotation, color, nSigDigs, x, y, fontSize, outline ? 1 : 0);
     }
+    return this;
+  }
+
+  public ChartConfig setEndOnTick(boolean endOnTick)
+  {
+    this.endOnTick = endOnTick;
     return this;
   }
 }

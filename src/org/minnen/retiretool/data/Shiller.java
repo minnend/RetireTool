@@ -43,7 +43,7 @@ public class Shiller
 
   public static File getPathCSV()
   {
-    return new File(DataIO.getFinancePath(), "shiller.csv");
+    return new File(DataIO.getFinancePath(), "shiller-dmswr.csv");
   }
 
   public static File getPathExcel()

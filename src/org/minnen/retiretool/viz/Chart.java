@@ -217,8 +217,9 @@ public class Chart
       writer.write("  },\n"); // xAxis
 
       writer.write("  yAxis: {\n");
+      writer.writef("   endOnTick: %s,\n", config.endOnTick ? "true" : "false");
       if (config.yTickInterval >= 0) {
-        writer.writef("  tickInterval: %d,\n", config.yTickInterval);
+        writer.writef("   tickInterval: %d,\n", config.yTickInterval);
       }
 
       writer.write("   labels: {\n");
